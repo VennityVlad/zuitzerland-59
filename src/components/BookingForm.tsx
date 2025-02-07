@@ -1,7 +1,9 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays } from "date-fns";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ROOM_TYPES, MIN_STAY_DAYS, PRICING_TABLE, ROOM_MIN_STAY } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
 import PersonalInfoFields from "./booking/PersonalInfoFields";
@@ -11,6 +13,8 @@ import RoomSelectionFields from "./booking/RoomSelectionFields";
 const BookingForm = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [isFormValid, setIsFormValid] = useState(false);
   const [formData, setFormData] = useState<BookingFormData>({
     name: "",
     email: "",
@@ -33,20 +37,58 @@ const BookingForm = () => {
     const days = differenceInDays(new Date(checkout), new Date(checkin));
     if (days <= 0) return 0;
     
-    // Get the pricing array for the selected room type
     const priceArray = PRICING_TABLE[roomType];
     if (!priceArray) return 0;
     
-    // Calculate total price by summing up the daily rates for each day of stay
     let totalPrice = 0;
     for (let i = 0; i < days; i++) {
-      // Use the price for the current day (0-based index), or the last price if beyond 25 days
       const dayPrice = priceArray[Math.min(i, priceArray.length - 1)];
       totalPrice += dayPrice;
     }
     
     return totalPrice;
   };
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateMinimumStay = (days: number, roomType: string): string | null => {
+    if (!roomType) return null;
+    const minimumStay = ROOM_MIN_STAY[roomType] || MIN_STAY_DAYS;
+    
+    if (days < minimumStay) {
+      const weekText = minimumStay === 7 ? "1 week" : 
+                      minimumStay === 14 ? "2 weeks" : 
+                      "the entire period";
+      return `This room type requires a minimum stay of ${weekText}`;
+    }
+    return null;
+  };
+
+  const validateForm = () => {
+    // Check if all required fields are filled
+    const requiredFields = ['name', 'email', 'address', 'city', 'zip', 'country', 'checkin', 'checkout', 'roomType'] as const;
+    const allFieldsFilled = requiredFields.every(field => formData[field]);
+    
+    // Check email format
+    const isEmailValid = validateEmail(formData.email);
+
+    // Check minimum stay if dates and room type are selected
+    let stayValidation = null;
+    if (formData.checkin && formData.checkout && formData.roomType) {
+      const days = differenceInDays(new Date(formData.checkout), new Date(formData.checkin));
+      stayValidation = validateMinimumStay(days, formData.roomType);
+    }
+
+    setValidationWarning(stayValidation);
+    setIsFormValid(allFieldsFilled && isEmailValid && !stayValidation);
+  };
+
+  useEffect(() => {
+    validateForm();
+  }, [formData]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -74,18 +116,6 @@ const BookingForm = () => {
     handleInputChange({
       target: { name: "roomType", value },
     } as React.ChangeEvent<HTMLSelectElement>);
-  };
-
-  const validateMinimumStay = (days: number, roomType: string): string | null => {
-    const minimumStay = ROOM_MIN_STAY[roomType] || MIN_STAY_DAYS;
-    
-    if (days < minimumStay) {
-      const weekText = minimumStay === 7 ? "1 week" : 
-                      minimumStay === 14 ? "2 weeks" : 
-                      "the entire period";
-      return `This room type requires a minimum stay of ${weekText}`;
-    }
-    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,6 +188,12 @@ const BookingForm = () => {
         </p>
       </div>
 
+      {validationWarning && (
+        <Alert variant="destructive">
+          <AlertDescription>{validationWarning}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <PersonalInfoFields
           formData={formData}
@@ -178,7 +214,7 @@ const BookingForm = () => {
       <Button
         type="submit"
         className="w-full bg-hotel-navy hover:bg-hotel-navy/90"
-        disabled={isLoading}
+        disabled={isLoading || !isFormValid}
       >
         {isLoading ? "Submitting..." : "Complete Booking"}
       </Button>
