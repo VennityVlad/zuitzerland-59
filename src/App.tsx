@@ -8,6 +8,9 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
+import Invoices from "./pages/Invoices";
+import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +27,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/signin" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <NavMenu />
+      {children}
+    </>
+  );
 };
 
 const App = () => {
@@ -85,6 +93,22 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Index />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/invoices"
+                element={
+                  <ProtectedRoute>
+                    <Invoices />
                   </ProtectedRoute>
                 }
               />
