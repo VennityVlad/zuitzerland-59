@@ -31,6 +31,10 @@ const BookingForm = () => {
     price: 0,
   });
 
+  // Define the date constraints
+  const minDate = "2025-05-01";
+  const maxDate = "2025-05-25";
+
   const calculatePrice = (checkin: string, checkout: string, roomType: string) => {
     if (!checkin || !checkout || !roomType) return 0;
     const room = ROOM_TYPES.find((r) => r.id === roomType);
@@ -135,6 +139,7 @@ const BookingForm = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Personal Information Fields */}
         <div className="space-y-2">
           <Label htmlFor="name">Full Name</Label>
           <Input
@@ -202,6 +207,7 @@ const BookingForm = () => {
           />
         </div>
 
+        {/* Date Selection Fields */}
         <div className="space-y-2">
           <Label htmlFor="checkin">Check-in Date</Label>
           <div className="relative">
@@ -210,7 +216,8 @@ const BookingForm = () => {
               name="checkin"
               type="date"
               required
-              min={format(new Date(), "yyyy-MM-dd")}
+              min={minDate}
+              max={maxDate}
               value={formData.checkin}
               onChange={handleInputChange}
               className="date-picker"
@@ -227,7 +234,8 @@ const BookingForm = () => {
               name="checkout"
               type="date"
               required
-              min={formData.checkin}
+              min={formData.checkin || minDate}
+              max={maxDate}
               value={formData.checkout}
               onChange={handleInputChange}
               className="date-picker"
