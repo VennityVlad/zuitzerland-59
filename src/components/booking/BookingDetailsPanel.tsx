@@ -22,7 +22,7 @@ const BookingDetailsPanel = ({
     const fetchExchangeRate = async () => {
       try {
         const response = await fetch(
-          `http://apilayer.net/api/live?access_key=d62c3d3b99d1601f68580196f699fdf0&currencies=USD,CHF&source=CHF&format=1`
+          `https://api.apilayer.net/currency_data/live?access_key=d62c3d3b99d1601f68580196f699fdf0&currencies=USD,CHF&source=CHF&format=1`
         );
         const data = await response.json();
         if (data.success && data.quotes) {
@@ -62,7 +62,7 @@ const BookingDetailsPanel = ({
             onRoomTypeChange={(value) =>
               handleInputChange({
                 target: { name: "roomType", value },
-              } as React.ChangeEvent<HTMLSelectElement>)
+              } as React.ChangeEvent<HTMLInputElement>)
             }
           />
         </div>
