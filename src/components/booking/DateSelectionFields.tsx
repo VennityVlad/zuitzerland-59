@@ -1,3 +1,4 @@
+
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,8 +42,8 @@ const DateSelectionFields = ({
               name="checkin"
               type="date"
               required
-              min={minDate}
-              max={maxDate}
+              min="2025-05-01"
+              max="2025-05-26"
               value={formData.checkin}
               onChange={handleInputChange}
               className="date-picker pl-4 pr-10 py-5 text-gray-900"
@@ -59,8 +60,8 @@ const DateSelectionFields = ({
               name="checkout"
               type="date"
               required
-              min={formData.checkin || minDate}
-              max={maxDate}
+              min={formData.checkin || "2025-05-01"}
+              max="2025-05-26"
               value={formData.checkout}
               onChange={handleInputChange}
               className="date-picker pl-4 pr-10 py-5 text-gray-900"
