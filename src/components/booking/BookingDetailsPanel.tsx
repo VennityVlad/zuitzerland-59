@@ -22,12 +22,17 @@ const BookingDetailsPanel = ({
     const fetchExchangeRate = async () => {
       try {
         const response = await fetch(
-          `https://api.apilayer.net/currency_data/live?access_key=d62c3d3b99d1601f68580196f699fdf0&currencies=USD,CHF&source=CHF&format=1`
+          `https://api.currencylayer.com/live?access_key=6ca43ac4cfb297bbbf5846450c3bfffc&format=1`
         );
         const data = await response.json();
         if (data.success && data.quotes) {
-          const rate = data.quotes.CHFUSD;
-          setUsdPrice(formData.price * rate);
+          // The API returns USD as base, so we need to convert CHF to USD
+          const usdChfRate = data.quotes.USDCHF;
+          if (usdChfRate) {
+            // Convert CHF to USD: divide by USDCHF rate since we want CHF->USD
+            const convertedPrice = formData.price / usdChfRate;
+            setUsdPrice(convertedPrice);
+          }
         }
       } catch (error) {
         console.error("Error fetching exchange rate:", error);
