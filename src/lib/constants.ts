@@ -1,3 +1,4 @@
+
 import { RoomType } from "@/types/booking";
 
 type PricingTable = {
@@ -11,13 +12,12 @@ export const PRICING_TABLE: PricingTable = {
   "twin-shared": [157, 157, 157, 157, 157, 157, 157, 155, 153, 151, 149, 147, 145, 143, 141, 139, 137, 135, 133, 131, 129, 127, 125, 123, 121],
   "twin-bathroom": [157, 157, 157, 157, 157, 157, 157, 157, 157, 157, 157, 157, 157, 100, 98, 97, 95, 93, 92, 90, 88, 86, 86, 86, 86],
   "triple-room": [157, 157, 157, 157, 157, 157, 157, 156, 154, 153, 151, 150, 148, 147, 145, 144, 143, 141, 140, 138, 85, 84, 83, 82, 81],
-  "queen-deluxe": [360, 360, 360, 360, 360, 360, 360, 355, 350, 345, 340, 335, 330, 325, 320, 315, 310, 305, 300, 295, 290, 285, 280, 275, 270],
 };
 
 export const ROOM_TYPES: RoomType[] = [
   {
     id: "queen-standard",
-    name: "Hotel Room - Queen Bed (Standard)",
+    name: "Hotel Room - Queen Bed (Daily Cleaning)",
     pricePerNight: PRICING_TABLE["queen-standard"][0],
     description: "2 people in private room with daily cleaning, includes breakfast",
   },
@@ -50,13 +50,7 @@ export const ROOM_TYPES: RoomType[] = [
     name: "2 Bedroom Apartment - Triple Bed",
     pricePerNight: PRICING_TABLE["triple-room"][0],
     description: "Single person, shared bathroom (1 bathroom between 5 people), includes breakfast",
-  },
-  {
-    id: "queen-deluxe",
-    name: "Hotel Room - Queen Bed (Deluxe)",
-    pricePerNight: PRICING_TABLE["queen-deluxe"][0],
-    description: "2 people in private room with daily cleaning, includes breakfast",
-  },
+  }
 ];
 
 export const MIN_STAY_DAYS = 7; // Default minimum stay of 1 week
@@ -65,3 +59,4 @@ export const ROOM_MIN_STAY: { [key: string]: number } = {
   "twin-bathroom": 14, // 2 weeks minimum for 2 bedroom twin
   "triple-room": 25, // Whole time (25 days) for 2 bedroom triple
 };
+

@@ -56,7 +56,7 @@ const DATE_RANGES: DateRange[] = [
     id: "summit",
     name: "Zuitzerland Summit 2025",
     startDate: "2025-05-24",
-    endDate: "2025-05-25",
+    endDate: "2025-05-26",
     description: "Summit Weekend"
   }
 ];
