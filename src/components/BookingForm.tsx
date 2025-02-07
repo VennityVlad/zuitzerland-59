@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -9,8 +10,6 @@ import PersonalInfoFields from "./booking/PersonalInfoFields";
 import DateSelectionFields from "./booking/DateSelectionFields";
 import RoomSelectionFields from "./booking/RoomSelectionFields";
 import { supabase } from "@/integrations/supabase/client";
-
-const ZAPIER_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/15806559/2ai30w5/";
 
 const BookingForm = () => {
   const { toast } = useToast();
@@ -36,9 +35,10 @@ const BookingForm = () => {
 
   useEffect(() => {
     const fetchWebhookUrl = async () => {
-      const { data: { ZAPIER_WEBHOOK_URL }, error } = await supabase
+      const { data, error } = await supabase
         .from('secrets')
-        .select('ZAPIER_WEBHOOK_URL')
+        .select('value')
+        .eq('name', 'ZAPIER_WEBHOOK_URL')
         .single();
       
       if (error) {
@@ -51,7 +51,7 @@ const BookingForm = () => {
         return;
       }
       
-      setWebhookUrl(ZAPIER_WEBHOOK_URL);
+      setWebhookUrl(data.value);
     };
 
     fetchWebhookUrl();
