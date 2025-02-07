@@ -1,5 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Check } from "lucide-react";
 
 interface DateRange {
   id: string;
@@ -67,7 +68,10 @@ interface DateRangeSelectorProps {
 
 const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
   const handleValueChange = (value: string[]) => {
-    if (value.length === 0) return;
+    if (value.length === 0) {
+      onDateRangeChange("", "");
+      return;
+    }
     
     // Find the earliest start date and latest end date from selected ranges
     const selectedRanges = DATE_RANGES.filter(range => value.includes(range.id));
@@ -97,12 +101,17 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
               <TooltipTrigger asChild>
                 <ToggleGroupItem
                   value={range.id}
-                  className="w-full justify-start rounded-lg border border-gray-200 hover:border-hotel-gold transition-colors duration-200 data-[state=on]:border-hotel-gold data-[state=on]:bg-hotel-gold/5"
+                  className="group w-full justify-start rounded-lg border border-gray-200 hover:border-hotel-gold transition-colors duration-200 data-[state=on]:border-hotel-gold data-[state=on]:bg-hotel-gold/5"
                   aria-label={range.name}
                 >
                   <div className="flex flex-col p-4 w-full">
                     <div className="flex justify-between items-center w-full">
-                      <span className="font-semibold text-hotel-navy text-left">{range.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center group-data-[state=on]:bg-hotel-gold group-data-[state=on]:border-hotel-gold">
+                          <Check className="w-3.5 h-3.5 text-white opacity-0 group-data-[state=on]:opacity-100 transition-opacity" />
+                        </div>
+                        <span className="font-semibold text-hotel-navy text-left">{range.name}</span>
+                      </div>
                       <span className="text-sm text-gray-600 font-medium ml-4">
                         {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
                       </span>
