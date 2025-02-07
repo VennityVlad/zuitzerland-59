@@ -210,6 +210,21 @@ export const useBookingForm = () => {
     try {
       const { invoiceUid, paymentLink } = await createRequestFinanceInvoice();
       
+      // Convert BookingFormData to a plain object for JSON compatibility
+      const bookingDetailsJson = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        address: formData.address,
+        city: formData.city,
+        zip: formData.zip,
+        country: formData.country,
+        checkin: formData.checkin,
+        checkout: formData.checkout,
+        roomType: formData.roomType,
+        price: formData.price
+      };
+
       // Store invoice in Supabase
       const { error: insertError } = await supabase
         .from('invoices')
@@ -217,7 +232,7 @@ export const useBookingForm = () => {
           user_id: user?.id,
           invoice_uid: invoiceUid,
           payment_link: paymentLink,
-          booking_details: formData,
+          booking_details: bookingDetailsJson,
           price: formData.price,
           room_type: formData.roomType,
           checkin: formData.checkin,
