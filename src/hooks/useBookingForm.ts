@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -127,33 +126,65 @@ export const useBookingForm = () => {
     }
 
     const selectedCountry = countries.find(c => c.code === formData.country);
+    const creationDate = new Date().toISOString();
+    const dueDate = addDays(new Date(), 14).toISOString();
+    const invoiceNumber = `INV-${Date.now()}`;
+
     const invoiceData = {
-      payment: {
-        currency: "CHF",
-        amount: formData.price.toString(),
-        decimals: 2
-      },
-      payer: {
-        email: formData.email,
-        fullName: `${formData.firstName} ${formData.lastName}`,
+      creationDate,
+      invoiceItems: [
+        {
+          currency: "CHF",
+          name: `${formData.roomType} Room - Zuitzerland`,
+          quantity: 1,
+          tax: {
+            type: "percentage",
+            amount: 0
+          },
+          unitPrice: `${formData.price}00` // Adding 00 for cents as per the format
+        }
+      ],
+      invoiceNumber,
+      buyerInfo: {
         address: {
           streetAddress: formData.address,
           city: formData.city,
-          country: selectedCountry?.name || "",
-          postalCode: formData.zip
-        }
+          postalCode: formData.zip,
+          country: selectedCountry?.name || ""
+        },
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName
       },
-      contentData: {
-        reason: `Hotel Booking - ${formData.roomType}`,
-        dueDate: addDays(new Date(), 14).toISOString(),
-        items: [
-          {
-            name: `${formData.roomType} Room`,
-            quantity: 1,
-            unitPrice: formData.price.toString(),
-            amount: formData.price.toString()
+      paymentTerms: {
+        dueDate
+      },
+      paymentOptions: [
+        {
+          type: "wallet",
+          value: {
+            currencies: ["USDC-optimism"],
+            paymentInformation: {
+              paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
+              chain: "optimism"
+            }
           }
-        ]
+        },
+        {
+          type: "wallet",
+          value: {
+            currencies: ["ETH-optimism"],
+            paymentInformation: {
+              paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
+              chain: "optimism"
+            }
+          }
+        }
+      ],
+      tags: ["zapier_invoice"],
+      meta: {
+        format: "rnf_invoice",
+        version: "0.0.3"
       }
     };
 
@@ -167,6 +198,8 @@ export const useBookingForm = () => {
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Request Finance API error:', errorData);
       throw new Error('Failed to create invoice');
     }
 
