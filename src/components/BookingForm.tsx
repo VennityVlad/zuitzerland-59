@@ -179,10 +179,10 @@ const BookingForm = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-2xl mx-auto p-6 space-y-8 bg-white rounded-lg shadow-lg"
+      className="max-w-2xl mx-auto p-8 space-y-8 bg-white rounded-xl shadow-lg border border-secondary"
     >
       <div className="space-y-2">
-        <h2 className="text-3xl font-semibold text-hotel-navy">Hotel Booking</h2>
+        <h2 className="text-3xl font-semibold text-primary">Hotel Booking</h2>
         <p className="text-gray-500">
           Please fill in your details to complete your booking
         </p>
@@ -213,7 +213,7 @@ const BookingForm = () => {
 
       <Button
         type="submit"
-        className="w-full bg-hotel-navy hover:bg-hotel-navy/90"
+        className="w-full bg-primary hover:bg-primary/90 text-white"
         disabled={isLoading || !isFormValid}
       >
         {isLoading ? "Submitting..." : "Complete Booking"}
