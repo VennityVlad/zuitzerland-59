@@ -1,6 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check } from "lucide-react";
 
 interface DateRange {
   id: string;
@@ -101,17 +100,12 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
               <TooltipTrigger asChild>
                 <ToggleGroupItem
                   value={range.id}
-                  className="group w-full justify-start rounded-lg border border-gray-200 hover:border-hotel-gold transition-colors duration-200 data-[state=on]:border-hotel-gold data-[state=on]:bg-hotel-gold/5"
+                  className="group w-full justify-start rounded-lg border-2 border-transparent hover:border-hotel-gold/50 transition-colors duration-200 data-[state=on]:border-hotel-gold data-[state=on]:bg-hotel-gold/5"
                   aria-label={range.name}
                 >
                   <div className="flex flex-col p-4 w-full">
                     <div className="flex justify-between items-center w-full">
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center group-data-[state=on]:bg-hotel-gold group-data-[state=on]:border-hotel-gold">
-                          <Check className="w-3.5 h-3.5 text-white opacity-0 group-data-[state=on]:opacity-100 transition-opacity" />
-                        </div>
-                        <span className="font-semibold text-hotel-navy text-left">{range.name}</span>
-                      </div>
+                      <span className="font-semibold text-hotel-navy text-left">{range.name}</span>
                       <span className="text-sm text-gray-600 font-medium ml-4">
                         {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
                       </span>
