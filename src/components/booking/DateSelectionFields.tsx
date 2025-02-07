@@ -1,3 +1,4 @@
+
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,9 +18,9 @@ const DateSelectionFields = ({
   maxDate,
 }: DateSelectionFieldsProps) => {
   return (
-    <>
+    <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label htmlFor="checkin">Check-in Date</Label>
+        <Label htmlFor="checkin" className="text-gray-700">Check-in</Label>
         <div className="relative">
           <Input
             id="checkin"
@@ -30,14 +31,14 @@ const DateSelectionFields = ({
             max={maxDate}
             value={formData.checkin}
             onChange={handleInputChange}
-            className="date-picker"
+            className="date-picker pl-4 pr-10 py-5 text-gray-900"
           />
-          <CalendarIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+          <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="checkout">Check-out Date</Label>
+        <Label htmlFor="checkout" className="text-gray-700">Check-out</Label>
         <div className="relative">
           <Input
             id="checkout"
@@ -48,12 +49,12 @@ const DateSelectionFields = ({
             max={maxDate}
             value={formData.checkout}
             onChange={handleInputChange}
-            className="date-picker"
+            className="date-picker pl-4 pr-10 py-5 text-gray-900"
           />
-          <CalendarIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+          <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -19,34 +20,28 @@ const RoomSelectionFields = ({
   onRoomTypeChange,
 }: RoomSelectionFieldsProps) => {
   return (
-    <>
-      <div className="space-y-2">
-        <Label htmlFor="roomType">Room Type</Label>
-        <Select
-          name="roomType"
-          value={formData.roomType}
-          onValueChange={onRoomTypeChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a room type" />
-          </SelectTrigger>
-          <SelectContent>
-            {ROOM_TYPES.map((room) => (
-              <SelectItem key={room.id} value={room.id}>
-                {room.name} - ${room.pricePerNight}/night
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Total Price</Label>
-        <div className="h-10 px-3 py-2 rounded-md border bg-muted text-muted-foreground">
-          ${formData.price}
-        </div>
-      </div>
-    </>
+    <div className="space-y-2">
+      <Label htmlFor="roomType" className="text-gray-700">Room Type</Label>
+      <Select
+        name="roomType"
+        value={formData.roomType}
+        onValueChange={onRoomTypeChange}
+      >
+        <SelectTrigger className="w-full py-5">
+          <SelectValue placeholder="Select a room type" />
+        </SelectTrigger>
+        <SelectContent>
+          {ROOM_TYPES.map((room) => (
+            <SelectItem key={room.id} value={room.id}>
+              <div className="flex flex-col">
+                <span className="font-medium">{room.name}</span>
+                <span className="text-sm text-gray-500">${room.pricePerNight}/night</span>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
