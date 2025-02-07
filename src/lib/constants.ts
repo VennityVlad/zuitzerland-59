@@ -19,37 +19,37 @@ export const ROOM_TYPES: RoomType[] = [
     id: "queen-standard",
     name: "Hotel Room - Queen Bed (Daily Cleaning)",
     pricePerNight: PRICING_TABLE["queen-standard"][0],
-    description: "2 people in private room with daily cleaning, includes breakfast",
+    description: "2 people in private room incl. breakfast",
   },
   {
     id: "couples-suite",
-    name: "3 Bedroom Apartment - Couples Suite",
+    name: "3 Bedroom Apartment - Couples Room",
     pricePerNight: PRICING_TABLE["couples-suite"][0],
-    description: "Private entrance, two people including breakfast",
+    description: "Two people incl. breakfast, private entrance",
   },
   {
     id: "queen-shared",
-    name: "3-4 Bedroom Apartment - Queen Bed",
+    name: "3-4 Bedroom Apartment - Queen Bed Room",
     pricePerNight: PRICING_TABLE["queen-shared"][0],
-    description: "Single person, shared bathroom (2 bathrooms between 6-8 people), includes breakfast",
+    description: "Single person not sharing, two bathrooms between 6-8 people, includes breakfast",
   },
   {
     id: "twin-shared",
-    name: "3-4 Bedroom Apartment - Twin Bed",
+    name: "3-4 Bedroom Apartment - Twin Bed Room",
     pricePerNight: PRICING_TABLE["twin-shared"][0],
-    description: "Single person, shared bathroom (2 bathrooms between 6-8 people), includes breakfast",
+    description: "Single person, two bathrooms between 6-8 people, includes breakfast",
   },
   {
     id: "twin-bathroom",
-    name: "2 Bedroom Apartment - Twin Bed",
+    name: "2 Bedroom Apartment - Twin Bed Room",
     pricePerNight: PRICING_TABLE["twin-bathroom"][0],
-    description: "Single person, shared bathroom (1 bathroom between 5 people), includes breakfast",
+    description: "Single person, one bathroom between five people, includes breakfast",
   },
   {
     id: "triple-room",
-    name: "2 Bedroom Apartment - Triple Bed",
+    name: "2 Bedroom Apartment - Triple Bed Room",
     pricePerNight: PRICING_TABLE["triple-room"][0],
-    description: "Single person, shared bathroom (1 bathroom between 5 people), includes breakfast",
+    description: "Single person, one bathroom between five people, includes breakfast",
   }
 ];
 
