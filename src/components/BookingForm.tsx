@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format, addDays, differenceInDays } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { ROOM_TYPES, MIN_STAY_DAYS } from "@/lib/constants";
+import { ROOM_TYPES, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
 import PersonalInfoFields from "./booking/PersonalInfoFields";
 import DateSelectionFields from "./booking/DateSelectionFields";
@@ -24,16 +24,28 @@ const BookingForm = () => {
     price: 0,
   });
 
-  // Define the date constraints
   const minDate = "2025-05-01";
   const maxDate = "2025-05-25";
 
   const calculatePrice = (checkin: string, checkout: string, roomType: string) => {
     if (!checkin || !checkout || !roomType) return 0;
-    const room = ROOM_TYPES.find((r) => r.id === roomType);
-    if (!room) return 0;
+    
     const days = differenceInDays(new Date(checkout), new Date(checkin));
-    return days * room.pricePerNight;
+    if (days <= 0) return 0;
+    
+    // Get the pricing array for the selected room type
+    const priceArray = PRICING_TABLE[roomType];
+    if (!priceArray) return 0;
+    
+    // Calculate total price by summing up the daily rates for each day of stay
+    let totalPrice = 0;
+    for (let i = 0; i < days; i++) {
+      // Use the price for the current day (0-based index), or the last price if beyond 25 days
+      const dayPrice = priceArray[Math.min(i, priceArray.length - 1)];
+      totalPrice += dayPrice;
+    }
+    
+    return totalPrice;
   };
 
   const handleInputChange = (
