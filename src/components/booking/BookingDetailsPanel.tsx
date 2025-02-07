@@ -17,6 +17,7 @@ const BookingDetailsPanel = ({
   maxDate,
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
+  const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -26,11 +27,10 @@ const BookingDetailsPanel = ({
         );
         const data = await response.json();
         if (data.success && data.quotes) {
-          // The API returns USD as base, so we need to convert CHF to USD
-          const usdChfRate = data.quotes.USDCHF;
-          if (usdChfRate) {
-            // Convert CHF to USD: divide by USDCHF rate since we want CHF->USD
-            const convertedPrice = formData.price / usdChfRate;
+          const rate = data.quotes.USDCHF;
+          if (rate) {
+            setUsdChfRate(rate);
+            const convertedPrice = formData.price / rate;
             setUsdPrice(convertedPrice);
           }
         }
@@ -39,10 +39,15 @@ const BookingDetailsPanel = ({
       }
     };
 
-    if (formData.price > 0) {
+    // Only fetch the rate if we don't have it yet and there's a price to convert
+    if (formData.price > 0 && usdChfRate === null) {
       fetchExchangeRate();
+    } else if (formData.price > 0 && usdChfRate !== null) {
+      // If we already have the rate, just calculate the new price
+      const convertedPrice = formData.price / usdChfRate;
+      setUsdPrice(convertedPrice);
     }
-  }, [formData.price]);
+  }, [formData.price, usdChfRate]);
 
   return (
     <div className="p-6 bg-secondary/20 rounded-xl space-y-6">
