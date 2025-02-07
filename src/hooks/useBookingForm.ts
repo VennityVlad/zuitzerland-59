@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, addDays, differenceInDays } from "date-fns";
+import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ROOM_MIN_STAY, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
@@ -29,15 +29,24 @@ export const useBookingForm = () => {
   const calculatePrice = (checkin: string, checkout: string, roomType: string) => {
     if (!checkin || !checkout || !roomType) return 0;
     
-    const days = differenceInDays(new Date(checkout), new Date(checkin));
+    const startDate = parse(checkin, 'yyyy-MM-dd', new Date());
+    const endDate = parse(checkout, 'yyyy-MM-dd', new Date());
+    const days = differenceInDays(endDate, startDate);
+    
     if (days <= 0) return 0;
     
     const priceArray = PRICING_TABLE[roomType];
     if (!priceArray) return 0;
     
+    // Calculate the starting index in the pricing array (days since May 1st)
+    const mayFirst = new Date(2025, 4, 1); // May is month 4 (0-based)
+    const startIndex = differenceInDays(startDate, mayFirst);
+    
     let totalPrice = 0;
     for (let i = 0; i < days; i++) {
-      const dayPrice = priceArray[Math.min(i, priceArray.length - 1)];
+      const dayIndex = startIndex + i;
+      // Use the last price in the array if we go beyond the array length
+      const dayPrice = priceArray[Math.min(dayIndex, priceArray.length - 1)];
       totalPrice += dayPrice;
     }
     

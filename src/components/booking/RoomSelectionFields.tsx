@@ -1,4 +1,3 @@
-
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -35,7 +34,6 @@ const RoomSelectionFields = ({
             <SelectItem key={room.id} value={room.id}>
               <div className="flex flex-col">
                 <span className="font-medium">{room.name}</span>
-                <span className="text-sm text-gray-500">${room.pricePerNight}/night</span>
               </div>
             </SelectItem>
           ))}
