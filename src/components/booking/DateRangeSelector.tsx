@@ -100,11 +100,13 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
                   className="w-full justify-start rounded-lg border border-gray-200 hover:border-hotel-gold transition-colors duration-200 data-[state=on]:border-hotel-gold data-[state=on]:bg-hotel-gold/5"
                   aria-label={range.name}
                 >
-                  <div className="flex justify-between items-center p-4 w-full">
-                    <span className="font-semibold text-hotel-navy">{range.name}</span>
-                    <span className="text-sm text-gray-600 font-medium">
-                      {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
-                    </span>
+                  <div className="flex flex-col p-4 w-full">
+                    <div className="flex justify-between items-center w-full">
+                      <span className="font-semibold text-hotel-navy text-left">{range.name}</span>
+                      <span className="text-sm text-gray-600 font-medium ml-4">
+                        {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
+                      </span>
+                    </div>
                   </div>
                 </ToggleGroupItem>
               </TooltipTrigger>
