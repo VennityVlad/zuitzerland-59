@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <PrivyProvider
-      appId={process.env.VITE_PRIVY_APP_ID || ''}
+      appId={import.meta.env.VITE_PRIVY_APP_ID || ''}
       config={{
         loginMethods: ['email', 'google'],
         appearance: {
