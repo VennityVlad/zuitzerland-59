@@ -10,6 +10,8 @@ import PersonalInfoFields from "./booking/PersonalInfoFields";
 import DateSelectionFields from "./booking/DateSelectionFields";
 import RoomSelectionFields from "./booking/RoomSelectionFields";
 
+const ZAPIER_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/15806559/2ai30w5/";
+
 const BookingForm = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -151,7 +153,7 @@ const BookingForm = () => {
     };
 
     try {
-      await fetch("https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/", {
+      await fetch(ZAPIER_WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
