@@ -80,28 +80,31 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="pb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Select Your Program Dates</h3>
-        <p className="text-sm text-gray-500">Choose one or more program periods to attend</p>
+    <div className="space-y-4 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+      <div className="border-b pb-4">
+        <h3 className="text-xl font-semibold text-hotel-navy">Select Your Program Dates</h3>
+        <p className="text-sm text-gray-600 mt-1">Choose one or more program periods to attend</p>
       </div>
       <ToggleGroup 
         type="multiple" 
-        className="flex flex-col gap-2"
+        className="flex flex-col gap-3"
         onValueChange={handleValueChange}
       >
         {DATE_RANGES.map((range) => (
           <ToggleGroupItem
             key={range.id}
             value={range.id}
-            className="w-full justify-start gap-4 p-4 data-[state=on]:bg-secondary/50"
+            className="w-full justify-start rounded-lg border border-gray-200 hover:border-hotel-gold transition-colors duration-200 data-[state=on]:border-hotel-gold data-[state=on]:bg-hotel-gold/5"
+            aria-label={range.name}
           >
-            <div className="flex flex-col">
-              <span className="font-medium">{range.name}</span>
-              <span className="text-sm text-gray-500">
-                {range.startDate} - {range.endDate}
-              </span>
-              <span className="text-sm text-gray-600 mt-1">{range.description}</span>
+            <div className="flex flex-col p-4 w-full">
+              <div className="flex justify-between items-start mb-2">
+                <span className="font-semibold text-hotel-navy">{range.name}</span>
+                <span className="text-sm text-gray-600 font-medium">
+                  {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
+                </span>
+              </div>
+              <span className="text-sm text-gray-600">{range.description}</span>
             </div>
           </ToggleGroupItem>
         ))}
