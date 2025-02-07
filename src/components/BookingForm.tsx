@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +8,7 @@ import type { BookingFormData } from "@/types/booking";
 import PersonalInfoFields from "./booking/PersonalInfoFields";
 import DateSelectionFields from "./booking/DateSelectionFields";
 import RoomSelectionFields from "./booking/RoomSelectionFields";
+import { supabase } from "@/lib/supabaseClient";
 
 const ZAPIER_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/15806559/2ai30w5/";
 
@@ -17,6 +17,7 @@ const BookingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState<string>("");
   const [formData, setFormData] = useState<BookingFormData>({
     name: "",
     email: "",
@@ -32,6 +33,29 @@ const BookingForm = () => {
 
   const minDate = "2025-05-01";
   const maxDate = "2025-05-25";
+
+  useEffect(() => {
+    const fetchWebhookUrl = async () => {
+      const { data: { ZAPIER_WEBHOOK_URL }, error } = await supabase
+        .from('secrets')
+        .select('ZAPIER_WEBHOOK_URL')
+        .single();
+      
+      if (error) {
+        console.error('Error fetching webhook URL:', error);
+        toast({
+          title: "Configuration Error",
+          description: "There was an error loading the booking configuration.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setWebhookUrl(ZAPIER_WEBHOOK_URL);
+    };
+
+    fetchWebhookUrl();
+  }, []);
 
   const calculatePrice = (checkin: string, checkout: string, roomType: string) => {
     if (!checkin || !checkout || !roomType) return 0;
@@ -70,14 +94,11 @@ const BookingForm = () => {
   };
 
   const validateForm = () => {
-    // Check if all required fields are filled
     const requiredFields = ['name', 'email', 'address', 'city', 'zip', 'country', 'checkin', 'checkout', 'roomType'] as const;
     const allFieldsFilled = requiredFields.every(field => formData[field]);
     
-    // Check email format
     const isEmailValid = validateEmail(formData.email);
 
-    // Check minimum stay if dates and room type are selected
     let stayValidation = null;
     if (formData.checkin && formData.checkout && formData.roomType) {
       const days = differenceInDays(new Date(formData.checkout), new Date(formData.checkin));
@@ -124,6 +145,16 @@ const BookingForm = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    if (!webhookUrl) {
+      toast({
+        title: "Configuration Error",
+        description: "Booking system is not properly configured.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const days = differenceInDays(
       new Date(formData.checkout),
       new Date(formData.checkin)
@@ -153,7 +184,7 @@ const BookingForm = () => {
     };
 
     try {
-      await fetch(ZAPIER_WEBHOOK_URL, {
+      await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
