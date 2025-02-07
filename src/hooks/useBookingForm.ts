@@ -12,7 +12,7 @@ import { usePrivy } from "@privy-io/react-auth";
 export const useBookingForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user } = usePrivy();
+  const { user, authenticated } = usePrivy();
   const [isLoading, setIsLoading] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
@@ -122,6 +122,10 @@ export const useBookingForm = () => {
   };
 
   const createRequestFinanceInvoice = async () => {
+    if (!requestFinanceApiKey) {
+      throw new Error('API key not configured');
+    }
+
     const selectedCountry = countries.find(c => c.code === formData.country);
     const invoiceData = {
       payment: {
@@ -252,27 +256,35 @@ export const useBookingForm = () => {
 
   useEffect(() => {
     const fetchApiKey = async () => {
-      const { data, error } = await supabase
-        .from('secrets')
-        .select('value')
-        .eq('name', 'REQUEST_FINANCE_API_KEY')
-        .single();
+      if (!authenticated) return;
       
-      if (error) {
+      try {
+        const { data, error } = await supabase
+          .from('secrets')
+          .select('value')
+          .eq('name', 'REQUEST_FINANCE_API_KEY')
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error fetching API key:', error);
+          toast({
+            title: "Configuration Error",
+            description: "There was an error loading the invoice configuration.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (data) {
+          setRequestFinanceApiKey(data.value);
+        }
+      } catch (error) {
         console.error('Error fetching API key:', error);
-        toast({
-          title: "Configuration Error",
-          description: "There was an error loading the invoice configuration.",
-          variant: "destructive",
-        });
-        return;
       }
-      
-      setRequestFinanceApiKey(data.value);
     };
 
     fetchApiKey();
-  }, []);
+  }, [authenticated]);
 
   return {
     formData,
