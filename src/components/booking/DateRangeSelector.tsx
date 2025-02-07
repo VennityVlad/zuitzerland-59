@@ -1,4 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DateRange {
   id: string;
@@ -85,30 +86,35 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
         <h3 className="text-xl font-semibold text-hotel-navy">Select Your Program Dates</h3>
         <p className="text-sm text-gray-600 mt-1">Choose one or more program periods to attend</p>
       </div>
-      <ToggleGroup 
-        type="multiple" 
-        className="flex flex-col gap-3"
-        onValueChange={handleValueChange}
-      >
-        {DATE_RANGES.map((range) => (
-          <ToggleGroupItem
-            key={range.id}
-            value={range.id}
-            className="w-full justify-start rounded-lg border border-gray-200 hover:border-hotel-gold transition-colors duration-200 data-[state=on]:border-hotel-gold data-[state=on]:bg-hotel-gold/5"
-            aria-label={range.name}
-          >
-            <div className="flex flex-col p-4 w-full">
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-semibold text-hotel-navy">{range.name}</span>
-                <span className="text-sm text-gray-600 font-medium">
-                  {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
-                </span>
-              </div>
-              <span className="text-sm text-gray-600">{range.description}</span>
-            </div>
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+      <TooltipProvider>
+        <ToggleGroup 
+          type="multiple" 
+          className="flex flex-col gap-3"
+          onValueChange={handleValueChange}
+        >
+          {DATE_RANGES.map((range) => (
+            <Tooltip key={range.id}>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem
+                  value={range.id}
+                  className="w-full justify-start rounded-lg border border-gray-200 hover:border-hotel-gold transition-colors duration-200 data-[state=on]:border-hotel-gold data-[state=on]:bg-hotel-gold/5"
+                  aria-label={range.name}
+                >
+                  <div className="flex justify-between items-center p-4 w-full">
+                    <span className="font-semibold text-hotel-navy">{range.name}</span>
+                    <span className="text-sm text-gray-600 font-medium">
+                      {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
+                    </span>
+                  </div>
+                </ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-sm">{range.description}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </ToggleGroup>
+      </TooltipProvider>
     </div>
   );
 };
