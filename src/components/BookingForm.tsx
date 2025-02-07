@@ -8,7 +8,7 @@ import type { BookingFormData } from "@/types/booking";
 import PersonalInfoFields from "./booking/PersonalInfoFields";
 import DateSelectionFields from "./booking/DateSelectionFields";
 import RoomSelectionFields from "./booking/RoomSelectionFields";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 
 const ZAPIER_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/15806559/2ai30w5/";
 
