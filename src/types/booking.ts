@@ -1,3 +1,4 @@
+
 export interface RoomType {
   id: string;
   name: string;
@@ -6,7 +7,8 @@ export interface RoomType {
 }
 
 export interface BookingFormData {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   address: string;
   city: string;

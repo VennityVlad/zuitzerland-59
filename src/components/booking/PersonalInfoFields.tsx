@@ -1,3 +1,4 @@
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { BookingFormData } from "@/types/booking";
@@ -11,12 +12,23 @@ const PersonalInfoFields = ({ formData, handleInputChange }: PersonalInfoFieldsP
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="name">Full Name</Label>
+        <Label htmlFor="firstName">First Name</Label>
         <Input
-          id="name"
-          name="name"
+          id="firstName"
+          name="firstName"
           required
-          value={formData.name}
+          value={formData.firstName}
+          onChange={handleInputChange}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="lastName">Last Name</Label>
+        <Input
+          id="lastName"
+          name="lastName"
+          required
+          value={formData.lastName}
           onChange={handleInputChange}
         />
       </div>

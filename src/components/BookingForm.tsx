@@ -18,7 +18,8 @@ const BookingForm = () => {
   const [isFormValid, setIsFormValid] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState<string>("");
   const [formData, setFormData] = useState<BookingFormData>({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     address: "",
     city: "",
@@ -94,7 +95,7 @@ const BookingForm = () => {
   };
 
   const validateForm = () => {
-    const requiredFields = ['name', 'email', 'address', 'city', 'zip', 'country', 'checkin', 'checkout', 'roomType'] as const;
+    const requiredFields = ['firstName', 'lastName', 'email', 'address', 'city', 'zip', 'country', 'checkin', 'checkout', 'roomType'] as const;
     const allFieldsFilled = requiredFields.every(field => formData[field]);
     
     const isEmailValid = validateEmail(formData.email);
@@ -173,14 +174,14 @@ const BookingForm = () => {
 
     const creationDate = new Date().toISOString();
     const dueDate = addDays(new Date(), 14).toISOString();
-    const invoiceNumber = `INV-${formData.name.replace(/\s+/g, "")}`;
+    const invoiceNumber = `INV-${formData.firstName}${formData.lastName}`.replace(/\s+/g, "");
 
     const fullData = {
       ...formData,
       creationDate,
       dueDate,
       invoiceNumber,
-      price: `$${formData.price}`,
+      price: formData.price, // Remove $ symbol, just send the number
     };
 
     try {
