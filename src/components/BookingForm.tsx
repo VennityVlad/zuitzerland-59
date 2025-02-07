@@ -1,19 +1,12 @@
 import { useState } from "react";
 import { format, addDays, differenceInDays } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ROOM_TYPES, MIN_STAY_DAYS } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
+import PersonalInfoFields from "./booking/PersonalInfoFields";
+import DateSelectionFields from "./booking/DateSelectionFields";
+import RoomSelectionFields from "./booking/RoomSelectionFields";
 
 const BookingForm = () => {
   const { toast } = useToast();
@@ -65,11 +58,16 @@ const BookingForm = () => {
     });
   };
 
+  const handleRoomTypeChange = (value: string) => {
+    handleInputChange({
+      target: { name: "roomType", value },
+    } as React.ChangeEvent<HTMLSelectElement>);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate minimum stay
     const days = differenceInDays(
       new Date(formData.checkout),
       new Date(formData.checkin)
@@ -84,7 +82,6 @@ const BookingForm = () => {
       return;
     }
 
-    // Generate additional fields
     const creationDate = new Date().toISOString();
     const dueDate = addDays(new Date(), 14).toISOString();
     const invoiceNumber = `INV-${formData.name.replace(/\s+/g, "")}`;
@@ -98,17 +95,14 @@ const BookingForm = () => {
     };
 
     try {
-      const response = await fetch(
-        "https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          mode: "no-cors",
-          body: JSON.stringify(fullData),
-        }
-      );
+      await fetch("https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        mode: "no-cors",
+        body: JSON.stringify(fullData),
+      });
 
       toast({
         title: "Booking Submitted",
@@ -139,141 +133,20 @@ const BookingForm = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Personal Information Fields */}
-        <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
-          <Input
-            id="name"
-            name="name"
-            required
-            value={formData.name}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            required
-            value={formData.email}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Input
-            id="address"
-            name="address"
-            required
-            value={formData.address}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input
-            id="city"
-            name="city"
-            required
-            value={formData.city}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="zip">ZIP Code</Label>
-          <Input
-            id="zip"
-            name="zip"
-            required
-            value={formData.zip}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="country">Country</Label>
-          <Input
-            id="country"
-            name="country"
-            required
-            value={formData.country}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        {/* Date Selection Fields */}
-        <div className="space-y-2">
-          <Label htmlFor="checkin">Check-in Date</Label>
-          <div className="relative">
-            <Input
-              id="checkin"
-              name="checkin"
-              type="date"
-              required
-              min={minDate}
-              max={maxDate}
-              value={formData.checkin}
-              onChange={handleInputChange}
-              className="date-picker"
-            />
-            <CalendarIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="checkout">Check-out Date</Label>
-          <div className="relative">
-            <Input
-              id="checkout"
-              name="checkout"
-              type="date"
-              required
-              min={formData.checkin || minDate}
-              max={maxDate}
-              value={formData.checkout}
-              onChange={handleInputChange}
-              className="date-picker"
-            />
-            <CalendarIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="roomType">Room Type</Label>
-          <Select
-            name="roomType"
-            value={formData.roomType}
-            onValueChange={(value) =>
-              handleInputChange({
-                target: { name: "roomType", value },
-              } as React.ChangeEvent<HTMLSelectElement>)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a room type" />
-            </SelectTrigger>
-            <SelectContent>
-              {ROOM_TYPES.map((room) => (
-                <SelectItem key={room.id} value={room.id}>
-                  {room.name} - ${room.pricePerNight}/night
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Total Price</Label>
-          <div className="h-10 px-3 py-2 rounded-md border bg-muted text-muted-foreground">
-            ${formData.price}
-          </div>
-        </div>
+        <PersonalInfoFields
+          formData={formData}
+          handleInputChange={handleInputChange}
+        />
+        <DateSelectionFields
+          formData={formData}
+          handleInputChange={handleInputChange}
+          minDate={minDate}
+          maxDate={maxDate}
+        />
+        <RoomSelectionFields
+          formData={formData}
+          onRoomTypeChange={handleRoomTypeChange}
+        />
       </div>
 
       <Button
