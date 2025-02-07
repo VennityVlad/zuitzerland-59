@@ -9,6 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      invoices: {
+        Row: {
+          booking_details: Json
+          checkin: string
+          checkout: string
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          invoice_uid: string
+          last_name: string
+          payment_link: string
+          price: number
+          room_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          booking_details: Json
+          checkin: string
+          checkout: string
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          invoice_uid: string
+          last_name: string
+          payment_link: string
+          price: number
+          room_type: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          booking_details?: Json
+          checkin?: string
+          checkout?: string
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          invoice_uid?: string
+          last_name?: string
+          payment_link?: string
+          price?: number
+          room_type?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       secrets: {
         Row: {
           created_at: string
