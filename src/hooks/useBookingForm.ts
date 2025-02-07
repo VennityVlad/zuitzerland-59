@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -5,13 +6,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { ROOM_MIN_STAY, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
 import { countries } from "@/lib/countries";
+import { useNavigate } from "react-router-dom";
+import { usePrivy } from "@privy-io/react-auth";
 
 export const useBookingForm = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = usePrivy();
   const [isLoading, setIsLoading] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState<string>("");
+  const [requestFinanceApiKey, setRequestFinanceApiKey] = useState<string>("");
   const [formData, setFormData] = useState<BookingFormData>({
     firstName: "",
     lastName: "",
@@ -116,14 +121,66 @@ export const useBookingForm = () => {
     }));
   };
 
+  const createRequestFinanceInvoice = async () => {
+    const selectedCountry = countries.find(c => c.code === formData.country);
+    const invoiceData = {
+      payment: {
+        currency: "CHF",
+        amount: formData.price.toString(),
+        decimals: 2
+      },
+      payer: {
+        email: formData.email,
+        fullName: `${formData.firstName} ${formData.lastName}`,
+        address: {
+          streetAddress: formData.address,
+          city: formData.city,
+          country: selectedCountry?.name || "",
+          postalCode: formData.zip
+        }
+      },
+      contentData: {
+        reason: `Hotel Booking - ${formData.roomType}`,
+        dueDate: addDays(new Date(), 14).toISOString(),
+        items: [
+          {
+            name: `${formData.roomType} Room`,
+            quantity: 1,
+            unitPrice: formData.price.toString(),
+            amount: formData.price.toString()
+          }
+        ]
+      }
+    };
+
+    const response = await fetch('https://api.request.finance/invoices', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${requestFinanceApiKey}`
+      },
+      body: JSON.stringify(invoiceData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create invoice');
+    }
+
+    const data = await response.json();
+    return {
+      invoiceUid: data.uid,
+      paymentLink: data.paymentLink
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!webhookUrl) {
+    if (!requestFinanceApiKey) {
       toast({
         title: "Configuration Error",
-        description: "Booking system is not properly configured.",
+        description: "Invoice system is not properly configured.",
         variant: "destructive",
       });
       setIsLoading(false);
@@ -146,37 +203,37 @@ export const useBookingForm = () => {
       return;
     }
 
-    const creationDate = new Date().toISOString();
-    const dueDate = addDays(new Date(), 14).toISOString();
-    const invoiceNumber = `INV-${formData.firstName}${formData.lastName}`.replace(/\s+/g, "");
-
-    // Find the country name for the selected code
-    const selectedCountry = countries.find(c => c.code === formData.country);
-
-    const fullData = {
-      ...formData,
-      creationDate,
-      dueDate,
-      invoiceNumber,
-      price: formData.price,
-      countryCode: formData.country,
-      countryName: selectedCountry?.name || "",
-    };
-
     try {
-      await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        mode: "no-cors",
-        body: JSON.stringify(fullData),
-      });
+      const { invoiceUid, paymentLink } = await createRequestFinanceInvoice();
+      
+      // Store invoice in Supabase
+      const { error: insertError } = await supabase
+        .from('invoices')
+        .insert({
+          user_id: user?.id,
+          invoice_uid: invoiceUid,
+          payment_link: paymentLink,
+          booking_details: formData,
+          price: formData.price,
+          room_type: formData.roomType,
+          checkin: formData.checkin,
+          checkout: formData.checkout,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email
+        });
+
+      if (insertError) {
+        throw insertError;
+      }
 
       toast({
         title: "Booking Submitted",
         description: "Your booking has been successfully submitted!",
       });
+
+      // Redirect to invoices page
+      navigate('/invoices');
     } catch (error) {
       console.error("Error submitting booking:", error);
       toast({
@@ -194,27 +251,27 @@ export const useBookingForm = () => {
   }, [formData]);
 
   useEffect(() => {
-    const fetchWebhookUrl = async () => {
+    const fetchApiKey = async () => {
       const { data, error } = await supabase
         .from('secrets')
         .select('value')
-        .eq('name', 'ZAPIER_WEBHOOK_URL')
+        .eq('name', 'REQUEST_FINANCE_API_KEY')
         .single();
       
       if (error) {
-        console.error('Error fetching webhook URL:', error);
+        console.error('Error fetching API key:', error);
         toast({
           title: "Configuration Error",
-          description: "There was an error loading the booking configuration.",
+          description: "There was an error loading the invoice configuration.",
           variant: "destructive",
         });
         return;
       }
       
-      setWebhookUrl(data.value);
+      setRequestFinanceApiKey(data.value);
     };
 
-    fetchWebhookUrl();
+    fetchApiKey();
   }, []);
 
   return {
