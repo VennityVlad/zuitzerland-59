@@ -14,6 +14,7 @@ const BookingForm = () => {
     validationWarning,
     handleInputChange,
     handleSubmit,
+    handleCountryChange,
   } = useBookingForm();
 
   const minDate = "2025-05-01";
@@ -46,6 +47,7 @@ const BookingForm = () => {
             <PersonalInfoFields
               formData={formData}
               handleInputChange={handleInputChange}
+              onCountryChange={handleCountryChange}
             />
           </div>
         </div>

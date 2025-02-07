@@ -1,14 +1,27 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { countries } from "@/lib/countries";
 import type { BookingFormData } from "@/types/booking";
 
 interface PersonalInfoFieldsProps {
   formData: BookingFormData;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onCountryChange?: (value: string) => void;
 }
 
-const PersonalInfoFields = ({ formData, handleInputChange }: PersonalInfoFieldsProps) => {
+const PersonalInfoFields = ({ 
+  formData, 
+  handleInputChange,
+  onCountryChange 
+}: PersonalInfoFieldsProps) => {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -90,14 +103,22 @@ const PersonalInfoFields = ({ formData, handleInputChange }: PersonalInfoFieldsP
 
       <div className="space-y-2">
         <Label htmlFor="country" className="text-gray-700">Country</Label>
-        <Input
-          id="country"
+        <Select
           name="country"
-          required
           value={formData.country}
-          onChange={handleInputChange}
-          className="py-5"
-        />
+          onValueChange={onCountryChange}
+        >
+          <SelectTrigger className="w-full py-5">
+            <SelectValue placeholder="Select a country" />
+          </SelectTrigger>
+          <SelectContent>
+            {countries.map((country) => (
+              <SelectItem key={country.code} value={country.code}>
+                {country.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </>
   );

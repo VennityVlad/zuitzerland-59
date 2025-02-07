@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -79,7 +78,7 @@ export const useBookingForm = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -98,6 +97,13 @@ export const useBookingForm = () => {
       }
       return newData;
     });
+  };
+
+  const handleCountryChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      country: value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -203,5 +209,6 @@ export const useBookingForm = () => {
     validationWarning,
     handleInputChange,
     handleSubmit,
+    handleCountryChange,
   };
 };
