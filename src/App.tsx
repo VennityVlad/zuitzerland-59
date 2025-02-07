@@ -66,7 +66,7 @@ const App = () => {
       <PrivyProvider
         appId={privyAppId}
         config={{
-          loginMethods: ['email', 'google'],
+          loginMethods: ['email'], // Removed Google login until configured
           appearance: {
             theme: 'light',
             accentColor: '#1a365d', // hotel-navy color
