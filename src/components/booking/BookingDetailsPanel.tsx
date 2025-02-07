@@ -1,7 +1,7 @@
-
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import type { BookingFormData } from "@/types/booking";
+import { useState, useEffect } from "react";
 
 interface BookingDetailsPanelProps {
   formData: BookingFormData;
@@ -16,6 +16,29 @@ const BookingDetailsPanel = ({
   minDate,
   maxDate,
 }: BookingDetailsPanelProps) => {
+  const [usdPrice, setUsdPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+        const response = await fetch(
+          `http://apilayer.net/api/live?access_key=d62c3d3b99d1601f68580196f699fdf0&currencies=USD,CHF&source=CHF&format=1`
+        );
+        const data = await response.json();
+        if (data.success && data.quotes) {
+          const rate = data.quotes.CHFUSD;
+          setUsdPrice(formData.price * rate);
+        }
+      } catch (error) {
+        console.error("Error fetching exchange rate:", error);
+      }
+    };
+
+    if (formData.price > 0) {
+      fetchExchangeRate();
+    }
+  }, [formData.price]);
+
   return (
     <div className="p-6 bg-secondary/20 rounded-xl space-y-6">
       <div className="pb-4 border-b border-gray-200">
@@ -47,8 +70,14 @@ const BookingDetailsPanel = ({
         <div className="pt-4 mt-4 border-t border-gray-200">
           <div className="flex justify-between items-center text-lg font-semibold">
             <span>Total Price</span>
-            <span>${formData.price}</span>
+            <span>CHF {formData.price}</span>
           </div>
+          {usdPrice && (
+            <div className="flex justify-between items-center text-sm text-gray-500 mt-1">
+              <span>Approx USD</span>
+              <span>${usdPrice.toFixed(2)}</span>
+            </div>
+          )}
           <p className="text-sm text-gray-500 mt-1">Includes taxes and fees</p>
         </div>
       </div>
