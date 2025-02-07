@@ -21,7 +21,13 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { authenticated, ready } = usePrivy();
 
-  if (!ready) return null;
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
   
   if (!authenticated) {
     return <Navigate to="/signin" replace />;
@@ -74,10 +80,10 @@ const App = () => {
       <PrivyProvider
         appId={privyAppId}
         config={{
-          loginMethods: ['email'], // Removed Google login until configured
+          loginMethods: ['email'],
           appearance: {
             theme: 'light',
-            accentColor: '#1a365d', // hotel-navy color
+            accentColor: '#1a365d',
             logo: '/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png',
           },
         }}
@@ -112,7 +118,7 @@ const App = () => {
                   </ProtectedRoute>
                 }
               />
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<Navigate to="/signin" replace />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
