@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ROOM_MIN_STAY, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
+import { countries } from "@/lib/countries";
 
 export const useBookingForm = () => {
   const { toast } = useToast();
@@ -140,12 +141,17 @@ export const useBookingForm = () => {
     const dueDate = addDays(new Date(), 14).toISOString();
     const invoiceNumber = `INV-${formData.firstName}${formData.lastName}`.replace(/\s+/g, "");
 
+    // Find the country name for the selected code
+    const selectedCountry = countries.find(c => c.code === formData.country);
+
     const fullData = {
       ...formData,
       creationDate,
       dueDate,
       invoiceNumber,
       price: formData.price,
+      countryCode: formData.country,
+      countryName: selectedCountry?.name || "",
     };
 
     try {
