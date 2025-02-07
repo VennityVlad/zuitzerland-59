@@ -59,4 +59,9 @@ export const ROOM_TYPES: RoomType[] = [
   },
 ];
 
-export const MIN_STAY_DAYS = 7;
+export const MIN_STAY_DAYS = 7; // Default minimum stay of 1 week
+
+export const ROOM_MIN_STAY: { [key: string]: number } = {
+  "twin-bathroom": 14, // 2 weeks minimum for 2 bedroom twin
+  "triple-room": 25, // Whole time (25 days) for 2 bedroom triple
+};

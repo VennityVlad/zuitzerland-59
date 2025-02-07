@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format, addDays, differenceInDays } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { ROOM_TYPES, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
+import { ROOM_TYPES, MIN_STAY_DAYS, PRICING_TABLE, ROOM_MIN_STAY } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
 import PersonalInfoFields from "./booking/PersonalInfoFields";
 import DateSelectionFields from "./booking/DateSelectionFields";
@@ -76,6 +76,18 @@ const BookingForm = () => {
     } as React.ChangeEvent<HTMLSelectElement>);
   };
 
+  const validateMinimumStay = (days: number, roomType: string): string | null => {
+    const minimumStay = ROOM_MIN_STAY[roomType] || MIN_STAY_DAYS;
+    
+    if (days < minimumStay) {
+      const weekText = minimumStay === 7 ? "1 week" : 
+                      minimumStay === 14 ? "2 weeks" : 
+                      "the entire period";
+      return `This room type requires a minimum stay of ${weekText}`;
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -84,10 +96,12 @@ const BookingForm = () => {
       new Date(formData.checkout),
       new Date(formData.checkin)
     );
-    if (days < MIN_STAY_DAYS) {
+
+    const validationError = validateMinimumStay(days, formData.roomType);
+    if (validationError) {
       toast({
         title: "Validation Error",
-        description: `Minimum stay is ${MIN_STAY_DAYS} days`,
+        description: validationError,
         variant: "destructive",
       });
       setIsLoading(false);
