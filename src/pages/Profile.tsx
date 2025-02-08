@@ -40,6 +40,12 @@ const Profile = () => {
       if (!user?.id) return;
 
       try {
+        // First, set the auth context for Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await supabase.auth.setSession(session);
+        }
+
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -103,6 +109,11 @@ const Profile = () => {
       if (!user?.id) return;
       setUploading(true);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase.auth.setSession(session);
+      }
+
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.');
       }
@@ -156,6 +167,12 @@ const Profile = () => {
     if (!user?.id) return;
 
     try {
+      // Set auth context for Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase.auth.setSession(session);
+      }
+
       console.log('Updating profile with values:', values);
       
       const { error: updateError } = await supabase
