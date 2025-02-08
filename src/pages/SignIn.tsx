@@ -27,10 +27,11 @@ const SignIn = () => {
           return;
         }
 
-        // Create new profile
+        // Create new profile with a generated UUID as id
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
+            id: crypto.randomUUID(), // Generate a UUID for the profile
             privy_id: user.id,
             email: user.email?.address || null,
             username: null  // This will trigger the generate_username() function
