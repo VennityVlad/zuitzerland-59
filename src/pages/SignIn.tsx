@@ -23,19 +23,12 @@ const SignIn = () => {
           .maybeSingle();
 
         if (!existingProfile) {
-          // Get display name from various sources
-          const displayName = user.google?.name || 
-                            user.twitter?.name || 
-                            user.email?.address?.split('@')[0] || 
-                            null;
-
           // Create new profile
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
               id: user.id,
               email: user.email?.address || null,
-              full_name: displayName,
               username: null  // This will trigger the generate_username() function
             });
 
