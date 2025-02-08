@@ -51,7 +51,30 @@ const Profile = () => {
           throw error;
         }
 
-        if (data) {
+        if (!data) {
+          // Create new profile if it doesn't exist
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: crypto.randomUUID(),
+              privy_id: user.id,
+              email: user.email?.address || null,
+              username: null  // This will trigger the generate_username() function
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            throw createError;
+          }
+
+          setProfileData(newProfile);
+          form.reset({
+            username: newProfile.username || "",
+            description: newProfile.description || "",
+          });
+        } else {
           setProfileData(data);
           form.reset({
             username: data.username || "",
