@@ -20,6 +20,9 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+// Helper function to clean Privy ID to UUID
+const cleanPrivyId = (privyId: string) => privyId.replace('did:privy:', '');
+
 const Profile = () => {
   const { user } = usePrivy();
   const { toast } = useToast();
@@ -40,11 +43,12 @@ const Profile = () => {
       if (!user?.id) return;
 
       try {
-        console.log('Fetching profile for user:', user.id);
+        const cleanUserId = cleanPrivyId(user.id);
+        console.log('Fetching profile for user:', cleanUserId);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', cleanUserId)
           .maybeSingle();
 
         if (error) {
@@ -83,9 +87,10 @@ const Profile = () => {
         throw new Error('You must select an image to upload.');
       }
 
+      const cleanUserId = cleanPrivyId(user?.id || '');
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const filePath = `${user?.id}/${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${cleanUserId}/${crypto.randomUUID()}.${fileExt}`;
 
       console.log('Uploading file to path:', filePath);
 
@@ -104,7 +109,7 @@ const Profile = () => {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
-        .eq('id', user?.id);
+        .eq('id', cleanUserId);
 
       if (updateError) {
         throw updateError;
@@ -133,12 +138,13 @@ const Profile = () => {
 
     try {
       console.log('Updating profile with values:', values);
+      const cleanUserId = cleanPrivyId(user.id);
       
       // Check if profile exists first
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id')
-        .eq('id', user.id)
+        .eq('id', cleanUserId)
         .maybeSingle();
 
       if (!existingProfile) {
@@ -146,7 +152,7 @@ const Profile = () => {
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({
-            id: user.id,
+            id: cleanUserId,
             email: user.email?.address || null,
             username: values.username,
             description: values.description,
@@ -165,7 +171,7 @@ const Profile = () => {
             description: values.description,
             email: user.email?.address || null,
           })
-          .eq('id', user.id);
+          .eq('id', cleanUserId);
 
         if (updateError) {
           console.error('Error updating profile:', updateError);
@@ -182,7 +188,7 @@ const Profile = () => {
       const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', cleanUserId)
         .maybeSingle();
         
       if (fetchError) {
