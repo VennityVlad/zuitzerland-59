@@ -121,7 +121,10 @@ export const useBookingForm = () => {
   };
 
   const createRequestFinanceInvoice = async () => {
+    console.log('Starting invoice creation with API key:', requestFinanceApiKey ? 'Present' : 'Missing');
+    
     if (!requestFinanceApiKey) {
+      console.error('API key not found in configuration');
       throw new Error('API key not configured');
     }
 
@@ -188,26 +191,37 @@ export const useBookingForm = () => {
       }
     };
 
-    const response = await fetch('https://api.request.finance/invoices', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${requestFinanceApiKey}`
-      },
-      body: JSON.stringify(invoiceData)
-    });
+    console.log('Sending invoice data:', JSON.stringify(invoiceData, null, 2));
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Request Finance API error:', errorData);
-      throw new Error('Failed to create invoice');
+    try {
+      const response = await fetch('https://api.request.finance/invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${requestFinanceApiKey}`
+        },
+        body: JSON.stringify(invoiceData)
+      });
+
+      console.log('API Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Request Finance API error details:', errorData);
+        throw new Error(`Failed to create invoice: ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json();
+      console.log('API Response data:', data);
+      
+      return {
+        invoiceUid: data.uid,
+        paymentLink: data.paymentLink
+      };
+    } catch (error) {
+      console.error('Error in createRequestFinanceInvoice:', error);
+      throw error;
     }
-
-    const data = await response.json();
-    return {
-      invoiceUid: data.uid,
-      paymentLink: data.paymentLink
-    };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -304,9 +318,13 @@ export const useBookingForm = () => {
 
   useEffect(() => {
     const fetchApiKey = async () => {
-      if (!authenticated) return;
+      if (!authenticated) {
+        console.log('User not authenticated, skipping API key fetch');
+        return;
+      }
       
       try {
+        console.log('Fetching API key from Supabase');
         const { data, error } = await supabase
           .from('secrets')
           .select('value')
@@ -324,10 +342,13 @@ export const useBookingForm = () => {
         }
         
         if (data) {
+          console.log('API key fetched successfully');
           setRequestFinanceApiKey(data.value);
+        } else {
+          console.error('No API key found in secrets table');
         }
       } catch (error) {
-        console.error('Error fetching API key:', error);
+        console.error('Error in fetchApiKey:', error);
       }
     };
 
