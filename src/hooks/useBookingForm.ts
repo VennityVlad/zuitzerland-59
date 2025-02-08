@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -146,7 +147,7 @@ export const useBookingForm = () => {
           streetAddress: formData.address,
           city: formData.city,
           postalCode: formData.zip,
-          country: formData.country // Now using the country code directly from the form
+          country: formData.country
         },
         email: formData.email,
         firstName: formData.firstName,
@@ -242,11 +243,23 @@ export const useBookingForm = () => {
         price: formData.price
       };
 
-      // Store invoice in Supabase
+      // First, try to get the profile ID for the current user
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user?.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        throw new Error('Failed to fetch user profile');
+      }
+
+      // Store invoice in Supabase using the profile ID
       const { error: insertError } = await supabase
         .from('invoices')
         .insert({
-          user_id: user?.id,
+          user_id: profileData.id,
           invoice_uid: invoiceUid,
           payment_link: paymentLink,
           booking_details: bookingDetailsJson,
