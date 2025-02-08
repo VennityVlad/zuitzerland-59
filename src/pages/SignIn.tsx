@@ -5,39 +5,33 @@ import { LogIn } from "lucide-react";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { v4 as uuidv4 } from "uuid";
 
 const SignIn = () => {
   const { login, authenticated, ready, user } = usePrivy();
   const { toast } = useToast();
 
   useEffect(() => {
-    const createProfileAndMapping = async () => {
+    const createProfile = async () => {
       if (!user) return;
 
       try {
-        const privyId = user.id.replace('did:privy:', '');
-        
-        // Check if mapping already exists
-        const { data: existingMapping } = await supabase
-          .from('user_mappings')
-          .select('internal_id')
-          .eq('privy_id', privyId)
+        // Check if profile already exists
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('privy_id', user.id)
           .maybeSingle();
 
-        if (existingMapping) {
-          // If mapping exists, we're done
+        if (existingProfile) {
+          // If profile exists, we're done
           return;
         }
 
-        // Generate a new internal UUID for this user
-        const internalId = uuidv4();
-        
         // Create new profile
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
-            id: internalId,
+            privy_id: user.id,
             email: user.email?.address || null,
             username: null  // This will trigger the generate_username() function
           });
@@ -47,21 +41,8 @@ const SignIn = () => {
           throw profileError;
         }
 
-        // Create mapping between Privy ID and internal UUID
-        const { error: mappingError } = await supabase
-          .from('user_mappings')
-          .insert({
-            privy_id: privyId,
-            internal_id: internalId
-          });
-
-        if (mappingError) {
-          console.error('Error creating user mapping:', mappingError);
-          throw mappingError;
-        }
-
       } catch (error) {
-        console.error('Error in profile/mapping creation:', error);
+        console.error('Error in profile creation:', error);
         toast({
           title: "Error",
           description: "Something went wrong",
@@ -71,7 +52,7 @@ const SignIn = () => {
     };
 
     if (authenticated && user) {
-      createProfileAndMapping();
+      createProfile();
     }
   }, [authenticated, user]);
 

@@ -68,6 +68,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          privy_id: string | null
           updated_at: string
           username: string | null
         }
@@ -78,6 +79,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          privy_id?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -88,6 +90,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          privy_id?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -113,35 +116,6 @@ export type Database = {
           value?: string
         }
         Relationships: []
-      }
-      user_mappings: {
-        Row: {
-          created_at: string
-          id: string
-          internal_id: string
-          privy_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          internal_id: string
-          privy_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          internal_id?: string
-          privy_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_profile"
-            columns: ["internal_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {

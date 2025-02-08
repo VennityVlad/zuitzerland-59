@@ -26,7 +26,6 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
-  const [internalId, setInternalId] = useState<string>("");
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -37,50 +36,14 @@ const Profile = () => {
   });
 
   useEffect(() => {
-    const fetchUserMapping = async () => {
+    const fetchProfile = async () => {
       if (!user?.id) return;
 
       try {
-        const privyId = user.id.replace('did:privy:', '');
-        const { data: mapping, error: mappingError } = await supabase
-          .from('user_mappings')
-          .select('internal_id')
-          .eq('privy_id', privyId)
-          .maybeSingle();
-
-        if (mappingError) {
-          console.error('Error fetching user mapping:', mappingError);
-          throw mappingError;
-        }
-
-        if (mapping) {
-          setInternalId(mapping.internal_id);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load user data",
-          variant: "destructive",
-        });
-      }
-    };
-
-    if (user?.id) {
-      fetchUserMapping();
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!internalId) return;
-
-      try {
-        console.log('Fetching profile for user:', internalId);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', internalId)
+          .eq('privy_id', user.id)
           .maybeSingle();
 
         if (error) {
@@ -88,7 +51,6 @@ const Profile = () => {
           throw error;
         }
 
-        console.log('Profile data:', data);
         if (data) {
           setProfileData(data);
           form.reset({
@@ -97,7 +59,7 @@ const Profile = () => {
           });
         }
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error:', error);
         toast({
           title: "Error",
           description: "Failed to load profile data",
@@ -108,13 +70,14 @@ const Profile = () => {
       }
     };
 
-    if (internalId) {
+    if (user?.id) {
       fetchProfile();
     }
-  }, [internalId]);
+  }, [user?.id]);
 
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
+      if (!user?.id) return;
       setUploading(true);
 
       if (!event.target.files || event.target.files.length === 0) {
@@ -123,7 +86,7 @@ const Profile = () => {
 
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const filePath = `${internalId}/${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
       console.log('Uploading file to path:', filePath);
 
@@ -142,7 +105,7 @@ const Profile = () => {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
-        .eq('id', internalId);
+        .eq('privy_id', user.id);
 
       if (updateError) {
         throw updateError;
@@ -167,7 +130,7 @@ const Profile = () => {
   };
 
   const onSubmit = async (values: ProfileFormValues) => {
-    if (!internalId) return;
+    if (!user?.id) return;
 
     try {
       console.log('Updating profile with values:', values);
@@ -179,7 +142,7 @@ const Profile = () => {
           description: values.description,
           email: user?.email?.address || null,
         })
-        .eq('id', internalId);
+        .eq('privy_id', user.id);
 
       if (updateError) {
         console.error('Error updating profile:', updateError);
@@ -195,7 +158,7 @@ const Profile = () => {
       const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', internalId)
+        .eq('privy_id', user.id)
         .maybeSingle();
         
       if (fetchError) {
