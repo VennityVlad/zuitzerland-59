@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Upload } from "lucide-react";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
@@ -24,6 +25,7 @@ const Profile = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -70,6 +72,57 @@ const Profile = () => {
     fetchProfile();
   }, [user?.id]);
 
+  const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+
+      if (!event.target.files || event.target.files.length === 0) {
+        throw new Error('You must select an image to upload.');
+      }
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user?.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Update local state
+      setProfileData(prev => ({ ...prev, avatar_url: publicUrl }));
+
+      toast({
+        title: "Success",
+        description: "Avatar updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Error uploading avatar",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user?.id) return;
 
@@ -81,7 +134,6 @@ const Profile = () => {
           description: values.description,
           email: user.email?.address || null,
           full_name: user.google?.name || user.twitter?.username || user.email?.address?.split('@')[0] || null,
-          avatar_url: user.picture || null, // Using picture instead of avatarUrl
         })
         .eq('id', user.id);
 
@@ -133,12 +185,28 @@ const Profile = () => {
         
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex items-center gap-6 mb-8">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={profileData?.avatar_url} />
-              <AvatarFallback>
-                {profileData?.full_name?.charAt(0) || profileData?.email?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={profileData?.avatar_url} />
+                <AvatarFallback>
+                  {profileData?.full_name?.charAt(0) || profileData?.email?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <label 
+                className="absolute bottom-0 right-0 p-1 bg-white rounded-full shadow-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                htmlFor="avatar-upload"
+              >
+                <Upload className="h-4 w-4" />
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={uploadAvatar}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
             <div>
               <h1 className="text-2xl font-semibold text-hotel-navy">
                 {profileData?.full_name || 'Your Profile'}
