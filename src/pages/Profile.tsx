@@ -82,7 +82,10 @@ const Profile = () => {
 
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+      // Create a path that starts with the user's ID
+      const filePath = `${user?.id}/${crypto.randomUUID()}.${fileExt}`;
+
+      console.log('Uploading file to path:', filePath);
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -113,6 +116,7 @@ const Profile = () => {
         description: "Avatar updated successfully",
       });
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Error",
         description: "Error uploading avatar",
