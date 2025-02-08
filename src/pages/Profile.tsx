@@ -133,19 +133,44 @@ const Profile = () => {
 
     try {
       console.log('Updating profile with values:', values);
-      const { error } = await supabase
+      
+      // Check if profile exists first
+      const { data: existingProfile } = await supabase
         .from('profiles')
-        .update({
-          username: values.username,
-          description: values.description,
-          email: user.email?.address || null,
-          full_name: user.google?.name || user.twitter?.username || user.email?.address?.split('@')[0] || null,
-        })
-        .eq('id', user.id);
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error updating profile:', error);
-        throw error;
+      if (!existingProfile) {
+        // Create new profile with form data
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email?.address || null,
+            username: values.username,
+            description: values.description,
+          });
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+          throw insertError;
+        }
+      } else {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            username: values.username,
+            description: values.description,
+            email: user.email?.address || null,
+          })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Error updating profile:', updateError);
+          throw updateError;
+        }
       }
 
       toast({
@@ -279,3 +304,4 @@ const Profile = () => {
 };
 
 export default Profile;
+
