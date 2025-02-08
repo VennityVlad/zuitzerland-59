@@ -81,7 +81,7 @@ const Profile = () => {
           description: values.description,
           email: user.email?.address || null,
           full_name: user.google?.name || user.twitter?.username || user.email?.address?.split('@')[0] || null,
-          avatar_url: user.avatarUrl || null,
+          avatar_url: user.picture || null, // Using picture instead of avatarUrl
         })
         .eq('id', user.id);
 
