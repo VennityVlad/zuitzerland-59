@@ -29,8 +29,9 @@ const SignIn = () => {
             .insert({
               id: user.id,
               email: user.email?.address || null,
-              full_name: user.twitter?.username || user.google?.name || user.email?.address?.split('@')[0] || null,
-              avatar_url: user.avatarUrl || null
+              full_name: user.google?.name || user.twitter?.username || user.email?.address?.split('@')[0] || null,
+              avatar_url: user.avatarUrl || null,
+              username: null  // This will trigger the generate_username() function
             });
 
           if (insertError) {

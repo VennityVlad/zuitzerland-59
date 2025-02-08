@@ -44,7 +44,9 @@ const Profile = () => {
           .eq('id', user.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
 
         if (data) {
           setProfileData(data);
@@ -74,8 +76,7 @@ const Profile = () => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
+        .update({
           username: values.username,
           description: values.description,
           email: user.email?.address || null,
