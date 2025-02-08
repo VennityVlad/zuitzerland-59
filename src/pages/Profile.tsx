@@ -12,7 +12,6 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
-import { v4 as uuidv4 } from "uuid";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
@@ -27,7 +26,7 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
-  const [profileId, setProfileId] = useState<string>("");
+  const [internalId, setInternalId] = useState<string>("");
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -38,33 +37,50 @@ const Profile = () => {
   });
 
   useEffect(() => {
-    // Generate or retrieve a stable UUID for this user
-    const getOrCreateProfileId = () => {
-      const storedId = localStorage.getItem(`profile_id_${user?.id}`);
-      if (storedId) {
-        return storedId;
+    const fetchUserMapping = async () => {
+      if (!user?.id) return;
+
+      try {
+        const privyId = user.id.replace('did:privy:', '');
+        const { data: mapping, error: mappingError } = await supabase
+          .from('user_mappings')
+          .select('internal_id')
+          .eq('privy_id', privyId)
+          .maybeSingle();
+
+        if (mappingError) {
+          console.error('Error fetching user mapping:', mappingError);
+          throw mappingError;
+        }
+
+        if (mapping) {
+          setInternalId(mapping.internal_id);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load user data",
+          variant: "destructive",
+        });
       }
-      const newId = uuidv4();
-      localStorage.setItem(`profile_id_${user?.id}`, newId);
-      return newId;
     };
 
     if (user?.id) {
-      const uuid = getOrCreateProfileId();
-      setProfileId(uuid);
+      fetchUserMapping();
     }
   }, [user?.id]);
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!profileId) return;
+      if (!internalId) return;
 
       try {
-        console.log('Fetching profile for user:', profileId);
+        console.log('Fetching profile for user:', internalId);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', profileId)
+          .eq('id', internalId)
           .maybeSingle();
 
         if (error) {
@@ -92,10 +108,10 @@ const Profile = () => {
       }
     };
 
-    if (profileId) {
+    if (internalId) {
       fetchProfile();
     }
-  }, [profileId]);
+  }, [internalId]);
 
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -107,7 +123,7 @@ const Profile = () => {
 
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const filePath = `${profileId}/${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${internalId}/${crypto.randomUUID()}.${fileExt}`;
 
       console.log('Uploading file to path:', filePath);
 
@@ -126,7 +142,7 @@ const Profile = () => {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
-        .eq('id', profileId);
+        .eq('id', internalId);
 
       if (updateError) {
         throw updateError;
@@ -151,48 +167,23 @@ const Profile = () => {
   };
 
   const onSubmit = async (values: ProfileFormValues) => {
-    if (!profileId) return;
+    if (!internalId) return;
 
     try {
       console.log('Updating profile with values:', values);
       
-      // Check if profile exists first
-      const { data: existingProfile } = await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('id', profileId)
-        .maybeSingle();
+        .update({
+          username: values.username,
+          description: values.description,
+          email: user?.email?.address || null,
+        })
+        .eq('id', internalId);
 
-      if (!existingProfile) {
-        // Create new profile with form data
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: profileId,
-            email: user?.email?.address || null,
-            username: values.username,
-            description: values.description,
-          });
-
-        if (insertError) {
-          console.error('Error creating profile:', insertError);
-          throw insertError;
-        }
-      } else {
-        // Update existing profile
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            username: values.username,
-            description: values.description,
-            email: user?.email?.address || null,
-          })
-          .eq('id', profileId);
-
-        if (updateError) {
-          console.error('Error updating profile:', updateError);
-          throw updateError;
-        }
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        throw updateError;
       }
 
       toast({
@@ -204,7 +195,7 @@ const Profile = () => {
       const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', profileId)
+        .eq('id', internalId)
         .maybeSingle();
         
       if (fetchError) {

@@ -114,6 +114,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_mappings: {
+        Row: {
+          created_at: string
+          id: string
+          internal_id: string
+          privy_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          internal_id: string
+          privy_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          internal_id?: string
+          privy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_profile"
+            columns: ["internal_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -12,41 +12,56 @@ const SignIn = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const createProfile = async () => {
+    const createProfileAndMapping = async () => {
       if (!user) return;
 
       try {
-        // Generate a proper UUID for the profile
-        const profileId = uuidv4();
+        const privyId = user.id.replace('did:privy:', '');
         
-        // Check if profile already exists
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', profileId)
+        // Check if mapping already exists
+        const { data: existingMapping } = await supabase
+          .from('user_mappings')
+          .select('internal_id')
+          .eq('privy_id', privyId)
           .maybeSingle();
 
-        if (!existingProfile) {
-          // Create new profile
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: profileId,
-              email: user.email?.address || null,
-              username: null  // This will trigger the generate_username() function
-            });
-
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-            toast({
-              title: "Error",
-              description: "Failed to create user profile",
-              variant: "destructive",
-            });
-          }
+        if (existingMapping) {
+          // If mapping exists, we're done
+          return;
         }
+
+        // Generate a new internal UUID for this user
+        const internalId = uuidv4();
+        
+        // Create new profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: internalId,
+            email: user.email?.address || null,
+            username: null  // This will trigger the generate_username() function
+          });
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          throw profileError;
+        }
+
+        // Create mapping between Privy ID and internal UUID
+        const { error: mappingError } = await supabase
+          .from('user_mappings')
+          .insert({
+            privy_id: privyId,
+            internal_id: internalId
+          });
+
+        if (mappingError) {
+          console.error('Error creating user mapping:', mappingError);
+          throw mappingError;
+        }
+
       } catch (error) {
-        console.error('Error in profile creation:', error);
+        console.error('Error in profile/mapping creation:', error);
         toast({
           title: "Error",
           description: "Something went wrong",
@@ -56,7 +71,7 @@ const SignIn = () => {
     };
 
     if (authenticated && user) {
-      createProfile();
+      createProfileAndMapping();
     }
   }, [authenticated, user]);
 
