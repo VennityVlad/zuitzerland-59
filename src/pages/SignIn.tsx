@@ -23,14 +23,25 @@ const SignIn = () => {
           .maybeSingle();
 
         if (!existingProfile) {
+          // Get display name from various sources
+          const displayName = user.google?.name || 
+                            user.twitter?.name || 
+                            user.email?.address?.split('@')[0] || 
+                            null;
+
+          // Get avatar from various sources
+          const avatarUrl = user.googleProfilePicture || 
+                          user.twitterProfilePicture || 
+                          null;
+
           // Create new profile
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
               id: user.id,
               email: user.email?.address || null,
-              full_name: user.google?.name || user.twitter?.username || user.email?.address?.split('@')[0] || null,
-              avatar_url: user.google?.picture || user.twitter?.profileImageUrl || null,
+              full_name: displayName,
+              avatar_url: avatarUrl,
               username: null  // This will trigger the generate_username() function
             });
 

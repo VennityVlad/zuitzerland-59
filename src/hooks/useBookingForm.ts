@@ -226,6 +226,24 @@ export const useBookingForm = () => {
     }
 
     try {
+      // First ensure we have a profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user?.id)
+        .maybeSingle();
+
+      if (profileError || !profileData) {
+        console.error('Error fetching profile:', profileError);
+        toast({
+          title: "Error",
+          description: "Please sign in again to complete your profile setup",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const { invoiceUid, paymentLink } = await createRequestFinanceInvoice();
       
       // Convert BookingFormData to a plain object for JSON compatibility
@@ -242,18 +260,6 @@ export const useBookingForm = () => {
         roomType: formData.roomType,
         price: formData.price
       };
-
-      // First, try to get the profile ID for the current user
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user?.id)
-        .single();
-
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        throw new Error('Failed to fetch user profile');
-      }
 
       // Store invoice in Supabase using the profile ID
       const { error: insertError } = await supabase
