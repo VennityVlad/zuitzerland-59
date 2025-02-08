@@ -42,7 +42,7 @@ const Profile = () => {
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
@@ -74,9 +74,13 @@ const Profile = () => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
           username: values.username,
           description: values.description,
+          email: user.email?.address || null,
+          full_name: user.google?.name || user.twitter?.username || user.email?.address?.split('@')[0] || null,
+          avatar_url: user.avatarUrl || null,
         })
         .eq('id', user.id);
 
@@ -86,6 +90,17 @@ const Profile = () => {
         title: "Success",
         description: "Profile updated successfully",
       });
+      
+      // Refresh profile data after update
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+        
+      if (updatedProfile) {
+        setProfileData(updatedProfile);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
