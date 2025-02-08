@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -123,7 +122,6 @@ export const useBookingForm = () => {
   const createRequestFinanceInvoice = async () => {
     console.log('Starting invoice creation');
     
-    const selectedCountry = countries.find(c => c.code === formData.country);
     const creationDate = new Date().toISOString();
     const dueDate = addDays(new Date(), 14).toISOString();
     const invoiceNumber = `INV-${Date.now()}`;
@@ -148,7 +146,7 @@ export const useBookingForm = () => {
           streetAddress: formData.address,
           city: formData.city,
           postalCode: formData.zip,
-          country: selectedCountry?.name || ""
+          country: formData.country // Now using the country code directly from the form
         },
         email: formData.email,
         firstName: formData.firstName,
