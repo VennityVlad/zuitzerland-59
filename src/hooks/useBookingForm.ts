@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +16,6 @@ export const useBookingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
-  const [requestFinanceApiKey, setRequestFinanceApiKey] = useState<string>("");
   const [formData, setFormData] = useState<BookingFormData>({
     firstName: "",
     lastName: "",
@@ -121,13 +121,8 @@ export const useBookingForm = () => {
   };
 
   const createRequestFinanceInvoice = async () => {
-    console.log('Starting invoice creation with API key:', requestFinanceApiKey ? 'Present' : 'Missing');
+    console.log('Starting invoice creation');
     
-    if (!requestFinanceApiKey) {
-      console.error('API key not found in configuration');
-      throw new Error('API key not configured');
-    }
-
     const selectedCountry = countries.find(c => c.code === formData.country);
     const creationDate = new Date().toISOString();
     const dueDate = addDays(new Date(), 14).toISOString();
@@ -191,33 +186,20 @@ export const useBookingForm = () => {
       }
     };
 
-    console.log('Sending invoice data:', JSON.stringify(invoiceData, null, 2));
+    console.log('Sending invoice data to edge function:', JSON.stringify(invoiceData, null, 2));
 
     try {
-      const response = await fetch('https://api.request.finance/invoices', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${requestFinanceApiKey}`
-        },
-        body: JSON.stringify(invoiceData)
+      const { data, error } = await supabase.functions.invoke('create-invoice', {
+        body: { invoiceData }
       });
 
-      console.log('API Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Request Finance API error details:', errorData);
-        throw new Error(`Failed to create invoice: ${JSON.stringify(errorData)}`);
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error('Failed to create invoice');
       }
 
-      const data = await response.json();
-      console.log('API Response data:', data);
-      
-      return {
-        invoiceUid: data.uid,
-        paymentLink: data.paymentLink
-      };
+      console.log('Edge function response:', data);
+      return data;
     } catch (error) {
       console.error('Error in createRequestFinanceInvoice:', error);
       throw error;
@@ -227,16 +209,6 @@ export const useBookingForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    if (!requestFinanceApiKey) {
-      toast({
-        title: "Configuration Error",
-        description: "Invoice system is not properly configured.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
 
     const days = differenceInDays(
       new Date(formData.checkout),
@@ -315,45 +287,6 @@ export const useBookingForm = () => {
   useEffect(() => {
     validateForm();
   }, [formData]);
-
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      if (!authenticated) {
-        console.log('User not authenticated, skipping API key fetch');
-        return;
-      }
-      
-      try {
-        console.log('Fetching API key from Supabase');
-        const { data, error } = await supabase
-          .from('secrets')
-          .select('value')
-          .eq('name', 'REQUEST_FINANCE_API_KEY')
-          .maybeSingle();
-        
-        if (error) {
-          console.error('Error fetching API key:', error);
-          toast({
-            title: "Configuration Error",
-            description: "There was an error loading the invoice configuration.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        if (data) {
-          console.log('API key fetched successfully');
-          setRequestFinanceApiKey(data.value);
-        } else {
-          console.error('No API key found in secrets table');
-        }
-      } catch (error) {
-        console.error('Error in fetchApiKey:', error);
-      }
-    };
-
-    fetchApiKey();
-  }, [authenticated]);
 
   return {
     formData,
