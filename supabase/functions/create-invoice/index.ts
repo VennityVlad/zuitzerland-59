@@ -29,9 +29,9 @@ serve(async (req) => {
     const response = await fetch('https://api.request.finance/invoices', {
       method: 'POST',
       headers: {
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${requestFinanceApiKey}`,
-        'X-Network': 'optimism'  // Adding the required X-Network header
+        'Authorization': requestFinanceApiKey
       },
       body: JSON.stringify(invoiceData)
     });
