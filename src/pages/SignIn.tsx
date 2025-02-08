@@ -2,9 +2,60 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const SignIn = () => {
-  const { login, authenticated, ready } = usePrivy();
+  const { login, authenticated, ready, user } = usePrivy();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const createProfile = async () => {
+      if (!user) return;
+
+      try {
+        // Check if profile already exists
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          // Create new profile
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email?.address || null,
+              full_name: user.twitter?.username || user.google?.name || user.email?.address?.split('@')[0] || null,
+              avatar_url: user.avatarUrl || null
+            });
+
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+            toast({
+              title: "Error",
+              description: "Failed to create user profile",
+              variant: "destructive",
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error in profile creation:', error);
+        toast({
+          title: "Error",
+          description: "Something went wrong",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (authenticated && user) {
+      createProfile();
+    }
+  }, [authenticated, user]);
 
   if (!ready) {
     return (
