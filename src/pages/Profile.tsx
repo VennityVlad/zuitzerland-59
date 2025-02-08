@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
@@ -20,15 +21,13 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-// Helper function to clean Privy ID to UUID
-const cleanPrivyId = (privyId: string) => privyId.replace('did:privy:', '');
-
 const Profile = () => {
   const { user } = usePrivy();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
+  const [profileId, setProfileId] = useState<string>("");
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -39,16 +38,33 @@ const Profile = () => {
   });
 
   useEffect(() => {
+    // Generate or retrieve a stable UUID for this user
+    const getOrCreateProfileId = () => {
+      const storedId = localStorage.getItem(`profile_id_${user?.id}`);
+      if (storedId) {
+        return storedId;
+      }
+      const newId = uuidv4();
+      localStorage.setItem(`profile_id_${user?.id}`, newId);
+      return newId;
+    };
+
+    if (user?.id) {
+      const uuid = getOrCreateProfileId();
+      setProfileId(uuid);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
     const fetchProfile = async () => {
-      if (!user?.id) return;
+      if (!profileId) return;
 
       try {
-        const cleanUserId = cleanPrivyId(user.id);
-        console.log('Fetching profile for user:', cleanUserId);
+        console.log('Fetching profile for user:', profileId);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', cleanUserId)
+          .eq('id', profileId)
           .maybeSingle();
 
         if (error) {
@@ -76,8 +92,10 @@ const Profile = () => {
       }
     };
 
-    fetchProfile();
-  }, [user?.id]);
+    if (profileId) {
+      fetchProfile();
+    }
+  }, [profileId]);
 
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -87,10 +105,9 @@ const Profile = () => {
         throw new Error('You must select an image to upload.');
       }
 
-      const cleanUserId = cleanPrivyId(user?.id || '');
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const filePath = `${cleanUserId}/${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${profileId}/${crypto.randomUUID()}.${fileExt}`;
 
       console.log('Uploading file to path:', filePath);
 
@@ -109,7 +126,7 @@ const Profile = () => {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
-        .eq('id', cleanUserId);
+        .eq('id', profileId);
 
       if (updateError) {
         throw updateError;
@@ -134,17 +151,16 @@ const Profile = () => {
   };
 
   const onSubmit = async (values: ProfileFormValues) => {
-    if (!user?.id) return;
+    if (!profileId) return;
 
     try {
       console.log('Updating profile with values:', values);
-      const cleanUserId = cleanPrivyId(user.id);
       
       // Check if profile exists first
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id')
-        .eq('id', cleanUserId)
+        .eq('id', profileId)
         .maybeSingle();
 
       if (!existingProfile) {
@@ -152,8 +168,8 @@ const Profile = () => {
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({
-            id: cleanUserId,
-            email: user.email?.address || null,
+            id: profileId,
+            email: user?.email?.address || null,
             username: values.username,
             description: values.description,
           });
@@ -169,9 +185,9 @@ const Profile = () => {
           .update({
             username: values.username,
             description: values.description,
-            email: user.email?.address || null,
+            email: user?.email?.address || null,
           })
-          .eq('id', cleanUserId);
+          .eq('id', profileId);
 
         if (updateError) {
           console.error('Error updating profile:', updateError);
@@ -188,7 +204,7 @@ const Profile = () => {
       const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', cleanUserId)
+        .eq('id', profileId)
         .maybeSingle();
         
       if (fetchError) {

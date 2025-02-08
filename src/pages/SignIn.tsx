@@ -5,6 +5,7 @@ import { LogIn } from "lucide-react";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from "uuid";
 
 const SignIn = () => {
   const { login, authenticated, ready, user } = usePrivy();
@@ -15,11 +16,14 @@ const SignIn = () => {
       if (!user) return;
 
       try {
+        // Generate a proper UUID for the profile
+        const profileId = uuidv4();
+        
         // Check if profile already exists
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('id')
-          .eq('id', user.id)
+          .eq('id', profileId)
           .maybeSingle();
 
         if (!existingProfile) {
@@ -27,7 +31,7 @@ const SignIn = () => {
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
-              id: user.id,
+              id: profileId,
               email: user.email?.address || null,
               username: null  // This will trigger the generate_username() function
             });
