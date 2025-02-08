@@ -29,11 +29,6 @@ const SignIn = () => {
                             user.email?.address?.split('@')[0] || 
                             null;
 
-          // Get avatar from various sources
-          const avatarUrl = user.google?.picture || 
-                          user.twitter?.profileImageUrl || 
-                          null;
-
           // Create new profile
           const { error: insertError } = await supabase
             .from('profiles')
@@ -41,7 +36,6 @@ const SignIn = () => {
               id: user.id,
               email: user.email?.address || null,
               full_name: displayName,
-              avatar_url: avatarUrl,
               username: null  // This will trigger the generate_username() function
             });
 
