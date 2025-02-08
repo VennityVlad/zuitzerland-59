@@ -30,8 +30,8 @@ const SignIn = () => {
                             null;
 
           // Get avatar from various sources
-          const avatarUrl = user.googleProfilePicture || 
-                          user.twitterProfilePicture || 
+          const avatarUrl = user.google?.picture || 
+                          user.twitter?.profileImageUrl || 
                           null;
 
           // Create new profile
