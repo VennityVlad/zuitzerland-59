@@ -64,26 +64,32 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          description: string | null
           email: string | null
           full_name: string | null
           id: string
           updated_at: string
+          username: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          description?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           updated_at?: string
+          username?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          description?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
