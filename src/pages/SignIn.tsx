@@ -30,7 +30,7 @@ const SignIn = () => {
               id: user.id,
               email: user.email?.address || null,
               full_name: user.twitter?.username || user.google?.name || user.email?.address?.split('@')[0] || null,
-              avatar_url: user.avatarUrl || null
+              avatar_url: user.picture || null
             });
 
           if (insertError) {

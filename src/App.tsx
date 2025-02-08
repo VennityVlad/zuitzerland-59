@@ -10,6 +10,7 @@ import SignIn from "./pages/SignIn";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Invoices from "./pages/Invoices";
+import Book from "./pages/Book";
 import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
@@ -17,7 +18,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
-// Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { authenticated, ready } = usePrivy();
 
@@ -99,6 +99,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Index />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/book"
+                element={
+                  <ProtectedRoute>
+                    <Book />
                   </ProtectedRoute>
                 }
               />

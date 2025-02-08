@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, User, FileText, LogOut } from "lucide-react";
+import { Menu, User, FileText, LogOut, CalendarDays } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const NavMenu = () => {
@@ -23,6 +23,10 @@ const NavMenu = () => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={() => navigate("/book")} className="cursor-pointer">
+            <CalendarDays className="mr-2 h-4 w-4" />
+            Book
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />
             Profile
