@@ -40,6 +40,7 @@ const Profile = () => {
       if (!user?.id) return;
 
       try {
+        console.log('Fetching profile for user:', user.id);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -47,9 +48,11 @@ const Profile = () => {
           .maybeSingle();
 
         if (error) {
+          console.error('Error fetching profile:', error);
           throw error;
         }
 
+        console.log('Profile data:', data);
         if (data) {
           setProfileData(data);
           form.reset({
@@ -82,7 +85,6 @@ const Profile = () => {
 
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      // Create a path that starts with the user's ID
       const filePath = `${user?.id}/${crypto.randomUUID()}.${fileExt}`;
 
       console.log('Uploading file to path:', filePath);
@@ -108,7 +110,6 @@ const Profile = () => {
         throw updateError;
       }
 
-      // Update local state
       setProfileData(prev => ({ ...prev, avatar_url: publicUrl }));
 
       toast({
@@ -131,6 +132,7 @@ const Profile = () => {
     if (!user?.id) return;
 
     try {
+      console.log('Updating profile with values:', values);
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -141,7 +143,10 @@ const Profile = () => {
         })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating profile:', error);
+        throw error;
+      }
 
       toast({
         title: "Success",
@@ -149,13 +154,19 @@ const Profile = () => {
       });
       
       // Refresh profile data after update
-      const { data: updatedProfile } = await supabase
+      const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
         
+      if (fetchError) {
+        console.error('Error fetching updated profile:', fetchError);
+        throw fetchError;
+      }
+
       if (updatedProfile) {
+        console.log('Updated profile data:', updatedProfile);
         setProfileData(updatedProfile);
       }
     } catch (error) {
