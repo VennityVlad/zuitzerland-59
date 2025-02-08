@@ -30,7 +30,7 @@ const SignIn = () => {
               id: user.id,
               email: user.email?.address || null,
               full_name: user.google?.name || user.twitter?.username || user.email?.address?.split('@')[0] || null,
-              avatar_url: user.picture || null, // Using picture instead of avatarUrl
+              avatar_url: user.google?.picture || user.twitter?.profileImageUrl || null,
               username: null  // This will trigger the generate_username() function
             });
 

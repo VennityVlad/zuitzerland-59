@@ -30,7 +30,8 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${requestFinanceApiKey}`
+        'Authorization': `Bearer ${requestFinanceApiKey}`,
+        'X-Network': 'optimism'  // Adding the required X-Network header
       },
       body: JSON.stringify(invoiceData)
     });
