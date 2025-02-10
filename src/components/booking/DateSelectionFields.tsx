@@ -2,6 +2,7 @@
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
 import DateRangeSelector from "./DateRangeSelector";
 import type { BookingFormData } from "@/types/booking";
 
@@ -12,6 +13,45 @@ interface DateSelectionFieldsProps {
   maxDate: string;
 }
 
+const PROGRAM_BLOCKS = [
+  {
+    name: "Intro Days",
+    startDate: new Date(2025, 4, 1),
+    endDate: new Date(2025, 4, 3),
+    color: "bg-purple-200",
+  },
+  {
+    name: "Swiss Governance & New Societies Days",
+    startDate: new Date(2025, 4, 4),
+    endDate: new Date(2025, 4, 9),
+    color: "bg-blue-200",
+  },
+  {
+    name: "Cypherpunk Days",
+    startDate: new Date(2025, 4, 10),
+    endDate: new Date(2025, 4, 17),
+    color: "bg-green-200",
+  },
+  {
+    name: "Solarpunk Days",
+    startDate: new Date(2025, 4, 11),
+    endDate: new Date(2025, 4, 17),
+    color: "bg-yellow-200",
+  },
+  {
+    name: "Build Week",
+    startDate: new Date(2025, 4, 19),
+    endDate: new Date(2025, 4, 23),
+    color: "bg-orange-200",
+  },
+  {
+    name: "Zuitzerland Summit 2025",
+    startDate: new Date(2025, 4, 24),
+    endDate: new Date(2025, 4, 26),
+    color: "bg-red-200",
+  },
+];
+
 const DateSelectionFields = ({
   formData,
   handleInputChange,
@@ -19,7 +59,6 @@ const DateSelectionFields = ({
   maxDate,
 }: DateSelectionFieldsProps) => {
   const handleDateRangeChange = (startDate: string, endDate: string) => {
-    // Simulate input change events
     handleInputChange({
       target: { name: "checkin", value: startDate }
     } as React.ChangeEvent<HTMLInputElement>);
@@ -29,8 +68,42 @@ const DateSelectionFields = ({
     } as React.ChangeEvent<HTMLInputElement>);
   };
 
+  const isProgramDate = (date: Date) => {
+    const block = PROGRAM_BLOCKS.find(block => {
+      return date >= block.startDate && date <= block.endDate;
+    });
+    return block?.color || "";
+  };
+
   return (
     <div className="space-y-6">
+      <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">Program Calendar</h4>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {PROGRAM_BLOCKS.map((block) => (
+            <div key={block.name} className="flex items-center gap-2">
+              <div className={`w-4 h-4 rounded ${block.color}`}></div>
+              <span className="text-sm text-gray-600">{block.name}</span>
+            </div>
+          ))}
+        </div>
+        <Calendar
+          mode="single"
+          selected={formData.checkin ? new Date(formData.checkin) : undefined}
+          month={new Date(2025, 4)}
+          modifiers={{
+            programDate: (date) => isProgramDate(date) !== "",
+          }}
+          modifiersStyles={{
+            programDate: (date) => ({
+              backgroundColor: isProgramDate(date),
+            }),
+          }}
+          disabled
+          className="rounded-md border"
+        />
+      </div>
+
       <DateRangeSelector onDateRangeChange={handleDateRangeChange} />
       
       <div className="grid grid-cols-2 gap-4">
@@ -46,7 +119,8 @@ const DateSelectionFields = ({
               max="2025-05-26"
               value={formData.checkin}
               onChange={handleInputChange}
-              className="date-picker pl-4 pr-10 py-5 text-gray-900"
+              className="date-picker pl-4 pr-10 py-5 text-gray-900 bg-gray-50"
+              readOnly
             />
             <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           </div>
@@ -64,7 +138,8 @@ const DateSelectionFields = ({
               max="2025-05-26"
               value={formData.checkout}
               onChange={handleInputChange}
-              className="date-picker pl-4 pr-10 py-5 text-gray-900"
+              className="date-picker pl-4 pr-10 py-5 text-gray-900 bg-gray-50"
+              readOnly
             />
             <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           </div>
@@ -75,3 +150,4 @@ const DateSelectionFields = ({
 };
 
 export default DateSelectionFields;
+
