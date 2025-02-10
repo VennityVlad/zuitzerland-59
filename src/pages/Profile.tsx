@@ -36,6 +36,8 @@ const Profile = () => {
   });
 
   const checkAuthState = async () => {
+    console.log('--- Authentication Debug Info ---');
+    console.log('Privy User:', user);
     console.log('Privy User ID:', user?.id);
     
     const { data: { session } } = await supabase.auth.getSession();
@@ -44,13 +46,18 @@ const Profile = () => {
     if (session) {
       console.log('Supabase User ID:', session.user.id);
       
-      // Get the current RLS context
-      const { data, error } = await supabase.rpc('get_auth_context', {}, { count: 'exact' });
+      const { data, error } = await supabase.rpc('get_auth_context');
       if (error) {
         console.error('Error getting auth context:', error);
       } else {
         console.log('Current auth.uid():', data);
       }
+    } else {
+      console.log('WARNING: No Supabase session found!');
+      console.log('This means:');
+      console.log('1. Supabase RLS policies will not work');
+      console.log('2. Database operations requiring authentication will fail');
+      console.log('3. auth.uid() will return null');
     }
 
     // Also log the profile data to compare IDs
@@ -60,8 +67,11 @@ const Profile = () => {
     }
 
     toast({
-      title: "Debug Info",
-      description: "Check console for authentication details",
+      title: session ? "Authentication Active" : "No Supabase Session",
+      description: session 
+        ? "Check console for authentication details" 
+        : "Warning: No active Supabase session found. Check console for details.",
+      variant: session ? "default" : "destructive",
     });
   };
 
@@ -270,7 +280,7 @@ const Profile = () => {
         />
         
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <h2 className="text-lg font-semibold text-yellow-800 mb-2">Debug Section</h2>
+          <h2 className="text-lg font-semibold text-yellow-800 mb-2">Authentication Debug Section</h2>
           <Button 
             onClick={checkAuthState}
             variant="outline"
@@ -279,7 +289,10 @@ const Profile = () => {
             Check Authentication State
           </Button>
           <p className="mt-2 text-sm text-yellow-700">
-            Click to log authentication details to console
+            Click to check authentication status and log details to console
+          </p>
+          <p className="mt-1 text-xs text-yellow-600">
+            Note: If there's no Supabase session, database operations will fail
           </p>
         </div>
         
