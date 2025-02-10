@@ -68,6 +68,8 @@ interface DateRangeSelectorProps {
 
 const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
   const handleValueChange = (value: string[]) => {
+    console.log('Selected values:', value); // Add logging to debug selection state
+    
     if (value.length === 0) {
       onDateRangeChange("", "");
       return;
