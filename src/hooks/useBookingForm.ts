@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -118,6 +117,38 @@ export const useBookingForm = () => {
       ...prev,
       country: value
     }));
+  };
+
+  const notifyZapier = async (bookingData: BookingFormData, invoiceUid: string) => {
+    try {
+      const { data: { webhook_url }, error } = await supabase
+        .functions.invoke('get-secret', {
+          body: { secret_name: 'ZAPIER_WEBHOOK_URL' }
+        });
+
+      if (error || !webhook_url) {
+        console.error('Error fetching Zapier webhook URL:', error);
+        return;
+      }
+
+      await fetch(webhook_url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          booking: bookingData,
+          invoice_uid: invoiceUid,
+          timestamp: new Date().toISOString(),
+          event_type: 'new_booking'
+        })
+      });
+
+      console.log('Zapier webhook triggered successfully');
+    } catch (error) {
+      console.error('Error triggering Zapier webhook:', error);
+    }
   };
 
   const createRequestFinanceInvoice = async () => {
@@ -281,6 +312,9 @@ export const useBookingForm = () => {
       if (insertError) {
         throw insertError;
       }
+
+      // Trigger Zapier webhook
+      await notifyZapier(formData, invoiceUid);
 
       toast({
         title: "Booking Submitted",
