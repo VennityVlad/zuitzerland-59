@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +45,7 @@ const Profile = () => {
       console.log('Supabase User ID:', session.user.id);
       
       // Get the current RLS context
-      const { data, error } = await supabase.rpc('get_auth_context');
+      const { data, error } = await supabase.rpc('get_auth_context', {}, { count: 'exact' });
       if (error) {
         console.error('Error getting auth context:', error);
       } else {
