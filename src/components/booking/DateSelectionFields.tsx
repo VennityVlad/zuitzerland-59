@@ -2,11 +2,8 @@
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
 import DateRangeSelector from "./DateRangeSelector";
 import type { BookingFormData } from "@/types/booking";
-import type { ModifiersStyles } from "react-day-picker";
-import { cn } from "@/lib/utils";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -69,38 +66,6 @@ const DateSelectionFields = ({
     } as React.ChangeEvent<HTMLInputElement>);
   };
 
-  const isProgramDate = (date: Date) => {
-    const block = PROGRAM_BLOCKS.find(block => {
-      return date >= block.startDate && date <= block.endDate;
-    });
-    return block?.color || "";
-  };
-
-  const getUnderlineColor = (date: Date) => {
-    const block = PROGRAM_BLOCKS.find(block => {
-      return date >= block.startDate && date <= block.endDate;
-    });
-    return block?.underlineColor || "transparent";
-  };
-
-  const modifierStyles: ModifiersStyles = {
-    programDate: {
-      backgroundColor: "transparent",
-      color: "rgb(75 85 99)",
-      position: "relative",
-      "&::after": {
-        content: '""',
-        position: "absolute",
-        bottom: "-4px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "24px",
-        height: "2px",
-        backgroundColor: (date: Date) => getUnderlineColor(date)
-      }
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
@@ -116,25 +81,14 @@ const DateSelectionFields = ({
             </div>
           ))}
         </div>
-        <Calendar
-          mode="single"
-          selected={formData.checkin ? new Date(formData.checkin) : undefined}
-          month={new Date(2025, 4)}
-          modifiers={{
-            programDate: (date) => isProgramDate(date) !== "",
-          }}
-          modifiersStyles={modifierStyles}
-          disabled
-          className={cn(
-            "rounded-md border p-3",
-            "rdp-nav_button { @apply hover:bg-transparent hover:text-gray-900 }",
-            "[&_.rdp-day]:h-10 [&_.rdp-day]:w-10",
-            "[&_.rdp-day]:text-gray-600 [&_.rdp-day]:font-normal",
-            "[&_.rdp-day_button]:h-full [&_.rdp-day_button]:w-full",
-            "[&_.rdp-head_cell]:text-gray-400 [&_.rdp-head_cell]:font-normal",
-            "[&_.rdp-head_cell]:uppercase [&_.rdp-head_cell]:text-xs"
-          )}
-        />
+        <div className="space-y-3">
+          <h3 className="text-center text-xl font-semibold text-gray-900">May 2025</h3>
+          <img 
+            src="/lovable-uploads/0c29bde7-6469-4b8d-a527-0280076e3e52.png" 
+            alt="May 2025 Program Calendar"
+            className="w-full max-w-2xl mx-auto rounded-lg"
+          />
+        </div>
       </div>
 
       <DateRangeSelector onDateRangeChange={handleDateRangeChange} />
