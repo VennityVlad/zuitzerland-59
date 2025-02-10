@@ -1,4 +1,5 @@
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DateRange {
@@ -66,20 +67,29 @@ interface DateRangeSelectorProps {
 }
 
 const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
-  const handleValueChange = (value: string[]) => {
-    console.log('Selected values:', value);
-    console.log('Selection event triggered');
+  const [selectedRanges, setSelectedRanges] = React.useState<string[]>([]);
+
+  const handleCheckboxChange = (rangeId: string, checked: boolean) => {
+    console.log('Checkbox change:', rangeId, checked);
+    let newSelectedRanges: string[];
     
-    if (value.length === 0) {
+    if (checked) {
+      newSelectedRanges = [...selectedRanges, rangeId];
+    } else {
+      newSelectedRanges = selectedRanges.filter(id => id !== rangeId);
+    }
+    
+    setSelectedRanges(newSelectedRanges);
+    console.log('New selected ranges:', newSelectedRanges);
+    
+    if (newSelectedRanges.length === 0) {
       onDateRangeChange("", "");
       return;
     }
     
-    const selectedRanges = DATE_RANGES.filter(range => value.includes(range.id));
-    console.log('Selected ranges:', selectedRanges);
-    
-    const startDates = selectedRanges.map(range => range.startDate);
-    const endDates = selectedRanges.map(range => range.endDate);
+    const selectedDateRanges = DATE_RANGES.filter(range => newSelectedRanges.includes(range.id));
+    const startDates = selectedDateRanges.map(range => range.startDate);
+    const endDates = selectedDateRanges.map(range => range.endDate);
     
     const earliestStart = startDates.sort()[0];
     const latestEnd = endDates.sort().reverse()[0];
@@ -93,46 +103,40 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
         <h3 className="text-xl font-semibold text-gray-900">Select Your Program Dates</h3>
         <p className="text-sm text-gray-600 mt-1">Choose one or more program periods to attend</p>
       </div>
+      
       <TooltipProvider>
-        <ToggleGroup 
-          type="multiple" 
-          className="flex flex-col gap-3"
-          onValueChange={handleValueChange}
-        >
-          {DATE_RANGES.map((range) => {
-            console.log(`Rendering range ${range.id}`);
-            return (
-              <Tooltip key={range.id}>
+        <div className="space-y-3">
+          {DATE_RANGES.map((range) => (
+            <Tooltip key={range.id}>
+              <div className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 hover:border-purple-500 transition-colors">
                 <TooltipTrigger asChild>
-                  <ToggleGroupItem
-                    value={range.id}
-                    className="relative w-full justify-start rounded-lg border-2 
-                      border-gray-200 hover:border-purple-500 
-                      data-[state=on]:bg-purple-100 
-                      data-[state=on]:border-purple-500"
-                    aria-label={range.name}
-                  >
-                    <div className="flex flex-col p-4 w-full">
-                      <div className="flex justify-between items-center w-full">
-                        <span className="font-semibold text-gray-900 text-left 
-                          data-[state=on]:text-purple-700"
-                        >
-                          {range.name}
-                        </span>
+                  <div className="flex items-center space-x-3 flex-1">
+                    <Checkbox
+                      id={range.id}
+                      checked={selectedRanges.includes(range.id)}
+                      onCheckedChange={(checked) => handleCheckboxChange(range.id, checked as boolean)}
+                      className="h-5 w-5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                    />
+                    <div className="flex justify-between items-center w-full">
+                      <label
+                        htmlFor={range.id}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                      >
+                        <span className="font-semibold text-gray-900">{range.name}</span>
                         <span className="text-sm text-gray-600 font-medium ml-4">
                           {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
                         </span>
-                      </div>
+                      </label>
                     </div>
-                  </ToggleGroupItem>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-sm">{range.description}</p>
                 </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </ToggleGroup>
+              </div>
+            </Tooltip>
+          ))}
+        </div>
       </TooltipProvider>
     </div>
   );
