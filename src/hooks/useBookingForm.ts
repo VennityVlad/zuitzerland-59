@@ -32,6 +32,7 @@ export const useBookingForm = () => {
     roomType: "",
     price: 0,
     discountCode: "",
+    paymentType: "fiat", // Default to fiat
   });
 
   const calculatePrice = (checkin: string, checkout: string, roomType: string) => {
@@ -113,9 +114,21 @@ export const useBookingForm = () => {
   };
 
   const validateForm = () => {
-    const requiredFields = ['firstName', 'lastName', 'email', 'address', 'city', 'zip', 'country', 'checkin', 'checkout', 'roomType'] as const;
-    const allFieldsFilled = requiredFields.every(field => formData[field]);
+    const requiredFields = [
+      'firstName', 
+      'lastName', 
+      'email', 
+      'address', 
+      'city', 
+      'zip', 
+      'country', 
+      'checkin', 
+      'checkout', 
+      'roomType',
+      'paymentType'
+    ] as const;
     
+    const allFieldsFilled = requiredFields.every(field => formData[field]);
     const isEmailValid = validateEmail(formData.email);
 
     let stayValidation = null;
@@ -167,6 +180,13 @@ export const useBookingForm = () => {
     setFormData(prev => ({
       ...prev,
       country: value
+    }));
+  };
+
+  const handlePaymentTypeChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentType: value as 'fiat' | 'crypto'
     }));
   };
 
@@ -287,6 +307,7 @@ export const useBookingForm = () => {
     handleInputChange,
     handleSubmit,
     handleCountryChange,
+    handlePaymentTypeChange,
     calculateTaxAmount,
   };
 };

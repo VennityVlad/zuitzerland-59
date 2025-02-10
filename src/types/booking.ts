@@ -19,5 +19,6 @@ export interface BookingFormData {
   roomType: string;
   price: number;
   discountCode?: string;
+  paymentType: 'fiat' | 'crypto';
 }
 

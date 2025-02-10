@@ -5,6 +5,7 @@ import { useBookingForm } from "@/hooks/useBookingForm";
 import PersonalInfoFields from "./booking/PersonalInfoFields";
 import BookingDetailsPanel from "./booking/BookingDetailsPanel";
 import { BookingFormHeader } from "./booking/BookingFormHeader";
+import PaymentTypeSelector from "./booking/PaymentTypeSelector";
 
 const BookingForm = () => {
   const {
@@ -16,6 +17,7 @@ const BookingForm = () => {
     handleInputChange,
     handleSubmit,
     handleCountryChange,
+    handlePaymentTypeChange,
   } = useBookingForm();
 
   const minDate = "2025-05-01";
@@ -49,6 +51,10 @@ const BookingForm = () => {
               formData={formData}
               handleInputChange={handleInputChange}
               onCountryChange={handleCountryChange}
+            />
+            <PaymentTypeSelector
+              value={formData.paymentType}
+              onChange={handlePaymentTypeChange}
             />
           </div>
         </div>
