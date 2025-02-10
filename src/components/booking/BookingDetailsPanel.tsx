@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface BookingDetailsPanelProps {
   formData: BookingFormData;
@@ -39,6 +40,13 @@ const BookingDetailsPanel = ({
   const handleApplyDiscount = () => {
     handleInputChange({
       target: { name: "discountCode", value: discountCode },
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleRemoveDiscount = () => {
+    setDiscountCode("");
+    handleInputChange({
+      target: { name: "discountCode", value: "" },
     } as React.ChangeEvent<HTMLInputElement>);
   };
 
@@ -100,22 +108,37 @@ const BookingDetailsPanel = ({
 
         <div className="space-y-4">
           <Label htmlFor="discountCode">Discount Code</Label>
-          <div className="flex gap-2">
-            <Input
-              id="discountCode"
-              value={discountCode}
-              onChange={handleDiscountCodeChange}
-              placeholder="Enter discount code if you have one"
-              className="flex-1"
-            />
-            <Button 
-              onClick={handleApplyDiscount}
-              type="button"
-              variant="secondary"
-            >
-              Apply
-            </Button>
-          </div>
+          {formData.discountCode ? (
+            <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-md">
+              <span className="flex-1 font-medium">{formData.discountCode}</span>
+              <Button 
+                onClick={handleRemoveDiscount}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                id="discountCode"
+                value={discountCode}
+                onChange={handleDiscountCodeChange}
+                placeholder="Enter discount code if you have one"
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleApplyDiscount}
+                type="button"
+                variant="secondary"
+              >
+                Apply
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
@@ -159,3 +182,4 @@ const BookingDetailsPanel = ({
 };
 
 export default BookingDetailsPanel;
+
