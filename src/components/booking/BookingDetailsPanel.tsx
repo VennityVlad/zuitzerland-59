@@ -3,12 +3,15 @@ import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import type { BookingFormData } from "@/types/booking";
 import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface BookingDetailsPanelProps {
   formData: BookingFormData;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   minDate: string;
   maxDate: string;
+  discountAmount: number;
 }
 
 const SWITZERLAND_CODE = "CH";
@@ -19,12 +22,13 @@ const BookingDetailsPanel = ({
   handleInputChange,
   minDate,
   maxDate,
+  discountAmount,
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
 
   const taxAmount = formData.country === SWITZERLAND_CODE ? formData.price * VAT_RATE : 0;
-  const totalAmount = formData.price + taxAmount;
+  const totalAmount = formData.price + taxAmount - discountAmount;
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -82,11 +86,30 @@ const BookingDetailsPanel = ({
           />
         </div>
 
+        <div className="space-y-4">
+          <Label htmlFor="discountCode">Discount Code</Label>
+          <Input
+            id="discountCode"
+            name="discountCode"
+            value={formData.discountCode || ""}
+            onChange={handleInputChange}
+            placeholder="Enter discount code if you have one"
+            className="w-full"
+          />
+        </div>
+
         <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
           <div className="flex justify-between items-center text-gray-600">
             <span>Base Price</span>
-            <span>CHF {formData.price}</span>
+            <span>CHF {formData.price.toFixed(2)}</span>
           </div>
+          
+          {discountAmount > 0 && (
+            <div className="flex justify-between items-center text-green-600">
+              <span>Discount</span>
+              <span>- CHF {discountAmount.toFixed(2)}</span>
+            </div>
+          )}
           
           <div className="flex justify-between items-center text-gray-600">
             <span>

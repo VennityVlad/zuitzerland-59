@@ -12,6 +12,7 @@ const BookingForm = () => {
     isLoading,
     isFormValid,
     validationWarning,
+    discountAmount,
     handleInputChange,
     handleSubmit,
     handleCountryChange,
@@ -59,6 +60,7 @@ const BookingForm = () => {
             handleInputChange={handleInputChange}
             minDate={minDate}
             maxDate={maxDate}
+            discountAmount={discountAmount}
           />
         </div>
       </div>

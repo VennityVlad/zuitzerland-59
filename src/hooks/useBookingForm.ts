@@ -19,6 +19,7 @@ export const useBookingForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
   const [formData, setFormData] = useState<BookingFormData>({
     firstName: "",
     lastName: "",
@@ -31,6 +32,7 @@ export const useBookingForm = () => {
     checkout: "",
     roomType: "",
     price: 0,
+    discountCode: "",
   });
 
   const calculatePrice = (checkin: string, checkout: string, roomType: string) => {
@@ -56,6 +58,39 @@ export const useBookingForm = () => {
     }
     
     return totalPrice;
+  };
+
+  const calculateDiscount = async (basePrice: number, bookingMonth: string, discountCode?: string) => {
+    try {
+      // Fetch applicable discount from the database
+      const { data: discounts, error } = await supabase
+        .from('discounts')
+        .select('*')
+        .eq('active', true)
+        .eq('month', bookingMonth.toLowerCase());
+
+      if (error) {
+        console.error('Error fetching discounts:', error);
+        return 0;
+      }
+
+      let applicableDiscount = discounts.find(d => d.code === null); // Regular discount
+      
+      // If discount code is provided, check for special discount
+      if (discountCode) {
+        const specialDiscount = discounts.find(d => d.code === discountCode);
+        if (specialDiscount) {
+          applicableDiscount = specialDiscount;
+        }
+      }
+
+      if (!applicableDiscount) return 0;
+
+      return (basePrice * applicableDiscount.percentage) / 100;
+    } catch (error) {
+      console.error('Error calculating discount:', error);
+      return 0;
+    }
   };
 
   const calculateTaxAmount = (basePrice: number, country: string): number => {
@@ -96,25 +131,38 @@ export const useBookingForm = () => {
     setIsFormValid(allFieldsFilled && isEmailValid && !stayValidation);
   };
 
-  const handleInputChange = (
+  const handleInputChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
-      if (
-        (name === "checkin" || name === "checkout" || name === "roomType" || name === "country") &&
-        newData.checkin &&
-        newData.checkout &&
-        newData.roomType
-      ) {
-        const basePrice = calculatePrice(
-          newData.checkin,
-          newData.checkout,
+
+      const updatePriceAndDiscount = async () => {
+        if (
+          (name === "checkin" || name === "checkout" || name === "roomType" || name === "discountCode") &&
+          newData.checkin &&
+          newData.checkout &&
           newData.roomType
-        );
-        newData.price = basePrice;
-      }
+        ) {
+          const basePrice = calculatePrice(
+            newData.checkin,
+            newData.checkout,
+            newData.roomType
+          );
+          
+          // Get booking month for discount calculation
+          const bookingDate = new Date();
+          const bookingMonth = format(bookingDate, 'MMMM');
+          
+          const discount = await calculateDiscount(basePrice, bookingMonth, newData.discountCode);
+          setDiscountAmount(discount);
+          
+          newData.price = basePrice;
+        }
+      };
+
+      updatePriceAndDiscount();
       return newData;
     });
   };
@@ -144,7 +192,7 @@ export const useBookingForm = () => {
 
       const basePrice = bookingData.price;
       const taxAmount = calculateTaxAmount(basePrice, bookingData.country);
-      const totalAmount = basePrice + taxAmount;
+      const totalAmount = basePrice + taxAmount - discountAmount;
 
       const zapierData = {
         firstName: bookingData.firstName,
@@ -158,11 +206,13 @@ export const useBookingForm = () => {
         checkout: bookingData.checkout,
         roomType: bookingData.roomType,
         basePrice,
+        discountAmount,
         taxAmount,
         totalAmount,
         creationDate,
         dueDate,
-        invoiceNumber
+        invoiceNumber,
+        discountCode: bookingData.discountCode
       };
 
       console.log('Sending data to Zapier:', zapierData);
@@ -237,6 +287,7 @@ export const useBookingForm = () => {
     isLoading,
     isFormValid,
     validationWarning,
+    discountAmount,
     handleInputChange,
     handleSubmit,
     handleCountryChange,
