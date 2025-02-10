@@ -68,7 +68,7 @@ interface DateRangeSelectorProps {
 
 const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
   const handleValueChange = (value: string[]) => {
-    console.log('Selected values:', value); // Add logging to debug selection state
+    console.log('Selected values:', value);
     
     if (value.length === 0) {
       onDateRangeChange("", "");
@@ -103,12 +103,13 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
               <TooltipTrigger asChild>
                 <ToggleGroupItem
                   value={range.id}
-                  className="group w-full justify-start rounded-lg border-2 border-transparent hover:border-blue-400/50 transition-colors duration-200 data-[state=on]:border-blue-500 data-[state=on]:bg-blue-50"
+                  className="relative group w-full justify-start rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors duration-200 
+                    data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:ring-2 data-[state=on]:ring-primary/20 data-[state=on]:ring-offset-2"
                   aria-label={range.name}
                 >
                   <div className="flex flex-col p-4 w-full">
                     <div className="flex justify-between items-center w-full">
-                      <span className="font-semibold text-gray-900 text-left">{range.name}</span>
+                      <span className="font-semibold text-gray-900 text-left group-data-[state=on]:text-primary">{range.name}</span>
                       <span className="text-sm text-gray-600 font-medium ml-4">
                         {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
                       </span>
