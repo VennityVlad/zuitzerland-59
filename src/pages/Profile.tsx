@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +21,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const Profile = () => {
-  const { user, getAccessToken } = usePrivy();
+  const { user } = usePrivy();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
@@ -34,102 +35,11 @@ const Profile = () => {
     },
   });
 
-  const setupSupabaseSession = async () => {
-    try {
-      if (!user) return null;
-      
-      const privyToken = await getAccessToken();
-      if (!privyToken) {
-        console.error('No Privy token available');
-        return null;
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .update({ auth_token: privyToken })
-        .eq('privy_id', user.id)
-        .select()
-        .single();
-
-      if (!profile) {
-        console.error('Could not update profile with auth token');
-        return null;
-      }
-
-      const { data: { session }, error: sessionError } = await supabase.auth.signInWithPassword({
-        email: user.email?.address || 'placeholder@example.com',
-        password: privyToken,
-      });
-
-      if (sessionError) {
-        console.error('Error creating Supabase session:', sessionError);
-        return null;
-      }
-
-      return session;
-    } catch (error) {
-      console.error('Error in setupSupabaseSession:', error);
-      return null;
-    }
-  };
-
-  const checkAuthState = async () => {
-    console.log('--- Authentication Debug Info ---');
-    console.log('Privy User:', user);
-    console.log('Privy User ID:', user?.id);
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('Supabase Session:', session);
-    
-    if (session) {
-      console.log('Supabase User ID:', session.user.id);
-      
-      const { data, error } = await supabase.rpc('get_auth_context');
-      if (error) {
-        console.error('Error getting auth context:', error);
-      } else {
-        console.log('Current auth.uid():', data);
-      }
-    } else {
-      console.log('WARNING: No Supabase session found!');
-      console.log('This means:');
-      console.log('1. Supabase RLS policies will not work');
-      console.log('2. Database operations requiring authentication will fail');
-      console.log('3. auth.uid() will return null');
-
-      const newSession = await setupSupabaseSession();
-      if (newSession) {
-        console.log('Successfully created new Supabase session');
-      } else {
-        console.error('Failed to create new Supabase session');
-      }
-    }
-
-    if (profileData) {
-      console.log('Profile Data:', profileData);
-      console.log('Profile privy_id:', profileData.privy_id);
-      console.log('Profile supabase_uid:', profileData.supabase_uid);
-    }
-
-    toast({
-      title: session ? "Authentication Active" : "No Supabase Session",
-      description: session 
-        ? "Check console for authentication details" 
-        : "Warning: No active Supabase session found. Check console for details.",
-      variant: session ? "default" : "destructive",
-    });
-  };
-
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user?.id) return;
 
       try {
-        const session = await setupSupabaseSession();
-        if (!session) {
-          throw new Error('Could not establish Supabase session');
-        }
-
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -141,31 +51,7 @@ const Profile = () => {
           throw error;
         }
 
-        if (!data) {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: crypto.randomUUID(),
-              privy_id: user.id,
-              email: user.email?.address || null,
-              username: null,
-              supabase_uid: session.user.id,
-              auth_token: await getAccessToken()
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('Error creating profile:', createError);
-            throw createError;
-          }
-
-          setProfileData(newProfile);
-          form.reset({
-            username: newProfile.username || "",
-            description: newProfile.description || "",
-          });
-        } else {
+        if (data) {
           setProfileData(data);
           form.reset({
             username: data.username || "",
@@ -194,11 +80,6 @@ const Profile = () => {
       if (!user?.id) return;
       setUploading(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await supabase.auth.setSession(session);
-      }
-
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.');
       }
@@ -206,8 +87,6 @@ const Profile = () => {
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
-
-      console.log('Uploading file to path:', filePath);
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -252,20 +131,12 @@ const Profile = () => {
     if (!user?.id) return;
 
     try {
-      const session = await setupSupabaseSession();
-      if (!session) {
-        throw new Error('No valid Supabase session');
-      }
-
-      console.log('Updating profile with values:', values);
-      
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           username: values.username,
           description: values.description,
           email: user.email?.address || null,
-          auth_token: await getAccessToken()
         })
         .eq('privy_id', user.id);
 
@@ -321,23 +192,6 @@ const Profile = () => {
           alt="Switzerland Logo"
           className="logo mb-8"
         />
-        
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <h2 className="text-lg font-semibold text-yellow-800 mb-2">Authentication Debug Section</h2>
-          <Button 
-            onClick={checkAuthState}
-            variant="outline"
-            className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800"
-          >
-            Check Authentication State
-          </Button>
-          <p className="mt-2 text-sm text-yellow-700">
-            Click to check authentication status and log details to console
-          </p>
-          <p className="mt-1 text-xs text-yellow-600">
-            Note: If there's no Supabase session, database operations will fail
-          </p>
-        </div>
         
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex items-center gap-6 mb-8">

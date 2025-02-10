@@ -7,53 +7,81 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const SignIn = () => {
-  const { login, authenticated, ready, user } = usePrivy();
+  const { login, authenticated, ready, user, getAccessToken } = usePrivy();
   const { toast } = useToast();
 
   useEffect(() => {
-    const createProfile = async () => {
+    const setupAuth = async () => {
       if (!user) return;
 
       try {
-        // Check if profile already exists
+        const privyToken = await getAccessToken();
+        if (!privyToken) {
+          console.error('No Privy token available');
+          return;
+        }
+
+        // First check if profile exists
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('id')
           .eq('privy_id', user.id)
           .maybeSingle();
 
-        if (existingProfile) {
-          // If profile exists, we're done
-          return;
+        // Create new profile if it doesn't exist
+        if (!existingProfile) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: crypto.randomUUID(),
+              privy_id: user.id,
+              email: user.email?.address || null,
+              username: null,  // This will trigger the generate_username() function
+              auth_token: privyToken
+            });
+
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+            throw profileError;
+          }
+        } else {
+          // Update existing profile's auth token
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ auth_token: privyToken })
+            .eq('privy_id', user.id);
+
+          if (updateError) {
+            console.error('Error updating profile auth token:', updateError);
+            throw updateError;
+          }
         }
 
-        // Create new profile with a generated UUID as id
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: crypto.randomUUID(), // Generate a UUID for the profile
-            privy_id: user.id,
-            email: user.email?.address || null,
-            username: null  // This will trigger the generate_username() function
-          });
+        // Create Supabase session using the Privy token
+        const { data: { session }, error: sessionError } = await supabase.auth.signInWithPassword({
+          email: user.email?.address || 'placeholder@example.com',
+          password: privyToken,
+        });
 
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          throw profileError;
+        if (sessionError) {
+          console.error('Error creating Supabase session:', sessionError);
+          throw sessionError;
         }
+
+        console.log('Successfully established Supabase session');
 
       } catch (error) {
-        console.error('Error in profile creation:', error);
+        console.error('Error in auth setup:', error);
         toast({
           title: "Error",
-          description: "Something went wrong",
+          description: "Failed to complete authentication setup",
           variant: "destructive",
         });
       }
     };
 
     if (authenticated && user) {
-      createProfile();
+      setupAuth();
     }
   }, [authenticated, user]);
 
