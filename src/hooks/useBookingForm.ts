@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +10,6 @@ import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
-const SWITZERLAND_CODE = "CH";
 
 export const useBookingForm = () => {
   const { toast } = useToast();
@@ -210,6 +210,9 @@ export const useBookingForm = () => {
       const taxAmount = calculateTaxAmount(basePrice);
       const totalAmount = basePrice + taxAmount - discountAmount;
 
+      // Translate payment type to the desired format
+      const translatedPaymentType = bookingData.paymentType === 'fiat' ? 'stripe' : 'wallet';
+
       const zapierData = {
         firstName: bookingData.firstName,
         lastName: bookingData.lastName,
@@ -228,7 +231,8 @@ export const useBookingForm = () => {
         creationDate,
         dueDate,
         invoiceNumber,
-        discountCode: bookingData.discountCode
+        discountCode: bookingData.discountCode,
+        paymentType: translatedPaymentType
       };
 
       console.log('Sending data to Zapier:', zapierData);
