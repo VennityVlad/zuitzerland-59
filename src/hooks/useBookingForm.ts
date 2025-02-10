@@ -3,7 +3,7 @@ import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ROOM_MIN_STAY, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
-import type { BookingFormData } from "@/types/booking";
+import type { BookingFormData, InvoiceData } from "@/types/booking";
 import { countries } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
@@ -211,22 +211,26 @@ export const useBookingForm = () => {
 
       // Send data to Zapier and get invoice number
       const { invoiceNumber } = await notifyZapier(formData);
+
+      // Prepare data for Supabase insert
+      const invoiceData: InvoiceData = {
+        user_id: profileData.id,
+        invoice_uid: invoiceNumber,
+        booking_details: formData as Record<string, unknown>,
+        price: formData.price,
+        room_type: formData.roomType,
+        checkin: formData.checkin,
+        checkout: formData.checkout,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        payment_link: '' // This will be updated by Zapier
+      };
       
       // Store booking information in Supabase
       const { error: insertError } = await supabase
         .from('invoices')
-        .insert({
-          user_id: profileData.id,
-          invoice_uid: invoiceNumber,
-          booking_details: formData,
-          price: formData.price,
-          room_type: formData.roomType,
-          checkin: formData.checkin,
-          checkout: formData.checkout,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          email: formData.email
-        });
+        .insert(invoiceData);
 
       if (insertError) {
         throw insertError;
