@@ -119,7 +119,7 @@ export const useBookingForm = () => {
     }));
   };
 
-  const notifyZapier = async (bookingData: BookingFormData, invoiceUid: string) => {
+  const notifyZapier = async (bookingData: BookingFormData) => {
     try {
       const { data: { webhook_url }, error } = await supabase
         .functions.invoke('get-secret', {
@@ -131,107 +131,41 @@ export const useBookingForm = () => {
         return;
       }
 
+      const creationDate = new Date().toISOString();
+      const dueDate = addDays(new Date(), 14).toISOString();
+      const invoiceNumber = `INV-${bookingData.firstName}${bookingData.lastName}`;
+
+      const zapierData = {
+        name: `${bookingData.firstName} ${bookingData.lastName}`,
+        email: bookingData.email,
+        address: bookingData.address,
+        city: bookingData.city,
+        zip: bookingData.zip,
+        country: bookingData.country,
+        checkin: bookingData.checkin,
+        checkout: bookingData.checkout,
+        roomType: bookingData.roomType,
+        price: bookingData.price,
+        creationDate,
+        dueDate,
+        invoiceNumber
+      };
+
+      console.log('Sending data to Zapier:', zapierData);
+
       await fetch(webhook_url, {
         method: 'POST',
         mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          booking: bookingData,
-          invoice_uid: invoiceUid,
-          timestamp: new Date().toISOString(),
-          event_type: 'new_booking'
-        })
+        body: JSON.stringify(zapierData)
       });
 
       console.log('Zapier webhook triggered successfully');
+      return { invoiceNumber };
     } catch (error) {
       console.error('Error triggering Zapier webhook:', error);
-    }
-  };
-
-  const createRequestFinanceInvoice = async () => {
-    console.log('Starting invoice creation');
-    
-    const creationDate = new Date().toISOString();
-    const dueDate = addDays(new Date(), 14).toISOString();
-    const invoiceNumber = `INV-${Date.now()}`;
-
-    const invoiceData = {
-      creationDate,
-      invoiceItems: [
-        {
-          currency: "CHF",
-          name: `${formData.roomType} Room - Zuitzerland`,
-          quantity: 1,
-          tax: {
-            type: "percentage",
-            amount: 0
-          },
-          unitPrice: `${formData.price}00` // Adding 00 for cents as per the format
-        }
-      ],
-      invoiceNumber,
-      buyerInfo: {
-        address: {
-          streetAddress: formData.address,
-          city: formData.city,
-          postalCode: formData.zip,
-          country: formData.country
-        },
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName
-      },
-      paymentTerms: {
-        dueDate
-      },
-      paymentOptions: [
-        {
-          type: "wallet",
-          value: {
-            currencies: ["USDC-optimism"],
-            paymentInformation: {
-              paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
-              chain: "optimism"
-            }
-          }
-        },
-        {
-          type: "wallet",
-          value: {
-            currencies: ["ETH-optimism"],
-            paymentInformation: {
-              paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
-              chain: "optimism"
-            }
-          }
-        }
-      ],
-      tags: ["zapier_invoice"],
-      meta: {
-        format: "rnf_invoice",
-        version: "0.0.3"
-      }
-    };
-
-    console.log('Sending invoice data to edge function:', JSON.stringify(invoiceData, null, 2));
-
-    try {
-      const { data, error } = await supabase.functions.invoke('create-invoice', {
-        body: { invoiceData }
-      });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error('Failed to create invoice');
-      }
-
-      console.log('Edge function response:', data);
-      return data;
-    } catch (error) {
-      console.error('Error in createRequestFinanceInvoice:', error);
       throw error;
     }
   };
@@ -275,31 +209,16 @@ export const useBookingForm = () => {
         return;
       }
 
-      const { invoiceUid, paymentLink } = await createRequestFinanceInvoice();
+      // Send data to Zapier and get invoice number
+      const { invoiceNumber } = await notifyZapier(formData);
       
-      // Convert BookingFormData to a plain object for JSON compatibility
-      const bookingDetailsJson = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        address: formData.address,
-        city: formData.city,
-        zip: formData.zip,
-        country: formData.country,
-        checkin: formData.checkin,
-        checkout: formData.checkout,
-        roomType: formData.roomType,
-        price: formData.price
-      };
-
-      // Store invoice in Supabase using the profile ID
+      // Store booking information in Supabase
       const { error: insertError } = await supabase
         .from('invoices')
         .insert({
           user_id: profileData.id,
-          invoice_uid: invoiceUid,
-          payment_link: paymentLink,
-          booking_details: bookingDetailsJson,
+          invoice_uid: invoiceNumber,
+          booking_details: formData,
           price: formData.price,
           room_type: formData.roomType,
           checkin: formData.checkin,
@@ -312,9 +231,6 @@ export const useBookingForm = () => {
       if (insertError) {
         throw insertError;
       }
-
-      // Trigger Zapier webhook
-      await notifyZapier(formData, invoiceUid);
 
       toast({
         title: "Booking Submitted",
