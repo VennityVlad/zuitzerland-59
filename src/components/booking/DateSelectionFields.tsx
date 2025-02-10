@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import DateRangeSelector from "./DateRangeSelector";
 import type { BookingFormData } from "@/types/booking";
+import { DayModifiers } from "react-day-picker";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -89,9 +90,7 @@ const DateSelectionFields = ({
             programDate: (date) => isProgramDate(date) !== "",
           }}
           modifiersStyles={{
-            programDate: (date: Date) => ({
-              backgroundColor: isProgramDate(date),
-            }),
+            programDate: { backgroundColor: isProgramDate(new Date()) }
           }}
           disabled
           className="rounded-md border"
