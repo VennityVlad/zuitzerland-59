@@ -1,11 +1,9 @@
-
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import DateRangeSelector from "./DateRangeSelector";
 import type { BookingFormData } from "@/types/booking";
-import { DayModifiers } from "react-day-picker";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -82,6 +80,15 @@ const DateSelectionFields = ({
     return block?.underlineColor || "transparent";
   };
 
+  const modifierStyles = {
+    programDate: {
+      backgroundColor: isProgramDate as unknown as string,
+      borderBottomColor: getUnderlineColor as unknown as string,
+      borderBottomWidth: '2px',
+      borderBottomStyle: 'solid'
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
@@ -94,14 +101,6 @@ const DateSelectionFields = ({
             </div>
           ))}
         </div>
-        <style>
-          {`
-            .rdp-day_programDate {
-              border-bottom-width: 2px;
-              border-bottom-style: solid;
-            }
-          `}
-        </style>
         <Calendar
           mode="single"
           selected={formData.checkin ? new Date(formData.checkin) : undefined}
@@ -109,12 +108,7 @@ const DateSelectionFields = ({
           modifiers={{
             programDate: (date) => isProgramDate(date) !== "",
           }}
-          modifiersStyles={{
-            programDate: {
-              backgroundColor: (date: Date) => isProgramDate(date),
-              borderBottomColor: (date: Date) => getUnderlineColor(date),
-            }
-          }}
+          modifiersStyles={modifierStyles}
           disabled
           className="rounded-md border"
         />
@@ -166,4 +160,3 @@ const DateSelectionFields = ({
 };
 
 export default DateSelectionFields;
-
