@@ -103,13 +103,28 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
               <TooltipTrigger asChild>
                 <ToggleGroupItem
                   value={range.id}
-                  className="relative group w-full justify-start rounded-lg border-2 border-transparent hover:border-primary/50 transition-colors duration-200 
-                    data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:ring-2 data-[state=on]:ring-primary/20 data-[state=on]:ring-offset-2"
+                  className="relative group w-full justify-start rounded-lg border-2 border-transparent 
+                    hover:border-primary/50 transition-all duration-200 
+                    data-[state=on]:bg-[#8B5CF6]/10 
+                    data-[state=on]:border-[#8B5CF6] 
+                    data-[state=on]:shadow-[0_0_0_2px_#8B5CF6/20] 
+                    data-[state=on]:translate-x-1"
                   aria-label={range.name}
                 >
                   <div className="flex flex-col p-4 w-full">
                     <div className="flex justify-between items-center w-full">
-                      <span className="font-semibold text-gray-900 text-left group-data-[state=on]:text-primary">{range.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full transition-all duration-200
+                          group-data-[state=on]:bg-[#8B5CF6] 
+                          group-data-[state=on]:w-3 
+                          group-data-[state=on]:h-3" 
+                        />
+                        <span className="font-semibold text-gray-900 text-left 
+                          group-data-[state=on]:text-[#8B5CF6]"
+                        >
+                          {range.name}
+                        </span>
+                      </div>
                       <span className="text-sm text-gray-600 font-medium ml-4">
                         {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
                       </span>
