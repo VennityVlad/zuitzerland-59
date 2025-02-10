@@ -207,8 +207,9 @@ export const useBookingForm = () => {
       const invoiceNumber = `INV-${bookingData.firstName}${bookingData.lastName}`;
 
       const basePrice = bookingData.price;
-      const taxAmount = calculateTaxAmount(basePrice);
-      const totalAmount = basePrice + taxAmount - discountAmount;
+      const priceAfterDiscount = basePrice - discountAmount;
+      const taxAmount = calculateTaxAmount(priceAfterDiscount);
+      const totalAmount = priceAfterDiscount + taxAmount;
 
       // Translate payment type to the desired format
       const translatedPaymentType = bookingData.paymentType === 'fiat' ? 'stripe' : 'wallet';
@@ -226,6 +227,7 @@ export const useBookingForm = () => {
         roomType: bookingData.roomType,
         basePrice,
         discountAmount,
+        priceAfterDiscount,
         taxAmount,
         totalAmount,
         creationDate,
@@ -315,3 +317,4 @@ export const useBookingForm = () => {
     calculateTaxAmount,
   };
 };
+
