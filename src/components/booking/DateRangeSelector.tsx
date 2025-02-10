@@ -13,25 +13,25 @@ interface DateRange {
 
 const DATE_RANGES: DateRange[] = [
   {
-    id: "week1",
-    name: "Week 1",
+    id: "block1",
+    name: "Block 1",
     startDate: "2025-05-01",
     endDate: "2025-05-09",
-    description: "Community, Culture, Media, Philosophy & Truth-Seeking, Swiss Governance"
+    description: "Intro Days (May 1-3): Community, Culture, Media, Philosophy & Truth-Seeking\nSwiss Governance & New Societies Days (May 4-9): Democracy, Network States & Start-up Cities"
   },
   {
-    id: "week2",
-    name: "Week 2",
+    id: "block2",
+    name: "Block 2",
     startDate: "2025-05-10",
     endDate: "2025-05-17",
-    description: "Frontier Tech: Ethereum, Biotech, AI x Crypto, Living Design"
+    description: "Cypherpunk Days: Frontier Tech - Ethereum, Biotech, AI x Crypto\nSolarpunk Days: Living Design Week"
   },
   {
-    id: "week3",
-    name: "Week 3",
+    id: "block3",
+    name: "Block 3",
     startDate: "2025-05-18",
     endDate: "2025-05-26",
-    description: "Build Week, Hackathon, Govathon & Summit Weekend"
+    description: "Build Week (May 19-23): Hackathon and Govathon\nZuitzerland Summit 2025 (May 24-26)"
   }
 ];
 
@@ -74,7 +74,7 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     <div className="space-y-4 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
       <div className="border-b pb-4">
         <h3 className="text-xl font-semibold text-gray-900">Select Your Program Dates</h3>
-        <p className="text-sm text-gray-600 mt-1">Choose one or more program periods to attend</p>
+        <p className="text-sm text-gray-600 mt-1">Choose one or more program blocks to attend</p>
       </div>
       
       <TooltipProvider>
@@ -103,7 +103,7 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
                     </div>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent className="max-w-sm whitespace-pre-line">
                   <p className="text-sm">{range.description}</p>
                 </TooltipContent>
               </div>
