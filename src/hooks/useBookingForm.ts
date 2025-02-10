@@ -3,7 +3,7 @@ import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ROOM_MIN_STAY, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
-import type { BookingFormData, InvoiceData } from "@/types/booking";
+import type { BookingFormData } from "@/types/booking";
 import { countries } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
@@ -191,50 +191,7 @@ export const useBookingForm = () => {
     }
 
     try {
-      // First ensure we have a profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user?.id)
-        .maybeSingle();
-
-      if (profileError || !profileData) {
-        console.error('Error fetching profile:', profileError);
-        toast({
-          title: "Error",
-          description: "Please sign in again to complete your profile setup",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Send data to Zapier and get invoice number
-      const { invoiceNumber } = await notifyZapier(formData);
-
-      // Prepare data for Supabase insert
-      const invoiceData: InvoiceData = {
-        user_id: profileData.id,
-        invoice_uid: invoiceNumber,
-        booking_details: formData as Record<string, unknown>,
-        price: formData.price,
-        room_type: formData.roomType,
-        checkin: formData.checkin,
-        checkout: formData.checkout,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        email: formData.email,
-        payment_link: '' // This will be updated by Zapier
-      };
-      
-      // Store booking information in Supabase
-      const { error: insertError } = await supabase
-        .from('invoices')
-        .insert(invoiceData);
-
-      if (insertError) {
-        throw insertError;
-      }
+      await notifyZapier(formData);
 
       toast({
         title: "Booking Submitted",
