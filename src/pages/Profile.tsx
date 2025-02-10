@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +33,36 @@ const Profile = () => {
       description: "",
     },
   });
+
+  const checkAuthState = async () => {
+    console.log('Privy User ID:', user?.id);
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('Supabase Session:', session);
+    
+    if (session) {
+      console.log('Supabase User ID:', session.user.id);
+      
+      // Get the current RLS context
+      const { data, error } = await supabase.rpc('get_auth_context');
+      if (error) {
+        console.error('Error getting auth context:', error);
+      } else {
+        console.log('Current auth.uid():', data);
+      }
+    }
+
+    // Also log the profile data to compare IDs
+    if (profileData) {
+      console.log('Profile Data:', profileData);
+      console.log('Profile privy_id:', profileData.privy_id);
+    }
+
+    toast({
+      title: "Debug Info",
+      description: "Check console for authentication details",
+    });
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -238,6 +267,20 @@ const Profile = () => {
           alt="Switzerland Logo"
           className="logo mb-8"
         />
+        
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <h2 className="text-lg font-semibold text-yellow-800 mb-2">Debug Section</h2>
+          <Button 
+            onClick={checkAuthState}
+            variant="outline"
+            className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800"
+          >
+            Check Authentication State
+          </Button>
+          <p className="mt-2 text-sm text-yellow-700">
+            Click to log authentication details to console
+          </p>
+        </div>
         
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex items-center gap-6 mb-8">
