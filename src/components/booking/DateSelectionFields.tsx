@@ -82,7 +82,7 @@ const DateSelectionFields = ({
           ))}
         </div>
         <div className="space-y-3">
-          <h3 className="text-center text-xl font-light text-gray-900">May 2025</h3>
+          <h3 className="text-center text-base font-light text-gray-900">May 2025</h3>
           <img 
             src="/lovable-uploads/3491f983-cf60-4c81-bad1-23af5f9e8db6.png" 
             alt="May 2025 Program Calendar"
