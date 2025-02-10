@@ -1,3 +1,4 @@
+
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import type { BookingFormData } from "@/types/booking";
@@ -10,6 +11,9 @@ interface BookingDetailsPanelProps {
   maxDate: string;
 }
 
+const SWITZERLAND_CODE = "CH";
+const VAT_RATE = 0.081;
+
 const BookingDetailsPanel = ({
   formData,
   handleInputChange,
@@ -18,6 +22,9 @@ const BookingDetailsPanel = ({
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
+
+  const taxAmount = formData.country === SWITZERLAND_CODE ? formData.price * VAT_RATE : 0;
+  const totalAmount = formData.price + taxAmount;
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -30,7 +37,7 @@ const BookingDetailsPanel = ({
           const rate = data.quotes.USDCHF;
           if (rate) {
             setUsdChfRate(rate);
-            const convertedPrice = formData.price / rate;
+            const convertedPrice = totalAmount / rate;
             setUsdPrice(convertedPrice);
           }
         }
@@ -39,15 +46,13 @@ const BookingDetailsPanel = ({
       }
     };
 
-    // Only fetch the rate if we don't have it yet and there's a price to convert
-    if (formData.price > 0 && usdChfRate === null) {
+    if (totalAmount > 0 && usdChfRate === null) {
       fetchExchangeRate();
-    } else if (formData.price > 0 && usdChfRate !== null) {
-      // If we already have the rate, just calculate the new price
-      const convertedPrice = formData.price / usdChfRate;
+    } else if (totalAmount > 0 && usdChfRate !== null) {
+      const convertedPrice = totalAmount / usdChfRate;
       setUsdPrice(convertedPrice);
     }
-  }, [formData.price, usdChfRate]);
+  }, [totalAmount, usdChfRate]);
 
   return (
     <div className="p-6 bg-secondary/20 rounded-xl space-y-6">
@@ -77,18 +82,31 @@ const BookingDetailsPanel = ({
           />
         </div>
 
-        <div className="pt-4 mt-4 border-t border-gray-200">
-          <div className="flex justify-between items-center text-lg font-semibold">
-            <span>Total Price</span>
+        <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
+          <div className="flex justify-between items-center text-gray-600">
+            <span>Base Price</span>
             <span>CHF {formData.price}</span>
           </div>
+          
+          <div className="flex justify-between items-center text-gray-600">
+            <span>
+              Taxes {formData.country === SWITZERLAND_CODE && "(8.1% VAT)"}
+            </span>
+            <span>CHF {taxAmount.toFixed(2)}</span>
+          </div>
+
+          <div className="flex justify-between items-center text-lg font-semibold mt-2 pt-2 border-t border-gray-200">
+            <span>Total Price</span>
+            <span>CHF {totalAmount.toFixed(2)}</span>
+          </div>
+          
           {usdPrice && (
             <div className="flex justify-between items-center text-sm text-gray-500 mt-1">
               <span>Approx USD</span>
               <span>${usdPrice.toFixed(2)}</span>
             </div>
           )}
-          <p className="text-sm text-gray-500 mt-1">Includes taxes and fees</p>
+          <p className="text-sm text-gray-500">Includes all applicable taxes and fees</p>
         </div>
       </div>
     </div>

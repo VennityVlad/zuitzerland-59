@@ -9,6 +9,9 @@ import { countries } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 
+const VAT_RATE = 0.081; // 8.1% VAT rate for Switzerland
+const SWITZERLAND_CODE = "CH";
+
 export const useBookingForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -42,19 +45,21 @@ export const useBookingForm = () => {
     const priceArray = PRICING_TABLE[roomType];
     if (!priceArray) return 0;
     
-    // Calculate the starting index in the pricing array (days since May 1st)
-    const mayFirst = new Date(2025, 4, 1); // May is month 4 (0-based)
+    const mayFirst = new Date(2025, 4, 1);
     const startIndex = differenceInDays(startDate, mayFirst);
     
     let totalPrice = 0;
     for (let i = 0; i < days; i++) {
       const dayIndex = startIndex + i;
-      // Use the last price in the array if we go beyond the array length
       const dayPrice = priceArray[Math.min(dayIndex, priceArray.length - 1)];
       totalPrice += dayPrice;
     }
     
     return totalPrice;
+  };
+
+  const calculateTaxAmount = (basePrice: number, country: string): number => {
+    return country === SWITZERLAND_CODE ? basePrice * VAT_RATE : 0;
   };
 
   const validateEmail = (email: string): boolean => {
@@ -98,16 +103,17 @@ export const useBookingForm = () => {
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
       if (
-        (name === "checkin" || name === "checkout" || name === "roomType") &&
+        (name === "checkin" || name === "checkout" || name === "roomType" || name === "country") &&
         newData.checkin &&
         newData.checkout &&
         newData.roomType
       ) {
-        newData.price = calculatePrice(
+        const basePrice = calculatePrice(
           newData.checkin,
           newData.checkout,
           newData.roomType
         );
+        newData.price = basePrice;
       }
       return newData;
     });
@@ -136,7 +142,10 @@ export const useBookingForm = () => {
       const dueDate = addDays(new Date(), 14).toISOString();
       const invoiceNumber = `INV-${bookingData.firstName}${bookingData.lastName}`;
 
-      // Create a clean data object for Zapier with separate firstName and lastName
+      const basePrice = bookingData.price;
+      const taxAmount = calculateTaxAmount(basePrice, bookingData.country);
+      const totalAmount = basePrice + taxAmount;
+
       const zapierData = {
         firstName: bookingData.firstName,
         lastName: bookingData.lastName,
@@ -148,7 +157,9 @@ export const useBookingForm = () => {
         checkin: bookingData.checkin,
         checkout: bookingData.checkout,
         roomType: bookingData.roomType,
-        price: bookingData.price,
+        basePrice,
+        taxAmount,
+        totalAmount,
         creationDate,
         dueDate,
         invoiceNumber
@@ -156,7 +167,6 @@ export const useBookingForm = () => {
 
       console.log('Sending data to Zapier:', zapierData);
 
-      // Use the edge function to make the webhook call
       const { data, error: webhookError } = await supabase.functions.invoke('trigger-zapier', {
         body: { 
           webhook_url,
@@ -205,7 +215,6 @@ export const useBookingForm = () => {
         description: "Your booking has been successfully submitted!",
       });
 
-      // Redirect to invoices page
       navigate('/invoices');
     } catch (error) {
       console.error("Error submitting booking:", error);
@@ -231,5 +240,6 @@ export const useBookingForm = () => {
     handleInputChange,
     handleSubmit,
     handleCountryChange,
+    calculateTaxAmount,
   };
 };
