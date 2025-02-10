@@ -64,6 +64,7 @@ const Profile = () => {
     if (profileData) {
       console.log('Profile Data:', profileData);
       console.log('Profile privy_id:', profileData.privy_id);
+      console.log('Profile supabase_uid:', profileData.supabase_uid);
     }
 
     toast({
@@ -105,7 +106,8 @@ const Profile = () => {
               id: crypto.randomUUID(),
               privy_id: user.id,
               email: user.email?.address || null,
-              username: null  // This will trigger the generate_username() function
+              username: null,  // This will trigger the generate_username() function
+              supabase_uid: session?.user.id // Add the Supabase user ID
             })
             .select()
             .single();
@@ -121,6 +123,18 @@ const Profile = () => {
             description: newProfile.description || "",
           });
         } else {
+          // Update existing profile with Supabase UID if not set
+          if (!data.supabase_uid && session?.user.id) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ supabase_uid: session.user.id })
+              .eq('id', data.id);
+
+            if (updateError) {
+              console.error('Error updating supabase_uid:', updateError);
+            }
+          }
+
           setProfileData(data);
           form.reset({
             username: data.username || "",
@@ -220,7 +234,8 @@ const Profile = () => {
         .update({
           username: values.username,
           description: values.description,
-          email: user?.email?.address || null,
+          email: user.email?.address || null,
+          supabase_uid: session?.user.id // Make sure Supabase UID is set
         })
         .eq('privy_id', user.id);
 
