@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +20,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const Profile = () => {
-  const { user } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
@@ -34,6 +33,45 @@ const Profile = () => {
       description: "",
     },
   });
+
+  const setupSupabaseSession = async () => {
+    try {
+      if (!user) return null;
+      
+      const privyToken = await getAccessToken();
+      if (!privyToken) {
+        console.error('No Privy token available');
+        return null;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .update({ auth_token: privyToken })
+        .eq('privy_id', user.id)
+        .select()
+        .single();
+
+      if (!profile) {
+        console.error('Could not update profile with auth token');
+        return null;
+      }
+
+      const { data: { session }, error: sessionError } = await supabase.auth.signInWithPassword({
+        email: user.email?.address || 'placeholder@example.com',
+        password: privyToken,
+      });
+
+      if (sessionError) {
+        console.error('Error creating Supabase session:', sessionError);
+        return null;
+      }
+
+      return session;
+    } catch (error) {
+      console.error('Error in setupSupabaseSession:', error);
+      return null;
+    }
+  };
 
   const checkAuthState = async () => {
     console.log('--- Authentication Debug Info ---');
@@ -58,9 +96,15 @@ const Profile = () => {
       console.log('1. Supabase RLS policies will not work');
       console.log('2. Database operations requiring authentication will fail');
       console.log('3. auth.uid() will return null');
+
+      const newSession = await setupSupabaseSession();
+      if (newSession) {
+        console.log('Successfully created new Supabase session');
+      } else {
+        console.error('Failed to create new Supabase session');
+      }
     }
 
-    // Also log the profile data to compare IDs
     if (profileData) {
       console.log('Profile Data:', profileData);
       console.log('Profile privy_id:', profileData.privy_id);
@@ -81,10 +125,9 @@ const Profile = () => {
       if (!user?.id) return;
 
       try {
-        // First, set the auth context for Supabase
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await supabase.auth.setSession(session);
+        const session = await setupSupabaseSession();
+        if (!session) {
+          throw new Error('Could not establish Supabase session');
         }
 
         const { data, error } = await supabase
@@ -99,15 +142,15 @@ const Profile = () => {
         }
 
         if (!data) {
-          // Create new profile if it doesn't exist
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .insert({
               id: crypto.randomUUID(),
               privy_id: user.id,
               email: user.email?.address || null,
-              username: null,  // This will trigger the generate_username() function
-              supabase_uid: session?.user.id // Add the Supabase user ID
+              username: null,
+              supabase_uid: session.user.id,
+              auth_token: await getAccessToken()
             })
             .select()
             .single();
@@ -123,18 +166,6 @@ const Profile = () => {
             description: newProfile.description || "",
           });
         } else {
-          // Update existing profile with Supabase UID if not set
-          if (!data.supabase_uid && session?.user.id) {
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ supabase_uid: session.user.id })
-              .eq('id', data.id);
-
-            if (updateError) {
-              console.error('Error updating supabase_uid:', updateError);
-            }
-          }
-
           setProfileData(data);
           form.reset({
             username: data.username || "",
@@ -221,10 +252,9 @@ const Profile = () => {
     if (!user?.id) return;
 
     try {
-      // Set auth context for Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await supabase.auth.setSession(session);
+      const session = await setupSupabaseSession();
+      if (!session) {
+        throw new Error('No valid Supabase session');
       }
 
       console.log('Updating profile with values:', values);
@@ -235,7 +265,7 @@ const Profile = () => {
           username: values.username,
           description: values.description,
           email: user.email?.address || null,
-          supabase_uid: session?.user.id // Make sure Supabase UID is set
+          auth_token: await getAccessToken()
         })
         .eq('privy_id', user.id);
 
@@ -249,7 +279,6 @@ const Profile = () => {
         description: "Profile updated successfully",
       });
       
-      // Refresh profile data after update
       const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
@@ -262,7 +291,6 @@ const Profile = () => {
       }
 
       if (updatedProfile) {
-        console.log('Updated profile data:', updatedProfile);
         setProfileData(updatedProfile);
       }
     } catch (error) {
