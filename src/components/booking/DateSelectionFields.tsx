@@ -6,6 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import DateRangeSelector from "./DateRangeSelector";
 import type { BookingFormData } from "@/types/booking";
 import type { ModifiersStyles } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -84,10 +85,19 @@ const DateSelectionFields = ({
 
   const modifierStyles: ModifiersStyles = {
     programDate: {
-      backgroundColor: isProgramDate(new Date()) as string,
-      borderBottomColor: getUnderlineColor(new Date()),
-      borderBottomWidth: 2,
-      borderBottomStyle: "solid"
+      backgroundColor: "transparent",
+      color: "rgb(75 85 99)",
+      position: "relative",
+      "&::after": {
+        content: '""',
+        position: "absolute",
+        bottom: "-4px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "24px",
+        height: "2px",
+        backgroundColor: (date: Date) => getUnderlineColor(date)
+      }
     }
   };
 
@@ -98,7 +108,10 @@ const DateSelectionFields = ({
         <div className="flex flex-wrap gap-2 mb-4">
           {PROGRAM_BLOCKS.map((block) => (
             <div key={block.name} className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: block.color }}></div>
+              <div 
+                className="w-4 h-4 rounded" 
+                style={{ backgroundColor: block.color }}
+              ></div>
               <span className="text-sm text-gray-600">{block.name}</span>
             </div>
           ))}
@@ -112,7 +125,15 @@ const DateSelectionFields = ({
           }}
           modifiersStyles={modifierStyles}
           disabled
-          className="rounded-md border"
+          className={cn(
+            "rounded-md border p-3",
+            "rdp-nav_button { @apply hover:bg-transparent hover:text-gray-900 }",
+            "[&_.rdp-day]:h-10 [&_.rdp-day]:w-10",
+            "[&_.rdp-day]:text-gray-600 [&_.rdp-day]:font-normal",
+            "[&_.rdp-day_button]:h-full [&_.rdp-day_button]:w-full",
+            "[&_.rdp-head_cell]:text-gray-400 [&_.rdp-head_cell]:font-normal",
+            "[&_.rdp-head_cell]:uppercase [&_.rdp-head_cell]:text-xs"
+          )}
         />
       </div>
 
