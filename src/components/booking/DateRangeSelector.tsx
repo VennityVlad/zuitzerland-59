@@ -13,53 +13,25 @@ interface DateRange {
 
 const DATE_RANGES: DateRange[] = [
   {
-    id: "intro",
-    name: "Intro Days",
+    id: "week1",
+    name: "Week 1",
     startDate: "2025-05-01",
-    endDate: "2025-05-03",
-    description: "Community, Culture, Media, Philosophy & Truth-Seeking"
+    endDate: "2025-05-09",
+    description: "Community, Culture, Media, Philosophy & Truth-Seeking, Swiss Governance"
   },
   {
-    id: "swiss",
-    name: "Swiss Governance Days",
-    startDate: "2025-05-04",
-    endDate: "2025-05-10",
-    description: "Swiss governance and democracy"
+    id: "week2",
+    name: "Week 2",
+    startDate: "2025-05-10",
+    endDate: "2025-05-17",
+    description: "Frontier Tech: Ethereum, Biotech, AI x Crypto, Living Design"
   },
   {
-    id: "societies",
-    name: "New Societies Days",
-    startDate: "2025-05-04",
-    endDate: "2025-05-10",
-    description: "Network States, Network Societies & Start-up Cities"
-  },
-  {
-    id: "cypherpunk",
-    name: "Cypherpunk Days",
-    startDate: "2025-05-11",
-    endDate: "2025-05-18",
-    description: "Frontier Tech: Ethereum, Biotech, AI x Crypto"
-  },
-  {
-    id: "solarpunk",
-    name: "Solarpunk Days",
-    startDate: "2025-05-11",
-    endDate: "2025-05-18",
-    description: "Living Design Week"
-  },
-  {
-    id: "build",
-    name: "Build Week",
-    startDate: "2025-05-19",
-    endDate: "2025-05-23",
-    description: "Hackathon and Govathon"
-  },
-  {
-    id: "summit",
-    name: "Zuitzerland Summit 2025",
-    startDate: "2025-05-24",
+    id: "week3",
+    name: "Week 3",
+    startDate: "2025-05-18",
     endDate: "2025-05-26",
-    description: "Summit Weekend"
+    description: "Build Week, Hackathon, Govathon & Summit Weekend"
   }
 ];
 
