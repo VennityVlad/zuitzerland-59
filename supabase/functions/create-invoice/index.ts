@@ -26,7 +26,8 @@ serve(async (req) => {
     const { invoiceData } = await req.json();
     console.log('Received invoice data:', JSON.stringify(invoiceData, null, 2));
 
-    const response = await fetch('https://api.request.finance/invoices', {
+    // Step 1: Create off-chain invoice
+    const createInvoiceResponse = await fetch('https://api.request.finance/invoices', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -36,20 +37,42 @@ serve(async (req) => {
       body: JSON.stringify(invoiceData)
     });
 
-    console.log('API Response status:', response.status);
+    console.log('Create Invoice API Response status:', createInvoiceResponse.status);
     
-    if (!response.ok) {
-      const errorData = await response.json();
+    if (!createInvoiceResponse.ok) {
+      const errorData = await createInvoiceResponse.json();
       console.error('Request Finance API error details:', errorData);
       throw new Error(`Failed to create invoice: ${JSON.stringify(errorData)}`);
     }
 
-    const data = await response.json();
-    console.log('API Response data:', data);
+    const offChainInvoice = await createInvoiceResponse.json();
+    console.log('Off-chain invoice created:', offChainInvoice);
+
+    // Step 2: Convert to on-chain request
+    const convertToOnChainResponse = await fetch(`https://api.request.finance/invoices/${offChainInvoice.id}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': requestFinanceApiKey
+      }
+    });
+
+    console.log('Convert to on-chain API Response status:', convertToOnChainResponse.status);
+
+    if (!convertToOnChainResponse.ok) {
+      const errorData = await convertToOnChainResponse.json();
+      console.error('Request Finance API error details for on-chain conversion:', errorData);
+      throw new Error(`Failed to convert invoice to on-chain request: ${JSON.stringify(errorData)}`);
+    }
+
+    const onChainInvoice = await convertToOnChainResponse.json();
+    console.log('On-chain invoice created:', onChainInvoice);
     
     return new Response(JSON.stringify({
-      invoiceUid: data.uid,
-      paymentLink: data.paymentLink
+      invoiceId: onChainInvoice.id,
+      requestId: onChainInvoice.requestId,
+      paymentLink: onChainInvoice.invoiceLinks.pay
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
