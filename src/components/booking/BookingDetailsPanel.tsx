@@ -16,8 +16,7 @@ interface BookingDetailsPanelProps {
   discountAmount: number;
 }
 
-const SWITZERLAND_CODE = "CH";
-const VAT_RATE = 0.081;
+const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
 
 const BookingDetailsPanel = ({
   formData,
@@ -30,7 +29,7 @@ const BookingDetailsPanel = ({
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
   const [discountCode, setDiscountCode] = useState("");
 
-  const taxAmount = formData.country === SWITZERLAND_CODE ? formData.price * VAT_RATE : 0;
+  const taxAmount = formData.price * VAT_RATE;
   const totalAmount = formData.price + taxAmount - discountAmount;
 
   const handleDiscountCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,9 +156,7 @@ const BookingDetailsPanel = ({
           )}
           
           <div className="flex justify-between items-center text-gray-600">
-            <span>
-              Taxes {formData.country === SWITZERLAND_CODE && "(8.1% VAT)"}
-            </span>
+            <span>VAT (3.8%)</span>
             <span>CHF {taxAmount.toFixed(2)}</span>
           </div>
 
@@ -182,4 +179,3 @@ const BookingDetailsPanel = ({
 };
 
 export default BookingDetailsPanel;
-

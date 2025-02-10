@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +8,7 @@ import { countries } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 
-const VAT_RATE = 0.081; // 8.1% VAT rate for Switzerland
+const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
 const SWITZERLAND_CODE = "CH";
 
 export const useBookingForm = () => {
@@ -62,7 +61,6 @@ export const useBookingForm = () => {
 
   const calculateDiscount = async (basePrice: number, bookingMonth: string, discountCode?: string) => {
     try {
-      // Fetch applicable discount from the database
       const { data: discounts, error } = await supabase
         .from('discounts')
         .select('*')
@@ -76,7 +74,6 @@ export const useBookingForm = () => {
 
       let applicableDiscount = discounts.find(d => d.code === null); // Regular discount
       
-      // If discount code is provided, check for special discount
       if (discountCode) {
         const specialDiscount = discounts.find(d => d.code === discountCode);
         if (specialDiscount) {
@@ -93,8 +90,8 @@ export const useBookingForm = () => {
     }
   };
 
-  const calculateTaxAmount = (basePrice: number, country: string): number => {
-    return country === SWITZERLAND_CODE ? basePrice * VAT_RATE : 0;
+  const calculateTaxAmount = (basePrice: number): number => {
+    return basePrice * VAT_RATE;
   };
 
   const validateEmail = (email: string): boolean => {
@@ -151,7 +148,6 @@ export const useBookingForm = () => {
             newData.roomType
           );
           
-          // Get booking month for discount calculation
           const bookingDate = new Date();
           const bookingMonth = format(bookingDate, 'MMMM');
           
@@ -191,7 +187,7 @@ export const useBookingForm = () => {
       const invoiceNumber = `INV-${bookingData.firstName}${bookingData.lastName}`;
 
       const basePrice = bookingData.price;
-      const taxAmount = calculateTaxAmount(basePrice, bookingData.country);
+      const taxAmount = calculateTaxAmount(basePrice);
       const totalAmount = basePrice + taxAmount - discountAmount;
 
       const zapierData = {
