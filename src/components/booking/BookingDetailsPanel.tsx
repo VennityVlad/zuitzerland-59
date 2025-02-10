@@ -5,6 +5,7 @@ import type { BookingFormData } from "@/types/booking";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface BookingDetailsPanelProps {
   formData: BookingFormData;
@@ -26,9 +27,20 @@ const BookingDetailsPanel = ({
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
+  const [discountCode, setDiscountCode] = useState("");
 
   const taxAmount = formData.country === SWITZERLAND_CODE ? formData.price * VAT_RATE : 0;
   const totalAmount = formData.price + taxAmount - discountAmount;
+
+  const handleDiscountCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDiscountCode(e.target.value);
+  };
+
+  const handleApplyDiscount = () => {
+    handleInputChange({
+      target: { name: "discountCode", value: discountCode },
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -88,14 +100,22 @@ const BookingDetailsPanel = ({
 
         <div className="space-y-4">
           <Label htmlFor="discountCode">Discount Code</Label>
-          <Input
-            id="discountCode"
-            name="discountCode"
-            value={formData.discountCode || ""}
-            onChange={handleInputChange}
-            placeholder="Enter discount code if you have one"
-            className="w-full"
-          />
+          <div className="flex gap-2">
+            <Input
+              id="discountCode"
+              value={discountCode}
+              onChange={handleDiscountCodeChange}
+              placeholder="Enter discount code if you have one"
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleApplyDiscount}
+              type="button"
+              variant="secondary"
+            >
+              Apply
+            </Button>
+          </div>
         </div>
 
         <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
@@ -106,7 +126,9 @@ const BookingDetailsPanel = ({
           
           {discountAmount > 0 && (
             <div className="flex justify-between items-center text-green-600">
-              <span>Discount</span>
+              <span>
+                Discount {formData.discountCode && `(${formData.discountCode})`}
+              </span>
               <span>- CHF {discountAmount.toFixed(2)}</span>
             </div>
           )}
