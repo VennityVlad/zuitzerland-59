@@ -89,13 +89,7 @@ const DateSelectionFields = ({
         <div className="flex flex-wrap gap-2 mb-4">
           {PROGRAM_BLOCKS.map((block) => (
             <div key={block.name} className="flex items-center gap-2">
-              <div 
-                className="w-4 h-4 rounded relative" 
-                style={{ 
-                  backgroundColor: block.color,
-                  borderBottom: `2px solid ${block.underlineColor}`
-                }}
-              ></div>
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: block.color }}></div>
               <span className="text-sm text-gray-600">{block.name}</span>
             </div>
           ))}
@@ -103,16 +97,8 @@ const DateSelectionFields = ({
         <style>
           {`
             .rdp-day_programDate {
-              position: relative;
-            }
-            .rdp-day_programDate::after {
-              content: '';
-              position: absolute;
-              bottom: 0;
-              left: 0;
-              right: 0;
-              height: 2px;
-              background-color: var(--underline-color);
+              border-bottom-width: 2px;
+              border-bottom-style: solid;
             }
           `}
         </style>
@@ -124,10 +110,10 @@ const DateSelectionFields = ({
             programDate: (date) => isProgramDate(date) !== "",
           }}
           modifiersStyles={{
-            programDate: (date: Date) => ({
-              backgroundColor: isProgramDate(date),
-              "--underline-color": getUnderlineColor(date)
-            } as any)
+            programDate: {
+              backgroundColor: (date: Date) => isProgramDate(date),
+              borderBottomColor: (date: Date) => getUnderlineColor(date),
+            }
           }}
           disabled
           className="rounded-md border"
