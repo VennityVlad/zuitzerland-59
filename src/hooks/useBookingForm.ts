@@ -136,9 +136,10 @@ export const useBookingForm = () => {
       const dueDate = addDays(new Date(), 14).toISOString();
       const invoiceNumber = `INV-${bookingData.firstName}${bookingData.lastName}`;
 
-      // Create a clean data object for Zapier
+      // Create a clean data object for Zapier with separate firstName and lastName
       const zapierData = {
-        name: `${bookingData.firstName} ${bookingData.lastName}`,
+        firstName: bookingData.firstName,
+        lastName: bookingData.lastName,
         email: bookingData.email,
         address: bookingData.address,
         city: bookingData.city,
