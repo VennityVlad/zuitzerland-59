@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -128,13 +129,14 @@ export const useBookingForm = () => {
 
       if (error || !webhook_url) {
         console.error('Error fetching Zapier webhook URL:', error);
-        return;
+        throw new Error('Failed to get webhook URL');
       }
 
       const creationDate = new Date().toISOString();
       const dueDate = addDays(new Date(), 14).toISOString();
       const invoiceNumber = `INV-${bookingData.firstName}${bookingData.lastName}`;
 
+      // Create a clean data object for Zapier
       const zapierData = {
         name: `${bookingData.firstName} ${bookingData.lastName}`,
         email: bookingData.email,
@@ -153,14 +155,18 @@ export const useBookingForm = () => {
 
       console.log('Sending data to Zapier:', zapierData);
 
-      await fetch(webhook_url, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(zapierData)
+      // Use the edge function to make the webhook call
+      const { data, error: webhookError } = await supabase.functions.invoke('trigger-zapier', {
+        body: { 
+          webhook_url,
+          data: zapierData
+        }
       });
+
+      if (webhookError) {
+        console.error('Error calling webhook:', webhookError);
+        throw webhookError;
+      }
 
       console.log('Zapier webhook triggered successfully');
       return { invoiceNumber };
