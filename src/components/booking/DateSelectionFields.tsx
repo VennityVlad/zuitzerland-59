@@ -95,9 +95,18 @@ const DateSelectionFields = ({
             programDate: (date) => isProgramDate(date) !== "",
           }}
           modifiersStyles={{
-            programDate: (date) => ({
-              backgroundColor: isProgramDate(date),
-            }),
+            programDate: {
+              backgroundColor: "var(--program-date-color)",
+            },
+          }}
+          styles={{
+            day_programDate: (date) => {
+              const color = isProgramDate(date);
+              if (color) {
+                document.documentElement.style.setProperty('--program-date-color', color);
+              }
+              return {};
+            },
           }}
           disabled
           className="rounded-md border"
