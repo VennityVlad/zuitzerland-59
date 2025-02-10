@@ -1,9 +1,11 @@
+
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import DateRangeSelector from "./DateRangeSelector";
 import type { BookingFormData } from "@/types/booking";
+import type { ModifiersStyles } from "react-day-picker";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -80,12 +82,12 @@ const DateSelectionFields = ({
     return block?.underlineColor || "transparent";
   };
 
-  const modifierStyles = {
+  const modifierStyles: ModifiersStyles = {
     programDate: {
-      backgroundColor: isProgramDate as unknown as string,
-      borderBottomColor: getUnderlineColor as unknown as string,
-      borderBottomWidth: '2px',
-      borderBottomStyle: 'solid'
+      backgroundColor: isProgramDate(new Date()) as string,
+      borderBottomColor: getUnderlineColor(new Date()),
+      borderBottomWidth: 2,
+      borderBottomStyle: "solid"
     }
   };
 
