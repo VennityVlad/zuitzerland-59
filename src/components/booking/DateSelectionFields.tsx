@@ -18,37 +18,31 @@ const PROGRAM_BLOCKS = [
     name: "Intro Days",
     startDate: new Date(2025, 4, 1),
     endDate: new Date(2025, 4, 3),
-    color: "bg-purple-200",
+    color: "rgb(229, 222, 255)", // Soft Purple
   },
   {
     name: "Swiss Governance & New Societies Days",
     startDate: new Date(2025, 4, 4),
     endDate: new Date(2025, 4, 9),
-    color: "bg-blue-200",
+    color: "rgb(211, 228, 253)", // Soft Blue
   },
   {
-    name: "Cypherpunk Days",
+    name: "Cypherpunk & Solarpunk Days",
     startDate: new Date(2025, 4, 10),
     endDate: new Date(2025, 4, 17),
-    color: "bg-green-200",
-  },
-  {
-    name: "Solarpunk Days",
-    startDate: new Date(2025, 4, 11),
-    endDate: new Date(2025, 4, 17),
-    color: "bg-yellow-200",
+    color: "rgb(242, 252, 226)", // Soft Green
   },
   {
     name: "Build Week",
     startDate: new Date(2025, 4, 19),
     endDate: new Date(2025, 4, 23),
-    color: "bg-orange-200",
+    color: "rgb(254, 198, 161)", // Soft Orange
   },
   {
     name: "Zuitzerland Summit 2025",
     startDate: new Date(2025, 4, 24),
     endDate: new Date(2025, 4, 26),
-    color: "bg-red-200",
+    color: "rgb(255, 222, 226)", // Soft Pink
   },
 ];
 
@@ -82,7 +76,7 @@ const DateSelectionFields = ({
         <div className="flex flex-wrap gap-2 mb-4">
           {PROGRAM_BLOCKS.map((block) => (
             <div key={block.name} className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded ${block.color}`}></div>
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: block.color }}></div>
               <span className="text-sm text-gray-600">{block.name}</span>
             </div>
           ))}
@@ -95,18 +89,9 @@ const DateSelectionFields = ({
             programDate: (date) => isProgramDate(date) !== "",
           }}
           modifiersStyles={{
-            programDate: {
-              backgroundColor: "var(--program-date-color)",
-            },
-          }}
-          styles={{
-            day_programDate: (date) => {
-              const color = isProgramDate(date);
-              if (color) {
-                document.documentElement.style.setProperty('--program-date-color', color);
-              }
-              return {};
-            },
+            programDate: (date: Date) => ({
+              backgroundColor: isProgramDate(date),
+            }),
           }}
           disabled
           className="rounded-md border"
@@ -159,4 +144,3 @@ const DateSelectionFields = ({
 };
 
 export default DateSelectionFields;
-
