@@ -92,6 +92,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auth_token: string | null
           avatar_url: string | null
           created_at: string
           description: string | null
@@ -99,10 +100,12 @@ export type Database = {
           full_name: string | null
           id: string
           privy_id: string | null
+          supabase_uid: string | null
           updated_at: string
           username: string | null
         }
         Insert: {
+          auth_token?: string | null
           avatar_url?: string | null
           created_at?: string
           description?: string | null
@@ -110,10 +113,12 @@ export type Database = {
           full_name?: string | null
           id: string
           privy_id?: string | null
+          supabase_uid?: string | null
           updated_at?: string
           username?: string | null
         }
         Update: {
+          auth_token?: string | null
           avatar_url?: string | null
           created_at?: string
           description?: string | null
@@ -121,6 +126,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           privy_id?: string | null
+          supabase_uid?: string | null
           updated_at?: string
           username?: string | null
         }
