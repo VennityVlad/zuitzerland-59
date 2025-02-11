@@ -211,9 +211,78 @@ export const useBookingForm = () => {
       const taxAmount = calculateTaxAmount(priceAfterDiscount);
       const totalAmount = priceAfterDiscount + taxAmount;
 
-      // Translate payment type to the desired format
-      const translatedPaymentType = bookingData.paymentType === 'fiat' ? 'stripe' : 'wallet';
+      // Format data for Request Finance
+      const invoiceData = {
+        creationDate,
+        invoiceItems: [
+          {
+            currency: "CHF",
+            name: "Zuitzerland",
+            quantity: 1,
+            tax: {
+              type: "percentage",
+              amount: "3.8" // VAT rate as string
+            },
+            unitPrice: `${Math.round(priceAfterDiscount)}00` // Convert to cents
+          }
+        ],
+        invoiceNumber,
+        buyerInfo: {
+          address: {
+            streetAddress: bookingData.address,
+            city: bookingData.city,
+            postalCode: bookingData.zip,
+            country: bookingData.country
+          },
+          email: bookingData.email,
+          firstName: bookingData.firstName,
+          lastName: bookingData.lastName
+        },
+        paymentTerms: {
+          dueDate
+        },
+        paymentOptions: [
+          {
+            type: "wallet",
+            value: {
+              currencies: ["USDC-optimism"],
+              paymentInformation: {
+                paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
+                chain: "optimism"
+              }
+            }
+          },
+          {
+            type: "wallet",
+            value: {
+              currencies: ["ETH-optimism"],
+              paymentInformation: {
+                paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
+                chain: "optimism"
+              }
+            }
+          }
+        ],
+        tags: ["zapier_invoice"],
+        meta: {
+          format: "rnf_invoice",
+          version: "0.0.3"
+        }
+      };
 
+      // Create invoice using Request Finance API
+      const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-invoice', {
+        body: { invoiceData }
+      });
+
+      if (invoiceError) {
+        console.error('Error creating invoice:', invoiceError);
+        throw invoiceError;
+      }
+
+      console.log('Invoice created successfully:', invoiceResponse);
+
+      // Send data to Zapier
       const zapierData = {
         firstName: bookingData.firstName,
         lastName: bookingData.lastName,
@@ -234,7 +303,7 @@ export const useBookingForm = () => {
         dueDate,
         invoiceNumber,
         discountCode: bookingData.discountCode,
-        paymentType: translatedPaymentType
+        paymentType: bookingData.paymentType === 'fiat' ? 'stripe' : 'wallet'
       };
 
       console.log('Sending data to Zapier:', zapierData);
@@ -254,7 +323,7 @@ export const useBookingForm = () => {
       console.log('Zapier webhook triggered successfully');
       return { invoiceNumber };
     } catch (error) {
-      console.error('Error triggering Zapier webhook:', error);
+      console.error('Error in notifyZapier:', error);
       throw error;
     }
   };
@@ -317,4 +386,3 @@ export const useBookingForm = () => {
     calculateTaxAmount,
   };
 };
-
