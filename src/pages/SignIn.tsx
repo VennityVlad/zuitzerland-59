@@ -1,130 +1,32 @@
 
-import { usePrivy } from "@privy-io/react-auth";
+import { useState } from "react";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { LogIn } from "lucide-react";
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 const SignIn = () => {
-  const { login, authenticated, ready, user, getAccessToken } = usePrivy();
-  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const { signIn, user } = useSupabaseAuth();
 
-  useEffect(() => {
-    const setupAuth = async () => {
-      if (!user) {
-        console.log('No Privy user available yet');
-        return;
-      }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-      console.log('Privy user authenticated:', {
-        id: user.id,
-        email: user.email?.address
-      });
-
-      try {
-        const privyToken = await getAccessToken();
-        if (!privyToken) {
-          console.error('No Privy token available');
-          return;
-        }
-        console.log('Obtained Privy token');
-
-        // First check if profile exists
-        console.log('Checking for existing profile...');
-        const { data: existingProfile, error: profileCheckError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('privy_id', user.id)
-          .maybeSingle();
-
-        if (profileCheckError) {
-          console.error('Error checking existing profile:', profileCheckError);
-          throw profileCheckError;
-        }
-
-        // Create new profile if it doesn't exist
-        if (!existingProfile) {
-          console.log('No existing profile found, creating new profile...');
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: crypto.randomUUID(),
-              privy_id: user.id,
-              email: user.email?.address || null,
-              username: null,  // This will trigger the generate_username() function
-              auth_token: privyToken
-            });
-
-          if (profileError) {
-            console.error('Error creating profile:', profileError);
-            throw profileError;
-          }
-          console.log('New profile created successfully');
-        } else {
-          console.log('Existing profile found, updating auth token...');
-          // Update existing profile's auth token
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ auth_token: privyToken })
-            .eq('privy_id', user.id);
-
-          if (updateError) {
-            console.error('Error updating profile auth token:', updateError);
-            throw updateError;
-          }
-          console.log('Profile auth token updated successfully');
-        }
-
-        // Create Supabase session using the Privy token
-        console.log('Attempting to create Supabase session...');
-        const { data: { session }, error: sessionError } = await supabase.auth.signInWithPassword({
-          email: user.email?.address || 'placeholder@example.com',
-          password: privyToken,
-        });
-
-        if (sessionError) {
-          console.error('Error creating Supabase session:', sessionError);
-          throw sessionError;
-        }
-
-        console.log('Supabase session created successfully:', {
-          user: session?.user?.id,
-          expires_at: session?.expires_at
-        });
-
-      } catch (error) {
-        console.error('Error in auth setup:', error);
-        toast({
-          title: "Error",
-          description: "Failed to complete authentication setup",
-          variant: "destructive",
-        });
-      }
-    };
-
-    if (authenticated && user) {
-      console.log('Starting auth setup process...');
-      setupAuth();
-    } else {
-      console.log('Waiting for Privy authentication...', {
-        authenticated,
-        userPresent: !!user
-      });
+    try {
+      await signIn(email);
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("Authentication error:", error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [authenticated, user]);
+  };
 
-  if (!ready) {
-    console.log('Privy not ready yet');
-    return (
-      <div className="min-h-screen bg-secondary/30 flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-
-  if (authenticated) {
-    console.log('User authenticated, redirecting to home...');
+  if (user) {
     window.location.href = "/";
     return null;
   }
@@ -143,20 +45,54 @@ const SignIn = () => {
             Welcome to Switzerland Booking Portal
           </h1>
           
-          <p className="text-gray-600 mb-8 text-center">
-            Please sign in to access the booking form
-          </p>
-          
-          <Button 
-            onClick={() => {
-              console.log('Login button clicked');
-              login();
-            }}
-            className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
-          >
-            <LogIn className="mr-2" />
-            Sign In
-          </Button>
+          {isSubmitted ? (
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-medium text-gray-900">Check your email</h2>
+              <p className="text-gray-600">
+                We've sent a magic link to <strong>{email}</strong>
+              </p>
+              <p className="text-gray-500 text-sm">
+                Click the link in the email to sign in to your account.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4"
+                onClick={() => setIsSubmitted(false)}
+              >
+                Use a different email
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-gray-600 mb-8 text-center">
+                Enter your email to sign in or create an account
+              </p>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    required
+                  />
+                </div>
+
+                <Button 
+                  type="submit"
+                  className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
+                  disabled={isLoading}
+                >
+                  <LogIn className="mr-2" />
+                  {isLoading ? "Sending magic link..." : "Continue with email"}
+                </Button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>
