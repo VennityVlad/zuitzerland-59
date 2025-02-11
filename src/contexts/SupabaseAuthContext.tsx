@@ -7,8 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 interface SupabaseAuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -39,25 +38,10 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-    } catch (error) {
-      toast({
-        title: "Error signing in",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  const signUp = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({ 
-        email, 
-        password,
+      const { error } = await supabase.auth.signInWithOtp({ 
+        email,
         options: {
           emailRedirectTo: window.location.origin,
         }
@@ -65,12 +49,12 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       if (error) throw error;
       
       toast({
-        title: "Sign up successful",
-        description: "Please check your email to verify your account.",
+        title: "Check your email",
+        description: "We've sent you a magic link to sign in.",
       });
     } catch (error) {
       toast({
-        title: "Error signing up",
+        title: "Error signing in",
         description: (error as Error).message,
         variant: "destructive",
       });
@@ -93,7 +77,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   return (
-    <SupabaseAuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <SupabaseAuthContext.Provider value={{ user, loading, signIn, signOut }}>
       {children}
     </SupabaseAuthContext.Provider>
   );

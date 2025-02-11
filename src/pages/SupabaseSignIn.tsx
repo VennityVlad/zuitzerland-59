@@ -9,10 +9,9 @@ import { LogIn } from "lucide-react";
 
 const SupabaseSignIn = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const { signIn, signUp, user } = useSupabaseAuth();
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const { signIn, user } = useSupabaseAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,12 +19,8 @@ const SupabaseSignIn = () => {
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
-        await signUp(email, password);
-      } else {
-        await signIn(email, password);
-        navigate("/");
-      }
+      await signIn(email);
+      setIsSubmitted(true);
     } catch (error) {
       console.error("Authentication error:", error);
     } finally {
@@ -52,53 +47,54 @@ const SupabaseSignIn = () => {
             Welcome to Switzerland Booking Portal
           </h1>
           
-          <p className="text-gray-600 mb-8 text-center">
-            Please sign {isSignUp ? 'up' : 'in'} to access the booking form
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            <Button 
-              type="submit"
-              className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
-              disabled={isLoading}
-            >
-              <LogIn className="mr-2" />
-              {isLoading ? "Processing..." : isSignUp ? "Sign Up" : "Sign In"}
-            </Button>
-
-            <p className="text-center text-sm text-gray-600">
-              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-              <button
+          {isSubmitted ? (
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-medium text-gray-900">Check your email</h2>
+              <p className="text-gray-600">
+                We've sent a magic link to <strong>{email}</strong>
+              </p>
+              <p className="text-gray-500 text-sm">
+                Click the link in the email to sign in to your account.
+              </p>
+              <Button
                 type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-hotel-navy hover:underline"
+                variant="outline"
+                className="mt-4"
+                onClick={() => setIsSubmitted(false)}
               >
-                {isSignUp ? "Sign In" : "Sign Up"}
-              </button>
-            </p>
-          </form>
+                Use a different email
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-gray-600 mb-8 text-center">
+                Enter your email to sign in or create an account
+              </p>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    required
+                  />
+                </div>
+
+                <Button 
+                  type="submit"
+                  className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
+                  disabled={isLoading}
+                >
+                  <LogIn className="mr-2" />
+                  {isLoading ? "Sending magic link..." : "Continue with email"}
+                </Button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>
