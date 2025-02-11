@@ -30,31 +30,39 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
   const fetchProfile = async (userId: string) => {
     try {
+      // Try to upsert the profile
+      const newProfileId = crypto.randomUUID();
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('auth_user_id', userId)
-        .maybeSingle();
-
-      if (error) throw error;
-      setProfile(data);
-      
-      // If no profile exists, create one
-      if (!data) {
-        const newProfileId = crypto.randomUUID();
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert({
+        .upsert(
+          {
             id: newProfileId,
             auth_user_id: userId,
             email: user?.email || null,
             username: null,
-          })
-          .select()
-          .single();
+          },
+          {
+            onConflict: 'auth_user_id',
+            ignoreDuplicates: true,
+          }
+        )
+        .select()
+        .single();
 
-        if (createError) throw createError;
-        setProfile(newProfile);
+      if (error) throw error;
+      
+      // If upsert didn't return data (in case of conflict), fetch the existing profile
+      if (!data) {
+        const { data: existingProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('auth_user_id', userId)
+          .single();
+          
+        if (fetchError) throw fetchError;
+        setProfile(existingProfile);
+      } else {
+        setProfile(data);
       }
     } catch (error) {
       console.error('Error fetching/creating profile:', error);
@@ -169,3 +177,4 @@ export const useSupabaseAuth = () => {
   }
   return context;
 };
+
