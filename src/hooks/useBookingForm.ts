@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -206,16 +207,6 @@ export const useBookingForm = () => {
 
   const notifyZapier = async (bookingData: BookingFormData) => {
     try {
-      const { data: { webhook_url }, error } = await supabase
-        .functions.invoke('get-secret', {
-          body: { secret_name: 'ZAPIER_WEBHOOK_URL' }
-        });
-
-      if (error || !webhook_url) {
-        console.error('Error fetching Zapier webhook URL:', error);
-        throw new Error('Failed to get webhook URL');
-      }
-
       const creationDate = new Date().toISOString();
       const dueDate = calculateDueDate();
       const invoiceNumber = generateInvoiceNumber();
@@ -277,7 +268,17 @@ export const useBookingForm = () => {
 
       console.log('Invoice created successfully:', invoiceResponse);
 
-      // Send data to Zapier
+      /* Commenting out Zapier webhook for now
+      const { data: { webhook_url }, error } = await supabase
+        .functions.invoke('get-secret', {
+          body: { secret_name: 'ZAPIER_WEBHOOK_URL' }
+        });
+
+      if (error || !webhook_url) {
+        console.error('Error fetching Zapier webhook URL:', error);
+        throw new Error('Failed to get webhook URL');
+      }
+
       const zapierData = {
         firstName: bookingData.firstName,
         lastName: bookingData.lastName,
@@ -316,6 +317,8 @@ export const useBookingForm = () => {
       }
 
       console.log('Zapier webhook triggered successfully');
+      */
+      
       return { invoiceNumber };
     } catch (error) {
       console.error('Error in notifyZapier:', error);
