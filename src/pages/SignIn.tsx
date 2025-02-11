@@ -18,8 +18,8 @@ const SignIn = () => {
   useEffect(() => {
     console.log("SignIn: user state changed", user);
     if (user) {
-      console.log("SignIn: navigating to /");
-      navigate("/", { replace: true });
+      console.log("SignIn: navigating to /book");
+      navigate("/book", { replace: true });
     }
   }, [user, navigate]);
 
