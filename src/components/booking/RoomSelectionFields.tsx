@@ -21,20 +21,24 @@ interface RoomSelectionFieldsProps {
 }
 
 const getRoomTypes = async () => {
+  // Simplified query to get distinct room types
   const { data, error } = await supabase
     .from('prices')
-    .select('room_type')
-    .order('date', { ascending: true });
+    .select('room_type');
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching room types:', error);
+    throw error;
+  }
 
-  // Get unique room types and format them
-  const uniqueTypes = Array.from(new Set(data.map(row => row.room_type))) as RoomType[];
+  // Get unique room types
+  const uniqueTypes = [...new Set(data.map(row => row.room_type))] as RoomType[];
+  
+  console.log('Fetched unique room types:', uniqueTypes);
+  
   return uniqueTypes.map(type => ({
     id: type,
-    name: type.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ')
+    name: type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   }));
 };
 
@@ -45,7 +49,8 @@ const RoomSelectionFields = ({
   const { data: prices, isLoading: isPricesLoading } = usePrices(formData.checkin);
   const { data: roomTypes, isLoading: isRoomTypesLoading } = useQuery({
     queryKey: ['roomTypes'],
-    queryFn: getRoomTypes
+    queryFn: getRoomTypes,
+    staleTime: Infinity // Cache the room types indefinitely since they rarely change
   });
 
   // Update room type prices based on selected date
@@ -59,7 +64,6 @@ const RoomSelectionFields = ({
 
   const isLoading = isPricesLoading || isRoomTypesLoading;
 
-  console.log('Room types:', roomTypes);
   console.log('Room types with prices:', roomTypesWithPrices);
 
   return (
@@ -71,7 +75,7 @@ const RoomSelectionFields = ({
         onValueChange={onRoomTypeChange}
       >
         <SelectTrigger className="w-full py-5">
-          <SelectValue placeholder={isLoading ? "Loading prices..." : "Select a room type"} />
+          <SelectValue placeholder={isLoading ? "Loading room types..." : "Select a room type"} />
         </SelectTrigger>
         <SelectContent>
           {roomTypesWithPrices.map((room) => (
