@@ -41,9 +41,11 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       
       // If no profile exists, create one
       if (!data) {
+        const newProfileId = crypto.randomUUID();
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
+            id: newProfileId,
             auth_user_id: userId,
             email: user?.email || null,
             username: null,
