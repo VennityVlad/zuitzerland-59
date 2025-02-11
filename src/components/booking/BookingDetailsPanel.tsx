@@ -6,7 +6,12 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { HelpCircle, X } from "lucide-react";
+import { format, eachDayOfInterval, parse } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BookingDetailsPanelProps {
   formData: BookingFormData;
@@ -17,6 +22,61 @@ interface BookingDetailsPanelProps {
 }
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
+
+const PriceBreakdown = ({ checkin, checkout, roomType }: { checkin: string; checkout: string; roomType: string }) => {
+  const { data: prices } = useQuery({
+    queryKey: ['prices', checkin, checkout, roomType],
+    queryFn: async () => {
+      if (!checkin || !checkout || !roomType) return [];
+      
+      const { data, error } = await supabase
+        .from('prices')
+        .select('*')
+        .eq('room_type', roomType)
+        .gte('date', checkin)
+        .lte('date', checkout)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: Boolean(checkin && checkout && roomType)
+  });
+
+  const dateRange = checkin && checkout ? 
+    eachDayOfInterval({
+      start: parse(checkin, 'yyyy-MM-dd', new Date()),
+      end: parse(checkout, 'yyyy-MM-dd', new Date())
+    }) : [];
+
+  return (
+    <div className="max-h-[400px] overflow-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead className="text-right">Price (CHF)</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {dateRange.map((date, index) => {
+            const formattedDate = format(date, 'yyyy-MM-dd');
+            const priceForDay = prices?.find(p => p.date === formattedDate);
+            
+            return (
+              <TableRow key={formattedDate}>
+                <TableCell>{format(date, 'MMM dd, yyyy')}</TableCell>
+                <TableCell className="text-right">
+                  {priceForDay ? priceForDay.price.toFixed(2) : '-'}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
 
 const BookingDetailsPanel = ({
   formData,
@@ -142,7 +202,26 @@ const BookingDetailsPanel = ({
 
         <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
           <div className="flex justify-between items-center text-gray-600">
-            <span>Base Price</span>
+            <span className="flex items-center gap-2">
+              Base Price
+              {formData.checkin && formData.checkout && formData.roomType && (
+                <Popover>
+                  <PopoverTrigger>
+                    <HelpCircle className="h-4 w-4 text-gray-500 hover:text-gray-700 cursor-help" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-4" align="start">
+                    <div>
+                      <h4 className="font-semibold mb-3">Daily Price Breakdown</h4>
+                      <PriceBreakdown
+                        checkin={formData.checkin}
+                        checkout={formData.checkout}
+                        roomType={formData.roomType}
+                      />
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </span>
             <span>CHF {formData.price.toFixed(2)}</span>
           </div>
           
