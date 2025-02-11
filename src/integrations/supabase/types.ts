@@ -54,10 +54,10 @@ export type Database = {
           payment_link: string
           payment_type: string
           price: number
+          privy_id: string
           request_invoice_id: string
           room_type: string
           status: string
-          user_id: string
         }
         Insert: {
           booking_details: Json
@@ -73,10 +73,10 @@ export type Database = {
           payment_link: string
           payment_type: string
           price: number
+          privy_id: string
           request_invoice_id: string
           room_type: string
           status?: string
-          user_id: string
         }
         Update: {
           booking_details?: Json
@@ -92,12 +92,20 @@ export type Database = {
           payment_link?: string
           payment_type?: string
           price?: number
+          privy_id?: string
           request_invoice_id?: string
           room_type?: string
           status?: string
-          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invoices_privy_id_fkey"
+            columns: ["privy_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["privy_id"]
+          },
+        ]
       }
       profiles: {
         Row: {

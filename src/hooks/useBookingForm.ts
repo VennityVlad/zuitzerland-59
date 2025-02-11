@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -266,7 +267,7 @@ export const useBookingForm = () => {
       const { error: dbError } = await supabase
         .from('invoices')
         .insert({
-          user_id: user?.id,
+          privy_id: user?.id,
           request_invoice_id: invoiceResponse.invoiceId,
           invoice_uid: invoiceNumber,
           payment_link: invoiceResponse.paymentLink,
