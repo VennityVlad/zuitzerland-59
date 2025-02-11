@@ -79,9 +79,12 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
         
         if (!mounted) return;
         
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+        // Only set the user if it's different from the current state
+        if (JSON.stringify(session?.user) !== JSON.stringify(user)) {
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -97,11 +100,16 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
+      console.log("Auth state change event:", event);
+      
+      // Only update user state if it's different
+      if (JSON.stringify(session?.user) !== JSON.stringify(user)) {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
       }
     });
 
@@ -109,7 +117,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Removed user from dependencies
 
   const signIn = async (email: string) => {
     try {
