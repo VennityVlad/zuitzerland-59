@@ -15,7 +15,7 @@ const NavMenu = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="absolute top-4 left-4">
+    <div className="fixed top-4 left-4 z-50">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="lg" className="flex items-center gap-2 p-2">
