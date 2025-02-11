@@ -270,6 +270,7 @@ export const useBookingForm = () => {
         .from('invoices')
         .insert({
           auth_user_id: user.id,
+          privy_id: null, // Set to null since we're transitioning away from it
           request_invoice_id: invoiceResponse.invoiceId,
           invoice_uid: invoiceNumber,
           payment_link: invoiceResponse.paymentLink,

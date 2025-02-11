@@ -55,7 +55,7 @@ export type Database = {
           payment_link: string
           payment_type: string
           price: number
-          privy_id: string
+          privy_id: string | null
           request_invoice_id: string
           room_type: string
           status: string
@@ -75,7 +75,7 @@ export type Database = {
           payment_link: string
           payment_type: string
           price: number
-          privy_id: string
+          privy_id?: string | null
           request_invoice_id: string
           room_type: string
           status?: string
@@ -95,7 +95,7 @@ export type Database = {
           payment_link?: string
           payment_type?: string
           price?: number
-          privy_id?: string
+          privy_id?: string | null
           request_invoice_id?: string
           room_type?: string
           status?: string
