@@ -87,11 +87,19 @@ const getRoomTypes = async () => {
   // Get unique room types
   const uniqueTypes = [...new Set(data.map(row => row.room_type))] as string[];
   
-  console.log('Fetched unique room types:', uniqueTypes);
+  // Map room types to their display names
+  const roomTypeDisplayNames: { [key: string]: string } = {
+    'hotel_room_queen': 'Hotel Room - Queen Bed',
+    'apartment_3br_couples': '3 Bedroom Apartment - Couples Room',
+    'apartment_3_4br_queen': '3-4 Bedroom Apartment - Queen Bed Room',
+    'apartment_3_4br_twin': '3-4 Bedroom Apartment - Twin Bed Room',
+    'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
+    'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
+  };
   
   return uniqueTypes.map(type => ({
     id: type,
-    name: type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    name: roomTypeDisplayNames[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   }));
 };
 
@@ -143,12 +151,7 @@ const RoomSelectionFields = ({
         <SelectContent>
           {roomTypesWithPrices.map((room) => (
             <SelectItem key={room.id} value={room.id}>
-              <div className="flex flex-col">
-                <span className="font-medium">{room.name}</span>
-                <span className="text-sm text-gray-500">
-                  CHF {room.pricePerNight} per night
-                </span>
-              </div>
+              {room.name}
             </SelectItem>
           ))}
         </SelectContent>
