@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +7,7 @@ import type { BookingFormData } from "@/types/booking";
 import { countries } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
+import { v4 as uuidv4 } from 'uuid';
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
 
@@ -190,6 +190,20 @@ export const useBookingForm = () => {
     }));
   };
 
+  const generateInvoiceNumber = () => {
+    const timestamp = new Date().getTime().toString().slice(-6); // Last 6 digits of timestamp
+    const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 random alphanumeric
+    return `INV-${timestamp}-${randomStr}`;
+  };
+
+  const calculateDueDate = () => {
+    const now = new Date();
+    const dueDate = addDays(now, 14);
+    // Set due date to end of the day (23:59:59)
+    dueDate.setHours(23, 59, 59, 999);
+    return dueDate.toISOString();
+  };
+
   const notifyZapier = async (bookingData: BookingFormData) => {
     try {
       const { data: { webhook_url }, error } = await supabase
@@ -203,8 +217,8 @@ export const useBookingForm = () => {
       }
 
       const creationDate = new Date().toISOString();
-      const dueDate = addDays(new Date(), 14).toISOString();
-      const invoiceNumber = `INV-${bookingData.firstName}${bookingData.lastName}`;
+      const dueDate = calculateDueDate();
+      const invoiceNumber = generateInvoiceNumber();
 
       const basePrice = bookingData.price;
       const priceAfterDiscount = basePrice - discountAmount;
