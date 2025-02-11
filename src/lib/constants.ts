@@ -1,54 +1,50 @@
 
-import { RoomType } from "@/types/booking";
+import { RoomType, DatabaseRoomType } from "@/types/booking";
 
-type PricingTable = {
-  [key: string]: number[];
-};
-
-export const PRICING_TABLE: PricingTable = {
-  "queen-standard": [320, 320, 320, 320, 320, 320, 320, 315, 310, 305, 300, 295, 290, 285, 280, 275, 270, 265, 260, 255, 250, 245, 240, 235, 230],
-  "couples-suite": [300, 315, 315, 315, 315, 315, 315, 312, 309, 306, 303, 300, 297, 294, 291, 288, 285, 282, 279, 276, 273, 270, 267, 264, 261],
-  "queen-shared": [290, 290, 290, 290, 290, 290, 290, 284, 277, 271, 264, 258, 251, 245, 238, 232, 225, 219, 212, 206, 199, 193, 186, 180, 173],
-  "twin-shared": [157, 157, 157, 157, 157, 157, 157, 155, 153, 151, 149, 147, 145, 143, 141, 139, 137, 135, 133, 131, 129, 127, 125, 123, 121],
-  "twin-bathroom": [157, 157, 157, 157, 157, 157, 157, 157, 157, 157, 157, 157, 157, 100, 98, 97, 95, 93, 92, 90, 88, 86, 86, 86, 86],
-  "triple-room": [157, 157, 157, 157, 157, 157, 157, 156, 154, 153, 151, 150, 148, 147, 145, 144, 143, 141, 140, 138, 85, 84, 83, 82, 81],
+export const ROOM_TYPE_MAPPING: { [key: string]: DatabaseRoomType } = {
+  "queen-standard": "hotel_room_queen",
+  "couples-suite": "apartment_3br_couple",
+  "queen-shared": "apartment_3_4br_queen_single",
+  "twin-shared": "apartment_3_4br_twin_single",
+  "twin-bathroom": "apartment_2br_twin_single",
+  "triple-room": "apartment_2br_triple",
 };
 
 export const ROOM_TYPES: RoomType[] = [
   {
     id: "queen-standard",
     name: "Hotel Room - Queen Bed (Daily Cleaning)",
-    pricePerNight: PRICING_TABLE["queen-standard"][0],
+    pricePerNight: 0, // Will be populated from database
     description: "2 people in private room incl. breakfast",
   },
   {
     id: "couples-suite",
     name: "3 Bedroom Apartment - Couples Room",
-    pricePerNight: PRICING_TABLE["couples-suite"][0],
+    pricePerNight: 0, // Will be populated from database
     description: "Two people incl. breakfast, private entrance",
   },
   {
     id: "queen-shared",
     name: "3-4 Bedroom Apartment - Queen Bed Room",
-    pricePerNight: PRICING_TABLE["queen-shared"][0],
+    pricePerNight: 0, // Will be populated from database
     description: "Single person not sharing, two bathrooms between 6-8 people, includes breakfast",
   },
   {
     id: "twin-shared",
     name: "3-4 Bedroom Apartment - Twin Bed Room",
-    pricePerNight: PRICING_TABLE["twin-shared"][0],
+    pricePerNight: 0, // Will be populated from database
     description: "Single person, two bathrooms between 6-8 people, includes breakfast",
   },
   {
     id: "twin-bathroom",
     name: "2 Bedroom Apartment - Twin Bed Room",
-    pricePerNight: PRICING_TABLE["twin-bathroom"][0],
+    pricePerNight: 0, // Will be populated from database
     description: "Single person, one bathroom between five people, includes breakfast",
   },
   {
     id: "triple-room",
     name: "2 Bedroom Apartment - Triple Bed Room",
-    pricePerNight: PRICING_TABLE["triple-room"][0],
+    pricePerNight: 0, // Will be populated from database
     description: "Single person, one bathroom between five people, includes breakfast",
   }
 ];
@@ -59,4 +55,3 @@ export const ROOM_MIN_STAY: { [key: string]: number } = {
   "twin-bathroom": 14, // 2 weeks minimum for 2 bedroom twin
   "triple-room": 25, // Whole time (25 days) for 2 bedroom triple
 };
-

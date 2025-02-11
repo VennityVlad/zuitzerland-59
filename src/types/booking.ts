@@ -22,3 +22,16 @@ export interface BookingFormData {
   paymentType: 'fiat' | 'crypto';
 }
 
+export type DatabaseRoomType = 
+  | 'hotel_room_queen'
+  | 'apartment_3br_couple'
+  | 'apartment_3_4br_queen_single'
+  | 'apartment_3_4br_twin_single'
+  | 'apartment_2br_twin_single'
+  | 'apartment_2br_triple';
+
+export interface PriceData {
+  room_type: DatabaseRoomType;
+  date: string;
+  price: number;
+}

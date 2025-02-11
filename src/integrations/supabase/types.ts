@@ -110,6 +110,33 @@ export type Database = {
           },
         ]
       }
+      prices: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          price: number
+          room_type: Database["public"]["Enums"]["room_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          price: number
+          room_type: Database["public"]["Enums"]["room_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          price?: number
+          room_type?: Database["public"]["Enums"]["room_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           auth_token: string | null
@@ -195,6 +222,13 @@ export type Database = {
     }
     Enums: {
       invoice_status: "pending" | "paid" | "overdue"
+      room_type:
+        | "hotel_room_queen"
+        | "apartment_3br_couple"
+        | "apartment_3_4br_queen_single"
+        | "apartment_3_4br_twin_single"
+        | "apartment_2br_twin_single"
+        | "apartment_2br_triple"
     }
     CompositeTypes: {
       [_ in never]: never
