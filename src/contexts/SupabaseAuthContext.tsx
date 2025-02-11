@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
@@ -44,6 +45,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
         return;
       }
 
+      // Only create a new profile if we couldn't find an existing one
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
         .insert({
@@ -75,15 +77,14 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (!mounted) return;
         
-        // Only set the user if it's different from the current state
-        if (JSON.stringify(session?.user) !== JSON.stringify(user)) {
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          }
+        if (session?.user) {
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        } else {
+          setUser(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -101,14 +102,14 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       
       console.log("Auth state change event:", event);
       
-      // Only update user state if it's different
-      if (JSON.stringify(session?.user) !== JSON.stringify(user)) {
-        setUser(session?.user ?? null);
-        if (session?.user) {
+      if (session?.user) {
+        setUser(session.user);
+        if (event === 'SIGNED_IN') {
           await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
         }
+      } else {
+        setUser(null);
+        setProfile(null);
       }
     });
 
@@ -116,7 +117,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []); // Removed user from dependencies
+  }, []);
 
   const signIn = async (email: string) => {
     try {
@@ -167,14 +168,12 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
   const signOut = async () => {
     try {
-      // Explicitly sign out and clear all local storage
       const { error } = await supabase.auth.signOut({
-        scope: 'local' // This ensures we clear local storage as well
+        scope: 'local'
       });
       
       if (error) throw error;
       
-      // Force clear the user and profile states
       setUser(null);
       setProfile(null);
       
