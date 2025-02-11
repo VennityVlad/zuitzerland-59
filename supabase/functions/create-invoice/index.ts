@@ -43,7 +43,7 @@ serve(async (req) => {
         {
           type: "wallet",
           value: {
-            currencies: ["USDC-optimism"],
+            currencies: ["USDCn-optimism"],
             paymentInformation: {
               paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
               chain: "optimism"

@@ -41,6 +41,7 @@ export type Database = {
       }
       invoices: {
         Row: {
+          auth_user_id: string | null
           booking_details: Json
           checkin: string
           checkout: string
@@ -54,12 +55,13 @@ export type Database = {
           payment_link: string
           payment_type: string
           price: number
-          privy_id: string
+          privy_id: string | null
           request_invoice_id: string
           room_type: string
           status: string
         }
         Insert: {
+          auth_user_id?: string | null
           booking_details: Json
           checkin: string
           checkout: string
@@ -73,12 +75,13 @@ export type Database = {
           payment_link: string
           payment_type: string
           price: number
-          privy_id: string
+          privy_id?: string | null
           request_invoice_id: string
           room_type: string
           status?: string
         }
         Update: {
+          auth_user_id?: string | null
           booking_details?: Json
           checkin?: string
           checkout?: string
@@ -92,24 +95,25 @@ export type Database = {
           payment_link?: string
           payment_type?: string
           price?: number
-          privy_id?: string
+          privy_id?: string | null
           request_invoice_id?: string
           room_type?: string
           status?: string
         }
         Relationships: [
           {
-            foreignKeyName: "invoices_privy_id_fkey"
-            columns: ["privy_id"]
+            foreignKeyName: "invoices_auth_user_id_fkey"
+            columns: ["auth_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["privy_id"]
+            referencedColumns: ["auth_user_id"]
           },
         ]
       }
       profiles: {
         Row: {
           auth_token: string | null
+          auth_user_id: string | null
           avatar_url: string | null
           created_at: string
           description: string | null
@@ -123,6 +127,7 @@ export type Database = {
         }
         Insert: {
           auth_token?: string | null
+          auth_user_id?: string | null
           avatar_url?: string | null
           created_at?: string
           description?: string | null
@@ -136,6 +141,7 @@ export type Database = {
         }
         Update: {
           auth_token?: string | null
+          auth_user_id?: string | null
           avatar_url?: string | null
           created_at?: string
           description?: string | null
