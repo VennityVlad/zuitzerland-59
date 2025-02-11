@@ -128,7 +128,7 @@ const App = () => {
                   path="/invoices"
                   element={
                     <ProtectedRoute>
-                      <Profile />
+                      <Invoices />
                     </ProtectedRoute>
                   }
                 />
