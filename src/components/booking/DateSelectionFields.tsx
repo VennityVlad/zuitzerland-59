@@ -17,35 +17,35 @@ const PROGRAM_BLOCKS = [
     name: "Intro Days",
     startDate: new Date(2025, 4, 1),
     endDate: new Date(2025, 4, 3),
-    color: "rgb(229, 222, 255)", // Soft Purple
+    color: "#E5DEFF", // Solid Purple
     underlineColor: "#9b87f5",
   },
   {
     name: "Swiss Governance & New Societies Days",
     startDate: new Date(2025, 4, 4),
     endDate: new Date(2025, 4, 9),
-    color: "rgb(211, 228, 253)", // Soft Blue
+    color: "#D3E4FD", // Solid Blue
     underlineColor: "#0EA5E9",
   },
   {
     name: "Cypherpunk & Solarpunk Days",
     startDate: new Date(2025, 4, 10),
     endDate: new Date(2025, 4, 17),
-    color: "rgb(242, 252, 226)", // Soft Green
+    color: "#F2FCE2", // Solid Green
     underlineColor: "#8B5CF6",
   },
   {
     name: "Build Week",
     startDate: new Date(2025, 4, 19),
     endDate: new Date(2025, 4, 23),
-    color: "rgb(254, 198, 161)", // Soft Orange
+    color: "#FEC6A1", // Solid Orange
     underlineColor: "#F97316",
   },
   {
     name: "Zuitzerland Summit 2025",
     startDate: new Date(2025, 4, 24),
     endDate: new Date(2025, 4, 26),
-    color: "rgb(255, 222, 226)", // Soft Pink
+    color: "#FFDEE2", // Solid Pink
     underlineColor: "#D946EF",
   },
 ];
