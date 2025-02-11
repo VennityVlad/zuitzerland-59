@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Loader2, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -67,6 +67,14 @@ const Invoices = () => {
     window.open(paymentLink, '_blank');
   };
 
+  const formatDate = (dateString: string) => {
+    return format(parseISO(dateString), 'MMM d');
+  };
+
+  const formatDateWithYear = (dateString: string) => {
+    return format(parseISO(dateString), 'MMM d, yyyy');
+  };
+
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
       <div className="container max-w-4xl mx-auto px-4">
@@ -101,11 +109,11 @@ const Invoices = () => {
                   {invoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell>
-                        {format(new Date(invoice.created_at), 'MMM d, yyyy')}
+                        {formatDateWithYear(invoice.created_at)}
                       </TableCell>
                       <TableCell>{invoice.room_type}</TableCell>
                       <TableCell>
-                        {format(new Date(invoice.checkin), 'MMM d')} - {format(new Date(invoice.checkout), 'MMM d, yyyy')}
+                        {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
                       </TableCell>
                       <TableCell>CHF {invoice.price}</TableCell>
                       <TableCell>
