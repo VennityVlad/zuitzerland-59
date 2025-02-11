@@ -35,8 +35,7 @@ serve(async (req) => {
         value: {
           currency: "CHF",
           paymentInformation: {
-            stripePublishableKey: "pk_live_51JP6y9Jdl2BXNtq7yWlocBoca85Q4s7yKZSXM5H6UHRQx7XNbOXgdT9hKZN13X87wDMt64pmNdhDwdLpNnLviJqa00utBfebZj",
-            stripePaymentId: "pi_3Qr4LcJdl2BXNtq70BQ5wDFC_secret_9fnLb0vKUayRfZ8YJ4hp8nRS7"
+            stripePublishableKey: "pk_live_51JP6y9Jdl2BXNtq7yWlocBoca85Q4s7yKZSXM5H6UHRQx7XNbOXgdT9hKZN13X87wDMt64pmNdhDwdLpNnLviJqa00utBfebZj"
           }
         }
       }] : 
