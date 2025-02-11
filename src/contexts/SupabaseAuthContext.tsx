@@ -4,8 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
+interface UserProfile {
+  id: string;
+  auth_user_id: string;
+  email: string | null;
+  username: string | null;
+}
+
 interface SupabaseAuthContextType {
   user: User | null;
+  profile: UserProfile | null;
   loading: boolean;
   signIn: (email: string) => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
@@ -16,22 +24,46 @@ const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(u
 
 export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('auth_user_id', userId)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
   useEffect(() => {
     // Check active session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await fetchProfile(session.user.id);
+      }
       setLoading(false);
     };
 
     checkSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
     });
 
     return () => {
@@ -101,7 +133,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   return (
-    <SupabaseAuthContext.Provider value={{ user, loading, signIn, verifyOtp, signOut }}>
+    <SupabaseAuthContext.Provider value={{ user, profile, loading, signIn, verifyOtp, signOut }}>
       {children}
     </SupabaseAuthContext.Provider>
   );
@@ -114,3 +146,4 @@ export const useSupabaseAuth = () => {
   }
   return context;
 };
+

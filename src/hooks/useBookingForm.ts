@@ -7,14 +7,14 @@ import { ROOM_MIN_STAY, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
 import { countries } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
 
 export const useBookingForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user } = usePrivy();
+  const { user } = useSupabaseAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
@@ -204,6 +204,8 @@ export const useBookingForm = () => {
   };
 
   const createInvoice = async (bookingData: BookingFormData) => {
+    if (!user) throw new Error('User must be authenticated to create an invoice');
+
     try {
       const creationDate = new Date().toISOString();
       const dueDate = calculateDueDate();
@@ -267,7 +269,7 @@ export const useBookingForm = () => {
       const { error: dbError } = await supabase
         .from('invoices')
         .insert({
-          privy_id: user?.id,
+          auth_user_id: user.id,
           request_invoice_id: invoiceResponse.invoiceId,
           invoice_uid: invoiceNumber,
           payment_link: invoiceResponse.paymentLink,

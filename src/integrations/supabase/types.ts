@@ -41,6 +41,7 @@ export type Database = {
       }
       invoices: {
         Row: {
+          auth_user_id: string | null
           booking_details: Json
           checkin: string
           checkout: string
@@ -60,6 +61,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          auth_user_id?: string | null
           booking_details: Json
           checkin: string
           checkout: string
@@ -79,6 +81,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          auth_user_id?: string | null
           booking_details?: Json
           checkin?: string
           checkout?: string
@@ -99,17 +102,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invoices_privy_id_fkey"
-            columns: ["privy_id"]
+            foreignKeyName: "invoices_auth_user_id_fkey"
+            columns: ["auth_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["privy_id"]
+            referencedColumns: ["auth_user_id"]
           },
         ]
       }
       profiles: {
         Row: {
           auth_token: string | null
+          auth_user_id: string | null
           avatar_url: string | null
           created_at: string
           description: string | null
@@ -123,6 +127,7 @@ export type Database = {
         }
         Insert: {
           auth_token?: string | null
+          auth_user_id?: string | null
           avatar_url?: string | null
           created_at?: string
           description?: string | null
@@ -136,6 +141,7 @@ export type Database = {
         }
         Update: {
           auth_token?: string | null
+          auth_user_id?: string | null
           avatar_url?: string | null
           created_at?: string
           description?: string | null
