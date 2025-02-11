@@ -328,6 +328,11 @@ export const useBookingForm = () => {
 
     try {
       const invoiceResponse = await createInvoice(formData);
+      
+      // Open payment link in new window
+      if (invoiceResponse.paymentLink) {
+        window.open(invoiceResponse.paymentLink, '_blank');
+      }
 
       toast({
         title: "Booking Submitted",
