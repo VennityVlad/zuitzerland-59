@@ -131,39 +131,78 @@ const Profile = () => {
     if (!user?.id) return;
 
     try {
-      const { error: updateError } = await supabase
+      // First check if profile exists
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
-        .update({
-          username: values.username,
-          description: values.description,
-          email: user.email?.address || null,
-        })
-        .eq('privy_id', user.id);
+        .select('id')
+        .eq('privy_id', user.id)
+        .maybeSingle();
 
-      if (updateError) {
-        console.error('Error updating profile:', updateError);
-        throw updateError;
+      if (checkError) {
+        console.error('Error checking profile:', checkError);
+        throw checkError;
+      }
+
+      let profileId;
+      if (!existingProfile) {
+        // Create new profile if it doesn't exist
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: crypto.randomUUID(),
+            privy_id: user.id,
+            email: user.email?.address || null,
+            username: values.username,
+            description: values.description,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          throw createError;
+        }
+
+        profileId = newProfile.id;
+        setProfileData(newProfile);
+      } else {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            username: values.username,
+            description: values.description,
+            email: user.email?.address || null,
+          })
+          .eq('privy_id', user.id);
+
+        if (updateError) {
+          console.error('Error updating profile:', updateError);
+          throw updateError;
+        }
+        
+        // Fetch updated profile
+        const { data: updatedProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+          
+        if (fetchError) {
+          console.error('Error fetching updated profile:', fetchError);
+          throw fetchError;
+        }
+
+        if (updatedProfile) {
+          setProfileData(updatedProfile);
+        }
       }
 
       toast({
         title: "Success",
-        description: "Profile updated successfully",
+        description: existingProfile ? "Profile updated successfully" : "Profile created successfully",
       });
-      
-      const { data: updatedProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('privy_id', user.id)
-        .maybeSingle();
-        
-      if (fetchError) {
-        console.error('Error fetching updated profile:', fetchError);
-        throw fetchError;
-      }
 
-      if (updatedProfile) {
-        setProfileData(updatedProfile);
-      }
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
