@@ -4,19 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
-interface UserProfile {
-  id: string;
-  auth_user_id: string;
-  email: string | null;
-  username: string | null;
-}
-
 interface SupabaseAuthContextType {
   user: User | null;
-  profile: UserProfile | null;
   loading: boolean;
-  signIn: (email: string) => Promise<void>;
-  verifyOtp: (email: string, token: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -24,115 +16,33 @@ const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(u
 
 export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchProfile = async (userId: string) => {
-    if (!userId) return;
-    
-    try {
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_user_id', userId)
-        .maybeSingle();
-
-      if (fetchError) throw fetchError;
-
-      if (existingProfile) {
-        setProfile(existingProfile);
-        return;
-      }
-
-      // Only create a new profile if we couldn't find an existing one
-      const { data: newProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: crypto.randomUUID(),
-          auth_user_id: userId,
-          email: user?.email || null,
-          username: null,
-        })
-        .select()
-        .maybeSingle();
-
-      if (createError) throw createError;
-      if (newProfile) {
-        setProfile(newProfile);
-      }
-    } catch (error) {
-      console.error('Error fetching/creating profile:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load user profile",
-        variant: "destructive",
-      });
-    }
-  };
-
   useEffect(() => {
-    let mounted = true;
-
+    // Check active session
     const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-        
-        if (session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
-      } catch (error) {
-        console.error('Session check error:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setLoading(false);
     };
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      
-      console.log("Auth state change event:", event);
-      
-      if (session?.user) {
-        setUser(session.user);
-        if (event === 'SIGNED_IN') {
-          await fetchProfile(session.user.id);
-        }
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
     });
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  const signIn = async (email: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-        }
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      
-      toast({
-        title: "Check your email",
-        description: "We've sent you a one-time code to sign in.",
-      });
     } catch (error) {
       toast({
         title: "Error signing in",
@@ -143,22 +53,24 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     }
   };
 
-  const verifyOtp = async (email: string, token: string) => {
+  const signUp = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email'
+      const { error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+        }
       });
       if (error) throw error;
-
+      
       toast({
-        title: "Success",
-        description: "You've been signed in successfully.",
+        title: "Sign up successful",
+        description: "Please check your email to verify your account.",
       });
     } catch (error) {
       toast({
-        title: "Error verifying code",
+        title: "Error signing up",
         description: (error as Error).message,
         variant: "destructive",
       });
@@ -168,19 +80,8 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut({
-        scope: 'local'
-      });
-      
+      const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
-      setUser(null);
-      setProfile(null);
-      
-      toast({
-        title: "Signed out",
-        description: "You've been successfully signed out.",
-      });
     } catch (error) {
       toast({
         title: "Error signing out",
@@ -192,7 +93,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   return (
-    <SupabaseAuthContext.Provider value={{ user, profile, loading, signIn, verifyOtp, signOut }}>
+    <SupabaseAuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
       {children}
     </SupabaseAuthContext.Provider>
   );
