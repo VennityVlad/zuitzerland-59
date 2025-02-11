@@ -23,8 +23,57 @@ serve(async (req) => {
       throw new Error('API key not configured');
     }
 
-    const { invoiceData } = await req.json();
+    const { invoiceData, paymentType, priceAfterDiscount } = await req.json();
     console.log('Received invoice data:', JSON.stringify(invoiceData, null, 2));
+    console.log('Payment type:', paymentType);
+    console.log('Price after discount:', priceAfterDiscount);
+
+    // Adjust payment options based on payment type
+    const paymentOptions = paymentType === 'fiat' ? 
+      [{
+        type: "stripe",
+        value: {
+          currency: "CHF",
+          paymentInformation: {
+            stripePublishableKey: "pk_live_51JP6y9Jdl2BXNtq7yWlocBoca85Q4s7yKZSXM5H6UHRQx7XNbOXgdT9hKZN13X87wDMt64pmNdhDwdLpNnLviJqa00utBfebZj",
+            stripePaymentId: "pi_3Qr4LcJdl2BXNtq70BQ5wDFC_secret_9fnLb0vKUayRfZ8YJ4hp8nRS7"
+          }
+        }
+      }] : 
+      [
+        {
+          type: "wallet",
+          value: {
+            currencies: ["USDC-optimism"],
+            paymentInformation: {
+              paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
+              chain: "optimism"
+            }
+          }
+        },
+        {
+          type: "wallet",
+          value: {
+            currencies: ["ETH-optimism"],
+            paymentInformation: {
+              paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
+              chain: "optimism"
+            }
+          }
+        }
+      ];
+
+    // Create the final invoice data with adjusted payment options
+    const finalInvoiceData = {
+      ...invoiceData,
+      paymentOptions,
+      invoiceItems: [{
+        ...invoiceData.invoiceItems[0],
+        unitPrice: `${Math.round(priceAfterDiscount)}00` // Convert to cents
+      }]
+    };
+
+    console.log('Final invoice data:', JSON.stringify(finalInvoiceData, null, 2));
 
     // Step 1: Create off-chain invoice
     const createInvoiceResponse = await fetch('https://api.request.finance/invoices', {
@@ -34,7 +83,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': requestFinanceApiKey
       },
-      body: JSON.stringify(invoiceData)
+      body: JSON.stringify(finalInvoiceData)
     });
 
     console.log('Create Invoice API Response status:', createInvoiceResponse.status);

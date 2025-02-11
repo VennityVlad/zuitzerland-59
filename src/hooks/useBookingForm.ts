@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -237,8 +236,7 @@ export const useBookingForm = () => {
             tax: {
               type: "percentage",
               amount: "3.8" // VAT rate as string
-            },
-            unitPrice: `${Math.round(priceAfterDiscount)}00` // Convert to cents
+            }
           }
         ],
         invoiceNumber,
@@ -256,28 +254,6 @@ export const useBookingForm = () => {
         paymentTerms: {
           dueDate
         },
-        paymentOptions: [
-          {
-            type: "wallet",
-            value: {
-              currencies: ["USDC-optimism"],
-              paymentInformation: {
-                paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
-                chain: "optimism"
-              }
-            }
-          },
-          {
-            type: "wallet",
-            value: {
-              currencies: ["ETH-optimism"],
-              paymentInformation: {
-                paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
-                chain: "optimism"
-              }
-            }
-          }
-        ],
         tags: ["zapier_invoice"],
         meta: {
           format: "rnf_invoice",
@@ -285,9 +261,13 @@ export const useBookingForm = () => {
         }
       };
 
-      // Create invoice using Request Finance API
+      // Create invoice using Request Finance API with payment type
       const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-invoice', {
-        body: { invoiceData }
+        body: { 
+          invoiceData,
+          paymentType: bookingData.paymentType,
+          priceAfterDiscount
+        }
       });
 
       if (invoiceError) {
