@@ -15,8 +15,12 @@ serve(async (req) => {
     const { webhook_url, data } = await req.json();
 
     if (!webhook_url || !data) {
+      console.error('Missing webhook URL or data');
       throw new Error('Missing webhook URL or data');
     }
+
+    console.log('Attempting to call webhook URL:', webhook_url);
+    console.log('With data:', JSON.stringify(data, null, 2));
 
     const response = await fetch(webhook_url, {
       method: 'POST',
@@ -26,18 +30,30 @@ serve(async (req) => {
       body: JSON.stringify(data),
     });
 
+    console.log('Webhook response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error(`Webhook call failed with status: ${response.status}`);
+      const responseText = await response.text();
+      console.error('Webhook call failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: responseText
+      });
+      throw new Error(`Webhook call failed with status: ${response.status}. Response: ${responseText}`);
     }
 
+    const responseData = await response.json().catch(() => ({}));
+    console.log('Webhook call successful:', responseData);
+
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, response: responseData }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
       }
     );
   } catch (error) {
+    console.error('Error in trigger-zapier:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
@@ -47,3 +63,4 @@ serve(async (req) => {
     );
   }
 });
+
