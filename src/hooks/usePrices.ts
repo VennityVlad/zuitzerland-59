@@ -7,6 +7,11 @@ export const usePrices = (date: string) => {
   return useQuery({
     queryKey: ["prices", date],
     queryFn: async () => {
+      // Don't fetch if no date is provided
+      if (!date) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .from("prices")
         .select("*")
@@ -18,5 +23,7 @@ export const usePrices = (date: string) => {
 
       return data as PriceData[];
     },
+    // Only fetch when we have a valid date
+    enabled: Boolean(date),
   });
 };
