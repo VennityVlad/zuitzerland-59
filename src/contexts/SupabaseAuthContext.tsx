@@ -34,12 +34,33 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
         .from('profiles')
         .select('*')
         .eq('auth_user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setProfile(data);
+      
+      // If no profile exists, create one
+      if (!data) {
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            auth_user_id: userId,
+            email: user?.email || null,
+            username: null,
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        setProfile(newProfile);
+      }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error fetching/creating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load user profile",
+        variant: "destructive",
+      });
     }
   };
 
@@ -146,4 +167,3 @@ export const useSupabaseAuth = () => {
   }
   return context;
 };
-
