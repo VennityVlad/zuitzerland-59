@@ -3,9 +3,8 @@ import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ROOM_MIN_STAY, MIN_STAY_DAYS, PRICING_TABLE } from "@/lib/constants";
+import { ROOM_MIN_STAY, MIN_STAY_DAYS, ROOM_TYPE_MAPPING } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
-import { countries } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 
@@ -35,7 +34,7 @@ export const useBookingForm = () => {
     paymentType: "fiat", // Default to fiat
   });
 
-  const calculatePrice = (checkin: string, checkout: string, roomType: string) => {
+  const calculatePrice = async (checkin: string, checkout: string, roomType: string) => {
     if (!checkin || !checkout || !roomType) return 0;
     
     const startDate = parse(checkin, 'yyyy-MM-dd', new Date());
@@ -43,21 +42,32 @@ export const useBookingForm = () => {
     const days = differenceInDays(endDate, startDate);
     
     if (days <= 0) return 0;
-    
-    const priceArray = PRICING_TABLE[roomType];
-    if (!priceArray) return 0;
-    
-    const mayFirst = new Date(2025, 4, 1);
-    const startIndex = differenceInDays(startDate, mayFirst);
-    
-    let totalPrice = 0;
-    for (let i = 0; i < days; i++) {
-      const dayIndex = startIndex + i;
-      const dayPrice = priceArray[Math.min(dayIndex, priceArray.length - 1)];
-      totalPrice += dayPrice;
+
+    try {
+      const dbRoomType = ROOM_TYPE_MAPPING[roomType];
+      if (!dbRoomType) return 0;
+
+      // Fetch prices for the date range
+      const { data: prices, error } = await supabase
+        .from('prices')
+        .select('*')
+        .eq('room_type', dbRoomType)
+        .gte('date', checkin)
+        .lte('date', checkout)
+        .order('date', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching prices:', error);
+        return 0;
+      }
+
+      // Calculate total price
+      const totalPrice = prices.reduce((sum, price) => sum + Number(price.price), 0);
+      return totalPrice;
+    } catch (error) {
+      console.error('Error calculating price:', error);
+      return 0;
     }
-    
-    return totalPrice;
   };
 
   const calculateDiscount = async (basePrice: number, bookingMonth: string, discountCode?: string) => {
@@ -155,7 +165,7 @@ export const useBookingForm = () => {
           newData.checkout &&
           newData.roomType
         ) {
-          const basePrice = calculatePrice(
+          const basePrice = await calculatePrice(
             newData.checkin,
             newData.checkout,
             newData.roomType
