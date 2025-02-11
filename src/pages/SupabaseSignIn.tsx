@@ -9,9 +9,10 @@ import { LogIn } from "lucide-react";
 
 const SupabaseSignIn = () => {
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { signIn, user } = useSupabaseAuth();
+  const { signIn, verifyOtp, user } = useSupabaseAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,8 +20,13 @@ const SupabaseSignIn = () => {
     setIsLoading(true);
 
     try {
-      await signIn(email);
-      setIsSubmitted(true);
+      if (!isSubmitted) {
+        await signIn(email);
+        setIsSubmitted(true);
+      } else {
+        await verifyOtp(email, otp);
+        navigate("/");
+      }
     } catch (error) {
       console.error("Authentication error:", error);
     } finally {
@@ -48,23 +54,49 @@ const SupabaseSignIn = () => {
           </h1>
           
           {isSubmitted ? (
-            <div className="text-center space-y-4">
-              <h2 className="text-xl font-medium text-gray-900">Check your email</h2>
-              <p className="text-gray-600">
-                We've sent a magic link to <strong>{email}</strong>
-              </p>
-              <p className="text-gray-500 text-sm">
-                Click the link in the email to sign in to your account.
-              </p>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="text-center space-y-4 mb-6">
+                <h2 className="text-xl font-medium text-gray-900">Enter verification code</h2>
+                <p className="text-gray-600">
+                  We've sent a code to <strong>{email}</strong>
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="otp">Verification code</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  required
+                  className="text-center text-lg letter-spacing-1"
+                  maxLength={6}
+                />
+              </div>
+
+              <Button 
+                type="submit"
+                className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
+                disabled={isLoading}
+              >
+                <LogIn className="mr-2" />
+                {isLoading ? "Verifying..." : "Verify and sign in"}
+              </Button>
+
               <Button
                 type="button"
                 variant="outline"
-                className="mt-4"
-                onClick={() => setIsSubmitted(false)}
+                className="w-full"
+                onClick={() => {
+                  setIsSubmitted(false);
+                  setOtp("");
+                }}
               >
                 Use a different email
               </Button>
-            </div>
+            </form>
           ) : (
             <>
               <p className="text-gray-600 mb-8 text-center">
@@ -90,7 +122,7 @@ const SupabaseSignIn = () => {
                   disabled={isLoading}
                 >
                   <LogIn className="mr-2" />
-                  {isLoading ? "Sending magic link..." : "Continue with email"}
+                  {isLoading ? "Sending code..." : "Continue with email"}
                 </Button>
               </form>
             </>

@@ -8,6 +8,7 @@ interface SupabaseAuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string) => Promise<void>;
+  verifyOtp: (email: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -40,21 +41,44 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
   const signIn = async (email: string) => {
     try {
-      const { error } = await supabase.auth.signInWithOtp({ 
+      const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin,
+          shouldCreateUser: true,
         }
       });
       if (error) throw error;
       
       toast({
         title: "Check your email",
-        description: "We've sent you a magic link to sign in.",
+        description: "We've sent you a one-time code to sign in.",
       });
     } catch (error) {
       toast({
         title: "Error signing in",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const verifyOtp = async (email: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      });
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "You've been signed in successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error verifying code",
         description: (error as Error).message,
         variant: "destructive",
       });
@@ -77,7 +101,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   return (
-    <SupabaseAuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <SupabaseAuthContext.Provider value={{ user, loading, signIn, verifyOtp, signOut }}>
       {children}
     </SupabaseAuthContext.Provider>
   );
