@@ -45,7 +45,10 @@ export const useBookingForm = () => {
 
     try {
       const dbRoomType = ROOM_TYPE_MAPPING[roomType];
-      if (!dbRoomType) return 0;
+      if (!dbRoomType) {
+        console.error('Invalid room type:', roomType);
+        return 0;
+      }
 
       // Fetch prices for the date range
       const { data: prices, error } = await supabase
@@ -61,8 +64,17 @@ export const useBookingForm = () => {
         return 0;
       }
 
+      if (!prices || prices.length === 0) {
+        console.error('No prices found for the selected dates and room type');
+        return 0;
+      }
+
+      console.log('Fetched prices:', prices);
+      
       // Calculate total price
       const totalPrice = prices.reduce((sum, price) => sum + Number(price.price), 0);
+      console.log('Calculated total price:', totalPrice);
+      
       return totalPrice;
     } catch (error) {
       console.error('Error calculating price:', error);
