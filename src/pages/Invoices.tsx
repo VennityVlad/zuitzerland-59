@@ -10,8 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Invoice {
@@ -72,7 +73,7 @@ const Invoices = () => {
         <img 
           src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
           alt="Switzerland Logo"
-          className="logo"
+          className="logo mb-8"
         />
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h1 className="text-2xl font-semibold text-hotel-navy mb-6">My Invoices</h1>
@@ -98,11 +99,7 @@ const Invoices = () => {
                 </TableHeader>
                 <TableBody>
                   {invoices.map((invoice) => (
-                    <TableRow 
-                      key={invoice.id}
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handlePaymentClick(invoice.payment_link)}
-                    >
+                    <TableRow key={invoice.id}>
                       <TableCell>
                         {format(new Date(invoice.created_at), 'MMM d, yyyy')}
                       </TableCell>
@@ -121,9 +118,14 @@ const Invoices = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-primary hover:text-primary/80">
-                          View Payment
-                        </span>
+                        <Button
+                          onClick={() => handlePaymentClick(invoice.payment_link)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          Pay Now <ExternalLink className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

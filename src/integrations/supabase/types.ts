@@ -45,13 +45,16 @@ export type Database = {
           checkin: string
           checkout: string
           created_at: string
+          due_date: string
           email: string
           first_name: string
           id: string
           invoice_uid: string
           last_name: string
           payment_link: string
+          payment_type: string
           price: number
+          request_invoice_id: string
           room_type: string
           status: string
           user_id: string
@@ -61,13 +64,16 @@ export type Database = {
           checkin: string
           checkout: string
           created_at?: string
+          due_date: string
           email: string
           first_name: string
           id?: string
           invoice_uid: string
           last_name: string
           payment_link: string
+          payment_type: string
           price: number
+          request_invoice_id: string
           room_type: string
           status?: string
           user_id: string
@@ -77,13 +83,16 @@ export type Database = {
           checkin?: string
           checkout?: string
           created_at?: string
+          due_date?: string
           email?: string
           first_name?: string
           id?: string
           invoice_uid?: string
           last_name?: string
           payment_link?: string
+          payment_type?: string
           price?: number
+          request_invoice_id?: string
           room_type?: string
           status?: string
           user_id?: string
@@ -171,7 +180,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      invoice_status: "pending" | "paid" | "overdue"
     }
     CompositeTypes: {
       [_ in never]: never

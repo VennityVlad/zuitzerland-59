@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -8,14 +7,13 @@ import type { BookingFormData } from "@/types/booking";
 import { countries } from "@/lib/countries";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
-import { v4 as uuidv4 } from 'uuid';
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
 
 export const useBookingForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, authenticated } = usePrivy();
+  const { user } = usePrivy();
   const [isLoading, setIsLoading] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
@@ -192,20 +190,19 @@ export const useBookingForm = () => {
   };
 
   const generateInvoiceNumber = () => {
-    const timestamp = new Date().getTime().toString().slice(-6); // Last 6 digits of timestamp
-    const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 random alphanumeric
+    const timestamp = new Date().getTime().toString().slice(-6);
+    const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase();
     return `INV-${timestamp}-${randomStr}`;
   };
 
   const calculateDueDate = () => {
     const now = new Date();
-    const dueDate = addDays(now, 7); // Changed from 14 to 7 days
-    // Set due date to end of the day (23:59:59)
+    const dueDate = addDays(now, 7);
     dueDate.setHours(23, 59, 59, 999);
     return dueDate.toISOString();
   };
 
-  const notifyZapier = async (bookingData: BookingFormData) => {
+  const createInvoice = async (bookingData: BookingFormData) => {
     try {
       const creationDate = new Date().toISOString();
       const dueDate = calculateDueDate();
@@ -216,7 +213,6 @@ export const useBookingForm = () => {
       const taxAmount = calculateTaxAmount(priceAfterDiscount);
       const totalAmount = priceAfterDiscount + taxAmount;
 
-      // Format data for Request Finance
       const invoiceData = {
         creationDate,
         invoiceItems: [
@@ -226,7 +222,7 @@ export const useBookingForm = () => {
             quantity: 1,
             tax: {
               type: "percentage",
-              amount: "3.8" // VAT rate as string
+              amount: "3.8"
             }
           }
         ],
@@ -252,7 +248,6 @@ export const useBookingForm = () => {
         }
       };
 
-      // Create invoice using Request Finance API with payment type
       const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-invoice', {
         body: { 
           invoiceData,
@@ -268,60 +263,44 @@ export const useBookingForm = () => {
 
       console.log('Invoice created successfully:', invoiceResponse);
 
-      /* Commenting out Zapier webhook for now
-      const { data: { webhook_url }, error } = await supabase
-        .functions.invoke('get-secret', {
-          body: { secret_name: 'ZAPIER_WEBHOOK_URL' }
+      const { error: dbError } = await supabase
+        .from('invoices')
+        .insert({
+          user_id: user?.id,
+          request_invoice_id: invoiceResponse.invoiceId,
+          invoice_uid: invoiceNumber,
+          payment_link: invoiceResponse.paymentLink,
+          status: 'pending',
+          price: totalAmount,
+          payment_type: bookingData.paymentType,
+          due_date: dueDate,
+          checkin: bookingData.checkin,
+          checkout: bookingData.checkout,
+          room_type: bookingData.roomType,
+          first_name: bookingData.firstName,
+          last_name: bookingData.lastName,
+          email: bookingData.email,
+          booking_details: {
+            address: bookingData.address,
+            city: bookingData.city,
+            zip: bookingData.zip,
+            country: bookingData.country,
+            basePrice,
+            discountAmount,
+            taxAmount,
+            totalAmount,
+            discountCode: bookingData.discountCode || null
+          }
         });
 
-      if (error || !webhook_url) {
-        console.error('Error fetching Zapier webhook URL:', error);
-        throw new Error('Failed to get webhook URL');
+      if (dbError) {
+        console.error('Error storing invoice in database:', dbError);
+        throw dbError;
       }
 
-      const zapierData = {
-        firstName: bookingData.firstName,
-        lastName: bookingData.lastName,
-        email: bookingData.email,
-        address: bookingData.address,
-        city: bookingData.city,
-        zip: bookingData.zip,
-        country: bookingData.country,
-        checkin: bookingData.checkin,
-        checkout: bookingData.checkout,
-        roomType: bookingData.roomType,
-        basePrice,
-        discountAmount,
-        priceAfterDiscount,
-        taxAmount,
-        totalAmount,
-        creationDate,
-        dueDate,
-        invoiceNumber,
-        discountCode: bookingData.discountCode,
-        paymentType: bookingData.paymentType === 'fiat' ? 'stripe' : 'wallet'
-      };
-
-      console.log('Sending data to Zapier:', zapierData);
-
-      const { data, error: webhookError } = await supabase.functions.invoke('trigger-zapier', {
-        body: { 
-          webhook_url,
-          data: zapierData
-        }
-      });
-
-      if (webhookError) {
-        console.error('Error calling webhook:', webhookError);
-        throw webhookError;
-      }
-
-      console.log('Zapier webhook triggered successfully');
-      */
-      
-      return { invoiceNumber };
+      return invoiceResponse;
     } catch (error) {
-      console.error('Error in notifyZapier:', error);
+      console.error('Error in createInvoice:', error);
       throw error;
     }
   };
@@ -347,7 +326,7 @@ export const useBookingForm = () => {
     }
 
     try {
-      await notifyZapier(formData);
+      const invoiceResponse = await createInvoice(formData);
 
       toast({
         title: "Booking Submitted",
