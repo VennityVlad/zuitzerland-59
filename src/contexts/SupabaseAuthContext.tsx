@@ -29,8 +29,9 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   const { toast } = useToast();
 
   const fetchProfile = async (userId: string) => {
+    if (!userId) return;
+    
     try {
-      // First, try to get existing profile
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
@@ -44,7 +45,6 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
         return;
       }
 
-      // If no profile exists, create one
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
         .insert({
@@ -71,20 +71,32 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    // Check active session
+    let mounted = true;
+
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     checkSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       setUser(session?.user ?? null);
       if (session?.user) {
         await fetchProfile(session.user.id);
@@ -94,6 +106,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
