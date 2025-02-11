@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -35,20 +34,39 @@ export const useBookingForm = () => {
   });
 
   const calculatePrice = async (checkin: string, checkout: string, roomType: string) => {
-    if (!checkin || !checkout || !roomType) return 0;
+    console.log('calculatePrice called with:', { checkin, checkout, roomType });
+    
+    if (!checkin || !checkout || !roomType) {
+      console.log('Missing required parameters:', { checkin, checkout, roomType });
+      return 0;
+    }
     
     const startDate = parse(checkin, 'yyyy-MM-dd', new Date());
     const endDate = parse(checkout, 'yyyy-MM-dd', new Date());
     const days = differenceInDays(endDate, startDate);
     
-    if (days <= 0) return 0;
+    console.log('Calculated days:', days);
+    
+    if (days <= 0) {
+      console.log('Invalid date range - days <= 0');
+      return 0;
+    }
 
     try {
       const dbRoomType = ROOM_TYPE_MAPPING[roomType];
+      console.log('Mapped room type:', { original: roomType, mapped: dbRoomType });
+
       if (!dbRoomType) {
         console.error('Invalid room type:', roomType);
+        console.log('Available mappings:', ROOM_TYPE_MAPPING);
         return 0;
       }
+
+      // Log the exact query we're about to make
+      console.log('Querying prices with:', {
+        room_type: dbRoomType,
+        date_range: { start: checkin, end: checkout }
+      });
 
       // Fetch prices for the date range
       const { data: prices, error } = await supabase
@@ -60,24 +78,37 @@ export const useBookingForm = () => {
         .order('date', { ascending: true });
 
       if (error) {
-        console.error('Error fetching prices:', error);
+        console.error('Supabase query error:', error);
         return 0;
       }
 
       if (!prices || prices.length === 0) {
-        console.error('No prices found for the selected dates and room type');
+        console.error('No prices found for:', {
+          room_type: dbRoomType,
+          checkin,
+          checkout,
+          query: `room_type=${dbRoomType}&date>=${checkin}&date<=${checkout}`
+        });
         return 0;
       }
 
-      console.log('Fetched prices:', prices);
+      console.log('Fetched prices:', {
+        count: prices.length,
+        dates: prices.map(p => p.date),
+        prices: prices.map(p => p.price)
+      });
       
       // Calculate total price
-      const totalPrice = prices.reduce((sum, price) => sum + Number(price.price), 0);
-      console.log('Calculated total price:', totalPrice);
+      const totalPrice = prices.reduce((sum, price) => {
+        console.log('Adding price:', { date: price.date, price: price.price, runningTotal: sum + Number(price.price) });
+        return sum + Number(price.price);
+      }, 0);
+      
+      console.log('Final total price:', totalPrice);
       
       return totalPrice;
     } catch (error) {
-      console.error('Error calculating price:', error);
+      console.error('Error in calculatePrice:', error);
       return 0;
     }
   };
