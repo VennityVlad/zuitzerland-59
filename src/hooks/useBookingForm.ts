@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -7,9 +6,6 @@ import { ROOM_MIN_STAY, MIN_STAY_DAYS } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
-import type { Database } from "@/integrations/supabase/types";
-
-type RoomType = Database['public']['Enums']['room_type'];
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
 
@@ -67,7 +63,7 @@ export const useBookingForm = () => {
       const { data: prices, error } = await supabase
         .from('prices')
         .select('*')
-        .eq('room_type', roomType as RoomType)
+        .eq('room_type', roomType)
         .gte('date', checkin)
         .lte('date', checkout)
         .order('date', { ascending: true });

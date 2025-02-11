@@ -11,9 +11,6 @@ import type { BookingFormData } from "@/types/booking";
 import { usePrices } from "@/hooks/usePrices";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-
-type RoomType = Database['public']['Enums']['room_type'];
 
 interface RoomSelectionFieldsProps {
   formData: BookingFormData;
@@ -32,7 +29,7 @@ const getRoomTypes = async () => {
   }
 
   // Get unique room types
-  const uniqueTypes = [...new Set(data.map(row => row.room_type))] as RoomType[];
+  const uniqueTypes = [...new Set(data.map(row => row.room_type))] as string[];
   
   console.log('Fetched unique room types:', uniqueTypes);
   
