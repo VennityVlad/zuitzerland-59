@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -198,7 +199,7 @@ export const useBookingForm = () => {
 
   const calculateDueDate = () => {
     const now = new Date();
-    const dueDate = addDays(now, 14);
+    const dueDate = addDays(now, 7); // Changed from 14 to 7 days
     // Set due date to end of the day (23:59:59)
     dueDate.setHours(23, 59, 59, 999);
     return dueDate.toISOString();
