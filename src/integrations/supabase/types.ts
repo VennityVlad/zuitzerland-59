@@ -116,7 +116,7 @@ export type Database = {
           date: string
           id: string
           price: number
-          room_type: Database["public"]["Enums"]["room_type"]
+          room_type: string
           updated_at: string
         }
         Insert: {
@@ -124,7 +124,7 @@ export type Database = {
           date: string
           id?: string
           price: number
-          room_type: Database["public"]["Enums"]["room_type"]
+          room_type: string
           updated_at?: string
         }
         Update: {
@@ -132,7 +132,7 @@ export type Database = {
           date?: string
           id?: string
           price?: number
-          room_type?: Database["public"]["Enums"]["room_type"]
+          room_type?: string
           updated_at?: string
         }
         Relationships: []
