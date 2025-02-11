@@ -5,8 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
+import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
+import SupabaseSignIn from "./pages/SupabaseSignIn";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Invoices from "./pages/Invoices";
@@ -88,48 +90,53 @@ const App = () => {
           },
         }}
       >
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/signin" element={<SignIn />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/book"
-                element={
-                  <ProtectedRoute>
-                    <Book />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/invoices"
-                element={
-                  <ProtectedRoute>
-                    <Invoices />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<Navigate to="/signin" replace />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <SupabaseAuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Test route for Supabase auth */}
+                <Route path="/supabase-signin" element={<SupabaseSignIn />} />
+                
+                <Route path="/signin" element={<SignIn />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Index />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/book"
+                  element={
+                    <ProtectedRoute>
+                      <Book />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices"
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/signin" replace />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </SupabaseAuthProvider>
       </PrivyProvider>
     </QueryClientProvider>
   );
