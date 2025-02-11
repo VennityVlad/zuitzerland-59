@@ -13,37 +13,37 @@ export const ROOM_TYPE_MAPPING: { [key: string]: DatabaseRoomType } = {
 export const ROOM_TYPES: RoomType[] = [
   {
     id: "queen-standard",
-    name: "Hotel Room - Queen Bed (Daily Cleaning)",
+    name: "Hotel room / Queen bed / Daily Cleaning",
     pricePerNight: 0, // Will be populated from database
     description: "2 people in private room incl. breakfast",
   },
   {
     id: "couples-suite",
-    name: "3 Bedroom Apartment - Couples Room",
+    name: "3 bedroom apartment - couples room",
     pricePerNight: 0, // Will be populated from database
     description: "Two people incl. breakfast, private entrance",
   },
   {
     id: "queen-shared",
-    name: "3-4 Bedroom Apartment - Queen Bed Room",
+    name: "3 or 4 bedroom apartment - queen bed room",
     pricePerNight: 0, // Will be populated from database
     description: "Single person not sharing, two bathrooms between 6-8 people, includes breakfast",
   },
   {
     id: "twin-shared",
-    name: "3-4 Bedroom Apartment - Twin Bed Room",
+    name: "3 bedroom or 4 bedroom apartment - twin bed room",
     pricePerNight: 0, // Will be populated from database
     description: "Single person, two bathrooms between 6-8 people, includes breakfast",
   },
   {
     id: "twin-bathroom",
-    name: "2 Bedroom Apartment - Twin Bed Room",
+    name: "2 bedroom apartment - twin bed room",
     pricePerNight: 0, // Will be populated from database
     description: "Single person, one bathroom between five people, includes breakfast",
   },
   {
     id: "triple-room",
-    name: "2 Bedroom Apartment - Triple Bed Room",
+    name: "2 bedroom apartment - triple bed room",
     pricePerNight: 0, // Will be populated from database
     description: "Single person, one bathroom between five people, includes breakfast",
   }
