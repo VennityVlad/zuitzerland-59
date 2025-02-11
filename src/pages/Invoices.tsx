@@ -27,6 +27,7 @@ interface Invoice {
   checkout: string;
   first_name: string;
   last_name: string;
+  due_date: string;
 }
 
 const Invoices = () => {
@@ -101,6 +102,7 @@ const Invoices = () => {
                     <TableHead>Room Type</TableHead>
                     <TableHead>Stay Period</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
@@ -116,6 +118,9 @@ const Invoices = () => {
                         {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
                       </TableCell>
                       <TableCell>CHF {invoice.price}</TableCell>
+                      <TableCell>
+                        {formatDateWithYear(invoice.due_date)}
+                      </TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           invoice.status === 'paid' 
