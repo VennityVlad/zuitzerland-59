@@ -16,8 +16,10 @@ const SignIn = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("SignIn: user state changed", user);
     if (user) {
-      navigate("/");
+      console.log("SignIn: navigating to /");
+      navigate("/", { replace: true });
     }
   }, [user, navigate]);
 
@@ -30,8 +32,9 @@ const SignIn = () => {
         await signIn(email);
         setIsSubmitted(true);
       } else {
+        console.log("SignIn: verifying OTP");
         await verifyOtp(email, otp);
-        navigate("/");
+        console.log("SignIn: OTP verified successfully");
       }
     } catch (error) {
       console.error("Authentication error:", error);
@@ -39,9 +42,6 @@ const SignIn = () => {
       setIsLoading(false);
     }
   };
-
-  // Remove the immediate return for user check
-  // and let the useEffect handle the navigation
 
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
