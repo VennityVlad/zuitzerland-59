@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,17 +9,30 @@ import { LogIn } from "lucide-react";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { signIn, user } = useSupabaseAuth();
+  const { signIn, verifyOtp, user } = useSupabaseAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await signIn(email);
-      setIsSubmitted(true);
+      if (!isSubmitted) {
+        await signIn(email);
+        setIsSubmitted(true);
+      } else {
+        await verifyOtp(email, otp);
+        navigate("/");
+      }
     } catch (error) {
       console.error("Authentication error:", error);
     } finally {
@@ -26,10 +40,8 @@ const SignIn = () => {
     }
   };
 
-  if (user) {
-    window.location.href = "/";
-    return null;
-  }
+  // Remove the immediate return for user check
+  // and let the useEffect handle the navigation
 
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
@@ -47,21 +59,46 @@ const SignIn = () => {
           
           {isSubmitted ? (
             <div className="text-center space-y-4">
-              <h2 className="text-xl font-medium text-gray-900">Check your email</h2>
+              <h2 className="text-xl font-medium text-gray-900">Enter verification code</h2>
               <p className="text-gray-600">
-                We've sent a magic link to <strong>{email}</strong>
+                We've sent a code to <strong>{email}</strong>
               </p>
-              <p className="text-gray-500 text-sm">
-                Click the link in the email to sign in to your account.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-4"
-                onClick={() => setIsSubmitted(false)}
-              >
-                Use a different email
-              </Button>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="otp">Verification code</Label>
+                  <Input
+                    id="otp"
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="Enter 6-digit code"
+                    required
+                    className="text-center text-lg letter-spacing-1"
+                    maxLength={6}
+                  />
+                </div>
+
+                <Button 
+                  type="submit"
+                  className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
+                  disabled={isLoading}
+                >
+                  <LogIn className="mr-2" />
+                  {isLoading ? "Verifying..." : "Verify and sign in"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setIsSubmitted(false);
+                    setOtp("");
+                  }}
+                >
+                  Use a different email
+                </Button>
+              </form>
             </div>
           ) : (
             <>
@@ -88,7 +125,7 @@ const SignIn = () => {
                   disabled={isLoading}
                 >
                   <LogIn className="mr-2" />
-                  {isLoading ? "Sending magic link..." : "Continue with email"}
+                  {isLoading ? "Sending code..." : "Continue with email"}
                 </Button>
               </form>
             </>
