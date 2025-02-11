@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
@@ -168,10 +167,7 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
 
   const signOut = async () => {
     try {
-      // First clear any stored session data
-      await supabase.auth.clearSession();
-      
-      // Then explicitly sign out
+      // Explicitly sign out and clear all local storage
       const { error } = await supabase.auth.signOut({
         scope: 'local' // This ensures we clear local storage as well
       });
