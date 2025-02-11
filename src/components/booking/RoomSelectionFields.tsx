@@ -21,17 +21,17 @@ const getRoomTypes = async () => {
   const { data, error } = await supabase
     .from('prices')
     .select('room_type')
-    .order('date', { ascending: true })
-    .then(result => {
-      // Get unique room types
-      const uniqueTypes = Array.from(new Set(result.data?.map(row => row.room_type)));
-      return { data: uniqueTypes.map(type => ({ room_type: type })), error: result.error };
-    });
+    .order('date', { ascending: true });
 
   if (error) throw error;
-  return data.map(({ room_type }) => ({
-    id: room_type,
-    name: room_type.split('_').join(' ').replace(/\b\w/g, c => c.toUpperCase())
+
+  // Get unique room types and format them
+  const uniqueTypes = Array.from(new Set(data.map(row => row.room_type)));
+  return uniqueTypes.map(type => ({
+    id: type,
+    name: type.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ')
   }));
 };
 
@@ -55,6 +55,9 @@ const RoomSelectionFields = ({
   }) || [];
 
   const isLoading = isPricesLoading || isRoomTypesLoading;
+
+  console.log('Room types:', roomTypes);
+  console.log('Room types with prices:', roomTypesWithPrices);
 
   return (
     <div className="space-y-2">

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ROOM_MIN_STAY, MIN_STAY_DAYS, ROOM_TYPE_MAPPING } from "@/lib/constants";
+import { ROOM_MIN_STAY, MIN_STAY_DAYS } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
@@ -53,18 +53,9 @@ export const useBookingForm = () => {
     }
 
     try {
-      const dbRoomType = ROOM_TYPE_MAPPING[roomType];
-      console.log('Mapped room type:', { original: roomType, mapped: dbRoomType });
-
-      if (!dbRoomType) {
-        console.error('Invalid room type:', roomType);
-        console.log('Available mappings:', ROOM_TYPE_MAPPING);
-        return 0;
-      }
-
       // Log the exact query we're about to make
       console.log('Querying prices with:', {
-        room_type: dbRoomType,
+        room_type: roomType,
         date_range: { start: checkin, end: checkout }
       });
 
@@ -72,7 +63,7 @@ export const useBookingForm = () => {
       const { data: prices, error } = await supabase
         .from('prices')
         .select('*')
-        .eq('room_type', dbRoomType)
+        .eq('room_type', roomType)
         .gte('date', checkin)
         .lte('date', checkout)
         .order('date', { ascending: true });
@@ -84,10 +75,10 @@ export const useBookingForm = () => {
 
       if (!prices || prices.length === 0) {
         console.error('No prices found for:', {
-          room_type: dbRoomType,
+          room_type: roomType,
           checkin,
           checkout,
-          query: `room_type=${dbRoomType}&date>=${checkin}&date<=${checkout}`
+          query: `room_type=${roomType}&date>=${checkin}&date<=${checkout}`
         });
         return 0;
       }
