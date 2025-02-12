@@ -272,12 +272,7 @@ export const useBookingForm = () => {
           },
           email: bookingData.email,
           firstName: bookingData.firstName,
-          lastName: bookingData.lastName,
-          metaData: {
-            checkin: bookingData.checkin,
-            checkout: bookingData.checkout,
-            roomType: bookingData.roomType
-          }
+          lastName: bookingData.lastName
         },
         paymentTerms: {
           dueDate
