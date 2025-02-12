@@ -151,6 +151,7 @@ export type Database = {
           full_name: string | null
           id: string
           privy_id: string | null
+          role: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid: string | null
           updated_at: string
           username: string | null
@@ -165,6 +166,7 @@ export type Database = {
           full_name?: string | null
           id: string
           privy_id?: string | null
+          role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
           updated_at?: string
           username?: string | null
@@ -179,6 +181,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           privy_id?: string | null
+          role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
           updated_at?: string
           username?: string | null
@@ -225,6 +228,7 @@ export type Database = {
     }
     Enums: {
       invoice_status: "pending" | "paid" | "overdue"
+      profile_role: "admin" | "team" | "co-curator"
       room_type:
         | "hotel_room_queen"
         | "apartment_3br_couple"
