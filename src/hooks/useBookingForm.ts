@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -272,12 +273,16 @@ export const useBookingForm = () => {
           },
           email: bookingData.email,
           firstName: bookingData.firstName,
-          lastName: bookingData.lastName
+          lastName: bookingData.lastName,
+          metaData: {
+            checkin: bookingData.checkin,
+            checkout: bookingData.checkout,
+            roomType: bookingData.roomType
+          }
         },
         paymentTerms: {
           dueDate
         },
-        tags: ["zapier_invoice"],
         meta: {
           format: "rnf_invoice",
           version: "0.0.3"
