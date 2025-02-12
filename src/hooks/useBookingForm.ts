@@ -361,6 +361,25 @@ export const useBookingForm = () => {
     }
 
     try {
+      // Check for existing non-cancelled bookings
+      const { data: existingInvoices, error: checkError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('privy_id', user?.id)
+        .neq('status', 'cancelled');
+
+      if (checkError) throw checkError;
+
+      if (existingInvoices && existingInvoices.length > 0) {
+        toast({
+          title: "Existing Booking",
+          description: "You already have an existing booking. Please check your invoices page.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const invoiceResponse = await createInvoice(formData);
       
       // Open payment link in new window
