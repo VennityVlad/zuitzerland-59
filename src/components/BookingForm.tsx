@@ -20,6 +20,7 @@ const BookingForm = () => {
     isFormValid,
     validationWarning,
     discountAmount,
+    isRoleBasedDiscount,
     handleInputChange,
     handleSubmit,
     handleCountryChange,
@@ -113,6 +114,7 @@ const BookingForm = () => {
             minDate={minDate}
             maxDate={maxDate}
             discountAmount={discountAmount}
+            isRoleBasedDiscount={isRoleBasedDiscount}
           />
         </div>
       </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ export const useBookingForm = () => {
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [isRoleBasedDiscount, setIsRoleBasedDiscount] = useState(false);
   const [formData, setFormData] = useState<BookingFormData>({
     firstName: "",
     lastName: "",
@@ -29,7 +31,6 @@ export const useBookingForm = () => {
     checkout: "",
     roomType: "",
     price: 0,
-    discountCode: "",
     paymentType: "fiat", // Default to fiat
   });
 
@@ -93,34 +94,66 @@ export const useBookingForm = () => {
     }
   };
 
-  const calculateDiscount = async (basePrice: number, bookingMonth: string, discountCode?: string) => {
+  const calculateDiscount = async (basePrice: number, bookingMonth: string) => {
     try {
-      const { data: discounts, error } = await supabase
-        .from('discounts')
-        .select('*')
-        .eq('active', true)
-        .eq('month', bookingMonth.toLowerCase());
+      // First, check if the user has a co-designer or co-curator role
+      if (user?.id) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('privy_id', user.id)
+          .single();
 
-      if (error) {
-        console.error('Error fetching discounts:', error);
-        return 0;
-      }
+        const isEligibleRole = userProfile?.role === 'co-designer' || userProfile?.role === 'co-curator';
 
-      let applicableDiscount = discounts.find(d => d.code === null); // Regular discount
-      
-      if (discountCode) {
-        const specialDiscount = discounts.find(d => d.code === discountCode);
-        if (specialDiscount) {
-          applicableDiscount = specialDiscount;
+        if (isEligibleRole) {
+          const { data: discounts, error } = await supabase
+            .from('discounts')
+            .select('*')
+            .eq('active', true)
+            .eq('is_role_based', true)
+            .eq('month', bookingMonth.toLowerCase());
+
+          if (error) {
+            console.error('Error fetching discounts:', error);
+            return { amount: 0, isRoleBasedDiscount: false };
+          }
+
+          if (discounts && discounts.length > 0) {
+            const discount = discounts[0];
+            return {
+              amount: (basePrice * discount.percentage) / 100,
+              isRoleBasedDiscount: true
+            };
+          }
         }
       }
 
-      if (!applicableDiscount) return 0;
+      // If no role-based discount applies, check for regular discounts
+      const { data: regularDiscounts, error } = await supabase
+        .from('discounts')
+        .select('*')
+        .eq('active', true)
+        .eq('is_role_based', false)
+        .eq('month', bookingMonth.toLowerCase());
 
-      return (basePrice * applicableDiscount.percentage) / 100;
+      if (error) {
+        console.error('Error fetching regular discounts:', error);
+        return { amount: 0, isRoleBasedDiscount: false };
+      }
+
+      if (regularDiscounts && regularDiscounts.length > 0) {
+        const discount = regularDiscounts[0];
+        return {
+          amount: (basePrice * discount.percentage) / 100,
+          isRoleBasedDiscount: false
+        };
+      }
+
+      return { amount: 0, isRoleBasedDiscount: false };
     } catch (error) {
       console.error('Error calculating discount:', error);
-      return 0;
+      return { amount: 0, isRoleBasedDiscount: false };
     }
   };
 
@@ -185,7 +218,7 @@ export const useBookingForm = () => {
 
       const updatePriceAndDiscount = async () => {
         if (
-          (name === "checkin" || name === "checkout" || name === "roomType" || name === "discountCode") &&
+          (name === "checkin" || name === "checkout" || name === "roomType") &&
           newData.checkin &&
           newData.checkout &&
           newData.roomType
@@ -199,8 +232,9 @@ export const useBookingForm = () => {
           const bookingDate = new Date();
           const bookingMonth = format(bookingDate, 'MMMM');
           
-          const discount = await calculateDiscount(basePrice, bookingMonth, newData.discountCode);
-          setDiscountAmount(discount);
+          const { amount, isRoleBasedDiscount } = await calculateDiscount(basePrice, bookingMonth);
+          setDiscountAmount(amount);
+          setIsRoleBasedDiscount(isRoleBasedDiscount);
           
           newData.price = basePrice;
         }
@@ -415,6 +449,7 @@ export const useBookingForm = () => {
     isFormValid,
     validationWarning,
     discountAmount,
+    isRoleBasedDiscount,
     handleInputChange,
     handleSubmit,
     handleCountryChange,

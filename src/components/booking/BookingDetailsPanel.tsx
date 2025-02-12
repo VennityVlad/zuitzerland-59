@@ -1,16 +1,14 @@
-
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import type { BookingFormData } from "@/types/booking";
 import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { HelpCircle, X } from "lucide-react";
 import { format, differenceInDays, parse } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePrivy } from "@privy-io/react-auth";
 
 interface BookingDetailsPanelProps {
   formData: BookingFormData;
@@ -18,6 +16,7 @@ interface BookingDetailsPanelProps {
   minDate: string;
   maxDate: string;
   discountAmount: number;
+  isRoleBasedDiscount: boolean;
 }
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
@@ -90,10 +89,10 @@ const BookingDetailsPanel = ({
   minDate,
   maxDate,
   discountAmount,
+  isRoleBasedDiscount,
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
-  const [discountCode, setDiscountCode] = useState("");
 
   // Calculate price after discount
   const priceAfterDiscount = formData.price - discountAmount;
@@ -101,23 +100,6 @@ const BookingDetailsPanel = ({
   const taxAmount = priceAfterDiscount * VAT_RATE;
   // Calculate total amount (discounted price + VAT)
   const totalAmount = priceAfterDiscount + taxAmount;
-
-  const handleDiscountCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDiscountCode(e.target.value);
-  };
-
-  const handleApplyDiscount = () => {
-    handleInputChange({
-      target: { name: "discountCode", value: discountCode },
-    } as React.ChangeEvent<HTMLInputElement>);
-  };
-
-  const handleRemoveDiscount = () => {
-    setDiscountCode("");
-    handleInputChange({
-      target: { name: "discountCode", value: "" },
-    } as React.ChangeEvent<HTMLInputElement>);
-  };
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -175,41 +157,6 @@ const BookingDetailsPanel = ({
           />
         </div>
 
-        <div className="space-y-4">
-          <Label htmlFor="discountCode">Discount Code</Label>
-          {formData.discountCode ? (
-            <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-md">
-              <span className="flex-1 font-medium">{formData.discountCode}</span>
-              <Button 
-                onClick={handleRemoveDiscount}
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                id="discountCode"
-                value={discountCode}
-                onChange={handleDiscountCodeChange}
-                placeholder="Enter discount code if you have one"
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleApplyDiscount}
-                type="button"
-                variant="secondary"
-              >
-                Apply
-              </Button>
-            </div>
-          )}
-        </div>
-
         <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
           <div className="flex justify-between items-center text-gray-600">
             <span className="flex items-center gap-2">
@@ -235,7 +182,7 @@ const BookingDetailsPanel = ({
           {discountAmount > 0 && (
             <div className="flex justify-between items-center text-green-600">
               <span>
-                Discount {formData.discountCode && `(${formData.discountCode})`}
+                {isRoleBasedDiscount ? 'Co-designer/Co-curator Discount' : 'Discount'}
               </span>
               <span>- CHF {discountAmount.toFixed(2)}</span>
             </div>

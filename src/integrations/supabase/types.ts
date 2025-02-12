@@ -12,28 +12,25 @@ export type Database = {
       discounts: {
         Row: {
           active: boolean
-          code: string | null
           created_at: string
           id: string
-          is_codesigner: boolean
+          is_role_based: boolean
           month: string
           percentage: number
         }
         Insert: {
           active?: boolean
-          code?: string | null
           created_at?: string
           id?: string
-          is_codesigner?: boolean
+          is_role_based?: boolean
           month: string
           percentage: number
         }
         Update: {
           active?: boolean
-          code?: string | null
           created_at?: string
           id?: string
-          is_codesigner?: boolean
+          is_role_based?: boolean
           month?: string
           percentage?: number
         }
