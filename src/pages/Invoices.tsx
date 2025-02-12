@@ -41,11 +41,26 @@ const Invoices = () => {
       try {
         setIsLoading(true);
         
-        // First, fetch the current invoice data
-        const { data, error } = await supabase
+        // First, fetch the current invoice data for the logged-in user
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('auth_user_id, privy_id')
+          .eq('privy_id', user?.id)
+          .single();
+
+        if (!profileData) {
+          console.error('No profile found for user');
+          setInvoices([]);
+          return;
+        }
+
+        const query = supabase
           .from('invoices')
           .select('*')
+          .or(`privy_id.eq.${user?.id},auth_user_id.eq.${profileData.auth_user_id}`)
           .order('created_at', { ascending: false });
+
+        const { data, error } = await query;
 
         if (error) throw error;
         setInvoices(data);
@@ -55,10 +70,7 @@ const Invoices = () => {
         if (statusError) throw statusError;
 
         // Finally, fetch the updated data
-        const { data: updatedData, error: fetchError } = await supabase
-          .from('invoices')
-          .select('*')
-          .order('created_at', { ascending: false });
+        const { data: updatedData, error: fetchError } = await query;
 
         if (fetchError) throw fetchError;
         setInvoices(updatedData);
@@ -175,3 +187,4 @@ const Invoices = () => {
 };
 
 export default Invoices;
+
