@@ -40,30 +40,17 @@ const Invoices = () => {
     const fetchInvoices = async () => {
       try {
         setIsLoading(true);
-        
-        // First, fetch the current invoice data for the logged-in user
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('auth_user_id, privy_id')
-          .eq('privy_id', user?.id)
-          .single();
-
-        if (!profileData) {
-          console.error('No profile found for user');
-          setInvoices([]);
-          return;
-        }
 
         const query = supabase
           .from('invoices')
           .select('*')
-          .or(`privy_id.eq.${user?.id},auth_user_id.eq.${profileData.auth_user_id}`)
+          .eq('privy_id', user?.id)
           .order('created_at', { ascending: false });
 
         const { data, error } = await query;
 
         if (error) throw error;
-        setInvoices(data);
+        setInvoices(data || []);
 
         // Then update the statuses in the background
         const { error: statusError } = await supabase.functions.invoke('get-invoice-status');
@@ -73,7 +60,7 @@ const Invoices = () => {
         const { data: updatedData, error: fetchError } = await query;
 
         if (fetchError) throw fetchError;
-        setInvoices(updatedData);
+        setInvoices(updatedData || []);
       } catch (error) {
         console.error('Error fetching invoices:', error);
         toast({
