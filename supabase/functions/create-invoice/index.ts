@@ -62,42 +62,13 @@ serve(async (req) => {
         }
       ];
 
-    // Create item description based on room type and number of days
-    const checkin = invoiceData.buyerInfo?.metaData?.checkin;
-    const checkout = invoiceData.buyerInfo?.metaData?.checkout;
-    const roomType = invoiceData.buyerInfo?.metaData?.roomType;
-
-    if (!checkin || !checkout || !roomType) {
-      throw new Error('Missing required booking information');
-    }
-
-    const startDate = new Date(checkin);
-    const endDate = new Date(checkout);
-    const daysDifference = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // Convert room type to display name
-    const roomTypeDisplayNames: { [key: string]: string } = {
-      'hotel_room_queen': 'Hotel Room - Queen Bed',
-      'apartment_3br_couples': '3 Bedroom Apartment - Couples Room',
-      'apartment_3_4br_queen': '3-4 Bedroom Apartment - Queen Bed Room',
-      'apartment_3_4br_twin': '3-4 Bedroom Apartment - Twin Bed Room',
-      'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
-      'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
-    };
-
-    const roomTypeDisplay = roomTypeDisplayNames[roomType];
-    if (!roomTypeDisplay) {
-      console.error('Unknown room type:', roomType);
-      throw new Error('Invalid room type');
-    }
-
     // Create the final invoice data with adjusted payment options
     const finalInvoiceData = {
       ...invoiceData,
       paymentOptions,
       invoiceItems: [{
         ...invoiceData.invoiceItems[0],
-        name: `${roomTypeDisplay} × ${daysDifference} days`,
+        name: "Zuitzerland reservation",
         unitPrice: `${Math.round(priceAfterDiscount)}00` // Convert to cents
       }],
       tags: [] // Remove zapier_invoice tag

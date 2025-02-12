@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -255,7 +254,7 @@ export const useBookingForm = () => {
         invoiceItems: [
           {
             currency: "CHF",
-            name: "Zuitzerland",
+            name: "Zuitzerland reservation",
             quantity: 1,
             tax: {
               type: "percentage",
