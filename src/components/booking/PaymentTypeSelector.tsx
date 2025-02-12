@@ -22,7 +22,7 @@ const PaymentTypeSelector = ({ value, onChange }: PaymentTypeSelectorProps) => {
           <SelectValue placeholder="Select payment method" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="fiat">Fiat (Stripe)</SelectItem>
+          <SelectItem value="fiat">Fiat (Credit Card)</SelectItem>
           <SelectItem value="crypto">Crypto (Wallet)</SelectItem>
         </SelectContent>
       </Select>
@@ -31,4 +31,3 @@ const PaymentTypeSelector = ({ value, onChange }: PaymentTypeSelectorProps) => {
 };
 
 export default PaymentTypeSelector;
-
