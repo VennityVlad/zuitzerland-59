@@ -41,6 +41,19 @@ const Invoices = () => {
       try {
         setIsLoading(true);
 
+        // First, fetch the current invoice data for the logged-in user
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('privy_id')
+          .eq('privy_id', user?.id)
+          .single();
+
+        if (!profileData) {
+          console.error('No profile found for user');
+          setInvoices([]);
+          return;
+        }
+
         const query = supabase
           .from('invoices')
           .select('*')
