@@ -21,7 +21,7 @@ const TermsDialog = ({ open, onOpenChange }: TermsDialogProps) => {
           <DialogTitle className="text-xl font-semibold">Zuitzerland General Terms and Conditions</DialogTitle>
           <DialogDescription>Version 1 - Effective Date: February 10, 2025</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="h-[50vh] w-full pr-4">
           <div className="space-y-4 text-sm">
             <h3 className="font-semibold">About Zuitzerland</h3>
             <p>
