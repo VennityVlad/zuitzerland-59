@@ -41,14 +41,20 @@ const Invoices = () => {
       try {
         setIsLoading(true);
 
+        if (!user?.id) {
+          console.error('No user ID available');
+          setInvoices([]);
+          return;
+        }
+
         // First, fetch the current invoice data for the logged-in user
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('privy_id')
-          .eq('privy_id', user?.id)
+          .eq('privy_id', user.id)
           .single();
 
-        if (!profileData) {
+        if (profileError || !profileData) {
           console.error('No profile found for user');
           setInvoices([]);
           return;
@@ -57,7 +63,7 @@ const Invoices = () => {
         const query = supabase
           .from('invoices')
           .select('*')
-          .eq('privy_id', user?.id)
+          .eq('privy_id', user.id)
           .order('created_at', { ascending: false });
 
         const { data, error } = await query;
