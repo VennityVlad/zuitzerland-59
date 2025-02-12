@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { HelpCircle, X } from "lucide-react";
-import { format, eachDayOfInterval, parse } from "date-fns";
+import { format, differenceInDays, parse } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,56 +23,63 @@ interface BookingDetailsPanelProps {
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
 
 const PriceBreakdown = ({ checkin, checkout, roomType }: { checkin: string; checkout: string; roomType: string }) => {
-  const { data: prices } = useQuery({
-    queryKey: ['prices', checkin, checkout, roomType],
+  const { data: priceInfo } = useQuery({
+    queryKey: ['priceInfo', checkin, checkout, roomType],
     queryFn: async () => {
-      if (!checkin || !checkout || !roomType) return [];
+      if (!checkin || !checkout || !roomType) return null;
+      
+      const startDate = parse(checkin, 'yyyy-MM-dd', new Date());
+      const endDate = parse(checkout, 'yyyy-MM-dd', new Date());
+      const days = differenceInDays(endDate, startDate);
       
       const { data, error } = await supabase
         .from('prices')
         .select('*')
         .eq('room_type', roomType)
-        .gte('date', checkin)
-        .lte('date', checkout)
-        .order('date', { ascending: true });
+        .lte('duration', days)
+        .order('duration', { ascending: false })
+        .limit(1);
 
       if (error) throw error;
-      return data || [];
+      if (!data || data.length === 0) return null;
+
+      return {
+        durationRate: data[0],
+        totalDays: days
+      };
     },
     enabled: Boolean(checkin && checkout && roomType)
   });
 
-  const dateRange = checkin && checkout ? 
-    eachDayOfInterval({
-      start: parse(checkin, 'yyyy-MM-dd', new Date()),
-      end: parse(checkout, 'yyyy-MM-dd', new Date())
-    }) : [];
+  if (!priceInfo) return <div>No pricing information available</div>;
+
+  const { durationRate, totalDays } = priceInfo;
+  const totalPrice = durationRate.price * totalDays;
+
+  const roomTypeDisplayNames: { [key: string]: string } = {
+    'hotel_room_queen': 'Hotel Room - Queen Bed',
+    'apartment_3br_couples': '3 Bedroom Apartment - Couples Room',
+    'apartment_3_4br_queen': '3-4 Bedroom Apartment - Queen Bed Room',
+    'apartment_3_4br_twin': '3-4 Bedroom Apartment - Twin Bed Room',
+    'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
+    'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
+  };
 
   return (
-    <div className="max-h-[400px] overflow-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead className="text-right">Price (CHF)</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {dateRange.map((date, index) => {
-            const formattedDate = format(date, 'yyyy-MM-dd');
-            const priceForDay = prices?.find(p => p.date === formattedDate);
-            
-            return (
-              <TableRow key={formattedDate}>
-                <TableCell>{format(date, 'MMM dd, yyyy')}</TableCell>
-                <TableCell className="text-right">
-                  {priceForDay ? priceForDay.price.toFixed(2) : '-'}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <h4 className="font-semibold">Price Calculation</h4>
+        <div className="text-sm space-y-1">
+          <p>Room Type: {roomTypeDisplayNames[roomType]}</p>
+          <p>Length of Stay: {totalDays} days</p>
+          <p>Applicable Rate: CHF {durationRate.price} per day</p>
+          <p>Rate Duration Tier: {durationRate.duration} days or more</p>
+          <div className="mt-4 pt-2 border-t">
+            <p className="font-medium">Calculation:</p>
+            <p>CHF {durationRate.price} × {totalDays} days = CHF {totalPrice}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -210,14 +216,11 @@ const BookingDetailsPanel = ({
                     <HelpCircle className="h-4 w-4 text-gray-500 hover:text-gray-700 cursor-help" />
                   </PopoverTrigger>
                   <PopoverContent className="w-[400px] p-4" align="start">
-                    <div>
-                      <h4 className="font-semibold mb-3">Daily Price Breakdown</h4>
-                      <PriceBreakdown
-                        checkin={formData.checkin}
-                        checkout={formData.checkout}
-                        roomType={formData.roomType}
-                      />
-                    </div>
+                    <PriceBreakdown
+                      checkin={formData.checkin}
+                      checkout={formData.checkout}
+                      roomType={formData.roomType}
+                    />
                   </PopoverContent>
                 </Popover>
               )}
