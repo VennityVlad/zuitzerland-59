@@ -227,7 +227,7 @@ const Profile = () => {
               <Avatar className="h-20 w-20">
                 <AvatarImage src={profileData?.avatar_url} />
                 <AvatarFallback>
-                  {profileData?.full_name?.charAt(0) || profileData?.email?.charAt(0)}
+                  {profileData?.username?.charAt(0) || profileData?.email?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <label 
@@ -247,9 +247,16 @@ const Profile = () => {
             </div>
             <div>
               <h1 className="text-2xl font-semibold text-hotel-navy">
-                {profileData?.full_name || 'Your Profile'}
+                {profileData?.username || 'Anonymous User'}
               </h1>
-              <p className="text-gray-600">{profileData?.email}</p>
+              <div className="space-y-1">
+                <p className="text-gray-600">{profileData?.email}</p>
+                {profileData?.role && (
+                  <p className="text-sm text-primary font-medium capitalize">
+                    {profileData.role.replace(/-/g, ' ')}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
