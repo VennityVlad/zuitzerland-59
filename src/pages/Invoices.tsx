@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
@@ -141,7 +142,7 @@ const Invoices = () => {
                       <TableCell>
                         {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
                       </TableCell>
-                      <TableCell>CHF {invoice.price}</TableCell>
+                      <TableCell>CHF {invoice.price.toFixed(2)}</TableCell>
                       <TableCell>
                         {formatDateWithYear(invoice.due_date)}
                       </TableCell>
