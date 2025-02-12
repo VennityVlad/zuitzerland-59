@@ -35,50 +35,33 @@ const Invoices = () => {
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUpdatingStatuses, setIsUpdatingStatuses] = useState(false);
-
-  const updateInvoiceStatuses = async () => {
-    try {
-      setIsUpdatingStatuses(true);
-      const { error } = await supabase.functions.invoke('get-invoice-status');
-      
-      if (error) throw error;
-
-      // Refetch invoices to get updated statuses
-      const { data, error: fetchError } = await supabase
-        .from('invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-      
-      setInvoices(data);
-    } catch (error) {
-      console.error('Error updating invoice statuses:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update invoice statuses. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingStatuses(false);
-    }
-  };
 
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
+        setIsLoading(true);
+        
+        // First, fetch the current invoice data
         const { data, error } = await supabase
           .from('invoices')
           .select('*')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-
         setInvoices(data);
-        
-        // Update statuses after initial fetch
-        await updateInvoiceStatuses();
+
+        // Then update the statuses in the background
+        const { error: statusError } = await supabase.functions.invoke('get-invoice-status');
+        if (statusError) throw statusError;
+
+        // Finally, fetch the updated data
+        const { data: updatedData, error: fetchError } = await supabase
+          .from('invoices')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+        setInvoices(updatedData);
       } catch (error) {
         console.error('Error fetching invoices:', error);
         toast({
@@ -130,17 +113,8 @@ const Invoices = () => {
           className="logo mb-8"
         />
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="flex justify-between items-center mb-6">
+          <div className="mb-6">
             <h1 className="text-2xl font-semibold text-hotel-navy">My Invoices</h1>
-            <Button
-              onClick={updateInvoiceStatuses}
-              variant="outline"
-              disabled={isUpdatingStatuses}
-              className="flex items-center gap-2"
-            >
-              {isUpdatingStatuses && <Loader2 className="h-4 w-4 animate-spin" />}
-              Refresh Statuses
-            </Button>
           </div>
           
           {isLoading ? (
