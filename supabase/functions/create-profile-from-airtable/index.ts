@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface ProfileData {
   email: string;
-  role?: 'admin' | 'team' | 'co-curator';
+  role?: 'admin' | 'team' | 'co-curator' | 'co-designer';
 }
 
 Deno.serve(async (req) => {

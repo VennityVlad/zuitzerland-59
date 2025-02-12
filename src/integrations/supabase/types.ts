@@ -228,7 +228,7 @@ export type Database = {
     }
     Enums: {
       invoice_status: "pending" | "paid" | "overdue"
-      profile_role: "admin" | "team" | "co-curator"
+      profile_role: "admin" | "co-designer" | "co-curator"
       room_type:
         | "hotel_room_queen"
         | "apartment_3br_couple"
