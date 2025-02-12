@@ -5,7 +5,3 @@ enable_signup = true
 [functions]
 [functions.create-invoice]
 verify_jwt = true
-
-[extensions]
-pg_cron = true
-pg_net = true
