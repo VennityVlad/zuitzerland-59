@@ -7,8 +7,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 
 interface TermsDialogProps {
   open: boolean;
@@ -23,14 +21,6 @@ const TermsDialog = ({ open, onOpenChange }: TermsDialogProps) => {
           <DialogTitle className="text-xl font-semibold">Zuitzerland General Terms and Conditions</DialogTitle>
           <DialogDescription>Version 1 - Effective Date: February 10, 2025</DialogDescription>
         </DialogHeader>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-4"
-          onClick={() => onOpenChange(false)}
-        >
-          <X className="h-4 w-4" />
-        </Button>
         <ScrollArea className="flex-1 pr-4">
           <div className="space-y-4 text-sm">
             <h3 className="font-semibold">About Zuitzerland</h3>
