@@ -6,6 +6,9 @@ import PersonalInfoFields from "./booking/PersonalInfoFields";
 import BookingDetailsPanel from "./booking/BookingDetailsPanel";
 import { BookingFormHeader } from "./booking/BookingFormHeader";
 import PaymentTypeSelector from "./booking/PaymentTypeSelector";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState } from "react";
+import TermsDialog from "./booking/TermsDialog";
 
 const BookingForm = () => {
   const {
@@ -20,12 +23,23 @@ const BookingForm = () => {
     handlePaymentTypeChange,
   } = useBookingForm();
 
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+
   const minDate = "2025-05-01";
   const maxDate = "2025-05-25";
 
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!termsAccepted) {
+      return;
+    }
+    handleSubmit(e);
+  };
+
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={onSubmit}
       className="max-w-6xl mx-auto p-8 space-y-8 bg-white rounded-xl shadow-lg border border-secondary"
     >
       <BookingFormHeader
@@ -71,13 +85,34 @@ const BookingForm = () => {
         </div>
       </div>
 
+      <div className="flex items-start space-x-2 mt-6">
+        <Checkbox
+          id="terms"
+          checked={termsAccepted}
+          onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+          className="mt-1"
+        />
+        <label htmlFor="terms" className="text-sm text-gray-600">
+          I accept the{" "}
+          <button
+            type="button"
+            onClick={() => setShowTerms(true)}
+            className="text-primary hover:underline font-medium"
+          >
+            Terms and Conditions
+          </button>
+        </label>
+      </div>
+
       <Button
         type="submit"
         className="w-full bg-primary hover:bg-primary/90 text-white text-lg py-6"
-        disabled={isLoading || !isFormValid}
+        disabled={isLoading || !isFormValid || !termsAccepted}
       >
         {isLoading ? "Processing..." : "Confirm and Pay"}
       </Button>
+
+      <TermsDialog open={showTerms} onOpenChange={setShowTerms} />
     </form>
   );
 };
