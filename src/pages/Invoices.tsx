@@ -35,6 +35,35 @@ const Invoices = () => {
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdatingStatuses, setIsUpdatingStatuses] = useState(false);
+
+  const updateInvoiceStatuses = async () => {
+    try {
+      setIsUpdatingStatuses(true);
+      const { error } = await supabase.functions.invoke('get-invoice-status');
+      
+      if (error) throw error;
+
+      // Refetch invoices to get updated statuses
+      const { data, error: fetchError } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+      
+      setInvoices(data);
+    } catch (error) {
+      console.error('Error updating invoice statuses:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update invoice statuses. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatuses(false);
+    }
+  };
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -47,6 +76,9 @@ const Invoices = () => {
         if (error) throw error;
 
         setInvoices(data);
+        
+        // Update statuses after initial fetch
+        await updateInvoiceStatuses();
       } catch (error) {
         console.error('Error fetching invoices:', error);
         toast({
@@ -76,6 +108,19 @@ const Invoices = () => {
     return format(parseISO(dateString), 'MMM d, yyyy');
   };
 
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
       <div className="container max-w-4xl mx-auto px-4">
@@ -85,7 +130,18 @@ const Invoices = () => {
           className="logo mb-8"
         />
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-2xl font-semibold text-hotel-navy mb-6">My Invoices</h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-semibold text-hotel-navy">My Invoices</h1>
+            <Button
+              onClick={updateInvoiceStatuses}
+              variant="outline"
+              disabled={isUpdatingStatuses}
+              className="flex items-center gap-2"
+            >
+              {isUpdatingStatuses && <Loader2 className="h-4 w-4 animate-spin" />}
+              Refresh Statuses
+            </Button>
+          </div>
           
           {isLoading ? (
             <div className="flex justify-center items-center py-8">
@@ -122,11 +178,7 @@ const Invoices = () => {
                         {formatDateWithYear(invoice.due_date)}
                       </TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          invoice.status === 'paid' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
                           {invoice.status}
                         </span>
                       </TableCell>
@@ -135,6 +187,7 @@ const Invoices = () => {
                           onClick={() => handlePaymentClick(invoice.payment_link)}
                           variant="outline"
                           size="sm"
+                          disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
                           className="flex items-center gap-2"
                         >
                           Pay Now <ExternalLink className="h-4 w-4" />
@@ -153,4 +206,3 @@ const Invoices = () => {
 };
 
 export default Invoices;
-
