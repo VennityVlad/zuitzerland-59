@@ -9,6 +9,9 @@ import PaymentTypeSelector from "./booking/PaymentTypeSelector";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import TermsDialog from "./booking/TermsDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { differenceInDays, parse } from "date-fns";
 
 const BookingForm = () => {
   const {
@@ -29,9 +32,38 @@ const BookingForm = () => {
   const minDate = "2025-05-01";
   const maxDate = "2025-05-25";
 
+  // Query to check pricing availability
+  const { data: availablePricing } = useQuery({
+    queryKey: ['price-check', formData.checkin, formData.checkout, formData.roomType],
+    queryFn: async () => {
+      if (!formData.checkin || !formData.checkout || !formData.roomType) return null;
+      
+      const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
+      const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
+      const days = differenceInDays(endDate, startDate);
+      
+      const { data, error } = await supabase
+        .from('prices')
+        .select('*')
+        .eq('room_type', formData.roomType)
+        .lte('duration', days)
+        .order('duration', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: Boolean(formData.checkin && formData.checkout && formData.roomType)
+  });
+
+  const meetsMinimumStay = !formData.checkin || 
+                          !formData.checkout || 
+                          !formData.roomType || 
+                          (availablePricing && availablePricing.length > 0);
+
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!termsAccepted) {
+    if (!termsAccepted || !meetsMinimumStay) {
       return;
     }
     handleSubmit(e);
@@ -107,7 +139,7 @@ const BookingForm = () => {
       <Button
         type="submit"
         className="w-full bg-primary hover:bg-primary/90 text-white text-lg py-6"
-        disabled={isLoading || !isFormValid || !termsAccepted}
+        disabled={isLoading || !isFormValid || !termsAccepted || !meetsMinimumStay}
       >
         {isLoading ? "Processing..." : "Confirm and Pay"}
       </Button>
