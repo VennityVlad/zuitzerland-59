@@ -140,7 +140,7 @@ const SignIn = () => {
         
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">
           <h1 className="text-2xl font-semibold text-hotel-navy mb-6 text-center">
-            Welcome to Switzerland Booking Portal
+            Welcome to the Zuitzerland Portal
           </h1>
           
           <p className="text-gray-600 mb-8 text-center">
