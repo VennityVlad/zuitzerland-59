@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -131,7 +130,6 @@ const Profile = () => {
     if (!user?.id) return;
 
     try {
-      // First check if profile exists
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('id')
@@ -145,7 +143,6 @@ const Profile = () => {
 
       let profileId;
       if (!existingProfile) {
-        // Create new profile if it doesn't exist
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
@@ -166,7 +163,6 @@ const Profile = () => {
         profileId = newProfile.id;
         setProfileData(newProfile);
       } else {
-        // Update existing profile
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -181,7 +177,6 @@ const Profile = () => {
           throw updateError;
         }
         
-        // Fetch updated profile
         const { data: updatedProfile, error: fetchError } = await supabase
           .from('profiles')
           .select('*')
@@ -226,12 +221,6 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
       <div className="container max-w-4xl mx-auto px-4">
-        <img 
-          src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
-          alt="Switzerland Logo"
-          className="logo mb-8"
-        />
-        
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
