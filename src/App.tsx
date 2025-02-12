@@ -89,13 +89,8 @@ const App = () => {
             logo: '/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png',
           },
           embeddedWallets: {
-            createOnLogin: {
-              chainConfig: {
-                chainName: 'Ethereum',
-                chainId: '0x1',
-                isTestnet: false
-              }
-            }
+            createOnLogin: true,
+            noPromptOnSignature: true
           }
         }}
       >
