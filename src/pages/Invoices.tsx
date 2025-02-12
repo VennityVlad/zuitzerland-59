@@ -51,7 +51,7 @@ const Invoices = () => {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('privy_id')
-          .eq('privy_id', user.id)
+          .eq('privy_id', user.id.toString())
           .single();
 
         if (profileError || !profileData) {
@@ -63,7 +63,7 @@ const Invoices = () => {
         const query = supabase
           .from('invoices')
           .select('*')
-          .eq('privy_id', user.id)
+          .eq('privy_id', user.id.toString())
           .order('created_at', { ascending: false });
 
         const { data, error } = await query;
