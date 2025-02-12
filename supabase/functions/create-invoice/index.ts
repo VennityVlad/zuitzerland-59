@@ -62,14 +62,32 @@ serve(async (req) => {
         }
       ];
 
+    // Create item description based on room type and number of days
+    const startDate = new Date(invoiceData.buyerInfo.metaData?.checkin);
+    const endDate = new Date(invoiceData.buyerInfo.metaData?.checkout);
+    const daysDifference = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Convert room type to display name
+    const roomTypeDisplayNames: { [key: string]: string } = {
+      'hotel_room_queen': 'Hotel Room - Queen Bed',
+      'apartment_3br_couples': '3 Bedroom Apartment - Couples Room',
+      'apartment_3_4br_queen': '3-4 Bedroom Apartment - Queen Bed Room',
+      'apartment_3_4br_twin': '3-4 Bedroom Apartment - Twin Bed Room',
+      'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
+      'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
+    };
+    const roomTypeDisplay = roomTypeDisplayNames[invoiceData.buyerInfo.metaData?.roomType] || invoiceData.buyerInfo.metaData?.roomType;
+
     // Create the final invoice data with adjusted payment options
     const finalInvoiceData = {
       ...invoiceData,
       paymentOptions,
       invoiceItems: [{
         ...invoiceData.invoiceItems[0],
+        name: `${roomTypeDisplay} × ${daysDifference} days`,
         unitPrice: `${Math.round(priceAfterDiscount)}00` // Convert to cents
-      }]
+      }],
+      tags: [] // Remove zapier_invoice tag
     };
 
     console.log('Final invoice data:', JSON.stringify(finalInvoiceData, null, 2));
