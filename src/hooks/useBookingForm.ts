@@ -358,7 +358,7 @@ export const useBookingForm = () => {
             discountAmount,
             taxAmount,
             totalAmount,
-            discountCode: bookingData.discountCode || null
+            isRoleBasedDiscount
           }
         });
 
