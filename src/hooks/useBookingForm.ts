@@ -45,7 +45,7 @@ export const useBookingForm = () => {
     const endDate = parse(checkout, 'yyyy-MM-dd', new Date());
     const days = differenceInDays(endDate, startDate);
     
-    console.log('Calculated days:', days);
+    console.log('Calculated stay duration (days):', days);
     
     if (days <= 0) {
       console.log('Invalid date range - days <= 0');
@@ -53,20 +53,14 @@ export const useBookingForm = () => {
     }
 
     try {
-      // Log the exact query we're about to make
-      console.log('Querying prices with:', {
-        room_type: roomType,
-        date_range: { start: checkin, end: checkout }
-      });
-
-      // Fetch prices for the date range
+      // Get the applicable price based on the duration
       const { data: prices, error } = await supabase
         .from('prices')
         .select('*')
         .eq('room_type', roomType)
-        .gte('date', checkin)
-        .lte('date', checkout)
-        .order('date', { ascending: true });
+        .lte('duration', days)
+        .order('duration', { ascending: false })
+        .limit(1);
 
       if (error) {
         console.error('Supabase query error:', error);
@@ -74,28 +68,23 @@ export const useBookingForm = () => {
       }
 
       if (!prices || prices.length === 0) {
-        console.error('No prices found for:', {
+        console.error('No applicable price found for:', {
           room_type: roomType,
-          checkin,
-          checkout,
-          query: `room_type=${roomType}&date>=${checkin}&date<=${checkout}`
+          duration: days
         });
         return 0;
       }
 
-      console.log('Fetched prices:', {
-        count: prices.length,
-        dates: prices.map(p => p.date),
-        prices: prices.map(p => p.price)
+      const applicablePrice = prices[0];
+      console.log('Found applicable price:', applicablePrice);
+      
+      // Calculate total price based on the daily rate and number of days
+      const totalPrice = applicablePrice.price * days;
+      console.log('Calculated total price:', { 
+        dailyRate: applicablePrice.price,
+        days,
+        totalPrice 
       });
-      
-      // Calculate total price
-      const totalPrice = prices.reduce((sum, price) => {
-        console.log('Adding price:', { date: price.date, price: price.price, runningTotal: sum + Number(price.price) });
-        return sum + Number(price.price);
-      }, 0);
-      
-      console.log('Final total price:', totalPrice);
       
       return totalPrice;
     } catch (error) {
@@ -151,6 +140,8 @@ export const useBookingForm = () => {
     if (days < minimumStay) {
       const weekText = minimumStay === 7 ? "1 week" : 
                       minimumStay === 14 ? "2 weeks" : 
+                      minimumStay === 25 ? "25 days" : 
+                      minimumStay === 30 ? "30 days" : 
                       "the entire period";
       return `This room type requires a minimum stay of ${weekText}`;
     }

@@ -34,38 +34,38 @@ const RoomInfo = () => {
       <TableBody>
         <TableRow>
           <TableCell>Hotel Room - Queen Bed</TableCell>
-          <TableCell>230 - 360</TableCell>
-          <TableCell>7.0 days</TableCell>
+          <TableCell>190 - 230</TableCell>
+          <TableCell>7 days</TableCell>
           <TableCell className="hidden md:table-cell">A private hotel room with a queen bed, daily cleaning, and space for two people. Suitable for couples or small families with a child.</TableCell>
         </TableRow>
         <TableRow>
           <TableCell>3 Bedroom Apartment - Couples Room</TableCell>
-          <TableCell>261 - 300</TableCell>
-          <TableCell>7.0 days</TableCell>
+          <TableCell>220 - 261</TableCell>
+          <TableCell>7 days</TableCell>
           <TableCell className="hidden md:table-cell">A private room in a three-bedroom apartment with a queen bed, private entrance, and breakfast included. Suitable for two people, with space for a small child.</TableCell>
         </TableRow>
         <TableRow>
           <TableCell>3-4 Bedroom Apartment - Queen Bed Room</TableCell>
-          <TableCell>173 - 290</TableCell>
-          <TableCell>7.0 days</TableCell>
+          <TableCell>150 - 173</TableCell>
+          <TableCell>7 days</TableCell>
           <TableCell className="hidden md:table-cell">A private room with a queen bed in a shared 3-4 bedroom apartment. Includes two shared bathrooms. The apartment has two bathrooms.</TableCell>
         </TableRow>
         <TableRow>
           <TableCell>3-4 Bedroom Apartment - Twin Bed Room</TableCell>
-          <TableCell>121 - 157</TableCell>
-          <TableCell>14.0 days</TableCell>
+          <TableCell>110 - 121</TableCell>
+          <TableCell>14 days</TableCell>
           <TableCell className="hidden md:table-cell">A shared twin room in a 3-4 bedroom apartment. Two people per room, sharing bathrooms with others in the apartment. The apartment has two bathrooms.</TableCell>
         </TableRow>
         <TableRow>
           <TableCell>2 Bedroom Apartment - Twin Bed Room</TableCell>
-          <TableCell>86 - 100</TableCell>
-          <TableCell>14.0 days</TableCell>
+          <TableCell>80 - 86</TableCell>
+          <TableCell>14 days</TableCell>
           <TableCell className="hidden md:table-cell">A twin bed in a shared two-bedroom apartment. One shared bathroom between five people.</TableCell>
         </TableRow>
         <TableRow>
           <TableCell>2 Bedroom Apartment - Triple Bed Room</TableCell>
-          <TableCell>81 - 88</TableCell>
-          <TableCell>25.0 days</TableCell>
+          <TableCell>75 - 81</TableCell>
+          <TableCell>25 days</TableCell>
           <TableCell className="hidden md:table-cell">A single bed in a shared room with two others (three single beds in total). One shared bathroom between five people.</TableCell>
         </TableRow>
       </TableBody>
@@ -74,7 +74,6 @@ const RoomInfo = () => {
 };
 
 const getRoomTypes = async () => {
-  // Simplified query to get distinct room types
   const { data, error } = await supabase
     .from('prices')
     .select('room_type');
@@ -107,22 +106,11 @@ const RoomSelectionFields = ({
   formData,
   onRoomTypeChange,
 }: RoomSelectionFieldsProps) => {
-  const { data: prices, isLoading: isPricesLoading } = usePrices(formData.checkin);
   const { data: roomTypes, isLoading: isRoomTypesLoading } = useQuery({
     queryKey: ['roomTypes'],
     queryFn: getRoomTypes,
     staleTime: Infinity
   });
-
-  const roomTypesWithPrices = roomTypes?.map(room => {
-    const priceData = prices?.find(p => p.room_type === room.id);
-    return {
-      ...room,
-      pricePerNight: priceData?.price || 0
-    };
-  }) || [];
-
-  const isLoading = isPricesLoading || isRoomTypesLoading;
 
   return (
     <div className="space-y-2">
@@ -146,10 +134,10 @@ const RoomSelectionFields = ({
         onValueChange={onRoomTypeChange}
       >
         <SelectTrigger className="w-full py-5">
-          <SelectValue placeholder={isLoading ? "Loading room types..." : "Select a room type"} />
+          <SelectValue placeholder={isRoomTypesLoading ? "Loading room types..." : "Select a room type"} />
         </SelectTrigger>
         <SelectContent>
-          {roomTypesWithPrices.map((room) => (
+          {roomTypes?.map((room) => (
             <SelectItem key={room.id} value={room.id}>
               {room.name}
             </SelectItem>
