@@ -95,8 +95,12 @@ const BookingDetailsPanel = ({
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
   const [discountCode, setDiscountCode] = useState("");
 
-  const taxAmount = formData.price * VAT_RATE;
-  const totalAmount = formData.price + taxAmount - discountAmount;
+  // Calculate price after discount
+  const priceAfterDiscount = formData.price - discountAmount;
+  // Calculate VAT on the discounted price
+  const taxAmount = priceAfterDiscount * VAT_RATE;
+  // Calculate total amount (discounted price + VAT)
+  const totalAmount = priceAfterDiscount + taxAmount;
 
   const handleDiscountCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDiscountCode(e.target.value);
@@ -234,6 +238,13 @@ const BookingDetailsPanel = ({
                 Discount {formData.discountCode && `(${formData.discountCode})`}
               </span>
               <span>- CHF {discountAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {discountAmount > 0 && (
+            <div className="flex justify-between items-center text-gray-600">
+              <span>Price after discount</span>
+              <span>CHF {priceAfterDiscount.toFixed(2)}</span>
             </div>
           )}
           
