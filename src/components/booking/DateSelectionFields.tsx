@@ -4,6 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DateRangeSelector from "./DateRangeSelector";
 import type { BookingFormData } from "@/types/booking";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { differenceInDays, parse } from "date-fns";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -65,6 +69,35 @@ const DateSelectionFields = ({
       target: { name: "checkout", value: endDate }
     } as React.ChangeEvent<HTMLInputElement>);
   };
+
+  // Query to check pricing availability
+  const { data: availablePricing } = useQuery({
+    queryKey: ['price-check', formData.checkin, formData.checkout, formData.roomType],
+    queryFn: async () => {
+      if (!formData.checkin || !formData.checkout || !formData.roomType) return null;
+      
+      const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
+      const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
+      const days = differenceInDays(endDate, startDate);
+      
+      const { data, error } = await supabase
+        .from('prices')
+        .select('*')
+        .eq('room_type', formData.roomType)
+        .lte('duration', days)
+        .order('duration', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: Boolean(formData.checkin && formData.checkout && formData.roomType)
+  });
+
+  const showPricingWarning = formData.checkin && 
+                            formData.checkout && 
+                            formData.roomType && 
+                            (!availablePricing || availablePricing.length === 0);
 
   return (
     <div className="space-y-6">
@@ -132,6 +165,14 @@ const DateSelectionFields = ({
           </div>
         </div>
       </div>
+
+      {showPricingWarning && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            The selected stay duration does not meet the minimum stay requirement for this room type. Please adjust your dates or select a different room type.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };
