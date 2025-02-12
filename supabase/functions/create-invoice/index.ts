@@ -63,8 +63,16 @@ serve(async (req) => {
       ];
 
     // Create item description based on room type and number of days
-    const startDate = new Date(invoiceData.buyerInfo.metaData?.checkin);
-    const endDate = new Date(invoiceData.buyerInfo.metaData?.checkout);
+    const checkin = invoiceData.buyerInfo?.metaData?.checkin;
+    const checkout = invoiceData.buyerInfo?.metaData?.checkout;
+    const roomType = invoiceData.buyerInfo?.metaData?.roomType;
+
+    if (!checkin || !checkout || !roomType) {
+      throw new Error('Missing required booking information');
+    }
+
+    const startDate = new Date(checkin);
+    const endDate = new Date(checkout);
     const daysDifference = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     
     // Convert room type to display name
@@ -76,7 +84,12 @@ serve(async (req) => {
       'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
       'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
     };
-    const roomTypeDisplay = roomTypeDisplayNames[invoiceData.buyerInfo.metaData?.roomType] || invoiceData.buyerInfo.metaData?.roomType;
+
+    const roomTypeDisplay = roomTypeDisplayNames[roomType];
+    if (!roomTypeDisplay) {
+      console.error('Unknown room type:', roomType);
+      throw new Error('Invalid room type');
+    }
 
     // Create the final invoice data with adjusted payment options
     const finalInvoiceData = {
