@@ -23,30 +23,18 @@ const SignIn = () => {
       });
 
       try {
-        // Get the JWT token from Privy
-        const token = await user.refreshIdToken();
+        // Get the JWT token from Privy and store it in sessionStorage
+        const token = await user.getIdToken();
         if (!token) {
           console.error('No Privy token available');
           return;
         }
         console.log('Obtained Privy token');
+        sessionStorage.setItem('privyToken', token);
 
         if (!user.email?.address) {
           console.error('No email address available');
           return;
-        }
-
-        // Update JWT claims in Supabase
-        const { error: jwtError } = await supabase.functions.invoke('update-privy-jwt', {
-          body: {
-            jwt: token,
-            userId: user.id.toString()
-          }
-        });
-
-        if (jwtError) {
-          console.error('Error updating JWT claims:', jwtError);
-          throw jwtError;
         }
 
         // Check for existing profile with matching email
@@ -73,7 +61,6 @@ const SignIn = () => {
             .from('profiles')
             .update({
               privy_id: user.id.toString(),
-              auth_token: token,
               email: user.email.address // Ensure email is set
             })
             .eq('id', existingProfile.id);
@@ -93,8 +80,7 @@ const SignIn = () => {
               id: newProfileId,
               privy_id: user.id.toString(),
               email: user.email.address,
-              username: null, // This will trigger the generate_username() function
-              auth_token: token
+              username: null // This will trigger the generate_username() function
             });
 
           if (createError) {
@@ -105,22 +91,7 @@ const SignIn = () => {
           console.log('New profile created successfully');
         }
 
-        // Create Supabase session using the Privy token
-        console.log('Attempting to create Supabase session...');
-        const { data: { session }, error: sessionError } = await supabase.auth.signInWithPassword({
-          email: user.email.address,
-          password: token,
-        });
-
-        if (sessionError) {
-          console.error('Error creating Supabase session:', sessionError);
-          throw sessionError;
-        }
-
-        console.log('Supabase session created successfully:', {
-          user: session?.user?.id,
-          expires_at: session?.expires_at
-        });
+        console.log('Auth setup completed successfully');
 
       } catch (error) {
         console.error('Error in auth setup:', error);
