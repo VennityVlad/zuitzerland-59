@@ -30,7 +30,7 @@ const PaymentTypeSelector = ({ value, onChange }: PaymentTypeSelectorProps) => {
       </Select>
       
       {value === 'crypto' && (
-        <Alert variant="warning" className="mt-2">
+        <Alert className="mt-2">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Please make sure to use the Request Finance user interface when paying with crypto. Do NOT send us the funds directly from your wallet.

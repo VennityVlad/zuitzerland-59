@@ -2,7 +2,7 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -11,123 +11,112 @@ const SignIn = () => {
   const { toast } = useToast();
   const [isSettingUpProfile, setIsSettingUpProfile] = useState(false);
 
-  useEffect(() => {
-    const setupAuth = async () => {
-      if (!user) {
-        console.log('No Privy user available yet');
-        return;
+  const setupAuth = useCallback(async () => {
+    if (!user?.email?.address || isSettingUpProfile) {
+      return;
+    }
+
+    setIsSettingUpProfile(true);
+
+    try {
+      console.log('Privy user authenticated:', {
+        id: user.id,
+        email: user.email.address
+      });
+
+      // Check for existing profile by email
+      console.log('Checking for existing profile by email...');
+      const { data: existingProfiles, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', user.email.address);
+
+      if (profileCheckError) {
+        console.error('Error checking existing profile:', profileCheckError);
+        throw profileCheckError;
       }
 
-      if (!user.email?.address) {
-        console.log('No email address available');
-        return;
-      }
+      console.log('Existing profiles found:', existingProfiles);
 
-      if (isSettingUpProfile) {
-        console.log('Profile setup already in progress...');
-        return;
-      }
+      if (existingProfiles && existingProfiles.length > 0) {
+        // Use the first profile found with this email
+        const existingProfile = existingProfiles[0];
+        console.log('Found existing profile:', existingProfile);
 
-      setIsSettingUpProfile(true);
+        // Only update if privy_id is different
+        if (existingProfile.privy_id !== user.id.toString()) {
+          // Update profile with new Privy ID
+          const updateData = {
+            privy_id: user.id.toString(),
+            email: user.email.address
+          };
 
-      try {
-        console.log('Privy user authenticated:', {
-          id: user.id,
-          email: user.email.address
-        });
-
-        // Check for existing profile by email
-        console.log('Checking for existing profile by email...');
-        const { data: existingProfiles, error: profileCheckError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', user.email.address);
-
-        if (profileCheckError) {
-          console.error('Error checking existing profile:', profileCheckError);
-          throw profileCheckError;
-        }
-
-        console.log('Existing profiles found:', existingProfiles);
-
-        if (existingProfiles && existingProfiles.length > 0) {
-          // Use the first profile found with this email
-          const existingProfile = existingProfiles[0];
-          console.log('Found existing profile:', existingProfile);
-
-          // Only update if privy_id is different
-          if (existingProfile.privy_id !== user.id.toString()) {
-            // Update profile with new Privy ID
-            const updateData = {
-              privy_id: user.id.toString(),
-              email: user.email.address
-            };
-
-            console.log('Updating profile with data:', updateData);
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update(updateData)
-              .eq('id', existingProfile.id);
-
-            if (updateError) {
-              console.error('Error updating profile:', updateError);
-              throw updateError;
-            }
-
-            console.log('Profile updated successfully');
-          } else {
-            console.log('Profile already up to date');
-          }
-        } else {
-          // Create new profile if no existing profile found
-          console.log('No existing profile found, creating new profile...');
-          const newProfileId = crypto.randomUUID();
-          const { error: createError } = await supabase
+          console.log('Updating profile with data:', updateData);
+          const { error: updateError } = await supabase
             .from('profiles')
-            .insert({
-              id: newProfileId,
-              privy_id: user.id.toString(),
-              email: user.email.address,
-              username: null // This will trigger the generate_username() function
-            });
+            .update(updateData)
+            .eq('id', existingProfile.id);
 
-          if (createError) {
-            console.error('Error creating profile:', createError);
-            throw createError;
+          if (updateError) {
+            console.error('Error updating profile:', updateError);
+            throw updateError;
           }
-          console.log('New profile created successfully');
+
+          console.log('Profile updated successfully');
+        } else {
+          console.log('Profile already up to date');
         }
+      } else {
+        // Create new profile if no existing profile found
+        console.log('No existing profile found, creating new profile...');
+        const newProfileId = crypto.randomUUID();
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: newProfileId,
+            privy_id: user.id.toString(),
+            email: user.email.address,
+            username: null // This will trigger the generate_username() function
+          });
 
-        console.log('Auth setup completed successfully');
-        
-        // Only redirect after successful profile setup
-        window.location.href = "/";
-
-      } catch (error) {
-        console.error('Error in auth setup:', error);
-        toast({
-          title: "Authentication Error",
-          description: "There was an error setting up your profile. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsSettingUpProfile(false);
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          throw createError;
+        }
+        console.log('New profile created successfully');
       }
-    };
 
-    if (authenticated && user) {
+      console.log('Auth setup completed successfully');
+      
+      // Only redirect after successful profile setup
+      window.location.href = "/";
+
+    } catch (error) {
+      console.error('Error in auth setup:', error);
+      toast({
+        title: "Authentication Error",
+        description: "There was an error setting up your profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingUpProfile(false);
+    }
+  }, [user, isSettingUpProfile, toast]);
+
+  useEffect(() => {
+    if (authenticated && user && !isSettingUpProfile) {
       console.log('Starting auth setup process...');
       setupAuth();
     } else {
       console.log('Waiting for Privy authentication...', {
         authenticated,
-        userPresent: !!user
+        userPresent: !!user,
+        isSettingUpProfile
       });
     }
-  }, [authenticated, user, toast, isSettingUpProfile]);
+  }, [authenticated, user, setupAuth, isSettingUpProfile]);
 
   if (!ready) {
-    console.log('Privy not ready yet');
     return (
       <div className="min-h-screen bg-secondary/30 flex items-center justify-center">
         <div className="animate-pulse">Loading...</div>
@@ -135,7 +124,6 @@ const SignIn = () => {
     );
   }
 
-  // Don't redirect immediately when authenticated, let the setup complete first
   if (authenticated && isSettingUpProfile) {
     return (
       <div className="min-h-screen bg-secondary/30 flex items-center justify-center">
@@ -145,9 +133,11 @@ const SignIn = () => {
   }
 
   if (authenticated && !isSettingUpProfile) {
-    console.log('Setup complete, redirecting to home...');
-    window.location.href = "/";
-    return null;
+    return (
+      <div className="min-h-screen bg-secondary/30 flex items-center justify-center">
+        <div className="animate-pulse">Redirecting...</div>
+      </div>
+    );
   }
 
   return (
