@@ -14,6 +14,16 @@ const SignIn = () => {
   const setupComplete = useRef(false);
   const navigate = useNavigate();
 
+  // Store Privy auth info when user object is available
+  useEffect(() => {
+    if (user) {
+      sessionStorage.setItem('privyUser', JSON.stringify({
+        id: user.id,
+        email: user.email?.address
+      }));
+    }
+  }, [user]);
+
   const setupAuth = useCallback(async () => {
     if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {
       return;
