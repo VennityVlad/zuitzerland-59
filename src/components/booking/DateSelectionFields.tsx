@@ -1,13 +1,11 @@
 
-import { CalendarIcon, BookOpen } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import type { BookingFormData } from "@/types/booking";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parse, format } from "date-fns";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -16,28 +14,42 @@ interface DateSelectionFieldsProps {
   maxDate: string;
 }
 
-const DATE_RANGES = [
+const PROGRAM_BLOCKS = [
   {
-    id: "block1",
-    name: "Block 1",
-    startDate: "2025-05-01",
-    endDate: "2025-05-09",
-    description: "Intro Days (May 1-3): Community, Culture, Media, Philosophy & Truth-Seeking\nSwiss Governance & New Societies Days (May 4-9): Democracy, Network States & Start-up Cities"
+    name: "Intro Days",
+    startDate: new Date(2025, 4, 1),
+    endDate: new Date(2025, 4, 3),
+    color: "#E5DEFF", // Solid Purple
+    underlineColor: "#9b87f5",
   },
   {
-    id: "block2",
-    name: "Block 2",
-    startDate: "2025-05-10",
-    endDate: "2025-05-17",
-    description: "Cypherpunk Days: Frontier Tech - Ethereum, Biotech, AI x Crypto\nSolarpunk Days: Living Design Week"
+    name: "Swiss Governance & New Societies Days",
+    startDate: new Date(2025, 4, 4),
+    endDate: new Date(2025, 4, 9),
+    color: "#D3E4FD", // Solid Blue
+    underlineColor: "#0EA5E9",
   },
   {
-    id: "block3",
-    name: "Block 3",
-    startDate: "2025-05-18",
-    endDate: "2025-05-26",
-    description: "Build Week (May 19-23): Hackathon and Govathon\nZuitzerland Summit 2025 (May 24-26)"
-  }
+    name: "Cypherpunk & Solarpunk Days",
+    startDate: new Date(2025, 4, 10),
+    endDate: new Date(2025, 4, 17),
+    color: "#F2FCE2", // Solid Green
+    underlineColor: "#8B5CF6",
+  },
+  {
+    name: "Build Week",
+    startDate: new Date(2025, 4, 19),
+    endDate: new Date(2025, 4, 23),
+    color: "#FEC6A1", // Solid Orange
+    underlineColor: "#F97316",
+  },
+  {
+    name: "Zuitzerland Summit 2025",
+    startDate: new Date(2025, 4, 24),
+    endDate: new Date(2025, 4, 26),
+    color: "#FFDEE2", // Solid Pink
+    underlineColor: "#D946EF",
+  },
 ];
 
 const DateSelectionFields = ({
@@ -81,92 +93,29 @@ const DateSelectionFields = ({
     return format(date, 'MMMM d, yyyy');
   };
 
-  const handleDateRangeCheckboxChange = (rangeId: string, checked: boolean) => {
-    const selectedRange = DATE_RANGES.find(range => range.id === rangeId);
-    if (!selectedRange) return;
-
-    if (checked) {
-      handleInputChange({
-        target: { name: "checkin", value: selectedRange.startDate }
-      } as React.ChangeEvent<HTMLInputElement>);
-      
-      handleInputChange({
-        target: { name: "checkout", value: selectedRange.endDate }
-      } as React.ChangeEvent<HTMLInputElement>);
-    } else if (formData.checkin === selectedRange.startDate && formData.checkout === selectedRange.endDate) {
-      handleInputChange({
-        target: { name: "checkin", value: "" }
-      } as React.ChangeEvent<HTMLInputElement>);
-      
-      handleInputChange({
-        target: { name: "checkout", value: "" }
-      } as React.ChangeEvent<HTMLInputElement>);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="p-4 bg-secondary/20 rounded-lg space-y-3">
-          <div className="flex items-center gap-2 text-primary">
-            <BookOpen className="h-5 w-5" />
-            <h4 className="font-semibold">Program Legend</h4>
-          </div>
-          <div className="space-y-2 text-sm">
-            <p><span className="font-medium">Block 1:</span> Intro Days & Swiss Governance</p>
-            <p><span className="font-medium">Block 2:</span> Cypherpunk & Solarpunk Days</p>
-            <p><span className="font-medium">Block 3:</span> Build Week & Summit</p>
-          </div>
+      <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">Program Calendar</h4>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {PROGRAM_BLOCKS.map((block) => (
+            <div key={block.name} className="flex items-center gap-2">
+              <div 
+                className="w-4 h-4 rounded" 
+                style={{ backgroundColor: block.color }}
+              ></div>
+              <span className="text-sm text-gray-600">{block.name}</span>
+            </div>
+          ))}
         </div>
-        <div className="p-4 bg-secondary/20 rounded-lg space-y-3">
-          <div className="flex items-center gap-2 text-primary">
-            <CalendarIcon className="h-5 w-5" />
-            <h4 className="font-semibold">Program Calendar</h4>
-          </div>
-          <p className="text-sm">Select your preferred dates from the blocks below to see what's happening during your stay.</p>
+        <div className="space-y-3">
+          <h3 className="text-center text-base font-light text-gray-900">May 2025</h3>
+          <img 
+            src="/lovable-uploads/1042fc8f-7fd2-45d2-a91d-bd0e2c012279.png" 
+            alt="May 2025 Program Calendar"
+            className="w-full max-w-2xl mx-auto rounded-lg"
+          />
         </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="border-b pb-4">
-          <h3 className="text-xl font-semibold text-gray-900">Select Your Program Dates</h3>
-          <p className="text-sm text-gray-600 mt-1">Choose one or more program blocks to attend</p>
-        </div>
-        
-        <TooltipProvider>
-          <div className="space-y-3">
-            {DATE_RANGES.map((range) => (
-              <Tooltip key={range.id}>
-                <div className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 hover:border-purple-500 transition-colors">
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center space-x-3 flex-1">
-                      <Checkbox
-                        id={range.id}
-                        checked={formData.checkin === range.startDate && formData.checkout === range.endDate}
-                        onCheckedChange={(checked) => handleDateRangeCheckboxChange(range.id, checked as boolean)}
-                        className="h-5 w-5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                      />
-                      <div className="flex justify-between items-center w-full">
-                        <label
-                          htmlFor={range.id}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                        >
-                          <span className="font-semibold text-gray-900">{range.name}</span>
-                          <span className="text-sm text-gray-600 font-medium ml-4">
-                            {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-sm whitespace-pre-line">
-                    <p className="text-sm">{range.description}</p>
-                  </TooltipContent>
-                </div>
-              </Tooltip>
-            ))}
-          </div>
-        </TooltipProvider>
       </div>
       
       <div className="grid grid-cols-2 gap-4">
