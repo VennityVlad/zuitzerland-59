@@ -23,26 +23,12 @@ const SignIn = () => {
       });
 
       try {
-        // Get the JWT token from Privy and store it in sessionStorage
-        const token = await user.getIdToken();
-        if (!token) {
-          console.error('No Privy token available');
-          return;
-        }
-        console.log('Obtained Privy token');
-        sessionStorage.setItem('privyToken', token);
-
-        if (!user.email?.address) {
-          console.error('No email address available');
-          return;
-        }
-
         // Check for existing profile with matching email
         console.log('Checking for existing profile by email...');
         const { data: existingProfiles, error: profileCheckError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('email', user.email.address);
+          .eq('email', user.email?.address);
 
         if (profileCheckError) {
           console.error('Error checking existing profile:', profileCheckError);
@@ -61,7 +47,7 @@ const SignIn = () => {
             .from('profiles')
             .update({
               privy_id: user.id.toString(),
-              email: user.email.address // Ensure email is set
+              email: user.email?.address // Ensure email is set
             })
             .eq('id', existingProfile.id);
 
@@ -79,7 +65,7 @@ const SignIn = () => {
             .insert({
               id: newProfileId,
               privy_id: user.id.toString(),
-              email: user.email.address,
+              email: user.email?.address,
               username: null // This will trigger the generate_username() function
             });
 

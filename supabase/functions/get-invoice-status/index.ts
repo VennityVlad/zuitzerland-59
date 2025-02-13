@@ -12,6 +12,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -24,10 +25,16 @@ serve(async (req) => {
       .from('secrets')
       .select('value')
       .eq('name', Deno.env.get('DENO_ENV') === 'development' ? 'REQUEST_FINANCE_TEST_API_KEY' : 'REQUEST_FINANCE_API_KEY')
-      .single();
+      .maybeSingle();
 
-    if (secretError || !secretData) {
-      throw new Error('Could not retrieve API key');
+    if (secretError) {
+      console.error('Error fetching API key:', secretError);
+      throw new Error('Failed to fetch API key');
+    }
+
+    if (!secretData) {
+      console.error('No API key found');
+      throw new Error('API key not configured');
     }
 
     const requestFinanceApiKey = secretData.value;
@@ -37,11 +44,25 @@ serve(async (req) => {
       .from('invoices')
       .select('id, request_invoice_id');
       
-    if (dbError) throw dbError;
+    if (dbError) {
+      console.error('Error fetching invoices:', dbError);
+      throw dbError;
+    }
+
+    if (!invoices || invoices.length === 0) {
+      return new Response(
+        JSON.stringify({ message: 'No invoices found', updated: [] }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
     
     const updatedInvoices = await Promise.all(
       invoices.map(async (invoice) => {
         try {
+          console.log(`Fetching status for invoice ${invoice.request_invoice_id}`);
           const response = await fetch(`https://api.request.finance/invoices/${invoice.request_invoice_id}`, {
             headers: {
               'Accept': 'application/json',
@@ -55,6 +76,7 @@ serve(async (req) => {
           }
 
           const data = await response.json();
+          console.log(`Received status for invoice ${invoice.request_invoice_id}:`, data.status);
           
           // Map Request Finance status to our status
           let status = 'pending';
@@ -77,6 +99,7 @@ serve(async (req) => {
             return null;
           }
 
+          console.log(`Successfully updated invoice ${invoice.id} to status: ${status}`);
           return { id: invoice.id, status };
         } catch (error) {
           console.error(`Error processing invoice ${invoice.request_invoice_id}:`, error);
@@ -85,23 +108,29 @@ serve(async (req) => {
       })
     );
 
+    const validUpdates = updatedInvoices.filter(Boolean);
+    console.log(`Successfully processed ${validUpdates.length} invoices`);
+
     return new Response(
       JSON.stringify({ 
-        updated: updatedInvoices.filter(Boolean)
+        message: `Updated ${validUpdates.length} invoices`,
+        updated: validUpdates
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
       }
     );
   } catch (error) {
     console.error('Error in get-invoice-status function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'An unexpected error occurred'
+      }),
       { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
 });
-
