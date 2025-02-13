@@ -30,12 +30,12 @@ const SignIn = () => {
         }
         console.log('Obtained Privy token');
 
-        // First check if profile exists
+        // First check if profile exists and has privy_id
         console.log('Checking for existing profile...');
         const { data: existingProfile, error: profileCheckError } = await supabase
           .from('profiles')
-          .select('id')
-          .eq('privy_id', user.id)
+          .select('id, privy_id')
+          .eq('email', user.email?.address)
           .maybeSingle();
 
         if (profileCheckError) {
@@ -43,14 +43,45 @@ const SignIn = () => {
           throw profileCheckError;
         }
 
-        // Create new profile if it doesn't exist
-        if (!existingProfile) {
+        if (existingProfile) {
+          // If profile exists but doesn't have privy_id, update it
+          if (!existingProfile.privy_id) {
+            console.log('Updating existing profile with privy_id...');
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                privy_id: user.id.toString(),
+                auth_token: privyToken
+              })
+              .eq('id', existingProfile.id);
+
+            if (updateError) {
+              console.error('Error updating profile with privy_id:', updateError);
+              throw updateError;
+            }
+            console.log('Profile updated with privy_id successfully');
+          } else {
+            // Profile exists and has privy_id, just update auth token
+            console.log('Existing profile found, updating auth token...');
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ auth_token: privyToken })
+              .eq('id', existingProfile.id);
+
+            if (updateError) {
+              console.error('Error updating profile auth token:', updateError);
+              throw updateError;
+            }
+            console.log('Profile auth token updated successfully');
+          }
+        } else {
+          // Create new profile if it doesn't exist
           console.log('No existing profile found, creating new profile...');
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
               id: crypto.randomUUID(),
-              privy_id: user.id,
+              privy_id: user.id.toString(),
               email: user.email?.address || null,
               username: null,  // This will trigger the generate_username() function
               auth_token: privyToken
@@ -61,19 +92,6 @@ const SignIn = () => {
             throw profileError;
           }
           console.log('New profile created successfully');
-        } else {
-          console.log('Existing profile found, updating auth token...');
-          // Update existing profile's auth token
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ auth_token: privyToken })
-            .eq('privy_id', user.id);
-
-          if (updateError) {
-            console.error('Error updating profile auth token:', updateError);
-            throw updateError;
-          }
-          console.log('Profile auth token updated successfully');
         }
 
         // Create Supabase session using the Privy token
