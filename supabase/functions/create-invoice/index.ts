@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
@@ -163,23 +162,41 @@ serve(async (req) => {
     const onChainInvoice = await convertToOnChainResponse.json();
     console.log('On-chain invoice created:', onChainInvoice);
 
-    // Step 3: Trigger Zapier webhook with invoice details
+    // Step 3: Trigger Zapier webhook with enhanced invoice details
     try {
-      console.log('Triggering Zapier webhook');
+      console.log('Triggering Zapier webhook with enhanced details');
       const zapierResponse = await fetch('https://hooks.zapier.com/hooks/catch/15806559/2w3ifi2/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          // Invoice details
           invoiceId: onChainInvoice.id,
           paymentLink: onChainInvoice.invoiceLinks.pay,
+          invoiceDueDate: onChainInvoice.dueDate,
+          invoiceStatus: onChainInvoice.status,
+          
+          // Customer details
           customerName: `${invoiceData.buyerInfo.firstName} ${invoiceData.buyerInfo.lastName}`,
           customerEmail: invoiceData.buyerInfo.email,
+          customerAddress: invoiceData.buyerInfo.street,
+          customerCity: invoiceData.buyerInfo.city,
+          customerCountry: invoiceData.buyerInfo.country,
+          
+          // Booking details
           amount: priceAfterDiscount,
-          checkin: invoiceData.meta.checkin,
-          checkout: invoiceData.meta.checkout,
-          roomType: invoiceData.meta.roomType
+          checkinDate: invoiceData.meta.checkin,
+          checkoutDate: invoiceData.meta.checkout,
+          roomType: invoiceData.meta.roomType,
+          numberOfNights: Math.ceil((new Date(invoiceData.meta.checkout).getTime() - new Date(invoiceData.meta.checkin).getTime()) / (1000 * 60 * 60 * 24)),
+          
+          // Payment details
+          paymentType: paymentType,
+          currency: paymentType === 'fiat' ? 'CHF' : 'CRYPTO',
+          
+          // Timestamp
+          createdAt: new Date().toISOString()
         })
       });
 
