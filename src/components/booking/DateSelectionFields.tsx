@@ -1,8 +1,6 @@
 
 import { CalendarIcon } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import DateRangeSelector from "./DateRangeSelector";
 import type { BookingFormData } from "@/types/booking";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
@@ -60,16 +58,6 @@ const DateSelectionFields = ({
   minDate,
   maxDate,
 }: DateSelectionFieldsProps) => {
-  const handleDateRangeChange = (startDate: string, endDate: string) => {
-    handleInputChange({
-      target: { name: "checkin", value: startDate }
-    } as React.ChangeEvent<HTMLInputElement>);
-    
-    handleInputChange({
-      target: { name: "checkout", value: endDate }
-    } as React.ChangeEvent<HTMLInputElement>);
-  };
-
   // Query to check pricing availability
   const { data: availablePricing } = useQuery({
     queryKey: ['price-check', formData.checkin, formData.checkout, formData.roomType],
@@ -129,55 +117,29 @@ const DateSelectionFields = ({
           />
         </div>
       </div>
-
-      <DateRangeSelector onDateRangeChange={handleDateRangeChange} />
       
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="checkin" className="text-gray-700">Check-in</Label>
-          <div className="relative bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <Label htmlFor="checkin" className="text-gray-700">Check-in Date</Label>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <div className="flex items-center">
               <CalendarIcon className="h-5 w-5 text-gray-400 mr-2" />
-              <span className="text-gray-900">
-                {formData.checkin ? formatDisplayDate(formData.checkin) : 'Select date'}
+              <span className="text-gray-900 font-medium">
+                {formData.checkin ? formatDisplayDate(formData.checkin) : 'Not selected'}
               </span>
             </div>
-            <Input
-              id="checkin"
-              name="checkin"
-              type="date"
-              required
-              min="2025-05-01"
-              max="2025-05-26"
-              value={formData.checkin}
-              onChange={handleInputChange}
-              className="hidden"
-              readOnly
-            />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="checkout" className="text-gray-700">Check-out</Label>
-          <div className="relative bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <Label htmlFor="checkout" className="text-gray-700">Check-out Date</Label>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <div className="flex items-center">
               <CalendarIcon className="h-5 w-5 text-gray-400 mr-2" />
-              <span className="text-gray-900">
-                {formData.checkout ? formatDisplayDate(formData.checkout) : 'Select date'}
+              <span className="text-gray-900 font-medium">
+                {formData.checkout ? formatDisplayDate(formData.checkout) : 'Not selected'}
               </span>
             </div>
-            <Input
-              id="checkout"
-              name="checkout"
-              type="date"
-              required
-              min={formData.checkin || "2025-05-01"}
-              max="2025-05-26"
-              value={formData.checkout}
-              onChange={handleInputChange}
-              className="hidden"
-              readOnly
-            />
           </div>
         </div>
       </div>
