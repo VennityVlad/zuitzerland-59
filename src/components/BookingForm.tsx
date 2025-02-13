@@ -138,7 +138,7 @@ const BookingForm = () => {
   return (
     <form
       onSubmit={onSubmit}
-      className="max-w-6xl mx-auto p-8 space-y-8 bg-white rounded-xl shadow-lg border border-secondary"
+      className="max-w-6xl mx-auto p-8 mt-16 sm:mt-0 space-y-8 bg-white rounded-xl shadow-lg border border-secondary"
     >
       <BookingFormHeader
         title="Complete Your Booking"
