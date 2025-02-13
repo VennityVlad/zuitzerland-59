@@ -17,44 +17,54 @@ const SignIn = () => {
         return;
       }
 
+      if (!user.email?.address) {
+        console.log('No email address available');
+        return;
+      }
+
       console.log('Privy user authenticated:', {
         id: user.id,
         email: user.email?.address
       });
 
       try {
-        // Check for existing profile with matching email
+        // Check for existing profile by email
         console.log('Checking for existing profile by email...');
         const { data: existingProfiles, error: profileCheckError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('email', user.email?.address);
+          .eq('email', user.email.address);
 
         if (profileCheckError) {
           console.error('Error checking existing profile:', profileCheckError);
           throw profileCheckError;
         }
 
-        let profileId: string;
+        console.log('Existing profiles found:', existingProfiles);
 
         if (existingProfiles && existingProfiles.length > 0) {
           // Use the first profile found with this email
           const existingProfile = existingProfiles[0];
-          profileId = existingProfile.id;
+          console.log('Found existing profile:', existingProfile);
 
-          console.log('Updating existing profile:', existingProfile.id);
+          // Update profile with new Privy ID
+          const updateData = {
+            privy_id: user.id.toString(),
+            email: user.email.address // Ensure email is set
+          };
+
+          console.log('Updating profile with data:', updateData);
           const { error: updateError } = await supabase
             .from('profiles')
-            .update({
-              privy_id: user.id.toString(),
-              email: user.email?.address // Ensure email is set
-            })
-            .eq('id', existingProfile.id);
+            .update(updateData)
+            .eq('id', existingProfile.id)
+            .select();
 
           if (updateError) {
             console.error('Error updating profile:', updateError);
             throw updateError;
           }
+
           console.log('Profile updated successfully');
         } else {
           // Create new profile if no existing profile found
@@ -65,7 +75,7 @@ const SignIn = () => {
             .insert({
               id: newProfileId,
               privy_id: user.id.toString(),
-              email: user.email?.address,
+              email: user.email.address,
               username: null // This will trigger the generate_username() function
             });
 
@@ -73,20 +83,20 @@ const SignIn = () => {
             console.error('Error creating profile:', createError);
             throw createError;
           }
-          profileId = newProfileId;
           console.log('New profile created successfully');
         }
-
-        console.log('Auth setup completed successfully');
 
       } catch (error) {
         console.error('Error in auth setup:', error);
         toast({
-          title: "Error",
-          description: "Failed to complete authentication setup",
+          title: "Authentication Error",
+          description: "There was an error setting up your profile. Please try again.",
           variant: "destructive",
         });
+        return; // Return early to prevent redirect
       }
+
+      console.log('Auth setup completed successfully');
     };
 
     if (authenticated && user) {
@@ -98,7 +108,7 @@ const SignIn = () => {
         userPresent: !!user
       });
     }
-  }, [authenticated, user]);
+  }, [authenticated, user, toast]);
 
   if (!ready) {
     console.log('Privy not ready yet');
