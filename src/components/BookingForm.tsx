@@ -12,6 +12,8 @@ import TermsDialog from "./booking/TermsDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parse } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const BookingForm = () => {
   const {
@@ -29,6 +31,8 @@ const BookingForm = () => {
 
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState("booking");
 
   const minDate = "2025-05-01";
   const maxDate = "2025-05-25";
@@ -70,6 +74,67 @@ const BookingForm = () => {
     handleSubmit(e);
   };
 
+  const renderContactInfo = () => (
+    <div className="flex-1 space-y-6">
+      <div className="pb-6 border-b border-gray-200">
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">Contact Information</h3>
+        <p className="text-sm text-gray-500">We'll use these details to keep you informed about your booking</p>
+      </div>
+      <div className="grid grid-cols-1 gap-6">
+        <PersonalInfoFields
+          formData={formData}
+          handleInputChange={handleInputChange}
+          onCountryChange={handleCountryChange}
+        />
+        <PaymentTypeSelector
+          value={formData.paymentType}
+          onChange={handlePaymentTypeChange}
+        />
+      </div>
+    </div>
+  );
+
+  const renderBookingDetails = () => (
+    <div className={`${isMobile ? 'w-full' : 'lg:w-[400px]'} space-y-6`}>
+      <BookingDetailsPanel
+        formData={formData}
+        handleInputChange={handleInputChange}
+        minDate={minDate}
+        maxDate={maxDate}
+        discountAmount={discountAmount}
+        isRoleBasedDiscount={isRoleBasedDiscount}
+      />
+    </div>
+  );
+
+  const renderMobileView = () => (
+    <Tabs defaultValue="booking" className="w-full" value={activeTab} onValueChange={setActiveTab}>
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="booking" className="text-sm">
+          Booking Details
+        </TabsTrigger>
+        <TabsTrigger value="contact" className="text-sm">
+          Contact Info
+        </TabsTrigger>
+      </TabsList>
+      <div className="mt-6">
+        <TabsContent value="booking" className="m-0">
+          {renderBookingDetails()}
+        </TabsContent>
+        <TabsContent value="contact" className="m-0">
+          {renderContactInfo()}
+        </TabsContent>
+      </div>
+    </Tabs>
+  );
+
+  const renderDesktopView = () => (
+    <div className="flex flex-col lg:flex-row gap-8">
+      {renderContactInfo()}
+      {renderBookingDetails()}
+    </div>
+  );
+
   return (
     <form
       onSubmit={onSubmit}
@@ -86,38 +151,7 @@ const BookingForm = () => {
         </Alert>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Column - Contact Information */}
-        <div className="flex-1 space-y-6">
-          <div className="pb-6 border-b border-gray-200">
-            <h3 className="text-xl font-semibold text-gray-900 mb-1">Contact Information</h3>
-            <p className="text-sm text-gray-500">We'll use these details to keep you informed about your booking</p>
-          </div>
-          <div className="grid grid-cols-1 gap-6">
-            <PersonalInfoFields
-              formData={formData}
-              handleInputChange={handleInputChange}
-              onCountryChange={handleCountryChange}
-            />
-            <PaymentTypeSelector
-              value={formData.paymentType}
-              onChange={handlePaymentTypeChange}
-            />
-          </div>
-        </div>
-
-        {/* Right Column - Booking Details */}
-        <div className="lg:w-[400px]">
-          <BookingDetailsPanel
-            formData={formData}
-            handleInputChange={handleInputChange}
-            minDate={minDate}
-            maxDate={maxDate}
-            discountAmount={discountAmount}
-            isRoleBasedDiscount={isRoleBasedDiscount}
-          />
-        </div>
-      </div>
+      {isMobile ? renderMobileView() : renderDesktopView()}
 
       <div className="flex items-start space-x-2 mt-6">
         <Checkbox
