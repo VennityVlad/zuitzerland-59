@@ -13,7 +13,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parse } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
-import DateRangeSelector from "./booking/DateRangeSelector";
 
 const BookingForm = () => {
   const {
@@ -73,16 +72,6 @@ const BookingForm = () => {
     handleSubmit(e);
   };
 
-  const handleDateRangeChange = (startDate: string, endDate: string) => {
-    handleInputChange({
-      target: { name: "checkin", value: startDate }
-    } as React.ChangeEvent<HTMLInputElement>);
-    
-    handleInputChange({
-      target: { name: "checkout", value: endDate }
-    } as React.ChangeEvent<HTMLInputElement>);
-  };
-
   const renderContactInfo = () => (
     <div className="flex-1 space-y-6">
       <div className="pb-6 border-b border-gray-200">
@@ -105,7 +94,6 @@ const BookingForm = () => {
 
   const renderBookingDetails = () => (
     <div className="lg:w-[400px] space-y-6">
-      <DateRangeSelector onDateRangeChange={handleDateRangeChange} />
       <BookingDetailsPanel
         formData={formData}
         handleInputChange={handleInputChange}
