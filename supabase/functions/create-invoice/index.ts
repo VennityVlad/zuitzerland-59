@@ -22,11 +22,11 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get appropriate Request Finance API key based on environment
+    // Get Request Finance API key
     const { data: secretData, error: secretError } = await supabase
       .from('secrets')
       .select('value')
-      .eq('name', Deno.env.get('DENO_ENV') === 'development' ? 'REQUEST_FINANCE_TEST_API_KEY' : 'REQUEST_FINANCE_API_KEY')
+      .eq('name', 'REQUEST_FINANCE_API_KEY')
       .single();
 
     if (secretError || !secretData) {
