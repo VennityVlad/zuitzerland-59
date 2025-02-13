@@ -7,6 +7,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 interface PaymentTypeSelectorProps {
   value: string;
@@ -23,9 +25,18 @@ const PaymentTypeSelector = ({ value, onChange }: PaymentTypeSelectorProps) => {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="fiat">Fiat (Credit Card)</SelectItem>
-          <SelectItem value="crypto">Crypto (Wallet)</SelectItem>
+          <SelectItem value="crypto">Crypto</SelectItem>
         </SelectContent>
       </Select>
+      
+      {value === 'crypto' && (
+        <Alert variant="warning" className="mt-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Please make sure to use the Request Finance user interface when paying with crypto. Do NOT send us the funds directly from your wallet.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };
