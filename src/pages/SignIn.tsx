@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const SignIn = () => {
-  const { login, authenticated, ready, user, getAccessToken } = usePrivy();
+  const { login, authenticated, ready, user } = usePrivy();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -23,8 +23,9 @@ const SignIn = () => {
       });
 
       try {
-        const privyToken = await getAccessToken();
-        if (!privyToken) {
+        // Get the JWT token from Privy
+        const token = await user.refreshIdToken();
+        if (!token) {
           console.error('No Privy token available');
           return;
         }
@@ -33,6 +34,19 @@ const SignIn = () => {
         if (!user.email?.address) {
           console.error('No email address available');
           return;
+        }
+
+        // Update JWT claims in Supabase
+        const { error: jwtError } = await supabase.functions.invoke('update-privy-jwt', {
+          body: {
+            jwt: token,
+            userId: user.id.toString()
+          }
+        });
+
+        if (jwtError) {
+          console.error('Error updating JWT claims:', jwtError);
+          throw jwtError;
         }
 
         // Check for existing profile with matching email
@@ -59,7 +73,7 @@ const SignIn = () => {
             .from('profiles')
             .update({
               privy_id: user.id.toString(),
-              auth_token: privyToken,
+              auth_token: token,
               email: user.email.address // Ensure email is set
             })
             .eq('id', existingProfile.id);
@@ -80,7 +94,7 @@ const SignIn = () => {
               privy_id: user.id.toString(),
               email: user.email.address,
               username: null, // This will trigger the generate_username() function
-              auth_token: privyToken
+              auth_token: token
             });
 
           if (createError) {
@@ -95,7 +109,7 @@ const SignIn = () => {
         console.log('Attempting to create Supabase session...');
         const { data: { session }, error: sessionError } = await supabase.auth.signInWithPassword({
           email: user.email.address,
-          password: privyToken,
+          password: token,
         });
 
         if (sessionError) {

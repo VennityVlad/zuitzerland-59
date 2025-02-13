@@ -47,26 +47,7 @@ const Invoices = () => {
           return;
         }
 
-        // Update JWT claims in Supabase
-        const token = await user.getIdToken();
-        if (!token) {
-          throw new Error('No JWT token available');
-        }
-
-        // Call the Edge Function to update JWT claims
-        const { error: jwtError } = await supabase.functions.invoke('update-privy-jwt', {
-          body: {
-            jwt: token,
-            userId: user.id.toString()
-          }
-        });
-
-        if (jwtError) {
-          console.error('Error updating JWT claims:', jwtError);
-          throw jwtError;
-        }
-
-        // Fetch invoices
+        // Fetch invoices - RLS will handle authorization using JWT claims
         const query = supabase
           .from('invoices')
           .select('*')
