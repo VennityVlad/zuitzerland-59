@@ -2,7 +2,7 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -10,9 +10,10 @@ const SignIn = () => {
   const { login, authenticated, ready, user } = usePrivy();
   const { toast } = useToast();
   const [isSettingUpProfile, setIsSettingUpProfile] = useState(false);
+  const setupComplete = useRef(false);
 
   const setupAuth = useCallback(async () => {
-    if (!user?.email?.address || isSettingUpProfile) {
+    if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {
       return;
     }
 
@@ -87,6 +88,7 @@ const SignIn = () => {
       }
 
       console.log('Auth setup completed successfully');
+      setupComplete.current = true;
       
       // Only redirect after successful profile setup
       window.location.href = "/";
@@ -104,15 +106,9 @@ const SignIn = () => {
   }, [user, isSettingUpProfile, toast]);
 
   useEffect(() => {
-    if (authenticated && user && !isSettingUpProfile) {
+    if (authenticated && user && !isSettingUpProfile && !setupComplete.current) {
       console.log('Starting auth setup process...');
       setupAuth();
-    } else {
-      console.log('Waiting for Privy authentication...', {
-        authenticated,
-        userPresent: !!user,
-        isSettingUpProfile
-      });
     }
   }, [authenticated, user, setupAuth, isSettingUpProfile]);
 
@@ -132,7 +128,7 @@ const SignIn = () => {
     );
   }
 
-  if (authenticated && !isSettingUpProfile) {
+  if (authenticated && !isSettingUpProfile && setupComplete.current) {
     return (
       <div className="min-h-screen bg-secondary/30 flex items-center justify-center">
         <div className="animate-pulse">Redirecting...</div>
