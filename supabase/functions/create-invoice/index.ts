@@ -131,6 +131,35 @@ serve(async (req) => {
 
     const onChainInvoice = await convertToOnChainResponse.json();
     console.log('On-chain invoice created:', onChainInvoice);
+
+    // Step 3: Trigger Zapier webhook with invoice details
+    try {
+      const zapierResponse = await fetch('https://hooks.zapier.com/hooks/catch/15806559/2w3ifi2/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          invoiceId: onChainInvoice.id,
+          paymentLink: onChainInvoice.invoiceLinks.pay,
+          customerName: `${invoiceData.buyerInfo.firstName} ${invoiceData.buyerInfo.lastName}`,
+          customerEmail: invoiceData.buyerInfo.email,
+          amount: priceAfterDiscount,
+          checkin: invoiceData.meta.checkin,
+          checkout: invoiceData.meta.checkout,
+          roomType: invoiceData.meta.roomType
+        })
+      });
+
+      if (!zapierResponse.ok) {
+        console.error('Failed to trigger Zapier webhook:', await zapierResponse.text());
+      } else {
+        console.log('Successfully triggered Zapier webhook');
+      }
+    } catch (zapierError) {
+      console.error('Error triggering Zapier webhook:', zapierError);
+      // Don't throw the error as we don't want to fail the invoice creation
+    }
     
     return new Response(JSON.stringify({
       invoiceId: onChainInvoice.id,
@@ -147,4 +176,3 @@ serve(async (req) => {
     });
   }
 });
-
