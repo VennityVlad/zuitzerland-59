@@ -47,19 +47,26 @@ const Invoices = () => {
           return;
         }
 
-        // First, fetch the current invoice data for the logged-in user
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('privy_id')
-          .eq('privy_id', user.id.toString())
-          .single();
-
-        if (profileError || !profileData) {
-          console.error('No profile found for user');
-          setInvoices([]);
-          return;
+        // Update JWT claims in Supabase
+        const token = await user.getIdToken();
+        if (!token) {
+          throw new Error('No JWT token available');
         }
 
+        // Call the Edge Function to update JWT claims
+        const { error: jwtError } = await supabase.functions.invoke('update-privy-jwt', {
+          body: {
+            jwt: token,
+            userId: user.id.toString()
+          }
+        });
+
+        if (jwtError) {
+          console.error('Error updating JWT claims:', jwtError);
+          throw jwtError;
+        }
+
+        // Fetch invoices
         const query = supabase
           .from('invoices')
           .select('*')
@@ -71,11 +78,11 @@ const Invoices = () => {
         if (error) throw error;
         setInvoices(data || []);
 
-        // Then update the statuses in the background
+        // Update invoice statuses in the background
         const { error: statusError } = await supabase.functions.invoke('get-invoice-status');
         if (statusError) throw statusError;
 
-        // Finally, fetch the updated data
+        // Fetch updated data
         const { data: updatedData, error: fetchError } = await query;
 
         if (fetchError) throw fetchError;
@@ -193,4 +200,3 @@ const Invoices = () => {
 };
 
 export default Invoices;
-
