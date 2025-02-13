@@ -1,5 +1,5 @@
 
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, BookOpen } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import type { BookingFormData } from "@/types/booking";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -106,6 +106,27 @@ const DateSelectionFields = ({
 
   return (
     <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="p-4 bg-secondary/20 rounded-lg space-y-3">
+          <div className="flex items-center gap-2 text-primary">
+            <BookOpen className="h-5 w-5" />
+            <h4 className="font-semibold">Program Legend</h4>
+          </div>
+          <div className="space-y-2 text-sm">
+            <p><span className="font-medium">Block 1:</span> Intro Days & Swiss Governance</p>
+            <p><span className="font-medium">Block 2:</span> Cypherpunk & Solarpunk Days</p>
+            <p><span className="font-medium">Block 3:</span> Build Week & Summit</p>
+          </div>
+        </div>
+        <div className="p-4 bg-secondary/20 rounded-lg space-y-3">
+          <div className="flex items-center gap-2 text-primary">
+            <CalendarIcon className="h-5 w-5" />
+            <h4 className="font-semibold">Program Calendar</h4>
+          </div>
+          <p className="text-sm">Select your preferred dates from the blocks below to see what's happening during your stay.</p>
+        </div>
+      </div>
+
       <div className="space-y-4">
         <div className="border-b pb-4">
           <h3 className="text-xl font-semibold text-gray-900">Select Your Program Dates</h3>
