@@ -21,23 +21,16 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Get the appropriate API key based on the environment
-    const { data: secretData, error: secretError } = await supabase
-      .from('secrets')
-      .select('value')
-      .eq('name', Deno.env.get('DENO_ENV') === 'development' ? 'REQUEST_FINANCE_TEST_API_KEY' : 'REQUEST_FINANCE_API_KEY')
-      .maybeSingle();
+    const requestFinanceApiKey = Deno.env.get(
+      Deno.env.get('DENO_ENV') === 'development' 
+        ? 'REQUEST_FINANCE_TEST_API_KEY' 
+        : 'REQUEST_FINANCE_API_KEY'
+    );
 
-    if (secretError) {
-      console.error('Error fetching API key:', secretError);
-      throw new Error('Failed to fetch API key');
-    }
-
-    if (!secretData) {
+    if (!requestFinanceApiKey) {
       console.error('No API key found');
       throw new Error('API key not configured');
     }
-
-    const requestFinanceApiKey = secretData.value;
     
     // Get all invoices that need status update
     const { data: invoices, error: dbError } = await supabase

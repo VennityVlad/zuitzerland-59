@@ -16,17 +16,15 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get appropriate Request Finance API key based on environment
-    const { data: secretData, error: secretError } = await supabase
-      .from('secrets')
-      .select('value')
-      .eq('name', Deno.env.get('DENO_ENV') === 'development' ? 'REQUEST_FINANCE_TEST_API_KEY' : 'REQUEST_FINANCE_API_KEY')
-      .single();
+    const requestFinanceApiKey = Deno.env.get(
+      Deno.env.get('DENO_ENV') === 'development' 
+        ? 'REQUEST_FINANCE_TEST_API_KEY' 
+        : 'REQUEST_FINANCE_API_KEY'
+    );
 
-    if (secretError || !secretData) {
+    if (!requestFinanceApiKey) {
       throw new Error('Could not retrieve API key');
     }
-
-    const REQUEST_FINANCE_API_KEY = secretData.value;
 
     // Get all pending invoices that are past their due date
     const currentDate = new Date().toISOString();
@@ -49,7 +47,7 @@ Deno.serve(async (req) => {
         const response = await fetch(`https://api.request.finance/api/v1/invoices/${invoice.request_invoice_id}/cancel`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${REQUEST_FINANCE_API_KEY}`,
+            'Authorization': requestFinanceApiKey,
             'Content-Type': 'application/json'
           }
         });
@@ -108,4 +106,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
