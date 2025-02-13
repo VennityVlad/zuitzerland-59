@@ -7,7 +7,7 @@ import type { BookingFormData } from "@/types/booking";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInDays, parse } from "date-fns";
+import { differenceInDays, parse, format } from "date-fns";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -99,6 +99,12 @@ const DateSelectionFields = ({
                             formData.roomType && 
                             (!availablePricing || availablePricing.length === 0);
 
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = parse(dateStr, 'yyyy-MM-dd', new Date());
+    return format(date, 'MMMM d, yyyy');
+  };
+
   return (
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
@@ -129,7 +135,13 @@ const DateSelectionFields = ({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="checkin" className="text-gray-700">Check-in</Label>
-          <div className="relative">
+          <div className="relative bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center">
+              <CalendarIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <span className="text-gray-900">
+                {formData.checkin ? formatDisplayDate(formData.checkin) : 'Select date'}
+              </span>
+            </div>
             <Input
               id="checkin"
               name="checkin"
@@ -139,16 +151,21 @@ const DateSelectionFields = ({
               max="2025-05-26"
               value={formData.checkin}
               onChange={handleInputChange}
-              className="date-picker pl-4 pr-10 py-5 text-gray-900 bg-gray-50"
+              className="hidden"
               readOnly
             />
-            <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           </div>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="checkout" className="text-gray-700">Check-out</Label>
-          <div className="relative">
+          <div className="relative bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center">
+              <CalendarIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <span className="text-gray-900">
+                {formData.checkout ? formatDisplayDate(formData.checkout) : 'Select date'}
+              </span>
+            </div>
             <Input
               id="checkout"
               name="checkout"
@@ -158,10 +175,9 @@ const DateSelectionFields = ({
               max="2025-05-26"
               value={formData.checkout}
               onChange={handleInputChange}
-              className="date-picker pl-4 pr-10 py-5 text-gray-900 bg-gray-50"
+              className="hidden"
               readOnly
             />
-            <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           </div>
         </div>
       </div>
