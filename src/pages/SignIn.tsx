@@ -5,12 +5,14 @@ import { LogIn } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const SignIn = () => {
   const { login, authenticated, ready, user } = usePrivy();
   const { toast } = useToast();
   const [isSettingUpProfile, setIsSettingUpProfile] = useState(false);
   const setupComplete = useRef(false);
+  const navigate = useNavigate();
 
   const setupAuth = useCallback(async () => {
     if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {
@@ -90,8 +92,8 @@ const SignIn = () => {
       console.log('Auth setup completed successfully');
       setupComplete.current = true;
       
-      // Only redirect after successful profile setup
-      window.location.href = "/";
+      // Use React Router's navigate instead of window.location
+      navigate("/");
 
     } catch (error) {
       console.error('Error in auth setup:', error);
@@ -103,7 +105,7 @@ const SignIn = () => {
     } finally {
       setIsSettingUpProfile(false);
     }
-  }, [user, isSettingUpProfile, toast]);
+  }, [user, isSettingUpProfile, toast, navigate]);
 
   useEffect(() => {
     if (authenticated && user && !isSettingUpProfile && !setupComplete.current) {
@@ -111,6 +113,13 @@ const SignIn = () => {
       setupAuth();
     }
   }, [authenticated, user, setupAuth, isSettingUpProfile]);
+
+  // If already authenticated and setup is complete, redirect immediately
+  useEffect(() => {
+    if (authenticated && setupComplete.current && !isSettingUpProfile) {
+      navigate("/");
+    }
+  }, [authenticated, isSettingUpProfile, navigate]);
 
   if (!ready) {
     return (
