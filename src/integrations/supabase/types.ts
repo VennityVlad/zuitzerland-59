@@ -147,8 +147,6 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
-          jwt_claims: Json | null
-          jwt_token: string | null
           privy_id: string | null
           role: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid: string | null
@@ -164,8 +162,6 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
-          jwt_claims?: Json | null
-          jwt_token?: string | null
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
@@ -181,8 +177,6 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
-          jwt_claims?: Json | null
-          jwt_token?: string | null
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
