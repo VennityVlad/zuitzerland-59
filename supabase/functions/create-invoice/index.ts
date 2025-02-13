@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
@@ -21,25 +22,15 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get Request Finance API key
+    // Get Request Finance API key from Edge Function secrets
     console.log('Fetching Request Finance API key from secrets');
-    const { data: secretData, error: secretError } = await supabase
-      .from('secrets')
-      .select('value')
-      .eq('name', 'REQUEST_FINANCE_API_KEY')
-      .maybeSingle();
+    const requestFinanceApiKey = Deno.env.get('REQUEST_FINANCE_API_KEY');
 
-    if (secretError) {
-      console.error('Error fetching API key:', secretError);
-      throw new Error(`Failed to fetch API key: ${secretError.message}`);
-    }
-
-    if (!secretData?.value) {
+    if (!requestFinanceApiKey) {
       console.error('No API key found in secrets');
       throw new Error('API key not found in configuration');
     }
 
-    const requestFinanceApiKey = secretData.value;
     console.log('Successfully retrieved API key');
 
     // Parse request body
