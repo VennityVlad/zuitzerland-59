@@ -15,11 +15,11 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get Request Finance API key from secrets
+    // Get appropriate Request Finance API key based on environment
     const { data: secretData, error: secretError } = await supabase
       .from('secrets')
       .select('value')
-      .eq('name', 'REQUEST_FINANCE_API_KEY')
+      .eq('name', Deno.env.get('DENO_ENV') === 'development' ? 'REQUEST_FINANCE_TEST_API_KEY' : 'REQUEST_FINANCE_API_KEY')
       .single();
 
     if (secretError || !secretData) {
@@ -108,3 +108,4 @@ Deno.serve(async (req) => {
     );
   }
 });
+

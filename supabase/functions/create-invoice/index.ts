@@ -1,8 +1,10 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
 
-const requestFinanceApiKey = Deno.env.get('REQUEST_FINANCE_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,10 +20,21 @@ serve(async (req) => {
   try {
     console.log('Starting invoice creation in edge function');
     
-    if (!requestFinanceApiKey) {
-      console.error('REQUEST_FINANCE_API_KEY not found in environment');
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get appropriate Request Finance API key based on environment
+    const { data: secretData, error: secretError } = await supabase
+      .from('secrets')
+      .select('value')
+      .eq('name', Deno.env.get('DENO_ENV') === 'development' ? 'REQUEST_FINANCE_TEST_API_KEY' : 'REQUEST_FINANCE_API_KEY')
+      .single();
+
+    if (secretError || !secretData) {
+      console.error('Could not retrieve API key:', secretError);
       throw new Error('API key not configured');
     }
+
+    const requestFinanceApiKey = secretData.value;
 
     const { invoiceData, paymentType, priceAfterDiscount } = await req.json();
     console.log('Received invoice data:', JSON.stringify(invoiceData, null, 2));
@@ -134,3 +147,4 @@ serve(async (req) => {
     });
   }
 });
+

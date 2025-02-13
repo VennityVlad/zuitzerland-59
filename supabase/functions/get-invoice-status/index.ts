@@ -3,7 +3,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
 
-const requestFinanceApiKey = Deno.env.get('REQUEST_FINANCE_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -20,6 +19,19 @@ serve(async (req) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
+    // Get the appropriate API key based on the environment
+    const { data: secretData, error: secretError } = await supabase
+      .from('secrets')
+      .select('value')
+      .eq('name', Deno.env.get('DENO_ENV') === 'development' ? 'REQUEST_FINANCE_TEST_API_KEY' : 'REQUEST_FINANCE_API_KEY')
+      .single();
+
+    if (secretError || !secretData) {
+      throw new Error('Could not retrieve API key');
+    }
+
+    const requestFinanceApiKey = secretData.value;
+    
     // Get all invoices that need status update
     const { data: invoices, error: dbError } = await supabase
       .from('invoices')
@@ -33,7 +45,7 @@ serve(async (req) => {
           const response = await fetch(`https://api.request.finance/invoices/${invoice.request_invoice_id}`, {
             headers: {
               'Accept': 'application/json',
-              'Authorization': requestFinanceApiKey!
+              'Authorization': requestFinanceApiKey
             }
           });
 
@@ -92,3 +104,4 @@ serve(async (req) => {
     );
   }
 });
+
