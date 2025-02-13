@@ -23,23 +23,52 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get Request Finance API key
+    console.log('Fetching Request Finance API key from secrets');
     const { data: secretData, error: secretError } = await supabase
       .from('secrets')
       .select('value')
       .eq('name', 'REQUEST_FINANCE_API_KEY')
       .single();
 
-    if (secretError || !secretData) {
-      console.error('Could not retrieve API key:', secretError);
-      throw new Error('API key not configured');
+    if (secretError) {
+      console.error('Error fetching API key:', secretError);
+      throw new Error(`Failed to fetch API key: ${secretError.message}`);
+    }
+
+    if (!secretData?.value) {
+      console.error('No API key found in secrets');
+      throw new Error('API key not found in configuration');
     }
 
     const requestFinanceApiKey = secretData.value;
+    console.log('Successfully retrieved API key');
 
-    const { invoiceData, paymentType, priceAfterDiscount } = await req.json();
-    console.log('Received invoice data:', JSON.stringify(invoiceData, null, 2));
-    console.log('Payment type:', paymentType);
-    console.log('Price after discount:', priceAfterDiscount);
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+      console.log('Parsed request body successfully');
+    } catch (e) {
+      console.error('Error parsing request body:', e);
+      throw new Error('Invalid request body format');
+    }
+
+    const { invoiceData, paymentType, priceAfterDiscount } = body;
+    
+    if (!invoiceData || !paymentType || typeof priceAfterDiscount !== 'number') {
+      console.error('Missing required fields:', { 
+        hasInvoiceData: !!invoiceData, 
+        hasPaymentType: !!paymentType, 
+        priceAfterDiscount 
+      });
+      throw new Error('Missing required fields in request');
+    }
+
+    console.log('Request data validation passed:', {
+      paymentType,
+      priceAfterDiscount,
+      buyerInfo: invoiceData.buyerInfo
+    });
 
     // Adjust payment options based on payment type
     const paymentOptions = paymentType === 'fiat' ? 
@@ -84,12 +113,13 @@ serve(async (req) => {
         name: "Zuitzerland reservation",
         unitPrice: `${Math.round(priceAfterDiscount)}00` // Convert to cents
       }],
-      tags: [] // Remove zapier_invoice tag
+      tags: []
     };
 
-    console.log('Final invoice data:', JSON.stringify(finalInvoiceData, null, 2));
+    console.log('Prepared final invoice data:', JSON.stringify(finalInvoiceData, null, 2));
 
     // Step 1: Create off-chain invoice
+    console.log('Creating off-chain invoice with Request Finance');
     const createInvoiceResponse = await fetch('https://api.request.finance/invoices', {
       method: 'POST',
       headers: {
@@ -103,15 +133,21 @@ serve(async (req) => {
     console.log('Create Invoice API Response status:', createInvoiceResponse.status);
     
     if (!createInvoiceResponse.ok) {
-      const errorData = await createInvoiceResponse.json();
-      console.error('Request Finance API error details:', errorData);
-      throw new Error(`Failed to create invoice: ${JSON.stringify(errorData)}`);
+      const errorText = await createInvoiceResponse.text();
+      console.error('Request Finance API error response:', errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(`Failed to create invoice: ${JSON.stringify(errorData)}`);
+      } catch (e) {
+        throw new Error(`Failed to create invoice: ${errorText}`);
+      }
     }
 
     const offChainInvoice = await createInvoiceResponse.json();
     console.log('Off-chain invoice created:', offChainInvoice);
 
     // Step 2: Convert to on-chain request
+    console.log('Converting invoice to on-chain request');
     const convertToOnChainResponse = await fetch(`https://api.request.finance/invoices/${offChainInvoice.id}`, {
       method: 'POST',
       headers: {
@@ -124,9 +160,14 @@ serve(async (req) => {
     console.log('Convert to on-chain API Response status:', convertToOnChainResponse.status);
 
     if (!convertToOnChainResponse.ok) {
-      const errorData = await convertToOnChainResponse.json();
-      console.error('Request Finance API error details for on-chain conversion:', errorData);
-      throw new Error(`Failed to convert invoice to on-chain request: ${JSON.stringify(errorData)}`);
+      const errorText = await convertToOnChainResponse.text();
+      console.error('Request Finance API error response for on-chain conversion:', errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(`Failed to convert invoice to on-chain request: ${JSON.stringify(errorData)}`);
+      } catch (e) {
+        throw new Error(`Failed to convert invoice to on-chain request: ${errorText}`);
+      }
     }
 
     const onChainInvoice = await convertToOnChainResponse.json();
@@ -134,6 +175,7 @@ serve(async (req) => {
 
     // Step 3: Trigger Zapier webhook with invoice details
     try {
+      console.log('Triggering Zapier webhook');
       const zapierResponse = await fetch('https://hooks.zapier.com/hooks/catch/15806559/2w3ifi2/', {
         method: 'POST',
         headers: {
@@ -158,9 +200,9 @@ serve(async (req) => {
       }
     } catch (zapierError) {
       console.error('Error triggering Zapier webhook:', zapierError);
-      // Don't throw the error as we don't want to fail the invoice creation
     }
     
+    console.log('Sending successful response');
     return new Response(JSON.stringify({
       invoiceId: onChainInvoice.id,
       requestId: onChainInvoice.requestId,
@@ -170,7 +212,10 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in create-invoice function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message || 'An unexpected error occurred',
+      timestamp: new Date().toISOString()
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
