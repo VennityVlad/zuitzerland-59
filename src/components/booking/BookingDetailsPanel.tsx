@@ -189,7 +189,7 @@ const BookingDetailsPanel = ({
           {discountAmount > 0 && (
             <div className="flex justify-between items-center text-green-600">
               <span>
-                {isRoleBasedDiscount ? 'Co-designer/Co-curator Discount' : 'Discount'}
+                {isRoleBasedDiscount ? 'Co-designer Discount' : 'Discount'}
               </span>
               <span>- CHF {discountAmount.toFixed(2)}</span>
             </div>
