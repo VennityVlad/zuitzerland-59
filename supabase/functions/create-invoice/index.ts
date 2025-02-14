@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
@@ -59,6 +60,11 @@ serve(async (req) => {
       buyerInfo: invoiceData.buyerInfo
     });
 
+    // Calculate final price including Stripe fee if payment type is fiat
+    const finalPrice = paymentType === 'fiat' 
+      ? priceAfterDiscount * 1.03  // Add 3% Stripe fee
+      : priceAfterDiscount;
+
     // Adjust payment options based on payment type
     const paymentOptions = paymentType === 'fiat' ? 
       [{
@@ -100,7 +106,7 @@ serve(async (req) => {
       invoiceItems: [{
         ...invoiceData.invoiceItems[0],
         name: "Zuitzerland reservation",
-        unitPrice: `${Math.round(priceAfterDiscount)}00` // Convert to cents
+        unitPrice: `${Math.round(finalPrice)}00` // Convert to cents
       }],
       tags: []
     };
@@ -185,7 +191,7 @@ serve(async (req) => {
           customerCountry: invoiceData.buyerInfo.country,
           
           // Booking details
-          amount: priceAfterDiscount,
+          amount: finalPrice,
           checkinDate: invoiceData.meta.checkin,
           checkoutDate: invoiceData.meta.checkout,
           roomType: invoiceData.meta.roomType,

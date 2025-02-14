@@ -1,3 +1,4 @@
+
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import type { BookingFormData } from "@/types/booking";
@@ -20,6 +21,7 @@ interface BookingDetailsPanelProps {
 }
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
+const STRIPE_FEE_RATE = 0.03; // 3% Stripe fee for credit card payments
 
 const PriceBreakdown = ({ checkin, checkout, roomType }: { checkin: string; checkout: string; roomType: string }) => {
   const { data: priceInfo } = useQuery({
@@ -96,10 +98,15 @@ const BookingDetailsPanel = ({
 
   // Calculate price after discount
   const priceAfterDiscount = formData.price - discountAmount;
+  
+  // Calculate Stripe fee if payment method is credit card
+  const stripeFee = formData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
+  
   // Calculate VAT on the discounted price
   const taxAmount = priceAfterDiscount * VAT_RATE;
-  // Calculate total amount (discounted price + VAT)
-  const totalAmount = priceAfterDiscount + taxAmount;
+  
+  // Calculate total amount (discounted price + VAT + Stripe fee)
+  const totalAmount = priceAfterDiscount + taxAmount + stripeFee;
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -192,6 +199,13 @@ const BookingDetailsPanel = ({
             <div className="flex justify-between items-center text-gray-600">
               <span>Price after discount</span>
               <span>CHF {priceAfterDiscount.toFixed(2)}</span>
+            </div>
+          )}
+          
+          {formData.paymentType === "fiat" && (
+            <div className="flex justify-between items-center text-gray-600">
+              <span>Credit Card Processing Fee (3%)</span>
+              <span>CHF {stripeFee.toFixed(2)}</span>
             </div>
           )}
           
