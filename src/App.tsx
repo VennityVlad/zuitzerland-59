@@ -90,7 +90,7 @@ const App = () => {
           embeddedWallets: {
             createOnLogin: 'users-without-wallets'
           },
-          allowedOrigins: [
+          allowedDomains: [
             'https://8f877de4-355e-4755-81f8-2de8d51eec8d.lovableproject.com',
             'http://8f877de4-355e-4755-81f8-2de8d51eec8d.lovableproject.com',
             'http://localhost:8080',
