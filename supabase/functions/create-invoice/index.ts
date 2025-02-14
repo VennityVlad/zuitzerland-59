@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
@@ -60,15 +59,15 @@ serve(async (req) => {
       buyerInfo: invoiceData.buyerInfo
     });
 
-    // First calculate Stripe fee if payment type is fiat
+    // Calculate price with Stripe fee if payment type is fiat
     const priceWithStripeFee = paymentType === 'fiat' 
       ? priceAfterDiscount * 1.03  // Add 3% Stripe fee
       : priceAfterDiscount;
 
-    // Then calculate VAT (3.8%) on the price including Stripe fee
+    // Calculate VAT separately - Request Finance will handle this based on the tax info we provide
     const vatAmount = priceWithStripeFee * 0.038;
     
-    // Calculate final price including all fees
+    // Final price including all fees (for our records)
     const finalPrice = priceWithStripeFee + vatAmount;
 
     console.log('Price calculation:', {
@@ -119,7 +118,7 @@ serve(async (req) => {
       invoiceItems: [{
         ...invoiceData.invoiceItems[0],
         name: "Zuitzerland reservation",
-        unitPrice: `${Math.round(finalPrice)}00` // Convert to cents
+        unitPrice: `${Math.round(priceWithStripeFee)}00` // Send price with Stripe fee but before VAT
       }],
       tags: []
     };
