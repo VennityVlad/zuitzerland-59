@@ -114,7 +114,6 @@ const SignIn = () => {
     }
   }, [authenticated, user, setupAuth, isSettingUpProfile]);
 
-  // If already authenticated and setup is complete, redirect immediately
   useEffect(() => {
     if (authenticated && setupComplete.current && !isSettingUpProfile) {
       navigate("/");
@@ -146,17 +145,33 @@ const SignIn = () => {
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30 py-12">
-      <div className="container max-w-4xl mx-auto px-4">
-        <img 
-          src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
-          alt="Switzerland Logo"
-          className="logo"
-        />
+    <div 
+      className="min-h-screen relative flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
+      style={{
+        backgroundImage: "url('/lovable-uploads/d74a7f50-2043-4469-b19f-85dd74e411a5.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+      }}
+    >
+      {/* Overlay to ensure text readability */}
+      <div 
+        className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/30"
+        style={{ backdropFilter: 'blur(2px)' }}
+      />
+
+      <div className="container max-w-4xl mx-auto relative z-10">
+        <div className="mb-8 bg-white/90 p-4 rounded-xl inline-block backdrop-blur-sm">
+          <img 
+            src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
+            alt="Switzerland Logo"
+            className="h-24 w-auto"
+          />
+        </div>
         
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">
+        <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-2xl p-8 max-w-md mx-auto">
           <h1 className="text-2xl font-semibold text-hotel-navy mb-6 text-center">
-            Welcome to the Zuitzerland Portal
+            Welcome to Switzerland Booking Portal
           </h1>
           
           <p className="text-gray-600 mb-8 text-center">
@@ -168,7 +183,7 @@ const SignIn = () => {
               console.log('Login button clicked');
               login();
             }}
-            className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
+            className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90 transition-colors duration-200"
           >
             <LogIn className="mr-2" />
             Sign In
