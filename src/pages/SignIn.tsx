@@ -148,28 +148,30 @@ const SignIn = () => {
     <div 
       className="min-h-screen relative flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
       style={{
-        backgroundImage: "url('/lovable-uploads/d74a7f50-2043-4469-b19f-85dd74e411a5.png')",
+        backgroundImage: "url('/lovable-uploads/396565eb-2d6e-4641-9f0e-dccbeb7f7fb7.png')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat"
       }}
     >
-      {/* Overlay to ensure text readability */}
+      {/* Overlay for better text readability */}
       <div 
-        className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/30"
+        className="absolute inset-0 bg-black/20"
         style={{ backdropFilter: 'blur(2px)' }}
       />
 
-      <div className="container max-w-4xl mx-auto relative z-10">
-        <div className="mb-8 bg-white/90 p-4 rounded-xl inline-block backdrop-blur-sm">
-          <img 
-            src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
-            alt="Switzerland Logo"
-            className="h-24 w-auto"
-          />
+      <div className="container max-w-md mx-auto relative z-10 flex flex-col items-center">
+        <div className="w-full flex justify-center mb-8">
+          <div className="bg-white/90 p-6 rounded-xl backdrop-blur-sm">
+            <img 
+              src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
+              alt="Switzerland Logo"
+              className="h-24 w-auto mx-auto"
+            />
+          </div>
         </div>
         
-        <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-2xl p-8 max-w-md mx-auto">
+        <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-2xl p-8 w-full">
           <h1 className="text-2xl font-semibold text-hotel-navy mb-6 text-center">
             Welcome to Switzerland Booking Portal
           </h1>
