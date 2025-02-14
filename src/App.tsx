@@ -8,6 +8,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
+import SupabaseSignIn from "./pages/SupabaseSignIn";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Invoices from "./pages/Invoices";
@@ -89,13 +90,7 @@ const App = () => {
           },
           embeddedWallets: {
             createOnLogin: 'users-without-wallets'
-          },
-          allowedDomains: [
-            'https://8f877de4-355e-4755-81f8-2de8d51eec8d.lovableproject.com',
-            'http://8f877de4-355e-4755-81f8-2de8d51eec8d.lovableproject.com',
-            'http://localhost:8080',
-            'http://localhost:3000'
-          ]
+          }
         }}
       >
         <SupabaseAuthProvider>
@@ -104,6 +99,9 @@ const App = () => {
             <Sonner />
             <BrowserRouter>
               <Routes>
+                {/* Test route for Supabase auth */}
+                <Route path="/supabase-signin" element={<SupabaseSignIn />} />
+                
                 <Route path="/signin" element={<SignIn />} />
                 <Route
                   path="/"
@@ -148,3 +146,4 @@ const App = () => {
 };
 
 export default App;
+
