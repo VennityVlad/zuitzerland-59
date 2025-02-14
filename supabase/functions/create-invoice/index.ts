@@ -60,10 +60,23 @@ serve(async (req) => {
       buyerInfo: invoiceData.buyerInfo
     });
 
-    // Calculate final price including Stripe fee if payment type is fiat
-    const finalPrice = paymentType === 'fiat' 
+    // First calculate Stripe fee if payment type is fiat
+    const priceWithStripeFee = paymentType === 'fiat' 
       ? priceAfterDiscount * 1.03  // Add 3% Stripe fee
       : priceAfterDiscount;
+
+    // Then calculate VAT (3.8%) on the price including Stripe fee
+    const vatAmount = priceWithStripeFee * 0.038;
+    
+    // Calculate final price including all fees
+    const finalPrice = priceWithStripeFee + vatAmount;
+
+    console.log('Price calculation:', {
+      priceAfterDiscount,
+      priceWithStripeFee,
+      vatAmount,
+      finalPrice
+    });
 
     // Adjust payment options based on payment type
     const paymentOptions = paymentType === 'fiat' ? 
@@ -191,7 +204,10 @@ serve(async (req) => {
           customerCountry: invoiceData.buyerInfo.country,
           
           // Booking details
-          amount: finalPrice,
+          basePrice: priceAfterDiscount,
+          stripeFee: paymentType === 'fiat' ? priceAfterDiscount * 0.03 : 0,
+          vatAmount: vatAmount,
+          totalAmount: finalPrice,
           checkinDate: invoiceData.meta.checkin,
           checkoutDate: invoiceData.meta.checkout,
           roomType: invoiceData.meta.roomType,
