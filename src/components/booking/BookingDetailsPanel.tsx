@@ -102,11 +102,14 @@ const BookingDetailsPanel = ({
   // Calculate Stripe fee if payment method is credit card
   const stripeFee = formData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
   
-  // Calculate VAT on the discounted price
-  const taxAmount = priceAfterDiscount * VAT_RATE;
+  // Add Stripe fee to get subtotal before VAT
+  const subtotalBeforeVAT = priceAfterDiscount + stripeFee;
   
-  // Calculate total amount (discounted price + VAT + Stripe fee)
-  const totalAmount = priceAfterDiscount + taxAmount + stripeFee;
+  // Calculate VAT on the price after Stripe fee
+  const taxAmount = subtotalBeforeVAT * VAT_RATE;
+  
+  // Calculate final total amount
+  const totalAmount = subtotalBeforeVAT + taxAmount;
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -206,6 +209,13 @@ const BookingDetailsPanel = ({
             <div className="flex justify-between items-center text-gray-600">
               <span>Credit Card Processing Fee (3%)</span>
               <span>CHF {stripeFee.toFixed(2)}</span>
+            </div>
+          )}
+
+          {formData.paymentType === "fiat" && (
+            <div className="flex justify-between items-center text-gray-600">
+              <span>Subtotal before VAT</span>
+              <span>CHF {subtotalBeforeVAT.toFixed(2)}</span>
             </div>
           )}
           
