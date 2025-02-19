@@ -185,6 +185,42 @@ export type Database = {
         }
         Relationships: []
       }
+      room_types: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          min_stay_days: number | null
+          price_range_max: number | null
+          price_range_min: number | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          min_stay_days?: number | null
+          price_range_max?: number | null
+          price_range_min?: number | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          min_stay_days?: number | null
+          price_range_max?: number | null
+          price_range_min?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       secrets: {
         Row: {
           created_at: string
