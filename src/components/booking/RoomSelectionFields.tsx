@@ -11,7 +11,6 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { HelpCircle } from "lucide-react";
 import type { BookingFormData } from "@/types/booking";
-import { usePrices } from "@/hooks/usePrices";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -76,7 +75,8 @@ const RoomInfo = () => {
 const getRoomTypes = async () => {
   const { data, error } = await supabase
     .from('prices')
-    .select('room_type');
+    .select('room_type')
+    .order('room_type');
 
   if (error) {
     console.error('Error fetching room types:', error);
@@ -86,19 +86,9 @@ const getRoomTypes = async () => {
   // Get unique room types
   const uniqueTypes = [...new Set(data.map(row => row.room_type))] as string[];
   
-  // Map room types to their display names
-  const roomTypeDisplayNames: { [key: string]: string } = {
-    'hotel_room_queen': 'Hotel Room - Queen Bed',
-    'apartment_3br_couples': '3 Bedroom Apartment - Couples Room',
-    'apartment_3_4br_queen': '3-4 Bedroom Apartment - Queen Bed Room',
-    'apartment_3_4br_twin': '3-4 Bedroom Apartment - Twin Bed Room',
-    'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
-    'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
-  };
-  
   return uniqueTypes.map(type => ({
     id: type,
-    name: roomTypeDisplayNames[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    name: type // Using the full descriptive name from the prices table
   }));
 };
 
@@ -149,3 +139,4 @@ const RoomSelectionFields = ({
 };
 
 export default RoomSelectionFields;
+
