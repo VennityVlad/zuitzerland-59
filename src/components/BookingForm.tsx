@@ -1,4 +1,3 @@
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useBookingForm } from "@/hooks/useBookingForm";
@@ -37,38 +36,52 @@ const BookingForm = () => {
   const minDate = "2025-05-01";
   const maxDate = "2025-05-25";
 
-  // Query to check pricing availability
-  const { data: availablePricing } = useQuery({
-    queryKey: ['price-check', formData.checkin, formData.checkout, formData.roomType],
+  const { data: roomTypeDetails } = useQuery({
+    queryKey: ['roomTypeDetails', formData.roomType],
     queryFn: async () => {
-      if (!formData.checkin || !formData.checkout || !formData.roomType) return null;
-      
-      const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
-      const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
-      const days = differenceInDays(endDate, startDate);
+      if (!formData.roomType) return null;
       
       const { data, error } = await supabase
-        .from('prices')
-        .select('*')
-        .eq('room_type', formData.roomType)
-        .lte('duration', days)
-        .order('duration', { ascending: false })
-        .limit(1);
+        .from('room_types')
+        .select('min_stay_days, display_name')
+        .eq('code', formData.roomType)
+        .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: Boolean(formData.checkin && formData.checkout && formData.roomType)
+    enabled: Boolean(formData.roomType)
   });
 
-  const meetsMinimumStay = !formData.checkin || 
-                          !formData.checkout || 
-                          !formData.roomType || 
-                          (availablePricing && availablePricing.length > 0);
+  const meetsMinimumStay = (): boolean => {
+    console.log('Checking minimum stay:', {
+      checkin: formData.checkin,
+      checkout: formData.checkout,
+      roomType: formData.roomType,
+      roomTypeDetails
+    });
+
+    if (!formData.checkin || !formData.checkout || !formData.roomType || !roomTypeDetails) {
+      console.log('Missing required data for minimum stay check');
+      return false;
+    }
+
+    const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
+    const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
+    const days = differenceInDays(endDate, startDate);
+    
+    console.log('Stay duration:', {
+      days,
+      minimumRequired: roomTypeDetails.min_stay_days,
+      meets: days >= (roomTypeDetails.min_stay_days || 0)
+    });
+
+    return days >= (roomTypeDetails.min_stay_days || 0);
+  };
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!termsAccepted || !meetsMinimumStay) {
+    if (!termsAccepted || !meetsMinimumStay()) {
       return;
     }
     handleSubmit(e);
@@ -135,6 +148,16 @@ const BookingForm = () => {
     </div>
   );
 
+  const isSubmitEnabled = isFormValid && termsAccepted && meetsMinimumStay() && !isLoading;
+
+  console.log('Submit button state:', {
+    isFormValid,
+    termsAccepted,
+    meetsMinimumStay: meetsMinimumStay(),
+    isLoading,
+    isEnabled: isSubmitEnabled
+  });
+
   return (
     <form
       onSubmit={onSubmit}
@@ -175,7 +198,7 @@ const BookingForm = () => {
       <Button
         type="submit"
         className="w-full bg-primary hover:bg-primary/90 text-white text-lg py-6"
-        disabled={isLoading || !isFormValid || !termsAccepted || !meetsMinimumStay}
+        disabled={!isSubmitEnabled}
       >
         {isLoading ? "Processing..." : "Confirm and Pay"}
       </Button>
