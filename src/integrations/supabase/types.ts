@@ -114,6 +114,7 @@ export type Database = {
           duration: number | null
           id: string
           price: number
+          room_code: string | null
           room_type: string
           updated_at: string
         }
@@ -123,6 +124,7 @@ export type Database = {
           duration?: number | null
           id?: string
           price: number
+          room_code?: string | null
           room_type: string
           updated_at?: string
         }
@@ -132,10 +134,19 @@ export type Database = {
           duration?: number | null
           id?: string
           price?: number
+          room_code?: string | null
           room_type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "prices_room_code_fkey"
+            columns: ["room_code"]
+            isOneToOne: false
+            referencedRelation: "room_types"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       profiles: {
         Row: {
