@@ -49,21 +49,24 @@ const App = () => {
 
   useEffect(() => {
     const fetchPrivyAppId = async () => {
-      const { data, error } = await supabase
-        .from('secrets')
-        .select('value')
-        .eq('name', 'VITE_PRIVY_APP_ID')
-        .single();
+      try {
+        const { data, error } = await supabase.functions.invoke('get-secret', {
+          body: { secretName: 'PRIVY_APP_ID' }
+        });
 
-      if (error) {
-        console.error('Error fetching Privy App ID:', error);
-        return;
-      }
+        if (error) {
+          console.error('Error fetching Privy App ID:', error);
+          return;
+        }
 
-      if (data) {
-        setPrivyAppId(data.value);
+        if (data?.secret) {
+          setPrivyAppId(data.secret);
+        }
+      } catch (error) {
+        console.error('Error in fetchPrivyAppId:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchPrivyAppId();
@@ -146,4 +149,3 @@ const App = () => {
 };
 
 export default App;
-
