@@ -70,11 +70,16 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     onDateRangeChange(earliestStart, latestEnd);
   };
 
+  const formatDateEuropean = (dateStr: string): string => {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}`;
+  };
+
   return (
     <div className="space-y-4 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
       <div className="border-b pb-4">
         <h3 className="text-xl font-semibold text-gray-900">Select Your Program Dates</h3>
-        <p className="text-sm text-gray-600 mt-1">Choose one or more program blocks to attend</p>
+        <p className="text-sm text-gray-600 mt-1">Choose one or more program blocks to attend (format: DD/MM)</p>
       </div>
       
       <TooltipProvider>
@@ -97,7 +102,7 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
                       >
                         <span className="font-semibold text-gray-900">{range.name}</span>
                         <span className="text-sm text-gray-600 font-medium ml-4">
-                          {range.startDate.split('-').slice(1).join('/')} - {range.endDate.split('-').slice(1).join('/')}
+                          {formatDateEuropean(range.startDate)} - {formatDateEuropean(range.endDate)}
                         </span>
                       </label>
                     </div>
