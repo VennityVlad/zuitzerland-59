@@ -21,6 +21,19 @@ interface RoomSelectionFieldsProps {
 }
 
 const RoomInfo = () => {
+  const { data: roomTypes } = useQuery({
+    queryKey: ['roomTypesInfo'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('room_types')
+        .select('*')
+        .order('price_range_min');
+
+      if (error) throw error;
+      return data;
+    }
+  });
+
   return (
     <Table>
       <TableHeader>
@@ -32,42 +45,14 @@ const RoomInfo = () => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow>
-          <TableCell>Hotel Room - Queen Bed</TableCell>
-          <TableCell>190 - 230</TableCell>
-          <TableCell>7 days</TableCell>
-          <TableCell className="hidden md:table-cell">A private hotel room with a queen bed, daily cleaning, and space for two people. Suitable for couples or small families with a child.</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>3 Bedroom Apartment - Couples Room</TableCell>
-          <TableCell>220 - 261</TableCell>
-          <TableCell>7 days</TableCell>
-          <TableCell className="hidden md:table-cell">A private room in a three-bedroom apartment with a queen bed, private entrance, and breakfast included. Suitable for two people, with space for a small child.</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>3-4 Bedroom Apartment - Queen Bed Room</TableCell>
-          <TableCell>150 - 173</TableCell>
-          <TableCell>7 days</TableCell>
-          <TableCell className="hidden md:table-cell">A private room with a queen bed in a shared 3-4 bedroom apartment. Includes two shared bathrooms. The apartment has two bathrooms.</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>3-4 Bedroom Apartment - Twin Bed Room</TableCell>
-          <TableCell>110 - 121</TableCell>
-          <TableCell>14 days</TableCell>
-          <TableCell className="hidden md:table-cell">A shared twin room in a 3-4 bedroom apartment. Two people per room, sharing bathrooms with others in the apartment. The apartment has two bathrooms.</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>2 Bedroom Apartment - Twin Bed Room</TableCell>
-          <TableCell>80 - 86</TableCell>
-          <TableCell>14 days</TableCell>
-          <TableCell className="hidden md:table-cell">A twin bed in a shared two-bedroom apartment. One shared bathroom between five people.</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>2 Bedroom Apartment - Triple Bed Room</TableCell>
-          <TableCell>75 - 81</TableCell>
-          <TableCell>25 days</TableCell>
-          <TableCell className="hidden md:table-cell">A single bed in a shared room with two others (three single beds in total). One shared bathroom between five people.</TableCell>
-        </TableRow>
+        {roomTypes?.map((room) => (
+          <TableRow key={room.code}>
+            <TableCell>{room.display_name}</TableCell>
+            <TableCell>{room.price_range_min} - {room.price_range_max}</TableCell>
+            <TableCell>{room.min_stay_days} days</TableCell>
+            <TableCell className="hidden md:table-cell">{room.description}</TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );
@@ -75,30 +60,18 @@ const RoomInfo = () => {
 
 const getRoomTypes = async () => {
   const { data, error } = await supabase
-    .from('prices')
-    .select('room_type');
+    .from('room_types')
+    .select('code, display_name')
+    .order('price_range_min');
 
   if (error) {
     console.error('Error fetching room types:', error);
     throw error;
   }
 
-  // Get unique room types
-  const uniqueTypes = [...new Set(data.map(row => row.room_type))] as string[];
-  
-  // Map room types to their display names
-  const roomTypeDisplayNames: { [key: string]: string } = {
-    'hotel_room_queen': 'Hotel Room - Queen Bed',
-    'apartment_3br_couples': '3 Bedroom Apartment - Couples Room',
-    'apartment_3_4br_queen': '3-4 Bedroom Apartment - Queen Bed Room',
-    'apartment_3_4br_twin': '3-4 Bedroom Apartment - Twin Bed Room',
-    'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
-    'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
-  };
-  
-  return uniqueTypes.map(type => ({
-    id: type,
-    name: roomTypeDisplayNames[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  return data.map(room => ({
+    id: room.code,
+    name: room.display_name
   }));
 };
 
@@ -149,4 +122,3 @@ const RoomSelectionFields = ({
 };
 
 export default RoomSelectionFields;
-
