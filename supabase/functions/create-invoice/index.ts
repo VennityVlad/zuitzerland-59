@@ -1,88 +1,251 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
 
-import { corsHeaders } from '../_shared/cors.ts';
-import { createClient } from '@supabase/supabase-js';
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
-const REQUEST_FINANCE_API_KEY = Deno.env.get('REQUEST_FINANCE_API_KEY') || '';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-interface CreateInvoicePayload {
-  invoiceData: any;
-  paymentType: string;
-  priceAfterDiscount: number;
-}
-
-Deno.serve(async (req) => {
+serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { invoiceData, paymentType, priceAfterDiscount } = await req.json() as CreateInvoicePayload;
+    console.log('Starting invoice creation in edge function');
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Prepare Request Finance invoice data
-    const requestFinanceData = {
-      "meta": {
-        "format": "rnf_invoice",
-        "version": "0.0.3"
-      },
-      "creationDate": new Date().toISOString(),
-      "invoiceNumber": invoiceData.invoiceNumber,
-      "buyerInfo": invoiceData.buyerInfo,
-      "paymentTerms": invoiceData.paymentTerms,
-      "invoiceItems": [
-        {
-          "name": "Zuitzerland reservation",
-          "quantity": 1,
-          "currency": "CHF", 
-          "unitPrice": paymentType === 'fiat' ? 
-            priceAfterDiscount * (1 + 0.03) : // Add 3% Stripe fee for fiat
-            priceAfterDiscount, // No fee for crypto
-          "tax": {
-            "type": "percentage",
-            "amount": "3.8" // 3.8% VAT for all customers
-          }
-        }
-      ]
-    };
+    // Get Request Finance API key from Edge Function secrets
+    console.log('Fetching Request Finance API key from secrets');
+    const requestFinanceApiKey = Deno.env.get('REQUEST_FINANCE_API_KEY');
 
-    // Create invoice in Request Finance
-    const response = await fetch('https://api.request.finance/v2/invoice', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${REQUEST_FINANCE_API_KEY}`,
-      },
-      body: JSON.stringify(requestFinanceData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!requestFinanceApiKey) {
+      console.error('No API key found in secrets');
+      throw new Error('API key not found in configuration');
     }
 
-    const data = await response.json();
+    console.log('Successfully retrieved API key');
 
-    // Return success response
-    return new Response(
-      JSON.stringify({
-        invoiceId: data.invoiceId,
-        paymentLink: data.paymentLink
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+      console.log('Parsed request body successfully');
+    } catch (e) {
+      console.error('Error parsing request body:', e);
+      throw new Error('Invalid request body format');
+    }
+
+    const { invoiceData, paymentType, priceAfterDiscount } = body;
+    
+    if (!invoiceData || !paymentType || typeof priceAfterDiscount !== 'number') {
+      console.error('Missing required fields:', { 
+        hasInvoiceData: !!invoiceData, 
+        hasPaymentType: !!paymentType, 
+        priceAfterDiscount 
+      });
+      throw new Error('Missing required fields in request');
+    }
+
+    console.log('Request data validation passed:', {
+      paymentType,
+      priceAfterDiscount,
+      buyerInfo: invoiceData.buyerInfo
+    });
+
+    // Calculate price with Stripe fee if payment type is fiat
+    const priceWithStripeFee = paymentType === 'fiat' 
+      ? priceAfterDiscount * 1.03  // Add 3% Stripe fee
+      : priceAfterDiscount;
+
+    // Calculate VAT separately - Request Finance will handle this based on the tax info we provide
+    const vatAmount = priceWithStripeFee * 0.038;
+    
+    // Final price including all fees (for our records)
+    const finalPrice = priceWithStripeFee + vatAmount;
+
+    console.log('Price calculation:', {
+      priceAfterDiscount,
+      priceWithStripeFee,
+      vatAmount,
+      finalPrice
+    });
+
+    // Adjust payment options based on payment type
+    const paymentOptions = paymentType === 'fiat' ? 
+      [{
+        type: "stripe",
+        value: {
+          currency: "CHF",
+          paymentInformation: {
+            stripePublishableKey: "pk_live_51JP6y9Jdl2BXNtq7yWlocBoca85Q4s7yKZSXM5H6UHRQx7XNbOXgdT9hKZN13X87wDMt64pmNdhDwdLpNnLviJqa00utBfebZj"
+          }
+        }
+      }] : 
+      [
+        {
+          type: "wallet",
+          value: {
+            currencies: ["USDCn-optimism"],
+            paymentInformation: {
+              paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
+              chain: "optimism"
+            }
+          }
+        },
+        {
+          type: "wallet",
+          value: {
+            currencies: ["ETH-optimism"],
+            paymentInformation: {
+              paymentAddress: "0x23F2583FAaab6966F3733625F3D2BA3337eA5dCA",
+              chain: "optimism"
+            }
+          }
+        }
+      ];
+
+    // Create the final invoice data with adjusted payment options
+    const finalInvoiceData = {
+      ...invoiceData,
+      paymentOptions,
+      invoiceItems: [{
+        ...invoiceData.invoiceItems[0],
+        name: "Zuitzerland reservation",
+        unitPrice: `${Math.round(priceWithStripeFee)}00` // Send price with Stripe fee but before VAT
+      }],
+      tags: []
+    };
+
+    console.log('Prepared final invoice data:', JSON.stringify(finalInvoiceData, null, 2));
+
+    // Step 1: Create off-chain invoice
+    console.log('Creating off-chain invoice with Request Finance');
+    const createInvoiceResponse = await fetch('https://api.request.finance/invoices', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': requestFinanceApiKey
       },
-    );
+      body: JSON.stringify(finalInvoiceData)
+    });
 
+    console.log('Create Invoice API Response status:', createInvoiceResponse.status);
+    
+    if (!createInvoiceResponse.ok) {
+      const errorText = await createInvoiceResponse.text();
+      console.error('Request Finance API error response:', errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(`Failed to create invoice: ${JSON.stringify(errorData)}`);
+      } catch (e) {
+        throw new Error(`Failed to create invoice: ${errorText}`);
+      }
+    }
+
+    const offChainInvoice = await createInvoiceResponse.json();
+    console.log('Off-chain invoice created:', offChainInvoice);
+
+    // Step 2: Convert to on-chain request
+    console.log('Converting invoice to on-chain request');
+    const convertToOnChainResponse = await fetch(`https://api.request.finance/invoices/${offChainInvoice.id}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': requestFinanceApiKey
+      }
+    });
+
+    console.log('Convert to on-chain API Response status:', convertToOnChainResponse.status);
+
+    if (!convertToOnChainResponse.ok) {
+      const errorText = await convertToOnChainResponse.text();
+      console.error('Request Finance API error response for on-chain conversion:', errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(`Failed to convert invoice to on-chain request: ${JSON.stringify(errorData)}`);
+      } catch (e) {
+        throw new Error(`Failed to convert invoice to on-chain request: ${errorText}`);
+      }
+    }
+
+    const onChainInvoice = await convertToOnChainResponse.json();
+    console.log('On-chain invoice created:', onChainInvoice);
+
+    // Step 3: Trigger Zapier webhook with enhanced invoice details
+    try {
+      console.log('Triggering Zapier webhook with enhanced details');
+      const zapierResponse = await fetch('https://hooks.zapier.com/hooks/catch/15806559/2w3ifi2/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          // Invoice details
+          invoiceId: onChainInvoice.id,
+          paymentLink: onChainInvoice.invoiceLinks.pay,
+          invoiceDueDate: onChainInvoice.dueDate,
+          invoiceStatus: onChainInvoice.status,
+          
+          // Customer details
+          customerName: `${invoiceData.buyerInfo.firstName} ${invoiceData.buyerInfo.lastName}`,
+          customerEmail: invoiceData.buyerInfo.email,
+          customerAddress: invoiceData.buyerInfo.street,
+          customerCity: invoiceData.buyerInfo.city,
+          customerCountry: invoiceData.buyerInfo.country,
+          
+          // Booking details
+          basePrice: priceAfterDiscount,
+          stripeFee: paymentType === 'fiat' ? priceAfterDiscount * 0.03 : 0,
+          vatAmount: vatAmount,
+          totalAmount: finalPrice,
+          checkinDate: invoiceData.meta.checkin,
+          checkoutDate: invoiceData.meta.checkout,
+          roomType: invoiceData.meta.roomType,
+          numberOfNights: Math.ceil((new Date(invoiceData.meta.checkout).getTime() - new Date(invoiceData.meta.checkin).getTime()) / (1000 * 60 * 60 * 24)),
+          
+          // Payment details
+          paymentType: paymentType,
+          currency: paymentType === 'fiat' ? 'CHF' : 'CRYPTO',
+          
+          // Timestamp
+          createdAt: new Date().toISOString()
+        })
+      });
+
+      if (!zapierResponse.ok) {
+        console.error('Failed to trigger Zapier webhook:', await zapierResponse.text());
+      } else {
+        console.log('Successfully triggered Zapier webhook');
+      }
+    } catch (zapierError) {
+      console.error('Error triggering Zapier webhook:', zapierError);
+    }
+    
+    console.log('Sending successful response');
+    return new Response(JSON.stringify({
+      invoiceId: onChainInvoice.id,
+      requestId: onChainInvoice.requestId,
+      paymentLink: onChainInvoice.invoiceLinks.pay
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      },
-    );
+    console.error('Error in create-invoice function:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message || 'An unexpected error occurred',
+      timestamp: new Date().toISOString()
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
