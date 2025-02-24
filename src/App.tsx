@@ -17,6 +17,7 @@ import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "./components/ui/use-toast";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => {
   const [privyAppId, setPrivyAppId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchPrivyAppId = async () => {
@@ -56,26 +59,62 @@ const App = () => {
 
         if (error) {
           console.error('Error fetching Privy App ID:', error);
+          setError('Failed to fetch authentication configuration');
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to fetch authentication configuration"
+          });
           return;
         }
 
-        if (data?.secret) {
-          setPrivyAppId(data.secret);
+        if (!data?.secret) {
+          setError('Authentication configuration is missing');
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Authentication configuration is missing"
+          });
+          return;
         }
+
+        setPrivyAppId(data.secret);
       } catch (error) {
         console.error('Error in fetchPrivyAppId:', error);
+        setError('Failed to initialize authentication');
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to initialize authentication"
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPrivyAppId();
-  }, []);
+  }, [toast]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error || !privyAppId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-red-600">{error || 'Authentication configuration is missing'}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
