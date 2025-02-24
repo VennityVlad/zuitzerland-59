@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -197,16 +196,29 @@ export const useBookingForm = () => {
   };
 
   const validateMinimumStay = (days: number, roomType: string): string | null => {
-    if (!roomType || !roomTypeDetails) return null;
+    console.log('Validating minimum stay:', { days, roomType, roomTypeDetails });
+    
+    if (!roomType || !roomTypeDetails) {
+      console.log('Skipping validation - missing room type or details');
+      return null;
+    }
+    
     const minimumStay = roomTypeDetails.min_stay_days || 0;
+    console.log('Minimum stay requirement:', minimumStay);
     
     if (days < minimumStay) {
-      return `This room type (${roomTypeDetails.display_name}) requires a minimum stay of ${minimumStay} days`;
+      const warningMessage = `This room type (${roomTypeDetails.display_name}) requires a minimum stay of ${minimumStay} days`;
+      console.log('Validation failed:', warningMessage);
+      return warningMessage;
     }
+    
+    console.log('Validation passed');
     return null;
   };
 
   const validateForm = () => {
+    console.log('Validating form with data:', formData);
+    
     const requiredFields = [
       'firstName', 
       'lastName', 
@@ -226,13 +238,36 @@ export const useBookingForm = () => {
 
     let stayValidation = null;
     if (formData.checkin && formData.checkout && formData.roomType) {
-      const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
-      const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
-      const days = differenceInDays(endDate, startDate);
-      if (days > 0) { // Only validate if dates make sense
-        stayValidation = validateMinimumStay(days, formData.roomType);
+      try {
+        const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
+        const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
+        const days = differenceInDays(endDate, startDate);
+        
+        console.log('Calculated stay duration:', {
+          startDate,
+          endDate,
+          days,
+          roomType: formData.roomType
+        });
+        
+        if (days > 0) {
+          stayValidation = validateMinimumStay(days, formData.roomType);
+        } else {
+          console.log('Invalid date range - days <= 0');
+        }
+      } catch (error) {
+        console.error('Error calculating stay duration:', error);
       }
+    } else {
+      console.log('Missing required date or room type fields for validation');
     }
+
+    console.log('Validation results:', {
+      allFieldsFilled,
+      isEmailValid,
+      stayValidation,
+      isFormValid: allFieldsFilled && isEmailValid && !stayValidation
+    });
 
     setValidationWarning(stayValidation);
     setIsFormValid(allFieldsFilled && isEmailValid && !stayValidation);
@@ -242,6 +277,8 @@ export const useBookingForm = () => {
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value } = e.target;
+    console.log('Input changed:', { name, value });
+    
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
 
@@ -469,8 +506,25 @@ export const useBookingForm = () => {
   };
 
   useEffect(() => {
+    console.log('Running validation effect:', {
+      formData,
+      roomTypeDetails
+    });
     validateForm();
-  }, [formData, roomTypeDetails]);
+  }, [
+    formData.checkin,
+    formData.checkout,
+    formData.roomType,
+    formData.email,
+    formData.firstName,
+    formData.lastName,
+    formData.address,
+    formData.city,
+    formData.zip,
+    formData.country,
+    formData.paymentType,
+    roomTypeDetails
+  ]);
 
   return {
     formData,
