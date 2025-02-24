@@ -27,7 +27,7 @@ const RoomInfo = () => {
       const { data, error } = await supabase
         .from('room_types')
         .select('*')
-        .order('price_range_min');
+        .order('price_range_min', { ascending: false });  // Changed to descending order
 
       if (error) throw error;
       return data;
@@ -62,7 +62,7 @@ const getRoomTypes = async () => {
   const { data, error } = await supabase
     .from('room_types')
     .select('code, display_name')
-    .order('price_range_min');
+    .order('price_range_min', { ascending: false });  // Changed to descending order
 
   if (error) {
     console.error('Error fetching room types:', error);
