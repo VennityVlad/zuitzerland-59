@@ -1,3 +1,4 @@
+
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import type { BookingFormData } from "@/types/booking";
@@ -95,60 +96,21 @@ const BookingDetailsPanel = ({
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
 
-  // Query price info only when we have valid dates and room type
-  const { data: priceInfo } = useQuery({
-    queryKey: ['priceInfo', formData.checkin, formData.checkout, formData.roomType],
-    queryFn: async () => {
-      if (!formData.checkin || !formData.checkout || !formData.roomType) {
-        console.log('Missing required data for price calculation');
-        return null;
-      }
-      
-      const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
-      const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
-      const days = differenceInDays(endDate, startDate);
-
-      if (days <= 0) {
-        console.log('Invalid date range - days <= 0');
-        return null;
-      }
-      
-      const { data, error } = await supabase
-        .from('prices')
-        .select('*')
-        .eq('room_code', formData.roomType)
-        .lte('duration', days)
-        .order('duration', { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
-      if (!data || data.length === 0) return null;
-
-      return {
-        durationRate: data[0],
-        totalDays: days
-      };
-    },
-    enabled: Boolean(formData.checkin && formData.checkout && formData.roomType)
-  });
-
-  // Reset price in formData when price info changes or becomes null
-  useEffect(() => {
-    const totalPrice = priceInfo ? priceInfo.durationRate.price * priceInfo.totalDays : 0;
-    handleInputChange({
-      target: { name: "price", value: totalPrice.toString() }
-    } as React.ChangeEvent<HTMLInputElement>);
-  }, [priceInfo, handleInputChange]);
-
-  // Calculate all the price components
-  const basePrice = formData.price;
-  const priceAfterDiscount = basePrice - discountAmount;
+  // Calculate price after discount
+  const priceAfterDiscount = formData.price - discountAmount;
+  
+  // Calculate Stripe fee if payment method is credit card
   const stripeFee = formData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
+  
+  // Add Stripe fee to get subtotal before VAT
   const subtotalBeforeVAT = priceAfterDiscount + stripeFee;
+  
+  // Calculate VAT on the price after Stripe fee
   const taxAmount = subtotalBeforeVAT * VAT_RATE;
+  
+  // Calculate final total amount
   const totalAmount = subtotalBeforeVAT + taxAmount;
 
-  // Update USD price when CHF total changes
   useEffect(() => {
     const fetchExchangeRate = async () => {
       try {
@@ -174,19 +136,8 @@ const BookingDetailsPanel = ({
     } else if (totalAmount > 0 && usdChfRate !== null) {
       const convertedPrice = totalAmount / usdChfRate;
       setUsdPrice(convertedPrice);
-    } else {
-      setUsdPrice(null); // Reset USD price when total amount is 0
     }
   }, [totalAmount, usdChfRate]);
-
-  const roomTypeDisplayNames: { [key: string]: string } = {
-    'hotel_room_queen': 'Hotel Room - Queen Bed',
-    'apartment_3br_couples': '3 Bedroom Apartment - Couples Room',
-    'apartment_3_4br_queen': '3-4 Bedroom Apartment - Queen Bed Room',
-    'apartment_3_4br_twin': '3-4 Bedroom Apartment - Twin Bed Room',
-    'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
-    'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
-  };
 
   return (
     <div className="p-6 bg-secondary/20 rounded-xl space-y-6">
@@ -217,83 +168,71 @@ const BookingDetailsPanel = ({
         </div>
 
         <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
-          {basePrice > 0 ? (
-            <>
-              <div className="flex justify-between items-center text-gray-600">
-                <span className="flex items-center gap-2">
-                  Base Price
-                  {formData.checkin && formData.checkout && formData.roomType && priceInfo && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-4 w-4 text-gray-500 hover:text-gray-700 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="w-[400px] p-4">
-                        <div className="space-y-2">
-                          <h4 className="font-semibold">Price Calculation</h4>
-                          <div className="text-sm space-y-1">
-                            <p>Room Type: {roomTypeDisplayNames[formData.roomType]}</p>
-                            <p>Length of Stay: {priceInfo.totalDays} days</p>
-                            <p>Applicable Rate: CHF {priceInfo.durationRate.price} per day</p>
-                            <p>Rate Duration Tier: {priceInfo.durationRate.duration} days or more</p>
-                            <div className="mt-4 pt-2 border-t">
-                              <p className="font-medium">Calculation:</p>
-                              <p>CHF {priceInfo.durationRate.price} × {priceInfo.totalDays} days = CHF {basePrice}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </span>
-                <span>CHF {basePrice.toFixed(2)}</span>
-              </div>
-              
-              {discountAmount > 0 && (
-                <>
-                  <div className="flex justify-between items-center text-green-600">
-                    <span>{isRoleBasedDiscount ? 'Co-designer Discount' : 'Discount'}</span>
-                    <span>- CHF {discountAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-gray-600">
-                    <span>Price after discount</span>
-                    <span>CHF {priceAfterDiscount.toFixed(2)}</span>
-                  </div>
-                </>
+          <div className="flex justify-between items-center text-gray-600">
+            <span className="flex items-center gap-2">
+              Base Price
+              {formData.checkin && formData.checkout && formData.roomType && (
+                <Popover>
+                  <PopoverTrigger>
+                    <HelpCircle className="h-4 w-4 text-gray-500 hover:text-gray-700 cursor-help" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-4" align="start">
+                    <PriceBreakdown
+                      checkin={formData.checkin}
+                      checkout={formData.checkout}
+                      roomType={formData.roomType}
+                    />
+                  </PopoverContent>
+                </Popover>
               )}
-              
-              {formData.paymentType === "fiat" && (
-                <>
-                  <div className="flex justify-between items-center text-gray-600">
-                    <span>Credit Card Processing Fee (3%)</span>
-                    <span>CHF {stripeFee.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-gray-600">
-                    <span>Subtotal before VAT</span>
-                    <span>CHF {subtotalBeforeVAT.toFixed(2)}</span>
-                  </div>
-                </>
-              )}
-              
-              <div className="flex justify-between items-center text-gray-600">
-                <span>VAT (3.8%)</span>
-                <span>CHF {taxAmount.toFixed(2)}</span>
-              </div>
+            </span>
+            <span>CHF {formData.price.toFixed(2)}</span>
+          </div>
+          
+          {discountAmount > 0 && (
+            <div className="flex justify-between items-center text-green-600">
+              <span>
+                {isRoleBasedDiscount ? 'Co-designer Discount' : 'Discount'}
+              </span>
+              <span>- CHF {discountAmount.toFixed(2)}</span>
+            </div>
+          )}
 
-              <div className="flex justify-between items-center text-lg font-semibold mt-2 pt-2 border-t border-gray-200">
-                <span>Total Price</span>
-                <span>CHF {totalAmount.toFixed(2)}</span>
-              </div>
-              
-              {usdPrice && (
-                <div className="flex justify-between items-center text-sm text-gray-500 mt-1">
-                  <span>Approx USD</span>
-                  <span>${usdPrice.toFixed(2)}</span>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center text-gray-500 py-4">
-              Select dates and room type to see pricing
+          {discountAmount > 0 && (
+            <div className="flex justify-between items-center text-gray-600">
+              <span>Price after discount</span>
+              <span>CHF {priceAfterDiscount.toFixed(2)}</span>
+            </div>
+          )}
+          
+          {formData.paymentType === "fiat" && (
+            <div className="flex justify-between items-center text-gray-600">
+              <span>Credit Card Processing Fee (3%)</span>
+              <span>CHF {stripeFee.toFixed(2)}</span>
+            </div>
+          )}
+
+          {formData.paymentType === "fiat" && (
+            <div className="flex justify-between items-center text-gray-600">
+              <span>Subtotal before VAT</span>
+              <span>CHF {subtotalBeforeVAT.toFixed(2)}</span>
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center text-gray-600">
+            <span>VAT (3.8%)</span>
+            <span>CHF {taxAmount.toFixed(2)}</span>
+          </div>
+
+          <div className="flex justify-between items-center text-lg font-semibold mt-2 pt-2 border-t border-gray-200">
+            <span>Total Price</span>
+            <span>CHF {totalAmount.toFixed(2)}</span>
+          </div>
+          
+          {usdPrice && (
+            <div className="flex justify-between items-center text-sm text-gray-500 mt-1">
+              <span>Approx USD</span>
+              <span>${usdPrice.toFixed(2)}</span>
             </div>
           )}
           <p className="text-sm text-gray-500">Includes all applicable taxes and fees</p>
