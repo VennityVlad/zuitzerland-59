@@ -4,12 +4,20 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
+interface UserRoles {
+  admin: boolean;
+  coDesigner: boolean;
+  coCurator: boolean;
+}
+
 interface SupabaseAuthContextType {
   user: User | null;
   loading: boolean;
+  roles: UserRoles;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  checkRole: (role: 'admin' | 'co-designer' | 'co-curator') => Promise<boolean>;
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined);
@@ -17,21 +25,66 @@ const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(u
 export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<UserRoles>({
+    admin: false,
+    coDesigner: false,
+    coCurator: false,
+  });
   const { toast } = useToast();
+
+  const checkRole = async (role: 'admin' | 'co-designer' | 'co-curator'): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { data, error } = await supabase
+        .rpc('has_role', {
+          user_id: user.id,
+          role: role
+        });
+
+      if (error) throw error;
+      return data || false;
+    } catch (error) {
+      console.error('Error checking role:', error);
+      return false;
+    }
+  };
+
+  const updateRoles = async (userId: string) => {
+    const roleChecks = await Promise.all([
+      checkRole('admin'),
+      checkRole('co-designer'),
+      checkRole('co-curator'),
+    ]);
+
+    setRoles({
+      admin: roleChecks[0],
+      coDesigner: roleChecks[1],
+      coCurator: roleChecks[2],
+    });
+  };
 
   useEffect(() => {
     // Check active session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await updateRoles(session.user.id);
+      }
       setLoading(false);
     };
 
     checkSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await updateRoles(session.user.id);
+      } else {
+        setRoles({ admin: false, coDesigner: false, coCurator: false });
+      }
     });
 
     return () => {
@@ -93,7 +146,15 @@ export const SupabaseAuthProvider = ({ children }: { children: React.ReactNode }
   };
 
   return (
-    <SupabaseAuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <SupabaseAuthContext.Provider value={{ 
+      user, 
+      loading, 
+      roles,
+      signIn, 
+      signUp, 
+      signOut,
+      checkRole
+    }}>
       {children}
     </SupabaseAuthContext.Provider>
   );
