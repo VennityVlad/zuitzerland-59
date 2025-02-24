@@ -1,4 +1,3 @@
-
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,7 +69,6 @@ const DateSelectionFields = ({
     } as React.ChangeEvent<HTMLInputElement>);
   };
 
-  // Query to get room type details
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', formData.roomType],
     queryFn: async () => {
@@ -88,7 +86,6 @@ const DateSelectionFields = ({
     enabled: Boolean(formData.roomType)
   });
 
-  // Calculate if minimum stay requirement is met
   const meetsMinimumStay = (): boolean => {
     if (!formData.checkin || !formData.checkout || !formData.roomType || !roomTypeDetails) {
       return true; // Don't show warning if we don't have all the data
@@ -131,7 +128,7 @@ const DateSelectionFields = ({
         <div className="space-y-3">
           <h3 className="text-center text-base font-light text-gray-900">May 2025</h3>
           <img 
-            src="/lovable-uploads/1042fc8f-7fd2-45d2-a91d-bd0e2c012279.png" 
+            src="/lovable-uploads/0badf122-3f2e-4396-a3fb-0c353bec112f.png" 
             alt="May 2025 Program Calendar"
             className="w-full max-w-2xl mx-auto rounded-lg"
           />
