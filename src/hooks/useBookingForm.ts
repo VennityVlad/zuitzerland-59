@@ -72,11 +72,23 @@ export const useBookingForm = () => {
     }
 
     try {
+      // First get the room code from room_types table
+      const { data: roomData, error: roomError } = await supabase
+        .from('room_types')
+        .select('code')
+        .eq('code', roomType)
+        .single();
+
+      if (roomError || !roomData) {
+        console.error('Error fetching room code:', roomError);
+        return 0;
+      }
+
       // Get the applicable price based on the duration
       const { data: prices, error } = await supabase
         .from('prices')
         .select('*')
-        .eq('room_code', roomType)
+        .eq('room_code', roomData.code)
         .lte('duration', days)
         .order('duration', { ascending: false })
         .limit(1);
@@ -88,7 +100,7 @@ export const useBookingForm = () => {
 
       if (!prices || prices.length === 0) {
         console.error('No applicable price found for:', {
-          room_type: roomType,
+          room_code: roomData.code,
           duration: days
         });
         return 0;
