@@ -198,7 +198,7 @@ export const useBookingForm = () => {
 
   const validateMinimumStay = (days: number, roomType: string): string | null => {
     if (!roomType || !roomTypeDetails) return null;
-    const minimumStay = roomTypeDetails.min_stay_days;
+    const minimumStay = roomTypeDetails.min_stay_days || 0;
     
     if (days < minimumStay) {
       return `This room type (${roomTypeDetails.display_name}) requires a minimum stay of ${minimumStay} days`;
@@ -226,8 +226,12 @@ export const useBookingForm = () => {
 
     let stayValidation = null;
     if (formData.checkin && formData.checkout && formData.roomType) {
-      const days = differenceInDays(new Date(formData.checkout), new Date(formData.checkin));
-      stayValidation = validateMinimumStay(days, formData.roomType);
+      const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
+      const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
+      const days = differenceInDays(endDate, startDate);
+      if (days > 0) { // Only validate if dates make sense
+        stayValidation = validateMinimumStay(days, formData.roomType);
+      }
     }
 
     setValidationWarning(stayValidation);
