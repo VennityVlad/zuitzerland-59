@@ -3,10 +3,10 @@ import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ROOM_MIN_STAY, MIN_STAY_DAYS } from "@/lib/constants";
 import type { BookingFormData } from "@/types/booking";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
+import { useQuery } from "@tanstack/react-query";
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
 
@@ -34,6 +34,24 @@ export const useBookingForm = () => {
     paymentType: "fiat", // Default to fiat
   });
 
+  // Query to get room type details for minimum stay validation
+  const { data: roomTypeDetails } = useQuery({
+    queryKey: ['roomTypeDetails', formData.roomType],
+    queryFn: async () => {
+      if (!formData.roomType) return null;
+      
+      const { data, error } = await supabase
+        .from('room_types')
+        .select('min_stay_days, display_name')
+        .eq('code', formData.roomType)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: Boolean(formData.roomType)
+  });
+
   const calculatePrice = async (checkin: string, checkout: string, roomType: string) => {
     console.log('calculatePrice called with:', { checkin, checkout, roomType });
     
@@ -58,7 +76,7 @@ export const useBookingForm = () => {
       const { data: prices, error } = await supabase
         .from('prices')
         .select('*')
-        .eq('room_type', roomType)
+        .eq('room_code', roomType)
         .lte('duration', days)
         .order('duration', { ascending: false })
         .limit(1);
@@ -167,16 +185,11 @@ export const useBookingForm = () => {
   };
 
   const validateMinimumStay = (days: number, roomType: string): string | null => {
-    if (!roomType) return null;
-    const minimumStay = ROOM_MIN_STAY[roomType] || MIN_STAY_DAYS;
+    if (!roomType || !roomTypeDetails) return null;
+    const minimumStay = roomTypeDetails.min_stay_days;
     
     if (days < minimumStay) {
-      const weekText = minimumStay === 7 ? "1 week" : 
-                      minimumStay === 14 ? "2 weeks" : 
-                      minimumStay === 25 ? "25 days" : 
-                      minimumStay === 30 ? "30 days" : 
-                      "the entire period";
-      return `This room type requires a minimum stay of ${weekText}`;
+      return `This room type (${roomTypeDetails.display_name}) requires a minimum stay of ${minimumStay} days`;
     }
     return null;
   };
@@ -441,7 +454,7 @@ export const useBookingForm = () => {
 
   useEffect(() => {
     validateForm();
-  }, [formData]);
+  }, [formData, roomTypeDetails]);
 
   return {
     formData,
