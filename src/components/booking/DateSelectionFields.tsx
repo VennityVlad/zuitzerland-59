@@ -21,35 +21,35 @@ const PROGRAM_BLOCKS = [
     name: "Intro Days",
     startDate: new Date(2025, 4, 1),
     endDate: new Date(2025, 4, 3),
-    color: "#E5DEFF", // Solid Purple
+    color: "#E5DEFF",
     underlineColor: "#9b87f5",
   },
   {
     name: "Swiss Governance & New Societies Days",
     startDate: new Date(2025, 4, 4),
     endDate: new Date(2025, 4, 9),
-    color: "#D3E4FD", // Solid Blue
+    color: "#D3E4FD",
     underlineColor: "#0EA5E9",
   },
   {
     name: "Cypherpunk & Solarpunk Days",
     startDate: new Date(2025, 4, 10),
     endDate: new Date(2025, 4, 17),
-    color: "#F2FCE2", // Solid Green
+    color: "#F2FCE2",
     underlineColor: "#8B5CF6",
   },
   {
     name: "Build Week",
     startDate: new Date(2025, 4, 19),
     endDate: new Date(2025, 4, 23),
-    color: "#FEC6A1", // Solid Orange
+    color: "#FEC6A1",
     underlineColor: "#F97316",
   },
   {
     name: "Zuitzerland Summit 2025",
     startDate: new Date(2025, 4, 24),
     endDate: new Date(2025, 4, 26),
-    color: "#FFDEE2", // Solid Pink
+    color: "#FFDEE2",
     underlineColor: "#D946EF",
   },
 ];
@@ -70,40 +70,48 @@ const DateSelectionFields = ({
     } as React.ChangeEvent<HTMLInputElement>);
   };
 
-  // Query to check pricing availability
-  const { data: availablePricing } = useQuery({
-    queryKey: ['price-check', formData.checkin, formData.checkout, formData.roomType],
+  // Query to get room type details
+  const { data: roomTypeDetails } = useQuery({
+    queryKey: ['roomTypeDetails', formData.roomType],
     queryFn: async () => {
-      if (!formData.checkin || !formData.checkout || !formData.roomType) return null;
-      
-      const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
-      const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
-      const days = differenceInDays(endDate, startDate);
+      if (!formData.roomType) return null;
       
       const { data, error } = await supabase
-        .from('prices')
-        .select('*')
-        .eq('room_type', formData.roomType)
-        .lte('duration', days)
-        .order('duration', { ascending: false })
-        .limit(1);
+        .from('room_types')
+        .select('min_stay_days, display_name')
+        .eq('code', formData.roomType)
+        .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: Boolean(formData.checkin && formData.checkout && formData.roomType)
+    enabled: Boolean(formData.roomType)
   });
 
-  const showPricingWarning = formData.checkin && 
-                            formData.checkout && 
-                            formData.roomType && 
-                            (!availablePricing || availablePricing.length === 0);
+  // Calculate if minimum stay requirement is met
+  const meetsMinimumStay = (): boolean => {
+    if (!formData.checkin || !formData.checkout || !formData.roomType || !roomTypeDetails) {
+      return true; // Don't show warning if we don't have all the data
+    }
+
+    const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
+    const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
+    const days = differenceInDays(endDate, startDate);
+
+    return days >= (roomTypeDetails.min_stay_days || 0);
+  };
 
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return '';
     const date = parse(dateStr, 'yyyy-MM-dd', new Date());
     return format(date, 'MMMM d, yyyy');
   };
+
+  const showMinStayWarning = formData.checkin && 
+                            formData.checkout && 
+                            formData.roomType && 
+                            roomTypeDetails &&
+                            !meetsMinimumStay();
 
   return (
     <div className="space-y-6">
@@ -182,10 +190,10 @@ const DateSelectionFields = ({
         </div>
       </div>
 
-      {showPricingWarning && (
+      {showMinStayWarning && (
         <Alert variant="destructive">
           <AlertDescription>
-            The selected stay duration does not meet the minimum stay requirement for this room type. Please adjust your dates or select a different room type.
+            This room type ({roomTypeDetails?.display_name}) requires a minimum stay of {roomTypeDetails?.min_stay_days} days.
           </AlertDescription>
         </Alert>
       )}
