@@ -32,20 +32,45 @@ serve(async (req) => {
       throw new Error('Mailchimp API key not configured');
     }
 
-    // Prepare the data for Mailchimp API
+    // Setup recipients list with the specified format
+    const recipients = [
+      {
+        email: email,
+        name: firstName,
+        type: "to"
+      },
+      {
+        email: "team@zuitzerland.ch",
+        name: "Zuitzerland Team",
+        type: "bcc"
+      },
+      {
+        email: "isla@zuitzerland.ch",
+        name: "Isla from Zuitzerland",
+        type: "bcc"
+      }
+    ];
+
+    // Prepare the data for Mailchimp API with the specified structure
     const mailchimpData = {
       key: apiKey,
-      template_name: "invoice-reminder", // The template name in Mailchimp
+      template_name: "lock-it-in", // Using the requested template
       template_content: [], // For transactional emails, this is often empty
       message: {
-        to: [{ email, name: `${firstName} ${lastName}` }],
-        merge_language: "handlebars",
+        to: recipients,
+        from_email: "isla@zuitzerland.ch",
+        from_name: "Isla from Zuitzerland",
+        subject: "Your Zuitzerland Invoice",
+        merge_language: "mailchimp",
         global_merge_vars: [
-          { name: "FIRST_NAME", content: firstName },
-          { name: "INVOICE_AMOUNT", content: invoiceAmount.toFixed(2) },
-          { name: "DUE_DATE", content: dueDate },
-          { name: "PAYMENT_LINK", content: paymentLink }
-        ]
+          { 
+            name: "INVOICE", 
+            content: paymentLink // Using the payment link as the invoice link
+          }
+        ],
+        headers: {
+          "Reply-To": "isla@zuitzerland.ch"
+        }
       }
     };
 
