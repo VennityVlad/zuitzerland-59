@@ -49,7 +49,7 @@ const Invoices = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-secondary/30 py-12">
-        <div className="container max-w-5xl mx-auto px-4">
+        <div className="container mx-auto px-4">
           <InvoiceLoader />
         </div>
       </div>
@@ -58,7 +58,7 @@ const Invoices = () => {
 
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
-      <div className="container max-w-5xl mx-auto px-4">
+      <div className="container mx-auto px-4">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-hotel-navy">
