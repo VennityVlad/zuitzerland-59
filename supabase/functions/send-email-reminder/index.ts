@@ -60,7 +60,7 @@ serve(async (req) => {
         to: recipients,
         from_email: "isla@zuitzerland.ch",
         from_name: "Isla from Zuitzerland",
-        subject: "Your Zuitzerland Invoice",
+        subject: "Reminder to Pay Your Zuitzerland Invoice",
         merge_language: "mailchimp",
         global_merge_vars: [
           { 
@@ -69,7 +69,7 @@ serve(async (req) => {
           }
         ],
         headers: {
-          "Reply-To": "isla@zuitzerland.ch"
+          "Reply-To": "team@zuitzerland.ch"
         }
       }
     };
