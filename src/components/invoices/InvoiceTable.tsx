@@ -15,19 +15,23 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { InvoiceCard } from "./InvoiceCard";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface InvoiceTableProps {
   invoices: Invoice[];
   isAdmin: boolean;
   onPaymentClick: (paymentLink: string) => void;
+  useCardView?: boolean; // New prop to control view mode
 }
 
-export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTableProps) => {
+export const InvoiceTable = ({ 
+  invoices, 
+  isAdmin, 
+  onPaymentClick,
+  useCardView = true // Default to card view
+}: InvoiceTableProps) => {
   const { toast } = useToast();
   const [loadingInvoiceId, setLoadingInvoiceId] = useState<string | null>(null);
-  const isMobile = useIsMobile();
 
   const formatDate = (dateString: string) => {
     return format(parseISO(dateString), 'MMM d');
@@ -91,8 +95,8 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
     }
   };
 
-  // Feed-style view (for mobile or when preferred)
-  if (isMobile) {
+  // Card view (default view now)
+  if (useCardView) {
     return (
       <div className="space-y-4">
         {invoices.map(invoice => (
@@ -108,7 +112,7 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
     );
   }
 
-  // Table view for desktop
+  // Table view (only used if explicitly set to false)
   // Admin view includes additional user information columns
   if (isAdmin) {
     return (
@@ -200,7 +204,7 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
     );
   }
 
-  // Regular user view
+  // Regular user view with table
   return (
     <ScrollArea className="w-full">
       <div className="min-w-max">

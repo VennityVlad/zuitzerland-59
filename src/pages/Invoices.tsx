@@ -1,17 +1,38 @@
 
 import { usePrivy } from "@privy-io/react-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
 import { InvoiceLoader } from "@/components/invoices/InvoiceLoader";
 import { NoInvoicesMessage } from "@/components/invoices/NoInvoicesMessage";
 import { useInvoices } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
+import { InvoiceFilter, InvoiceFilters } from "@/components/invoices/InvoiceFilter";
+import { Invoice } from "@/types/invoice";
+import { parseISO, subDays, subMonths } from "date-fns";
 
 const Invoices = () => {
   const { user } = usePrivy();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { invoices, isLoading: invoicesLoading } = useInvoices(user?.id, isAdmin);
+  const [filters, setFilters] = useState<InvoiceFilters>({
+    status: null,
+    name: null,
+    email: null,
+    roomType: null,
+    dateRange: null,
+  });
+
+  // Extract unique room types from invoices
+  const roomTypes = useMemo(() => {
+    const types = new Set<string>();
+    invoices.forEach((invoice) => {
+      if (invoice.room_type) {
+        types.add(invoice.room_type);
+      }
+    });
+    return Array.from(types);
+  }, [invoices]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -41,6 +62,66 @@ const Invoices = () => {
     }
   }, [user?.id]);
 
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter((invoice) => {
+      // Filter by status
+      if (filters.status && invoice.status !== filters.status) {
+        return false;
+      }
+
+      // Filter by name (case insensitive)
+      if (filters.name) {
+        const fullName = `${invoice.first_name} ${invoice.last_name}`.toLowerCase();
+        if (!fullName.includes(filters.name.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // Filter by email (case insensitive)
+      if (filters.email && !invoice.email.toLowerCase().includes(filters.email.toLowerCase())) {
+        return false;
+      }
+
+      // Filter by room type
+      if (filters.roomType && invoice.room_type !== filters.roomType) {
+        return false;
+      }
+
+      // Filter by date range
+      if (filters.dateRange) {
+        const createdAt = parseISO(invoice.created_at);
+        const now = new Date();
+        
+        switch (filters.dateRange) {
+          case 'week':
+            return createdAt >= subDays(now, 7);
+          case 'month':
+            return createdAt >= subMonths(now, 1);
+          case 'quarter':
+            return createdAt >= subMonths(now, 3);
+          default:
+            return true;
+        }
+      }
+
+      return true;
+    });
+  }, [invoices, filters]);
+
+  const handleFilterChange = (newFilters: InvoiceFilters) => {
+    setFilters(newFilters);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      status: null,
+      name: null,
+      email: null,
+      roomType: null,
+      dateRange: null,
+    });
+  };
+
   const handlePaymentClick = (paymentLink: string) => {
     window.open(paymentLink, '_blank');
   };
@@ -66,15 +147,39 @@ const Invoices = () => {
             </h1>
           </div>
           
+          {!invoicesLoading && (
+            <InvoiceFilter 
+              filters={filters} 
+              onFilterChange={handleFilterChange} 
+              onClearFilters={clearFilters} 
+              isAdmin={isAdmin}
+              roomTypes={roomTypes}
+            />
+          )}
+          
           {invoicesLoading ? (
             <InvoiceLoader />
-          ) : invoices.length === 0 ? (
-            <NoInvoicesMessage />
+          ) : filteredInvoices.length === 0 ? (
+            filters.status || filters.name || filters.email || filters.roomType || filters.dateRange ? (
+              <div className="text-center py-10">
+                <p className="text-gray-500">No invoices match your filters</p>
+                <Button 
+                  onClick={clearFilters} 
+                  variant="link" 
+                  className="mt-2"
+                >
+                  Clear all filters
+                </Button>
+              </div>
+            ) : (
+              <NoInvoicesMessage />
+            )
           ) : (
             <InvoiceTable 
-              invoices={invoices} 
+              invoices={filteredInvoices} 
               isAdmin={isAdmin} 
               onPaymentClick={handlePaymentClick} 
+              useCardView={true}
             />
           )}
         </div>
