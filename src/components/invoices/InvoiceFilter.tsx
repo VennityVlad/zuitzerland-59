@@ -84,16 +84,16 @@ export const InvoiceFilter = ({
           <div className="space-y-2">
             <Label htmlFor="status-filter">Status</Label>
             <Select
-              value={filters.status || ""}
+              value={filters.status || "all_statuses"}
               onValueChange={(value) =>
-                handleChange("status", value === "" ? null : value)
+                handleChange("status", value === "all_statuses" ? null : value)
               }
             >
               <SelectTrigger id="status-filter">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All statuses</SelectItem>
+                <SelectItem value="all_statuses">All statuses</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
@@ -105,16 +105,16 @@ export const InvoiceFilter = ({
           <div className="space-y-2">
             <Label htmlFor="room-type-filter">Room Type</Label>
             <Select
-              value={filters.roomType || ""}
+              value={filters.roomType || "all_room_types"}
               onValueChange={(value) =>
-                handleChange("roomType", value === "" ? null : value)
+                handleChange("roomType", value === "all_room_types" ? null : value)
               }
             >
               <SelectTrigger id="room-type-filter">
                 <SelectValue placeholder="All room types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All room types</SelectItem>
+                <SelectItem value="all_room_types">All room types</SelectItem>
                 {roomTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
@@ -127,11 +127,11 @@ export const InvoiceFilter = ({
           <div className="space-y-2">
             <Label htmlFor="date-range-filter">Date Range</Label>
             <Select
-              value={filters.dateRange || ""}
+              value={filters.dateRange || "all_time"}
               onValueChange={(value) =>
                 handleChange(
                   "dateRange",
-                  value === "" ? null : (value as any)
+                  value === "all_time" ? null : (value as any)
                 )
               }
             >
@@ -139,7 +139,7 @@ export const InvoiceFilter = ({
                 <SelectValue placeholder="All time" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All time</SelectItem>
+                <SelectItem value="all_time">All time</SelectItem>
                 <SelectItem value="week">Past week</SelectItem>
                 <SelectItem value="month">Past month</SelectItem>
                 <SelectItem value="quarter">Past 3 months</SelectItem>
