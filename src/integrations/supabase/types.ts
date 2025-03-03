@@ -49,10 +49,12 @@ export type Database = {
           id: string
           invoice_uid: string
           last_name: string
+          last_reminder_sent: string | null
           payment_link: string
           payment_type: string
           price: number
           privy_id: string | null
+          reminder_count: number | null
           request_invoice_id: string
           room_type: string
           status: string
@@ -69,10 +71,12 @@ export type Database = {
           id?: string
           invoice_uid: string
           last_name: string
+          last_reminder_sent?: string | null
           payment_link: string
           payment_type: string
           price: number
           privy_id?: string | null
+          reminder_count?: number | null
           request_invoice_id: string
           room_type: string
           status?: string
@@ -89,10 +93,12 @@ export type Database = {
           id?: string
           invoice_uid?: string
           last_name?: string
+          last_reminder_sent?: string | null
           payment_link?: string
           payment_type?: string
           price?: number
           privy_id?: string | null
+          reminder_count?: number | null
           request_invoice_id?: string
           room_type?: string
           status?: string
@@ -289,6 +295,12 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      increment_reminder_count: {
+        Args: {
+          invoice_id: string
+        }
+        Returns: number
       }
       update_auth_token: {
         Args: {

@@ -33,6 +33,11 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
     return format(parseISO(dateString), 'MMM d, yyyy');
   };
 
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return 'Never';
+    return format(parseISO(dateString), 'MMM d, yyyy h:mm a');
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'paid':
@@ -97,6 +102,7 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
             <TableHead>Amount</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Last Reminder</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -121,6 +127,20 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
                   {invoice.status}
                 </span>
+              </TableCell>
+              <TableCell>
+                {invoice.last_reminder_sent ? (
+                  <div className="text-xs">
+                    <div>{formatDateTime(invoice.last_reminder_sent)}</div>
+                    <div className="text-gray-500">
+                      {invoice.reminder_count && invoice.reminder_count > 0 
+                        ? `Sent ${invoice.reminder_count} ${invoice.reminder_count === 1 ? 'time' : 'times'}` 
+                        : ''}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-gray-500 text-xs">Never sent</span>
+                )}
               </TableCell>
               <TableCell>
                 <div className="flex flex-col gap-2">
