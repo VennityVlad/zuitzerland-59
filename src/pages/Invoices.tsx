@@ -59,7 +59,7 @@ const Invoices = () => {
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
       <div className="container mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-hotel-navy">
               {isAdmin ? 'All Invoices (Admin View)' : 'My Invoices'}
@@ -71,13 +71,11 @@ const Invoices = () => {
           ) : invoices.length === 0 ? (
             <NoInvoicesMessage />
           ) : (
-            <div className="overflow-x-auto">
-              <InvoiceTable 
-                invoices={invoices} 
-                isAdmin={isAdmin} 
-                onPaymentClick={handlePaymentClick} 
-              />
-            </div>
+            <InvoiceTable 
+              invoices={invoices} 
+              isAdmin={isAdmin} 
+              onPaymentClick={handlePaymentClick} 
+            />
           )}
         </div>
       </div>

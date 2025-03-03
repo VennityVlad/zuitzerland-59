@@ -1,0 +1,115 @@
+
+import { Invoice } from "@/types/invoice";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, Mail } from "lucide-react";
+import { format, parseISO } from "date-fns";
+
+interface InvoiceCardProps {
+  invoice: Invoice;
+  onPaymentClick: (paymentLink: string) => void;
+  onSendReminder?: (invoice: Invoice) => void;
+  isLoading?: boolean;
+}
+
+export const InvoiceCard = ({ 
+  invoice, 
+  onPaymentClick, 
+  onSendReminder,
+  isLoading 
+}: InvoiceCardProps) => {
+  const formatDate = (dateString: string) => {
+    return format(parseISO(dateString), 'MMM d, yyyy');
+  };
+
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return 'Never';
+    return format(parseISO(dateString), 'MMM d, yyyy h:mm a');
+  };
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800 hover:bg-green-200';
+      case 'overdue':
+        return 'bg-red-100 text-red-800 hover:bg-red-200';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+      default:
+        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+    }
+  };
+
+  return (
+    <Card className="mb-4">
+      <CardContent className="pt-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <Badge className={getStatusStyle(invoice.status)}>
+              {invoice.status}
+            </Badge>
+            <h3 className="text-lg font-medium mt-2">
+              {invoice.first_name} {invoice.last_name}
+            </h3>
+            <p className="text-sm text-gray-500">{invoice.email}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-semibold">CHF {invoice.price.toFixed(2)}</p>
+            <p className="text-sm text-gray-500">Due: {formatDate(invoice.due_date)}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+          <div>
+            <p className="text-gray-500">Room Type</p>
+            <p>{invoice.room_type}</p>
+          </div>
+          <div>
+            <p className="text-gray-500">Created</p>
+            <p>{formatDate(invoice.created_at)}</p>
+          </div>
+          <div>
+            <p className="text-gray-500">Stay Period</p>
+            <p>{format(parseISO(invoice.checkin), 'MMM d')} - {formatDate(invoice.checkout)}</p>
+          </div>
+          {onSendReminder && (
+            <div>
+              <p className="text-gray-500">Last Reminder</p>
+              <p className="text-xs">
+                {formatDateTime(invoice.last_reminder_sent)}
+                {invoice.reminder_count && invoice.reminder_count > 0 ? 
+                  ` (${invoice.reminder_count} ${invoice.reminder_count === 1 ? 'time' : 'times'})` : 
+                  ''}
+              </p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+
+      <CardFooter className="flex gap-2 justify-end">
+        {invoice.status !== 'paid' && invoice.status !== 'cancelled' && onSendReminder && (
+          <Button
+            onClick={() => onSendReminder(invoice)}
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            {isLoading ? 'Sending...' : 'Reminder'} <Mail className="h-4 w-4" />
+          </Button>
+        )}
+        
+        <Button
+          onClick={() => onPaymentClick(invoice.payment_link)}
+          variant="outline"
+          size="sm"
+          disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
+          className="flex items-center gap-2"
+        >
+          {onSendReminder ? 'Payment' : 'Pay Now'} <ExternalLink className="h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};

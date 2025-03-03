@@ -14,6 +14,9 @@ import { Invoice } from "@/types/invoice";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { InvoiceCard } from "./InvoiceCard";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface InvoiceTableProps {
   invoices: Invoice[];
@@ -24,6 +27,7 @@ interface InvoiceTableProps {
 export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTableProps) => {
   const { toast } = useToast();
   const [loadingInvoiceId, setLoadingInvoiceId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const formatDate = (dateString: string) => {
     return format(parseISO(dateString), 'MMM d');
@@ -87,63 +91,151 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
     }
   };
 
+  // Feed-style view (for mobile or when preferred)
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {invoices.map(invoice => (
+          <InvoiceCard 
+            key={invoice.id}
+            invoice={invoice}
+            onPaymentClick={onPaymentClick}
+            onSendReminder={isAdmin ? handleSendReminder : undefined}
+            isLoading={loadingInvoiceId === invoice.id}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Table view for desktop
   // Admin view includes additional user information columns
   if (isAdmin) {
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>First Name</TableHead>
-            <TableHead>Last Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Room Type</TableHead>
-            <TableHead>Stay Period</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Due Date</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Last Reminder</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invoices.map((invoice) => (
-            <TableRow key={invoice.id}>
-              <TableCell>
-                {formatDateWithYear(invoice.created_at)}
-              </TableCell>
-              <TableCell>{invoice.first_name}</TableCell>
-              <TableCell>{invoice.last_name}</TableCell>
-              <TableCell>{invoice.email}</TableCell>
-              <TableCell>{invoice.room_type}</TableCell>
-              <TableCell>
-                {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
-              </TableCell>
-              <TableCell>CHF {invoice.price.toFixed(2)}</TableCell>
-              <TableCell>
-                {formatDateWithYear(invoice.due_date)}
-              </TableCell>
-              <TableCell>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
-                  {invoice.status}
-                </span>
-              </TableCell>
-              <TableCell>
-                {invoice.last_reminder_sent ? (
-                  <div className="text-xs">
-                    <div>{formatDateTime(invoice.last_reminder_sent)}</div>
-                    <div className="text-gray-500">
-                      {invoice.reminder_count && invoice.reminder_count > 0 
-                        ? `Sent ${invoice.reminder_count} ${invoice.reminder_count === 1 ? 'time' : 'times'}` 
-                        : ''}
+      <ScrollArea className="w-full">
+        <div className="min-w-max">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>First Name</TableHead>
+                <TableHead>Last Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Room Type</TableHead>
+                <TableHead>Stay Period</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Reminder</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell>
+                    {formatDateWithYear(invoice.created_at)}
+                  </TableCell>
+                  <TableCell>{invoice.first_name}</TableCell>
+                  <TableCell>{invoice.last_name}</TableCell>
+                  <TableCell>{invoice.email}</TableCell>
+                  <TableCell>{invoice.room_type}</TableCell>
+                  <TableCell>
+                    {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
+                  </TableCell>
+                  <TableCell>CHF {invoice.price.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {formatDateWithYear(invoice.due_date)}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
+                      {invoice.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {invoice.last_reminder_sent ? (
+                      <div className="text-xs">
+                        <div>{formatDateTime(invoice.last_reminder_sent)}</div>
+                        <div className="text-gray-500">
+                          {invoice.reminder_count && invoice.reminder_count > 0 
+                            ? `Sent ${invoice.reminder_count} ${invoice.reminder_count === 1 ? 'time' : 'times'}` 
+                            : ''}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 text-xs">Never sent</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        onClick={() => onPaymentClick(invoice.payment_link)}
+                        variant="outline"
+                        size="sm"
+                        disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
+                        className="flex items-center gap-2"
+                      >
+                        Payment <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      
+                      {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
+                        <Button
+                          onClick={() => handleSendReminder(invoice)}
+                          variant="outline"
+                          size="sm"
+                          disabled={loadingInvoiceId === invoice.id}
+                          className="flex items-center gap-2"
+                        >
+                          {loadingInvoiceId === invoice.id ? 'Sending...' : 'Reminder'} <Mail className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <span className="text-gray-500 text-xs">Never sent</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-2">
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </ScrollArea>
+    );
+  }
+
+  // Regular user view
+  return (
+    <ScrollArea className="w-full">
+      <div className="min-w-max">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Room Type</TableHead>
+              <TableHead>Stay Period</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Due Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoices.map((invoice) => (
+              <TableRow key={invoice.id}>
+                <TableCell>
+                  {formatDateWithYear(invoice.created_at)}
+                </TableCell>
+                <TableCell>{invoice.room_type}</TableCell>
+                <TableCell>
+                  {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
+                </TableCell>
+                <TableCell>CHF {invoice.price.toFixed(2)}</TableCell>
+                <TableCell>
+                  {formatDateWithYear(invoice.due_date)}
+                </TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
+                    {invoice.status}
+                  </span>
+                </TableCell>
+                <TableCell>
                   <Button
                     onClick={() => onPaymentClick(invoice.payment_link)}
                     variant="outline"
@@ -151,76 +243,14 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
                     disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
                     className="flex items-center gap-2"
                   >
-                    Payment <ExternalLink className="h-4 w-4" />
+                    Pay Now <ExternalLink className="h-4 w-4" />
                   </Button>
-                  
-                  {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
-                    <Button
-                      onClick={() => handleSendReminder(invoice)}
-                      variant="outline"
-                      size="sm"
-                      disabled={loadingInvoiceId === invoice.id}
-                      className="flex items-center gap-2"
-                    >
-                      {loadingInvoiceId === invoice.id ? 'Sending...' : 'Reminder'} <Mail className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    );
-  }
-
-  // Regular user view
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Room Type</TableHead>
-          <TableHead>Stay Period</TableHead>
-          <TableHead>Amount</TableHead>
-          <TableHead>Due Date</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {invoices.map((invoice) => (
-          <TableRow key={invoice.id}>
-            <TableCell>
-              {formatDateWithYear(invoice.created_at)}
-            </TableCell>
-            <TableCell>{invoice.room_type}</TableCell>
-            <TableCell>
-              {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
-            </TableCell>
-            <TableCell>CHF {invoice.price.toFixed(2)}</TableCell>
-            <TableCell>
-              {formatDateWithYear(invoice.due_date)}
-            </TableCell>
-            <TableCell>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
-                {invoice.status}
-              </span>
-            </TableCell>
-            <TableCell>
-              <Button
-                onClick={() => onPaymentClick(invoice.payment_link)}
-                variant="outline"
-                size="sm"
-                disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
-                className="flex items-center gap-2"
-              >
-                Pay Now <ExternalLink className="h-4 w-4" />
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </ScrollArea>
   );
 };
