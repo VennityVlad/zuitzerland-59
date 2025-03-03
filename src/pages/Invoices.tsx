@@ -7,7 +7,7 @@ import { NoInvoicesMessage } from "@/components/invoices/NoInvoicesMessage";
 import { useInvoices } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import { InvoiceFilter, InvoiceFilters } from "@/components/invoices/InvoiceFilter";
-import { Invoice } from "@/types/invoice";
+import { Button } from "@/components/ui/button";
 import { parseISO, subDays, subMonths } from "date-fns";
 
 const Invoices = () => {
