@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import {
   Table,
   TableBody,
@@ -27,14 +28,17 @@ interface Invoice {
   checkout: string;
   first_name: string;
   last_name: string;
+  email: string;
   due_date: string;
 }
 
 const Invoices = () => {
   const { user } = usePrivy();
+  const { roles } = useSupabaseAuth();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isAdmin = roles.admin;
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -47,12 +51,18 @@ const Invoices = () => {
           return;
         }
 
-        // Fetch invoices - RLS will handle authorization using JWT claims
+        // Admin users see all invoices, regular users only see their own
         const query = supabase
           .from('invoices')
-          .select('*')
-          .eq('privy_id', user.id.toString())
-          .order('created_at', { ascending: false });
+          .select('*');
+        
+        // If not an admin, filter by user's Privy ID
+        if (!isAdmin) {
+          query.eq('privy_id', user.id.toString());
+        }
+        
+        // Order by created date, newest first
+        query.order('created_at', { ascending: false });
 
         const { data, error } = await query;
 
@@ -83,7 +93,7 @@ const Invoices = () => {
     if (user) {
       fetchInvoices();
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   const handlePaymentClick = (paymentLink: string) => {
     window.open(paymentLink, '_blank');
@@ -110,12 +120,120 @@ const Invoices = () => {
     }
   };
 
+  // Admin view includes additional user information columns
+  const AdminInvoicesTable = () => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Date</TableHead>
+          <TableHead>First Name</TableHead>
+          <TableHead>Last Name</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Room Type</TableHead>
+          <TableHead>Stay Period</TableHead>
+          <TableHead>Amount</TableHead>
+          <TableHead>Due Date</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Action</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {invoices.map((invoice) => (
+          <TableRow key={invoice.id}>
+            <TableCell>
+              {formatDateWithYear(invoice.created_at)}
+            </TableCell>
+            <TableCell>{invoice.first_name}</TableCell>
+            <TableCell>{invoice.last_name}</TableCell>
+            <TableCell>{invoice.email}</TableCell>
+            <TableCell>{invoice.room_type}</TableCell>
+            <TableCell>
+              {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
+            </TableCell>
+            <TableCell>CHF {invoice.price.toFixed(2)}</TableCell>
+            <TableCell>
+              {formatDateWithYear(invoice.due_date)}
+            </TableCell>
+            <TableCell>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
+                {invoice.status}
+              </span>
+            </TableCell>
+            <TableCell>
+              <Button
+                onClick={() => handlePaymentClick(invoice.payment_link)}
+                variant="outline"
+                size="sm"
+                disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
+                className="flex items-center gap-2"
+              >
+                Payment <ExternalLink className="h-4 w-4" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+
+  // Regular user view (same as before)
+  const UserInvoicesTable = () => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Date</TableHead>
+          <TableHead>Room Type</TableHead>
+          <TableHead>Stay Period</TableHead>
+          <TableHead>Amount</TableHead>
+          <TableHead>Due Date</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Action</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {invoices.map((invoice) => (
+          <TableRow key={invoice.id}>
+            <TableCell>
+              {formatDateWithYear(invoice.created_at)}
+            </TableCell>
+            <TableCell>{invoice.room_type}</TableCell>
+            <TableCell>
+              {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
+            </TableCell>
+            <TableCell>CHF {invoice.price.toFixed(2)}</TableCell>
+            <TableCell>
+              {formatDateWithYear(invoice.due_date)}
+            </TableCell>
+            <TableCell>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
+                {invoice.status}
+              </span>
+            </TableCell>
+            <TableCell>
+              <Button
+                onClick={() => handlePaymentClick(invoice.payment_link)}
+                variant="outline"
+                size="sm"
+                disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
+                className="flex items-center gap-2"
+              >
+                Pay Now <ExternalLink className="h-4 w-4" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
-      <div className="container max-w-4xl mx-auto px-4">
+      <div className="container max-w-5xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-hotel-navy">My Invoices</h1>
+            <h1 className="text-2xl font-semibold text-hotel-navy">
+              {isAdmin ? 'All Invoices (Admin View)' : 'My Invoices'}
+            </h1>
           </div>
           
           {isLoading ? (
@@ -126,52 +244,7 @@ const Invoices = () => {
             <p className="text-gray-600 text-center py-8">No invoices found.</p>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Room Type</TableHead>
-                    <TableHead>Stay Period</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell>
-                        {formatDateWithYear(invoice.created_at)}
-                      </TableCell>
-                      <TableCell>{invoice.room_type}</TableCell>
-                      <TableCell>
-                        {formatDate(invoice.checkin)} - {formatDateWithYear(invoice.checkout)}
-                      </TableCell>
-                      <TableCell>CHF {invoice.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        {formatDateWithYear(invoice.due_date)}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(invoice.status)}`}>
-                          {invoice.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          onClick={() => handlePaymentClick(invoice.payment_link)}
-                          variant="outline"
-                          size="sm"
-                          disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
-                          className="flex items-center gap-2"
-                        >
-                          Pay Now <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              {isAdmin ? <AdminInvoicesTable /> : <UserInvoicesTable />}
             </div>
           )}
         </div>
