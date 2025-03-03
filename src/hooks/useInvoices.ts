@@ -59,7 +59,8 @@ export const useInvoices = (userId: string | undefined, isAdmin: boolean) => {
       }
     };
 
-    if (userId) {
+    // Only fetch invoices when both userId and isAdmin state are available
+    if (userId !== undefined) {
       fetchInvoices();
     }
   }, [userId, isAdmin, toast]);

@@ -1,20 +1,60 @@
 
 import { usePrivy } from "@privy-io/react-auth";
-import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { useState, useEffect } from "react";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
 import { InvoiceLoader } from "@/components/invoices/InvoiceLoader";
 import { NoInvoicesMessage } from "@/components/invoices/NoInvoicesMessage";
 import { useInvoices } from "@/hooks/useInvoices";
+import { supabase } from "@/integrations/supabase/client";
 
 const Invoices = () => {
   const { user } = usePrivy();
-  const { roles } = useSupabaseAuth();
-  const isAdmin = roles.admin;
-  const { invoices, isLoading } = useInvoices(user?.id, isAdmin);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { invoices, isLoading: invoicesLoading } = useInvoices(user?.id, isAdmin);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        setIsAdmin(data?.role === 'admin');
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user?.id) {
+      fetchProfile();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
 
   const handlePaymentClick = (paymentLink: string) => {
     window.open(paymentLink, '_blank');
   };
+
+  // Show loading state while checking admin status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-secondary/30 py-12">
+        <div className="container max-w-5xl mx-auto px-4">
+          <InvoiceLoader />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-secondary/30 py-12">
@@ -26,7 +66,7 @@ const Invoices = () => {
             </h1>
           </div>
           
-          {isLoading ? (
+          {invoicesLoading ? (
             <InvoiceLoader />
           ) : invoices.length === 0 ? (
             <NoInvoicesMessage />
