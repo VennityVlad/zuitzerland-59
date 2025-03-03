@@ -123,7 +123,7 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
                 </span>
               </TableCell>
               <TableCell>
-                <div className="flex flex-col md:flex-row gap-2">
+                <div className="flex flex-col gap-2">
                   <Button
                     onClick={() => onPaymentClick(invoice.payment_link)}
                     variant="outline"
