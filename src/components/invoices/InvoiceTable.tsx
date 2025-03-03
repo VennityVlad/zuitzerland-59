@@ -8,9 +8,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Mail } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Invoice } from "@/types/invoice";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InvoiceTableProps {
   invoices: Invoice[];
@@ -19,6 +22,9 @@ interface InvoiceTableProps {
 }
 
 export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTableProps) => {
+  const { toast } = useToast();
+  const [loadingInvoiceId, setLoadingInvoiceId] = useState<string | null>(null);
+
   const formatDate = (dateString: string) => {
     return format(parseISO(dateString), 'MMM d');
   };
@@ -40,6 +46,42 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
     }
   };
 
+  const handleSendReminder = async (invoice: Invoice) => {
+    try {
+      setLoadingInvoiceId(invoice.id);
+      
+      const response = await supabase.functions.invoke('send-email-reminder', {
+        body: {
+          invoiceId: invoice.id,
+          email: invoice.email,
+          firstName: invoice.first_name,
+          lastName: invoice.last_name,
+          invoiceAmount: invoice.price,
+          dueDate: formatDateWithYear(invoice.due_date),
+          paymentLink: invoice.payment_link
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to send reminder');
+      }
+
+      toast({
+        title: "Reminder Sent",
+        description: `Payment reminder sent to ${invoice.email}`,
+      });
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      toast({
+        title: "Failed to Send Reminder",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingInvoiceId(null);
+    }
+  };
+
   // Admin view includes additional user information columns
   if (isAdmin) {
     return (
@@ -55,7 +97,7 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
             <TableHead>Amount</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Action</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -81,15 +123,29 @@ export const InvoiceTable = ({ invoices, isAdmin, onPaymentClick }: InvoiceTable
                 </span>
               </TableCell>
               <TableCell>
-                <Button
-                  onClick={() => onPaymentClick(invoice.payment_link)}
-                  variant="outline"
-                  size="sm"
-                  disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
-                  className="flex items-center gap-2"
-                >
-                  Payment <ExternalLink className="h-4 w-4" />
-                </Button>
+                <div className="flex flex-col md:flex-row gap-2">
+                  <Button
+                    onClick={() => onPaymentClick(invoice.payment_link)}
+                    variant="outline"
+                    size="sm"
+                    disabled={invoice.status === 'paid' || invoice.status === 'cancelled'}
+                    className="flex items-center gap-2"
+                  >
+                    Payment <ExternalLink className="h-4 w-4" />
+                  </Button>
+                  
+                  {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
+                    <Button
+                      onClick={() => handleSendReminder(invoice)}
+                      variant="outline"
+                      size="sm"
+                      disabled={loadingInvoiceId === invoice.id}
+                      className="flex items-center gap-2"
+                    >
+                      {loadingInvoiceId === invoice.id ? 'Sending...' : 'Reminder'} <Mail className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}

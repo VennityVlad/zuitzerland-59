@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.get-secret]
 verify_jwt = true
+
+[functions.send-email-reminder]
+verify_jwt = true
