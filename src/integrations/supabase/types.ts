@@ -13,26 +13,32 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          end_date: string | null
           id: string
           is_role_based: boolean
-          month: string
+          month: string | null
           percentage: number
+          start_date: string | null
         }
         Insert: {
           active?: boolean
           created_at?: string
+          end_date?: string | null
           id?: string
           is_role_based?: boolean
-          month: string
+          month?: string | null
           percentage: number
+          start_date?: string | null
         }
         Update: {
           active?: boolean
           created_at?: string
+          end_date?: string | null
           id?: string
           is_role_based?: boolean
-          month?: string
+          month?: string | null
           percentage?: number
+          start_date?: string | null
         }
         Relationships: []
       }

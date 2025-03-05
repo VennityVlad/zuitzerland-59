@@ -22,6 +22,7 @@ const BookingForm = () => {
     validationWarning,
     discountAmount,
     isRoleBasedDiscount,
+    discountName,
     handleInputChange,
     handleSubmit,
     handleCountryChange,
@@ -116,6 +117,7 @@ const BookingForm = () => {
         maxDate={maxDate}
         discountAmount={discountAmount}
         isRoleBasedDiscount={isRoleBasedDiscount}
+        discountName={discountName}
       />
     </div>
   );
