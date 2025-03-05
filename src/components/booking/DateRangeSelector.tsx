@@ -61,11 +61,25 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     }
     
     const selectedDateRanges = DATE_RANGES.filter(range => newSelectedRanges.includes(range.id));
-    const startDates = selectedDateRanges.map(range => range.startDate);
-    const endDates = selectedDateRanges.map(range => range.endDate);
     
-    const earliestStart = startDates.sort()[0];
-    const latestEnd = endDates.sort().reverse()[0];
+    // Extract dates and convert to Date objects for proper comparison
+    const startDatesAsObjects = selectedDateRanges.map(range => new Date(range.startDate));
+    const endDatesAsObjects = selectedDateRanges.map(range => new Date(range.endDate));
+    
+    // Find earliest start date and latest end date by comparing Date objects
+    const earliestStartDate = new Date(Math.min(...startDatesAsObjects.map(d => d.getTime())));
+    const latestEndDate = new Date(Math.max(...endDatesAsObjects.map(d => d.getTime())));
+    
+    // Convert back to string format
+    const earliestStart = earliestStartDate.toISOString().split('T')[0];
+    const latestEnd = latestEndDate.toISOString().split('T')[0];
+    
+    console.log('Calculated date range:', {
+      earliestStart,
+      latestEnd,
+      startDates: selectedDateRanges.map(r => r.startDate),
+      endDates: selectedDateRanges.map(r => r.endDate)
+    });
     
     onDateRangeChange(earliestStart, latestEnd);
   };
