@@ -8,7 +8,7 @@ interface PageTitleProps {
 
 export const PageTitle = ({ title, description }: PageTitleProps) => {
   return (
-    <div className="py-4 px-6 bg-secondary/10 border-b">
+    <div className="py-4 px-6 bg-secondary/10 border-b sticky top-0 z-10">
       <h1 className="text-2xl font-semibold text-hotel-navy">{title}</h1>
       {description && <p className="text-gray-500 mt-1">{description}</p>}
     </div>
