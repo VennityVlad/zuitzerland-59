@@ -1,5 +1,6 @@
 
 import { usePrivy } from "@privy-io/react-auth";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,12 +8,38 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, FileText, LogOut, CalendarDays, ChevronDown } from "lucide-react";
+import { User, FileText, LogOut, CalendarDays, ChevronDown, Percent } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const NavMenu = () => {
-  const { logout } = usePrivy();
+  const { logout, user } = usePrivy();
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        setIsAdmin(data?.role === 'admin');
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    if (user?.id) {
+      fetchProfile();
+    }
+  }, [user?.id]);
 
   return (
     <div className="fixed top-4 left-4 z-50">
@@ -40,6 +67,12 @@ const NavMenu = () => {
             <FileText className="mr-2 h-4 w-4" />
             Invoices
           </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem onClick={() => navigate("/discounts")} className="cursor-pointer">
+              <Percent className="mr-2 h-4 w-4" />
+              Discounts
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-red-600">
             <LogOut className="mr-2 h-4 w-4" />
             Log out

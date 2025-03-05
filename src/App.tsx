@@ -12,6 +12,7 @@ import SupabaseSignIn from "./pages/SupabaseSignIn";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Invoices from "./pages/Invoices";
+import Discounts from "./pages/Discounts";
 import Book from "./pages/Book";
 import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
@@ -174,6 +175,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <Invoices />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/discounts"
+                  element={
+                    <ProtectedRoute>
+                      <Discounts />
                     </ProtectedRoute>
                   }
                 />
