@@ -84,6 +84,8 @@ const Discounts = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      console.log("Fetched discounts:", data);
       setDiscounts(data || []);
     } catch (error) {
       console.error('Error fetching discounts:', error);
@@ -100,7 +102,8 @@ const Discounts = () => {
   const handleEdit = (id: string) => {
     const discount = discounts.find(d => d.id === id);
     if (discount) {
-      setEditValues(discount);
+      console.log("Editing discount:", discount);
+      setEditValues({...discount});
       setIsEditing(id);
     }
   };
@@ -112,25 +115,62 @@ const Discounts = () => {
 
   const handleSaveEdit = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('discounts')
-        .update({
-          percentage: editValues.percentage,
-          active: editValues.active,
-          is_role_based: editValues.is_role_based,
-          start_date: editValues.start_date,
-          end_date: editValues.end_date,
-          discountName: editValues.discountName
-        })
-        .eq('id', id);
+      console.log("Saving edited discount:", id, editValues);
+      
+      // Make sure we have all required fields
+      if (!editValues.percentage || editValues.percentage <= 0 || editValues.percentage > 100) {
+        toast({
+          title: "Error",
+          description: "Percentage must be between 1 and 100",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      if (error) throw error;
+      if (!editValues.discountName) {
+        toast({
+          title: "Error",
+          description: "Discount name is required",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const updateData = {
+        percentage: editValues.percentage,
+        active: editValues.active,
+        is_role_based: editValues.is_role_based,
+        start_date: editValues.start_date,
+        end_date: editValues.end_date,
+        discountName: editValues.discountName
+      };
+
+      console.log("Sending update to Supabase:", updateData);
+      
+      const { data, error } = await supabase
+        .from('discounts')
+        .update(updateData)
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
+
+      console.log("Update response from Supabase:", data);
 
       toast({
         title: "Success",
         description: "Discount updated successfully",
       });
       
+      // Update the discount in the local state to reflect changes immediately
+      setDiscounts(prevDiscounts => 
+        prevDiscounts.map(d => d.id === id ? { ...d, ...updateData } : d)
+      );
+      
+      // Refresh the discounts list to ensure we have the latest data
       fetchDiscounts();
       setIsEditing(null);
       setEditValues({});
@@ -138,7 +178,7 @@ const Discounts = () => {
       console.error('Error updating discount:', error);
       toast({
         title: "Error",
-        description: "Failed to update discount",
+        description: "Failed to update discount: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
     }
@@ -164,7 +204,9 @@ const Discounts = () => {
         return;
       }
 
-      const { error } = await supabase
+      console.log("Creating new discount:", newDiscount);
+
+      const { data, error } = await supabase
         .from('discounts')
         .insert({
           percentage: newDiscount.percentage,
@@ -173,9 +215,15 @@ const Discounts = () => {
           start_date: newDiscount.start_date,
           end_date: newDiscount.end_date,
           discountName: newDiscount.discountName
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
+
+      console.log("Insert response from Supabase:", data);
 
       toast({
         title: "Success",
@@ -196,7 +244,7 @@ const Discounts = () => {
       console.error('Error creating discount:', error);
       toast({
         title: "Error",
-        description: "Failed to create discount",
+        description: "Failed to create discount: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
     }
@@ -204,6 +252,8 @@ const Discounts = () => {
 
   const handleDeleteDiscount = async (id: string) => {
     try {
+      console.log("Deleting discount:", id);
+      
       const { error } = await supabase
         .from('discounts')
         .delete()
@@ -216,7 +266,8 @@ const Discounts = () => {
         description: "Discount deleted successfully",
       });
       
-      fetchDiscounts();
+      // Update the local state to reflect the deletion immediately
+      setDiscounts(prevDiscounts => prevDiscounts.filter(d => d.id !== id));
     } catch (error) {
       console.error('Error deleting discount:', error);
       toast({
