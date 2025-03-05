@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { DatePicker } from "@/components/ui/calendar";
-import { Calendar } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -304,12 +304,12 @@ const Discounts = () => {
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
                         >
-                          <Calendar className="mr-2 h-4 w-4" />
+                          <CalendarIcon className="mr-2 h-4 w-4" />
                           {newDiscount.start_date ? format(parseISO(newDiscount.start_date), 'PPP') : <span>Pick a date</span>}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <DatePicker
+                        <Calendar
                           mode="single"
                           selected={newDiscount.start_date ? parseISO(newDiscount.start_date) : undefined}
                           onSelect={(date) => date && setNewDiscount({...newDiscount, start_date: format(date, 'yyyy-MM-dd')})}
@@ -326,12 +326,12 @@ const Discounts = () => {
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
                         >
-                          <Calendar className="mr-2 h-4 w-4" />
+                          <CalendarIcon className="mr-2 h-4 w-4" />
                           {newDiscount.end_date ? format(parseISO(newDiscount.end_date), 'PPP') : <span>Pick a date</span>}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <DatePicker
+                        <Calendar
                           mode="single"
                           selected={newDiscount.end_date ? parseISO(newDiscount.end_date) : undefined}
                           onSelect={(date) => date && setNewDiscount({...newDiscount, end_date: format(date, 'yyyy-MM-dd')})}
@@ -411,12 +411,12 @@ const Discounts = () => {
                               variant="outline"
                               className="w-full justify-start text-left font-normal"
                             >
-                              <Calendar className="mr-2 h-4 w-4" />
+                              <CalendarIcon className="mr-2 h-4 w-4" />
                               {editValues.start_date ? format(parseISO(editValues.start_date), 'PPP') : <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
-                            <DatePicker
+                            <Calendar
                               mode="single"
                               selected={editValues.start_date ? parseISO(editValues.start_date) : undefined}
                               onSelect={(date) => date && setEditValues({...editValues, start_date: format(date, 'yyyy-MM-dd')})}
@@ -433,12 +433,12 @@ const Discounts = () => {
                               variant="outline"
                               className="w-full justify-start text-left font-normal"
                             >
-                              <Calendar className="mr-2 h-4 w-4" />
+                              <CalendarIcon className="mr-2 h-4 w-4" />
                               {editValues.end_date ? format(parseISO(editValues.end_date), 'PPP') : <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
-                            <DatePicker
+                            <Calendar
                               mode="single"
                               selected={editValues.end_date ? parseISO(editValues.end_date) : undefined}
                               onSelect={(date) => date && setEditValues({...editValues, end_date: format(date, 'yyyy-MM-dd')})}

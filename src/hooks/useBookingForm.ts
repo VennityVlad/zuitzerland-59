@@ -166,10 +166,10 @@ export const useBookingForm = () => {
             return {
               amount: (basePrice * discount.percentage) / 100,
               isRoleBasedDiscount: true,
-              name: discount.month ? `${discount.month.charAt(0).toUpperCase() + discount.month.slice(1)} Special` : 
+              name: discount.discountName || 
                     `Special Discount (${format(new Date(discount.start_date), 'MMM d')} - ${format(new Date(discount.end_date), 'MMM d')})`,
               percentage: discount.percentage,
-              month: discount.month
+              month: null
             };
           }
         }
@@ -201,10 +201,10 @@ export const useBookingForm = () => {
         return {
           amount: (basePrice * discount.percentage) / 100,
           isRoleBasedDiscount: false,
-          name: discount.month ? `${discount.month.charAt(0).toUpperCase() + discount.month.slice(1)} Special` : 
+          name: discount.discountName || 
                 `Special Discount (${format(new Date(discount.start_date), 'MMM d')} - ${format(new Date(discount.end_date), 'MMM d')})`,
           percentage: discount.percentage,
-          month: discount.month
+          month: null
         };
       }
 
