@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, FileText, LogOut, CalendarDays, ChevronDown, Percent } from "lucide-react";
+import { User, FileText, LogOut, CalendarDays, ChevronDown, Percent, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -68,10 +68,16 @@ const NavMenu = () => {
             Invoices
           </DropdownMenuItem>
           {isAdmin && (
-            <DropdownMenuItem onClick={() => navigate("/discounts")} className="cursor-pointer">
-              <Percent className="mr-2 h-4 w-4" />
-              Discounts
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={() => navigate("/discounts")} className="cursor-pointer">
+                <Percent className="mr-2 h-4 w-4" />
+                Discounts
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/room-types")} className="cursor-pointer">
+                <Layers className="mr-2 h-4 w-4" />
+                Room Types
+              </DropdownMenuItem>
+            </>
           )}
           <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-red-600">
             <LogOut className="mr-2 h-4 w-4" />

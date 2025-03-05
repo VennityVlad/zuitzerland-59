@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Invoices from "./pages/Invoices";
 import Discounts from "./pages/Discounts";
+import RoomTypes from "./pages/RoomTypes";
 import Book from "./pages/Book";
 import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
@@ -183,6 +183,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <Discounts />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-types"
+                  element={
+                    <ProtectedRoute>
+                      <RoomTypes />
                     </ProtectedRoute>
                   }
                 />
