@@ -20,14 +20,38 @@ export const useInvoices = (userId: string | undefined, isAdmin: boolean) => {
           return;
         }
 
+        // First get the profile id for the current user
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('privy_id', userId)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          toast({
+            title: "Error",
+            description: "Failed to load user profile.",
+            variant: "destructive",
+          });
+          setInvoices([]);
+          return;
+        }
+
+        if (!profileData && !isAdmin) {
+          console.warn('No profile found for user ID:', userId);
+          setInvoices([]);
+          return;
+        }
+
         // Admin users see all invoices, regular users only see their own
         const query = supabase
           .from('invoices')
           .select('*');
         
-        // If not an admin, filter by user's Privy ID
-        if (!isAdmin) {
-          query.eq('privy_id', userId.toString());
+        // If not an admin, filter by user's profile ID
+        if (!isAdmin && profileData) {
+          query.eq('profile_id', profileData.id);
         }
         
         // Order by created date, newest first
@@ -59,7 +83,7 @@ export const useInvoices = (userId: string | undefined, isAdmin: boolean) => {
       }
     };
 
-    // Only fetch invoices when both userId and isAdmin state are available
+    // Only fetch invoices when userId is available
     if (userId !== undefined) {
       fetchInvoices();
     }

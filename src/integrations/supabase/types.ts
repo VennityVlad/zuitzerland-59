@@ -60,6 +60,7 @@ export type Database = {
           payment_type: string
           price: number
           privy_id: string | null
+          profile_id: string | null
           reminder_count: number | null
           request_invoice_id: string
           room_type: string
@@ -82,6 +83,7 @@ export type Database = {
           payment_type: string
           price: number
           privy_id?: string | null
+          profile_id?: string | null
           reminder_count?: number | null
           request_invoice_id: string
           room_type: string
@@ -104,6 +106,7 @@ export type Database = {
           payment_type?: string
           price?: number
           privy_id?: string | null
+          profile_id?: string | null
           reminder_count?: number | null
           request_invoice_id?: string
           room_type?: string
@@ -116,6 +119,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["auth_user_id"]
+          },
+          {
+            foreignKeyName: "invoices_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }

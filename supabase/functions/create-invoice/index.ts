@@ -42,7 +42,7 @@ serve(async (req) => {
       throw new Error('Invalid request body format');
     }
 
-    const { invoiceData, paymentType, priceAfterDiscount } = body;
+    const { invoiceData, paymentType, priceAfterDiscount, privyId } = body;
     
     if (!invoiceData || !paymentType || typeof priceAfterDiscount !== 'number') {
       console.error('Missing required fields:', { 
@@ -53,10 +53,31 @@ serve(async (req) => {
       throw new Error('Missing required fields in request');
     }
 
+    // Retrieve the profile ID for the user if privyId is provided
+    let profileId = null;
+    if (privyId) {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('privy_id', privyId)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      } else if (profileData) {
+        profileId = profileData.id;
+        console.log('Found profile ID:', profileId);
+      } else {
+        console.log('No profile found for privyId:', privyId);
+      }
+    }
+
     console.log('Request data validation passed:', {
       paymentType,
       priceAfterDiscount,
-      buyerInfo: invoiceData.buyerInfo
+      buyerInfo: invoiceData.buyerInfo,
+      privyId,
+      profileId
     });
 
     // Calculate price with Stripe fee if payment type is fiat
@@ -228,6 +249,33 @@ serve(async (req) => {
       }
     } catch (zapierError) {
       console.error('Error triggering Zapier webhook:', zapierError);
+    }
+    
+    // Store the invoice data in our database with the profile ID
+    try {
+      const { error: dbError } = await supabase.from('invoices').insert({
+        request_invoice_id: onChainInvoice.id,
+        invoice_uid: onChainInvoice.invoiceNumber || crypto.randomUUID(),
+        payment_link: onChainInvoice.invoiceLinks.pay,
+        price: finalPrice,
+        room_type: invoiceData.meta.roomType,
+        checkin: invoiceData.meta.checkin,
+        checkout: invoiceData.meta.checkout,
+        email: invoiceData.buyerInfo.email,
+        first_name: invoiceData.buyerInfo.firstName,
+        last_name: invoiceData.buyerInfo.lastName,
+        due_date: onChainInvoice.dueDate,
+        booking_details: invoiceData,
+        payment_type: paymentType,
+        privy_id: privyId,
+        profile_id: profileId
+      });
+
+      if (dbError) {
+        console.error('Error storing invoice in database:', dbError);
+      }
+    } catch (dbError) {
+      console.error('Exception storing invoice in database:', dbError);
     }
     
     console.log('Sending successful response');

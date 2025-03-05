@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect, useMemo } from "react";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
@@ -23,7 +22,6 @@ const Invoices = () => {
     dateRange: null,
   });
 
-  // Extract unique room types from invoices
   const roomTypes = useMemo(() => {
     const types = new Set<string>();
     invoices.forEach((invoice) => {
@@ -64,12 +62,10 @@ const Invoices = () => {
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter((invoice) => {
-      // Filter by status
       if (filters.status && invoice.status !== filters.status) {
         return false;
       }
 
-      // Filter by name (case insensitive)
       if (filters.name) {
         const fullName = `${invoice.first_name} ${invoice.last_name}`.toLowerCase();
         if (!fullName.includes(filters.name.toLowerCase())) {
@@ -77,17 +73,14 @@ const Invoices = () => {
         }
       }
 
-      // Filter by email (case insensitive)
       if (filters.email && !invoice.email.toLowerCase().includes(filters.email.toLowerCase())) {
         return false;
       }
 
-      // Filter by room type
       if (filters.roomType && invoice.room_type !== filters.roomType) {
         return false;
       }
 
-      // Filter by date range
       if (filters.dateRange) {
         const createdAt = parseISO(invoice.created_at);
         const now = new Date();
@@ -126,7 +119,6 @@ const Invoices = () => {
     window.open(paymentLink, '_blank');
   };
 
-  // Show loading state while checking admin status
   if (isLoading) {
     return (
       <div className="min-h-screen bg-secondary/30 py-12">
