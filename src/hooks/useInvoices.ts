@@ -44,33 +44,40 @@ export const useInvoices = (userId: string | undefined, isAdmin: boolean) => {
           return;
         }
 
-        // Admin users see all invoices, regular users only see their own
-        const query = supabase
-          .from('invoices')
-          .select('*');
+        // Create the query based on user role
+        let query = supabase.from('invoices').select('*');
         
-        // If not an admin, filter by user's profile ID
+        // Non-admin users only see their own invoices
         if (!isAdmin && profileData) {
-          query.eq('profile_id', profileData.id);
+          query = query.eq('profile_id', profileData.id);
         }
         
         // Order by created date, newest first
-        query.order('created_at', { ascending: false });
+        query = query.order('created_at', { ascending: false });
 
         const { data, error } = await query;
 
         if (error) throw error;
         setInvoices(data || []);
 
-        // Update invoice statuses in the background
-        const { error: statusError } = await supabase.functions.invoke('get-invoice-status');
-        if (statusError) throw statusError;
-
-        // Fetch updated data
-        const { data: updatedData, error: fetchError } = await query;
-
-        if (fetchError) throw fetchError;
-        setInvoices(updatedData || []);
+        // Only update invoice statuses if we have invoices to update
+        if (data && data.length > 0) {
+          // Update invoice statuses in the background
+          const { error: statusError } = await supabase.functions.invoke('get-invoice-status');
+          
+          if (statusError) {
+            console.error('Error updating invoice statuses:', statusError);
+          } else {
+            // Fetch updated data only if status update was successful
+            const { data: updatedData, error: fetchError } = await query;
+            
+            if (fetchError) {
+              console.error('Error fetching updated invoices:', fetchError);
+            } else {
+              setInvoices(updatedData || []);
+            }
+          }
+        }
       } catch (error) {
         console.error('Error fetching invoices:', error);
         toast({

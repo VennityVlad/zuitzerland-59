@@ -13,7 +13,6 @@ const Invoices = () => {
   const { user } = usePrivy();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { invoices, isLoading: invoicesLoading } = useInvoices(user?.id, isAdmin);
   const [filters, setFilters] = useState<InvoiceFilters>({
     status: null,
     name: null,
@@ -22,19 +21,12 @@ const Invoices = () => {
     dateRange: null,
   });
 
-  const roomTypes = useMemo(() => {
-    const types = new Set<string>();
-    invoices.forEach((invoice) => {
-      if (invoice.room_type) {
-        types.add(invoice.room_type);
-      }
-    });
-    return Array.from(types);
-  }, [invoices]);
-
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user?.id) return;
+    const checkAdminStatus = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
         const { data, error } = await supabase
@@ -54,11 +46,23 @@ const Invoices = () => {
     };
 
     if (user?.id) {
-      fetchProfile();
+      checkAdminStatus();
     } else {
       setIsLoading(false);
     }
   }, [user?.id]);
+
+  const { invoices, isLoading: invoicesLoading } = useInvoices(user?.id, isAdmin);
+
+  const roomTypes = useMemo(() => {
+    const types = new Set<string>();
+    invoices.forEach((invoice) => {
+      if (invoice.room_type) {
+        types.add(invoice.room_type);
+      }
+    });
+    return Array.from(types);
+  }, [invoices]);
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter((invoice) => {
