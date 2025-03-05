@@ -38,10 +38,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <>
+    <div className="flex min-h-screen bg-secondary/30">
       <NavMenu />
-      {children}
-    </>
+      <div className="flex-1 relative">
+        {children}
+      </div>
+    </div>
   );
 };
 

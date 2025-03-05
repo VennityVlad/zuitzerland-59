@@ -45,3 +45,24 @@
 .logo {
   @apply mb-6 w-full max-w-md mx-auto;
 }
+
+/* Sidebar transition classes */
+.sidebar-transition {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.sidebar-enter {
+  @apply transform translate-x-0;
+}
+
+.sidebar-exit {
+  @apply transform -translate-x-full;
+}
+
+/* Override default styles for pages with sidebar */
+#root {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}

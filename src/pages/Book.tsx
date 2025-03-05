@@ -3,8 +3,8 @@ import BookingForm from "@/components/BookingForm";
 
 const Book = () => {
   return (
-    <div className="min-h-screen bg-secondary/30 py-12">
-      <div className="container max-w-4xl mx-auto px-4">
+    <div className="py-12 px-4 md:px-8">
+      <div className="container max-w-4xl mx-auto">
         <BookingForm />
       </div>
     </div>

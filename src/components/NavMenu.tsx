@@ -8,14 +8,47 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, FileText, LogOut, CalendarDays, ChevronDown, Percent, Layers } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { 
+  User, 
+  FileText, 
+  LogOut, 
+  CalendarDays, 
+  ChevronDown, 
+  Percent, 
+  Layers,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 const NavMenu = () => {
   const { logout, user } = usePrivy();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = useIsMobile();
+  
+  // Auto-collapse sidebar on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    } else {
+      setSidebarOpen(true);
+    }
+  }, [isMobile]);
+
+  // Close sidebar when navigating on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -41,51 +74,189 @@ const NavMenu = () => {
     }
   }, [user?.id]);
 
-  return (
-    <div className="fixed top-4 left-4 z-50">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="lg" className="flex items-center gap-2 p-2">
+  const menuItems = [
+    {
+      label: "Book",
+      icon: <CalendarDays className="h-5 w-5" />,
+      path: "/book",
+    },
+    {
+      label: "Profile",
+      icon: <User className="h-5 w-5" />,
+      path: "/profile",
+    },
+    {
+      label: "Invoices",
+      icon: <FileText className="h-5 w-5" />,
+      path: "/invoices",
+    }
+  ];
+
+  const adminItems = [
+    {
+      label: "Discounts",
+      icon: <Percent className="h-5 w-5" />,
+      path: "/discounts",
+    },
+    {
+      label: "Room Types",
+      icon: <Layers className="h-5 w-5" />,
+      path: "/room-types",
+    }
+  ];
+
+  if (isAdmin) {
+    menuItems.push(...adminItems);
+  }
+
+  const NavItem = ({ item }: { item: { label: string; icon: JSX.Element; path: string } }) => {
+    const isActive = location.pathname === item.path;
+    
+    return (
+      <Button
+        variant="ghost"
+        size="lg"
+        className={cn(
+          "w-full justify-start gap-3 px-3 py-6 text-base font-medium transition-colors",
+          isActive 
+            ? "bg-primary/10 text-primary" 
+            : "text-gray-600 hover:bg-primary/5 hover:text-primary"
+        )}
+        onClick={() => navigate(item.path)}
+      >
+        {item.icon}
+        <span className={cn("flex-1 text-left", !sidebarOpen && "hidden")}>
+          {item.label}
+        </span>
+      </Button>
+    );
+  };
+
+  // Mobile header with hamburger menu
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile hamburger button */}
+        <div className="fixed top-4 left-4 z-50">
+          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            {sidebarOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <div className="flex items-center">
+                <img 
+                  src="/lovable-uploads/e2be13a0-6853-41c8-aa7c-51ab5d5dd119.png" 
+                  alt="Menu Logo" 
+                  className="h-8 w-8 mr-2"
+                />
+                <Menu className="h-6 w-6" />
+              </div>
+            )}
+          </Button>
+        </div>
+
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Mobile sidebar */}
+        <div className={cn(
+          "fixed top-0 left-0 z-40 h-full w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
+          <div className="flex items-center justify-between p-4 border-b">
             <img 
               src="/lovable-uploads/e2be13a0-6853-41c8-aa7c-51ab5d5dd119.png" 
-              alt="Menu Logo" 
-              className="h-8 w-8"
+              alt="Logo" 
+              className="h-10 w-10"
             />
-            <ChevronDown className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <div className="flex flex-col p-3 space-y-1">
+            {menuItems.map((item) => (
+              <NavItem key={item.path} item={item} />
+            ))}
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 p-3 border-t">
+            <Button 
+              variant="ghost" 
+              size="lg"
+              className="w-full justify-start gap-3 px-3 py-6 text-base font-medium text-red-500 hover:bg-red-50 hover:text-red-700"
+              onClick={() => logout()}
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Log out</span>
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Desktop sidebar
+  return (
+    <>
+      <div className={cn(
+        "fixed top-0 left-0 z-40 h-full bg-white shadow-lg transition-all duration-300 ease-in-out",
+        sidebarOpen ? "w-64" : "w-20"
+      )}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <img 
+            src="/lovable-uploads/e2be13a0-6853-41c8-aa7c-51ab5d5dd119.png" 
+            alt="Logo" 
+            className="h-10 w-10"
+          />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-gray-400 hover:text-primary"
+          >
+            {sidebarOpen ? (
+              <ChevronLeft className="h-5 w-5" />
+            ) : (
+              <ChevronRight className="h-5 w-5" />
+            )}
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          <DropdownMenuItem onClick={() => navigate("/book")} className="cursor-pointer">
-            <CalendarDays className="mr-2 h-4 w-4" />
-            Book
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate("/invoices")} className="cursor-pointer">
-            <FileText className="mr-2 h-4 w-4" />
-            Invoices
-          </DropdownMenuItem>
-          {isAdmin && (
-            <>
-              <DropdownMenuItem onClick={() => navigate("/discounts")} className="cursor-pointer">
-                <Percent className="mr-2 h-4 w-4" />
-                Discounts
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/room-types")} className="cursor-pointer">
-                <Layers className="mr-2 h-4 w-4" />
-                Room Types
-              </DropdownMenuItem>
-            </>
-          )}
-          <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-red-600">
-            <LogOut className="mr-2 h-4 w-4" />
-            Log out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+        </div>
+
+        <div className="flex flex-col p-3 space-y-1">
+          {menuItems.map((item) => (
+            <NavItem key={item.path} item={item} />
+          ))}
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 p-3 border-t">
+          <Button 
+            variant="ghost" 
+            size="lg"
+            className={cn(
+              "w-full justify-start gap-3 px-3 py-6 text-base font-medium text-red-500 hover:bg-red-50 hover:text-red-700",
+              !sidebarOpen && "justify-center"
+            )}
+            onClick={() => logout()}
+          >
+            <LogOut className="h-5 w-5" />
+            <span className={cn("flex-1 text-left", !sidebarOpen && "hidden")}>
+              Log out
+            </span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Main content spacer to prevent overlap with sidebar */}
+      <div className={cn(
+        "transition-all duration-300 ease-in-out",
+        sidebarOpen ? "ml-64" : "ml-20"
+      )} />
+    </>
   );
 };
 
