@@ -55,7 +55,9 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     setSelectedRanges(newSelectedRanges);
     console.log('New selected ranges:', newSelectedRanges);
     
+    // Clear the dates when no selections
     if (newSelectedRanges.length === 0) {
+      console.log('No dates selected, clearing date range');
       onDateRangeChange("", "");
       return;
     }

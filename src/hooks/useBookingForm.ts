@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -75,7 +76,7 @@ export const useBookingForm = () => {
     console.log('calculatePrice called with:', { checkin, checkout, roomType });
     
     if (!checkin || !checkout || !roomType) {
-      console.log('Missing required parameters:', { checkin, checkout, roomType });
+      console.log('Missing required parameters for price calculation:', { checkin, checkout, roomType });
       return 0;
     }
     
@@ -347,6 +348,7 @@ export const useBookingForm = () => {
           newData.checkout &&
           newData.roomType
         ) {
+          console.log('Recalculating price due to date or room type change');
           const basePrice = await calculatePrice(
             newData.checkin,
             newData.checkout,
@@ -361,6 +363,12 @@ export const useBookingForm = () => {
           setDiscountMonth(month);
           
           newData.price = basePrice;
+          console.log('Updated price:', basePrice);
+        } else if ((name === "checkin" || name === "checkout") && (!newData.checkin || !newData.checkout)) {
+          // Reset price if either date is cleared
+          console.log('Resetting price due to date being cleared');
+          newData.price = 0;
+          setDiscountAmount(0);
         }
       };
 

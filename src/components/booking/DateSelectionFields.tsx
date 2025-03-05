@@ -1,3 +1,4 @@
+
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,13 +61,24 @@ const DateSelectionFields = ({
   maxDate,
 }: DateSelectionFieldsProps) => {
   const handleDateRangeChange = (startDate: string, endDate: string) => {
+    console.log('DateSelectionFields: handleDateRangeChange:', { startDate, endDate });
+    
+    // Update check-in date
     handleInputChange({
       target: { name: "checkin", value: startDate }
     } as React.ChangeEvent<HTMLInputElement>);
     
+    // Update check-out date
     handleInputChange({
       target: { name: "checkout", value: endDate }
     } as React.ChangeEvent<HTMLInputElement>);
+    
+    // Reset price if dates are cleared
+    if (!startDate || !endDate) {
+      handleInputChange({
+        target: { name: "price", value: "0" }
+      } as React.ChangeEvent<HTMLInputElement>);
+    }
   };
 
   const { data: roomTypeDetails } = useQuery({
