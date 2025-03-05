@@ -15,8 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface UserProfile {
   avatar_url?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
+  username?: string | null;
+  email?: string | null;
 }
 
 export const UserAvatar = () => {
@@ -31,7 +31,7 @@ export const UserAvatar = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('avatar_url, first_name, last_name')
+          .select('avatar_url, username, email')
           .eq('privy_id', user.id)
           .maybeSingle();
           
@@ -48,12 +48,12 @@ export const UserAvatar = () => {
   
   // Get initials for the avatar fallback
   const getInitials = () => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    if (profile?.username) {
+      return profile.username.substring(0, 2).toUpperCase();
     }
     
-    if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
+    if (user?.email?.address) {
+      return user.email.address.substring(0, 2).toUpperCase();
     }
     
     return "U";
