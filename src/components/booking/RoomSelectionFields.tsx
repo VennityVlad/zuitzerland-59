@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -26,7 +27,7 @@ const RoomInfo = () => {
       const { data, error } = await supabase
         .from('room_types')
         .select('*')
-        .order('price_range_min', { ascending: false });  // Changed to descending order
+        .order('price_range_min', { ascending: true });  // Changed to ascending order by minimum price
 
       if (error) throw error;
       return data;
@@ -61,7 +62,7 @@ const getRoomTypes = async () => {
   const { data, error } = await supabase
     .from('room_types')
     .select('code, display_name')
-    .order('price_range_min', { ascending: false });  // Changed to descending order
+    .order('price_range_min', { ascending: true });  // Changed to ascending order by minimum price
 
   if (error) {
     console.error('Error fetching room types:', error);
