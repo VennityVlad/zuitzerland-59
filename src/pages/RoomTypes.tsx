@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DatabaseRoomType } from "@/types/booking";
+import { PageTitle } from "@/components/PageTitle";
 
 interface RoomType {
   id: string;
-  code: string; // Changed from DatabaseRoomType to string to match Supabase response
+  code: string;
   display_name: string;
   description: string | null;
   price_range_min: number | null;
@@ -32,7 +32,7 @@ const RoomTypes = () => {
   const [editValues, setEditValues] = useState<Partial<RoomType>>({});
   const [newRoomType, setNewRoomType] = useState<Partial<RoomType>>({
     display_name: "",
-    code: "", // Changed from DatabaseRoomType to string
+    code: "",
     description: "",
     price_range_min: 0,
     price_range_max: 0,
@@ -117,7 +117,6 @@ const RoomTypes = () => {
     try {
       console.log("Saving edited room type:", id, editValues);
       
-      // Make sure we have all required fields
       if (!editValues.display_name) {
         toast({
           title: "Error",
@@ -165,12 +164,10 @@ const RoomTypes = () => {
         description: "Room type updated successfully",
       });
       
-      // Update the room type in the local state to reflect changes immediately
       setRoomTypes(prevRoomTypes => 
         prevRoomTypes.map(r => r.id === id ? { ...r, ...updateData } : r)
       );
       
-      // Refresh the room types list to ensure we have the latest data
       fetchRoomTypes();
       setIsEditing(null);
       setEditValues({});
@@ -266,7 +263,6 @@ const RoomTypes = () => {
         description: "Room type deleted successfully",
       });
       
-      // Update the local state to reflect the deletion immediately
       setRoomTypes(prevRoomTypes => prevRoomTypes.filter(r => r.id !== id));
     } catch (error) {
       console.error('Error deleting room type:', error);
@@ -280,9 +276,12 @@ const RoomTypes = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-secondary/30 py-12">
-        <div className="container mx-auto px-4">
-          <div className="animate-pulse">Loading...</div>
+      <div className="flex flex-col h-full">
+        <PageTitle title="Room Types" />
+        <div className="py-8 px-4 flex-grow">
+          <div className="container mx-auto">
+            <div className="animate-pulse">Loading...</div>
+          </div>
         </div>
       </div>
     );
@@ -290,11 +289,14 @@ const RoomTypes = () => {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-secondary/30 py-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold text-red-600">Access Denied</h1>
-            <p className="mt-2">You do not have permission to view this page.</p>
+      <div className="flex flex-col h-full">
+        <PageTitle title="Room Types" />
+        <div className="py-8 px-4 flex-grow">
+          <div className="container mx-auto">
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold text-red-600">Access Denied</h1>
+              <p className="mt-2">You do not have permission to view this page.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -302,224 +304,226 @@ const RoomTypes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30 py-12">
-      <div className="container mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold text-hotel-navy">Room Type Management</h1>
-            <Button 
-              onClick={() => setShowNewForm(!showNewForm)}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              {showNewForm ? "Cancel" : "Add New Room Type"}
-            </Button>
-          </div>
+    <div className="flex flex-col h-full">
+      <PageTitle title="Room Type Management" />
+      <div className="py-8 px-4 flex-grow">
+        <div className="container mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
+            <div className="flex justify-end items-center mb-6">
+              <Button 
+                onClick={() => setShowNewForm(!showNewForm)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                {showNewForm ? "Cancel" : "Add New Room Type"}
+              </Button>
+            </div>
 
-          {showNewForm && (
-            <Card className="mb-8 border-dashed border-2 border-blue-300">
-              <CardHeader>
-                <CardTitle>Create New Room Type</CardTitle>
-                <CardDescription>Fill in the details to create a new room type</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="new-name">Room Type Name</Label>
-                    <Input 
-                      id="new-name" 
-                      value={newRoomType.display_name || ''}
-                      onChange={(e) => setNewRoomType({...newRoomType, display_name: e.target.value})}
-                      placeholder="Queen Room"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-code">Room Type Code</Label>
-                    <Input 
-                      id="new-code" 
-                      value={newRoomType.code || ''}
-                      onChange={(e) => setNewRoomType({...newRoomType, code: e.target.value as DatabaseRoomType})}
-                      placeholder="hotel_room_queen"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="new-description">Description</Label>
-                  <Textarea 
-                    id="new-description" 
-                    value={newRoomType.description || ''}
-                    onChange={(e) => setNewRoomType({...newRoomType, description: e.target.value})}
-                    placeholder="Comfortable room with a queen-sized bed..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="new-price-min">Min Price ($)</Label>
-                    <Input 
-                      id="new-price-min" 
-                      type="number"
-                      min={0}
-                      value={newRoomType.price_range_min || 0}
-                      onChange={(e) => setNewRoomType({...newRoomType, price_range_min: Number(e.target.value)})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-price-max">Max Price ($)</Label>
-                    <Input 
-                      id="new-price-max" 
-                      type="number"
-                      min={0}
-                      value={newRoomType.price_range_max || 0}
-                      onChange={(e) => setNewRoomType({...newRoomType, price_range_max: Number(e.target.value)})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-min-stay">Min Stay (days)</Label>
-                    <Input 
-                      id="new-min-stay" 
-                      type="number"
-                      min={1}
-                      value={newRoomType.min_stay_days || 1}
-                      onChange={(e) => setNewRoomType({...newRoomType, min_stay_days: Number(e.target.value)})}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={handleCreateRoomType}>Create Room Type</Button>
-              </CardFooter>
-            </Card>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {roomTypes.map((roomType) => (
-              <Card key={roomType.id} className="border-blue-300">
+            {showNewForm && (
+              <Card className="mb-8 border-dashed border-2 border-blue-300">
                 <CardHeader>
-                  <CardTitle className="flex justify-between items-center">
-                    <span className="truncate">{roomType.display_name}</span>
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                      {roomType.code}
-                    </span>
-                  </CardTitle>
-                  <CardDescription>
-                    {roomType.min_stay_days ? `Min stay: ${roomType.min_stay_days} days` : 'No minimum stay requirement'}
-                  </CardDescription>
+                  <CardTitle>Create New Room Type</CardTitle>
+                  <CardDescription>Fill in the details to create a new room type</CardDescription>
                 </CardHeader>
-                
-                <CardContent>
-                  {isEditing === roomType.id ? (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor={`name-${roomType.id}`}>Room Type Name</Label>
-                        <Input 
-                          id={`name-${roomType.id}`}
-                          value={editValues.display_name || ''}
-                          onChange={(e) => setEditValues({...editValues, display_name: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`code-${roomType.id}`}>Room Type Code</Label>
-                        <Input 
-                          id={`code-${roomType.id}`}
-                          value={editValues.code || ''}
-                          onChange={(e) => setEditValues({...editValues, code: e.target.value as DatabaseRoomType})}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor={`description-${roomType.id}`}>Description</Label>
-                        <Textarea 
-                          id={`description-${roomType.id}`}
-                          value={editValues.description || ''}
-                          onChange={(e) => setEditValues({...editValues, description: e.target.value})}
-                          rows={3}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor={`min-price-${roomType.id}`}>Min Price ($)</Label>
-                          <Input 
-                            id={`min-price-${roomType.id}`}
-                            type="number"
-                            min={0}
-                            value={editValues.price_range_min || 0}
-                            onChange={(e) => setEditValues({...editValues, price_range_min: Number(e.target.value)})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`max-price-${roomType.id}`}>Max Price ($)</Label>
-                          <Input 
-                            id={`max-price-${roomType.id}`}
-                            type="number"
-                            min={0}
-                            value={editValues.price_range_max || 0}
-                            onChange={(e) => setEditValues({...editValues, price_range_max: Number(e.target.value)})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`min-stay-${roomType.id}`}>Min Stay (days)</Label>
-                          <Input 
-                            id={`min-stay-${roomType.id}`}
-                            type="number" 
-                            min={1}
-                            value={editValues.min_stay_days || 1}
-                            onChange={(e) => setEditValues({...editValues, min_stay_days: Number(e.target.value)})}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <div className="text-sm">
-                        {roomType.description || 'No description available'}
-                      </div>
-                      
-                      <div className="flex justify-between items-center mt-4">
-                        <span className="text-sm font-medium">Price Range:</span>
-                        <span className="text-sm">
-                          ${roomType.price_range_min || 0} - ${roomType.price_range_max || 0}
-                        </span>
-                      </div>
+                      <Label htmlFor="new-name">Room Type Name</Label>
+                      <Input 
+                        id="new-name" 
+                        value={newRoomType.display_name || ''}
+                        onChange={(e) => setNewRoomType({...newRoomType, display_name: e.target.value})}
+                        placeholder="Queen Room"
+                      />
                     </div>
-                  )}
+                    <div className="space-y-2">
+                      <Label htmlFor="new-code">Room Type Code</Label>
+                      <Input 
+                        id="new-code" 
+                        value={newRoomType.code || ''}
+                        onChange={(e) => setNewRoomType({...newRoomType, code: e.target.value as DatabaseRoomType})}
+                        placeholder="hotel_room_queen"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="new-description">Description</Label>
+                    <Textarea 
+                      id="new-description" 
+                      value={newRoomType.description || ''}
+                      onChange={(e) => setNewRoomType({...newRoomType, description: e.target.value})}
+                      placeholder="Comfortable room with a queen-sized bed..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-price-min">Min Price ($)</Label>
+                      <Input 
+                        id="new-price-min" 
+                        type="number"
+                        min={0}
+                        value={newRoomType.price_range_min || 0}
+                        onChange={(e) => setNewRoomType({...newRoomType, price_range_min: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-price-max">Max Price ($)</Label>
+                      <Input 
+                        id="new-price-max" 
+                        type="number"
+                        min={0}
+                        value={newRoomType.price_range_max || 0}
+                        onChange={(e) => setNewRoomType({...newRoomType, price_range_max: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-min-stay">Min Stay (days)</Label>
+                      <Input 
+                        id="new-min-stay" 
+                        type="number"
+                        min={1}
+                        value={newRoomType.min_stay_days || 1}
+                        onChange={(e) => setNewRoomType({...newRoomType, min_stay_days: Number(e.target.value)})}
+                      />
+                    </div>
+                  </div>
                 </CardContent>
-                
-                <CardFooter className="flex justify-between">
-                  {isEditing === roomType.id ? (
-                    <>
-                      <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
-                      <Button onClick={() => handleSaveEdit(roomType.id)}>Save</Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => handleEdit(roomType.id)}
-                      >
-                        Edit
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        onClick={() => handleDeleteRoomType(roomType.id)}
-                      >
-                        Delete
-                      </Button>
-                    </>
-                  )}
+                <CardFooter>
+                  <Button onClick={handleCreateRoomType}>Create Room Type</Button>
                 </CardFooter>
               </Card>
-            ))}
-          </div>
+            )}
 
-          {roomTypes.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No room types found. Create your first room type using the button above.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {roomTypes.map((roomType) => (
+                <Card key={roomType.id} className="border-blue-300">
+                  <CardHeader>
+                    <CardTitle className="flex justify-between items-center">
+                      <span className="truncate">{roomType.display_name}</span>
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        {roomType.code}
+                      </span>
+                    </CardTitle>
+                    <CardDescription>
+                      {roomType.min_stay_days ? `Min stay: ${roomType.min_stay_days} days` : 'No minimum stay requirement'}
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    {isEditing === roomType.id ? (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`name-${roomType.id}`}>Room Type Name</Label>
+                          <Input 
+                            id={`name-${roomType.id}`}
+                            value={editValues.display_name || ''}
+                            onChange={(e) => setEditValues({...editValues, display_name: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`code-${roomType.id}`}>Room Type Code</Label>
+                          <Input 
+                            id={`code-${roomType.id}`}
+                            value={editValues.code || ''}
+                            onChange={(e) => setEditValues({...editValues, code: e.target.value as DatabaseRoomType})}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor={`description-${roomType.id}`}>Description</Label>
+                          <Textarea 
+                            id={`description-${roomType.id}`}
+                            value={editValues.description || ''}
+                            onChange={(e) => setEditValues({...editValues, description: e.target.value})}
+                            rows={3}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="space-y-2">
+                            <Label htmlFor={`min-price-${roomType.id}`}>Min Price ($)</Label>
+                            <Input 
+                              id={`min-price-${roomType.id}`}
+                              type="number"
+                              min={0}
+                              value={editValues.price_range_min || 0}
+                              onChange={(e) => setEditValues({...editValues, price_range_min: Number(e.target.value)})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`max-price-${roomType.id}`}>Max Price ($)</Label>
+                            <Input 
+                              id={`max-price-${roomType.id}`}
+                              type="number"
+                              min={0}
+                              value={editValues.price_range_max || 0}
+                              onChange={(e) => setEditValues({...editValues, price_range_max: Number(e.target.value)})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`min-stay-${roomType.id}`}>Min Stay (days)</Label>
+                            <Input 
+                              id={`min-stay-${roomType.id}`}
+                              type="number" 
+                              min={1}
+                              value={editValues.min_stay_days || 1}
+                              onChange={(e) => setEditValues({...editValues, min_stay_days: Number(e.target.value)})}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          {roomType.description || 'No description available'}
+                        </div>
+                        
+                        <div className="flex justify-between items-center mt-4">
+                          <span className="text-sm font-medium">Price Range:</span>
+                          <span className="text-sm">
+                            ${roomType.price_range_min || 0} - ${roomType.price_range_max || 0}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                  
+                  <CardFooter className="flex justify-between">
+                    {isEditing === roomType.id ? (
+                      <>
+                        <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+                        <Button onClick={() => handleSaveEdit(roomType.id)}>Save</Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleEdit(roomType.id)}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          onClick={() => handleDeleteRoomType(roomType.id)}
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    )}
+                  </CardFooter>
+                </Card>
+              ))}
             </div>
-          )}
+
+            {roomTypes.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No room types found. Create your first room type using the button above.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

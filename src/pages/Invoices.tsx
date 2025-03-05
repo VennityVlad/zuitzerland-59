@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect, useMemo } from "react";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { InvoiceFilter, InvoiceFilters } from "@/components/invoices/InvoiceFilter";
 import { Button } from "@/components/ui/button";
 import { parseISO, subDays, subMonths } from "date-fns";
+import { PageTitle } from "@/components/PageTitle";
 
 const Invoices = () => {
   const { user } = usePrivy();
@@ -125,59 +127,59 @@ const Invoices = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-secondary/30 py-12">
-        <div className="container mx-auto px-4">
-          <InvoiceLoader />
+      <div className="flex flex-col h-full">
+        <PageTitle title="Invoices" />
+        <div className="py-8 px-4 flex-grow">
+          <div className="container mx-auto">
+            <InvoiceLoader />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30 py-12">
-      <div className="container mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-hotel-navy">
-              {isAdmin ? 'All Invoices (Admin View)' : 'My Invoices'}
-            </h1>
-          </div>
-          
-          {!invoicesLoading && (
-            <InvoiceFilter 
-              filters={filters} 
-              onFilterChange={handleFilterChange} 
-              onClearFilters={clearFilters} 
-              isAdmin={isAdmin}
-              roomTypes={roomTypes}
-            />
-          )}
-          
-          {invoicesLoading ? (
-            <InvoiceLoader />
-          ) : filteredInvoices.length === 0 ? (
-            filters.status || filters.name || filters.email || filters.roomType || filters.dateRange ? (
-              <div className="text-center py-10">
-                <p className="text-gray-500">No invoices match your filters</p>
-                <Button 
-                  onClick={clearFilters} 
-                  variant="link" 
-                  className="mt-2"
-                >
-                  Clear all filters
-                </Button>
-              </div>
+    <div className="flex flex-col h-full">
+      <PageTitle title={isAdmin ? 'All Invoices (Admin View)' : 'My Invoices'} />
+      <div className="py-8 px-4 flex-grow">
+        <div className="container mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
+            {!invoicesLoading && (
+              <InvoiceFilter 
+                filters={filters} 
+                onFilterChange={handleFilterChange} 
+                onClearFilters={clearFilters} 
+                isAdmin={isAdmin}
+                roomTypes={roomTypes}
+              />
+            )}
+            
+            {invoicesLoading ? (
+              <InvoiceLoader />
+            ) : filteredInvoices.length === 0 ? (
+              filters.status || filters.name || filters.email || filters.roomType || filters.dateRange ? (
+                <div className="text-center py-10">
+                  <p className="text-gray-500">No invoices match your filters</p>
+                  <Button 
+                    onClick={clearFilters} 
+                    variant="link" 
+                    className="mt-2"
+                  >
+                    Clear all filters
+                  </Button>
+                </div>
+              ) : (
+                <NoInvoicesMessage />
+              )
             ) : (
-              <NoInvoicesMessage />
-            )
-          ) : (
-            <InvoiceTable 
-              invoices={filteredInvoices} 
-              isAdmin={isAdmin} 
-              onPaymentClick={handlePaymentClick} 
-              useCardView={true}
-            />
-          )}
+              <InvoiceTable 
+                invoices={filteredInvoices} 
+                isAdmin={isAdmin} 
+                onPaymentClick={handlePaymentClick} 
+                useCardView={true}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

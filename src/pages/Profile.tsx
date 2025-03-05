@@ -11,6 +11,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
+import { PageTitle } from "@/components/PageTitle";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
@@ -210,47 +211,53 @@ const Profile = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-secondary/30 py-12">
-        <div className="container max-w-4xl mx-auto px-4">
-          <div className="animate-pulse">Loading...</div>
+      <div className="flex flex-col h-full">
+        <PageTitle title="Profile" />
+        <div className="py-8 px-4 flex-grow">
+          <div className="container max-w-4xl mx-auto">
+            <div className="animate-pulse">Loading...</div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30 py-12">
-      <div className="container max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="flex items-center gap-6 mb-8">
-            <div className="relative">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={profileData?.avatar_url} />
-                <AvatarFallback>
-                  {profileData?.username?.charAt(0) || profileData?.email?.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <label 
-                className="absolute bottom-0 right-0 p-1 bg-white rounded-full shadow-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                htmlFor="avatar-upload"
-              >
-                <Upload className="h-4 w-4" />
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={uploadAvatar}
-                  disabled={uploading}
-                  className="hidden"
-                />
-              </label>
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-hotel-navy">
-                {profileData?.username || 'Anonymous User'}
-              </h1>
-              <div className="space-y-1">
-                <p className="text-gray-600">{profileData?.email}</p>
+    <div className="flex flex-col h-full">
+      <PageTitle 
+        title="Profile" 
+        description={profileData?.email}
+      />
+      <div className="py-8 px-4 flex-grow">
+        <div className="container max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="flex items-center gap-6 mb-8">
+              <div className="relative">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={profileData?.avatar_url} />
+                  <AvatarFallback>
+                    {profileData?.username?.charAt(0) || profileData?.email?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <label 
+                  className="absolute bottom-0 right-0 p-1 bg-white rounded-full shadow-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                  htmlFor="avatar-upload"
+                >
+                  <Upload className="h-4 w-4" />
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={uploadAvatar}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {profileData?.username || 'Anonymous User'}
+                </h2>
                 {profileData?.role && (
                   <p className="text-sm text-primary font-medium capitalize">
                     {profileData.role.replace(/-/g, ' ')}
@@ -258,50 +265,50 @@ const Profile = () => {
                 )}
               </div>
             </div>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>About</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="Tell us a bit about yourself..."
+                          className="min-h-[100px]"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-hotel-navy hover:bg-hotel-navy/90"
+                >
+                  Save Changes
+                </Button>
+              </form>
+            </Form>
           </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>About</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        {...field} 
-                        placeholder="Tell us a bit about yourself..."
-                        className="min-h-[100px]"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button 
-                type="submit" 
-                className="w-full bg-hotel-navy hover:bg-hotel-navy/90"
-              >
-                Save Changes
-              </Button>
-            </form>
-          </Form>
         </div>
       </div>
     </div>

@@ -179,8 +179,8 @@ const NavMenu = () => {
             ))}
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 p-3 border-t">
-            {/* Profile button moved here */}
+          <div className="absolute bottom-0 left-0 right-0 p-3">
+            {/* Profile button */}
             <NavItem 
               item={{
                 label: "Profile",
@@ -188,6 +188,7 @@ const NavMenu = () => {
                 path: "/profile"
               }} 
             />
+            <div className="border-t my-2"></div>
             <Button 
               variant="ghost" 
               size="lg"
@@ -236,8 +237,8 @@ const NavMenu = () => {
           ))}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t">
-          {/* Profile button moved here */}
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          {/* Profile button */}
           <NavItem 
             item={{
               label: "Profile",
@@ -245,6 +246,7 @@ const NavMenu = () => {
               path: "/profile"
             }} 
           />
+          <div className="border-t my-2"></div>
           <Button 
             variant="ghost" 
             size="lg"
