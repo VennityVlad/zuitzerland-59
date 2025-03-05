@@ -142,10 +142,23 @@ serve(async (req) => {
         }
       ];
 
+    // Create a cleaned up buyer info object without the 'street' property
+    // The API expects address structure but not a separate street property
+    const cleanedBuyerInfo = {
+      ...invoiceData.buyerInfo,
+      // Remove street property if it exists directly in buyerInfo
+    };
+    
+    // Make sure the 'street' property is removed if it exists
+    if ('street' in cleanedBuyerInfo) {
+      delete cleanedBuyerInfo.street;
+    }
+
     // Create the final invoice data with adjusted payment options
     const finalInvoiceData = {
       ...invoiceData,
       paymentOptions,
+      buyerInfo: cleanedBuyerInfo, // Use cleaned buyerInfo without street property
       invoiceItems: [{
         ...invoiceData.invoiceItems[0],
         name: "Zuitzerland reservation",
@@ -229,9 +242,9 @@ serve(async (req) => {
           // Customer details
           customerName: `${invoiceData.buyerInfo.firstName} ${invoiceData.buyerInfo.lastName}`,
           customerEmail: invoiceData.buyerInfo.email,
-          customerAddress: invoiceData.buyerInfo.street,
-          customerCity: invoiceData.buyerInfo.city,
-          customerCountry: invoiceData.buyerInfo.country,
+          customerAddress: invoiceData.buyerInfo.address?.streetAddress || '',
+          customerCity: invoiceData.buyerInfo.address?.city || '',
+          customerCountry: invoiceData.buyerInfo.address?.country || '',
           
           // Booking details
           basePrice: priceDetails.basePrice,

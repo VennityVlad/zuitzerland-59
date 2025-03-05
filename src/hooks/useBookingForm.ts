@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -289,8 +288,7 @@ export const useBookingForm = () => {
           },
           email: bookingData.email,
           firstName: bookingData.firstName,
-          lastName: bookingData.lastName,
-          street: bookingData.address
+          lastName: bookingData.lastName
         },
         paymentTerms: {
           dueDate
