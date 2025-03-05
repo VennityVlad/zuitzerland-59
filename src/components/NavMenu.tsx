@@ -81,11 +81,6 @@ const NavMenu = () => {
       path: "/book",
     },
     {
-      label: "Profile",
-      icon: <User className="h-5 w-5" />,
-      path: "/profile",
-    },
-    {
       label: "Invoices",
       icon: <FileText className="h-5 w-5" />,
       path: "/invoices",
@@ -185,6 +180,14 @@ const NavMenu = () => {
           </div>
 
           <div className="absolute bottom-0 left-0 right-0 p-3 border-t">
+            {/* Profile button moved here */}
+            <NavItem 
+              item={{
+                label: "Profile",
+                icon: <User className="h-5 w-5" />,
+                path: "/profile"
+              }} 
+            />
             <Button 
               variant="ghost" 
               size="lg"
@@ -234,6 +237,14 @@ const NavMenu = () => {
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t">
+          {/* Profile button moved here */}
+          <NavItem 
+            item={{
+              label: "Profile",
+              icon: <User className="h-5 w-5" />,
+              path: "/profile"
+            }} 
+          />
           <Button 
             variant="ghost" 
             size="lg"
