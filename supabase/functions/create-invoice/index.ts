@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
@@ -9,9 +10,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const VAT_RATE = 0.038; // 3.8% VAT rate
-const STRIPE_FEE_RATE = 0.03; // 3% Stripe fee
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -83,23 +81,32 @@ serve(async (req) => {
       profileId
     });
 
-    // Calculate price with Stripe fee if payment type is fiat
-    const priceWithStripeFee = paymentType === 'fiat' 
-      ? priceAfterDiscount * (1 + STRIPE_FEE_RATE)  // Add 3% Stripe fee
-      : priceAfterDiscount;
-
-    // Calculate VAT separately - Request Finance will handle this based on the tax info we provide
-    const vatAmount = priceWithStripeFee * VAT_RATE;
-    
-    // Final price including all fees (for our records)
-    const finalPrice = priceWithStripeFee + vatAmount;
-
-    console.log('Price calculation:', {
-      priceAfterDiscount,
-      priceWithStripeFee,
-      vatAmount,
-      finalPrice
+    // Get the price details from our calculate-price edge function to ensure consistency
+    console.log('Calculating price details using calculate-price edge function');
+    const calculatePriceReq = new Request(`${supabaseUrl}/functions/v1/calculate-price`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`
+      },
+      body: JSON.stringify({
+        checkin: invoiceData.meta.checkin,
+        checkout: invoiceData.meta.checkout,
+        roomType: invoiceData.meta.roomType,
+        paymentType,
+        privyId
+      })
     });
+
+    const calculatePriceRes = await fetch(calculatePriceReq);
+    if (!calculatePriceRes.ok) {
+      const errorText = await calculatePriceRes.text();
+      console.error('Error calculating price:', errorText);
+      throw new Error(`Failed to calculate price: ${errorText}`);
+    }
+
+    const priceDetails = await calculatePriceRes.json();
+    console.log('Price details calculated:', priceDetails);
 
     // Adjust payment options based on payment type
     const paymentOptions = paymentType === 'fiat' ? 
@@ -142,7 +149,7 @@ serve(async (req) => {
       invoiceItems: [{
         ...invoiceData.invoiceItems[0],
         name: "Zuitzerland reservation",
-        unitPrice: `${Math.round(priceWithStripeFee)}00` // Send price with Stripe fee but before VAT
+        unitPrice: `${Math.round(priceDetails.subtotalBeforeVAT)}00` // Send price before VAT but after discounts and fees
       }],
       tags: []
     };
@@ -227,14 +234,17 @@ serve(async (req) => {
           customerCountry: invoiceData.buyerInfo.country,
           
           // Booking details
-          basePrice: priceAfterDiscount,
-          stripeFee: paymentType === 'fiat' ? priceAfterDiscount * STRIPE_FEE_RATE : 0,
-          vatAmount: vatAmount,
-          totalAmount: finalPrice,
+          basePrice: priceDetails.basePrice,
+          discountAmount: priceDetails.discountAmount,
+          priceAfterDiscount: priceDetails.priceAfterDiscount,
+          stripeFee: priceDetails.stripeFee,
+          subtotalBeforeVAT: priceDetails.subtotalBeforeVAT,
+          vatAmount: priceDetails.vatAmount,
+          totalAmount: priceDetails.totalAmount,
           checkinDate: invoiceData.meta.checkin,
           checkoutDate: invoiceData.meta.checkout,
           roomType: invoiceData.meta.roomType,
-          numberOfNights: Math.ceil((new Date(invoiceData.meta.checkout).getTime() - new Date(invoiceData.meta.checkin).getTime()) / (1000 * 60 * 60 * 24)),
+          numberOfNights: priceDetails.days,
           
           // Payment details
           paymentType: paymentType,
@@ -260,7 +270,7 @@ serve(async (req) => {
         request_invoice_id: onChainInvoice.id,
         invoice_uid: onChainInvoice.invoiceNumber || crypto.randomUUID(),
         payment_link: onChainInvoice.invoiceLinks.pay,
-        price: finalPrice,
+        price: priceDetails.totalAmount,
         room_type: invoiceData.meta.roomType,
         checkin: invoiceData.meta.checkin,
         checkout: invoiceData.meta.checkout,
@@ -270,13 +280,7 @@ serve(async (req) => {
         due_date: onChainInvoice.dueDate,
         booking_details: {
           ...invoiceData,
-          priceCalculation: {
-            priceAfterDiscount,
-            stripeFee: paymentType === 'fiat' ? priceAfterDiscount * STRIPE_FEE_RATE : 0,
-            priceWithStripeFee,
-            vatAmount,
-            finalPrice
-          }
+          priceCalculation: priceDetails
         },
         payment_type: paymentType,
         privy_id: privyId,

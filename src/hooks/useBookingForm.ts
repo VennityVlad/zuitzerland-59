@@ -1,14 +1,12 @@
+
 import { useState, useEffect } from "react";
-import { format, addDays, differenceInDays, parse } from "date-fns";
+import { format, addDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { BookingFormData } from "@/types/booking";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
-
-const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
-const STRIPE_FEE_RATE = 0.03; // 3% Stripe fee for credit card payments
 
 export const useBookingForm = () => {
   const { toast } = useToast();
@@ -61,174 +59,38 @@ export const useBookingForm = () => {
       console.log('Missing required parameters:', { checkin, checkout, roomType });
       return 0;
     }
-    
-    const startDate = parse(checkin, 'yyyy-MM-dd', new Date());
-    const endDate = parse(checkout, 'yyyy-MM-dd', new Date());
-    const days = differenceInDays(endDate, startDate);
-    
-    console.log('Calculated stay duration (days):', days);
-    
-    if (days <= 0) {
-      console.log('Invalid date range - days <= 0');
-      return 0;
-    }
 
     try {
-      const { data: roomData, error: roomError } = await supabase
-        .from('room_types')
-        .select('code')
-        .eq('code', roomType)
-        .single();
-
-      if (roomError || !roomData) {
-        console.error('Error fetching room code:', roomError);
-        return 0;
-      }
-
-      const { data: prices, error } = await supabase
-        .from('prices')
-        .select('*')
-        .eq('room_code', roomData.code)
-        .lte('duration', days)
-        .order('duration', { ascending: false })
-        .limit(1);
+      // Call the edge function for price calculation
+      const { data: priceDetails, error } = await supabase.functions.invoke('calculate-price', {
+        body: { 
+          checkin, 
+          checkout, 
+          roomType,
+          paymentType: formData.paymentType,
+          privyId: user?.id
+        }
+      });
 
       if (error) {
-        console.error('Supabase query error:', error);
+        console.error('Error from calculate-price edge function:', error);
         return 0;
       }
 
-      if (!prices || prices.length === 0) {
-        console.error('No applicable price found for:', {
-          room_code: roomData.code,
-          duration: days
-        });
-        return 0;
-      }
-
-      const applicablePrice = prices[0];
-      console.log('Found applicable price:', applicablePrice);
+      console.log('Received price details from edge function:', priceDetails);
       
-      const totalPrice = applicablePrice.price * days;
-      console.log('Calculated total price:', { 
-        dailyRate: applicablePrice.price,
-        days,
-        totalPrice 
-      });
+      // Update discount-related state
+      setDiscountAmount(priceDetails.discountAmount);
+      setIsRoleBasedDiscount(priceDetails.isRoleBasedDiscount);
+      setDiscountName(priceDetails.discountName);
+      setDiscountPercentage(priceDetails.discountPercentage);
+      setDiscountMonth(priceDetails.discountMonth);
       
-      return totalPrice;
+      return priceDetails.basePrice;
     } catch (error) {
       console.error('Error in calculatePrice:', error);
       return 0;
     }
-  };
-
-  const calculateDiscount = async (basePrice: number, checkinDate: string) => {
-    try {
-      const currentDate = format(new Date(), 'yyyy-MM-dd');
-      console.log('Calculating discount based on current date:', currentDate);
-      
-      if (user?.id) {
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('privy_id', user.id)
-          .single();
-
-        const isEligibleRole = userProfile?.role === 'co-designer' || userProfile?.role === 'co-curator';
-        console.log('User has eligible role for discount:', isEligibleRole);
-
-        if (isEligibleRole) {
-          const { data: discounts, error } = await supabase
-            .from('discounts')
-            .select('*')
-            .eq('active', true)
-            .eq('is_role_based', true)
-            .lte('start_date', currentDate)
-            .gte('end_date', currentDate);
-
-          if (error) {
-            console.error('Error fetching role-based discounts:', error);
-            return { 
-              amount: 0, 
-              isRoleBasedDiscount: false, 
-              name: null, 
-              percentage: 0, 
-              month: null 
-            };
-          }
-
-          if (discounts && discounts.length > 0) {
-            const discount = discounts[0];
-            console.log('Found applicable role-based discount:', discount);
-            
-            return {
-              amount: (basePrice * discount.percentage) / 100,
-              isRoleBasedDiscount: true,
-              name: discount.discountName || 
-                    `Special Discount (${format(new Date(discount.start_date), 'MMM d')} - ${format(new Date(discount.end_date), 'MMM d')})`,
-              percentage: discount.percentage,
-              month: null
-            };
-          }
-        }
-      }
-
-      const { data: regularDiscounts, error } = await supabase
-        .from('discounts')
-        .select('*')
-        .eq('active', true)
-        .eq('is_role_based', false)
-        .lte('start_date', currentDate)
-        .gte('end_date', currentDate);
-
-      if (error) {
-        console.error('Error fetching regular discounts:', error);
-        return { 
-          amount: 0, 
-          isRoleBasedDiscount: false, 
-          name: null, 
-          percentage: 0, 
-          month: null 
-        };
-      }
-
-      if (regularDiscounts && regularDiscounts.length > 0) {
-        const discount = regularDiscounts[0];
-        console.log('Found applicable regular discount:', discount);
-        
-        return {
-          amount: (basePrice * discount.percentage) / 100,
-          isRoleBasedDiscount: false,
-          name: discount.discountName || 
-                `Special Discount (${format(new Date(discount.start_date), 'MMM d')} - ${format(new Date(discount.end_date), 'MMM d')})`,
-          percentage: discount.percentage,
-          month: null
-        };
-      }
-
-      console.log('No applicable discounts found');
-      return { 
-        amount: 0, 
-        isRoleBasedDiscount: false, 
-        name: null, 
-        percentage: 0, 
-        month: null 
-      };
-    } catch (error) {
-      console.error('Error calculating discount:', error);
-      return { 
-        amount: 0, 
-        isRoleBasedDiscount: false, 
-        name: null, 
-        percentage: 0, 
-        month: null 
-      };
-    }
-  };
-
-  const calculateTaxAmount = (priceWithFees: number): number => {
-    return priceWithFees * VAT_RATE;
   };
 
   const validateEmail = (email: string): boolean => {
@@ -282,7 +144,7 @@ export const useBookingForm = () => {
       try {
         const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
         const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
-        const days = differenceInDays(endDate, startDate);
+        const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
         
         console.log('Calculated stay duration:', {
           startDate,
@@ -325,7 +187,7 @@ export const useBookingForm = () => {
 
       const updatePriceAndDiscount = async () => {
         if (
-          (name === "checkin" || name === "checkout" || name === "roomType") &&
+          (name === "checkin" || name === "checkout" || name === "roomType" || name === "paymentType") &&
           newData.checkin &&
           newData.checkout &&
           newData.roomType
@@ -335,13 +197,6 @@ export const useBookingForm = () => {
             newData.checkout,
             newData.roomType
           );
-          
-          const { amount, isRoleBasedDiscount, name, percentage, month } = await calculateDiscount(basePrice, newData.checkin);
-          setDiscountAmount(amount);
-          setIsRoleBasedDiscount(isRoleBasedDiscount);
-          setDiscountName(name);
-          setDiscountPercentage(percentage || 0);
-          setDiscountMonth(month);
           
           newData.price = basePrice;
         }
@@ -364,6 +219,11 @@ export const useBookingForm = () => {
       ...prev,
       paymentType: value as 'fiat' | 'crypto'
     }));
+
+    // Recalculate price when payment type changes
+    if (formData.checkin && formData.checkout && formData.roomType) {
+      calculatePrice(formData.checkin, formData.checkout, formData.roomType);
+    }
   };
 
   const generateInvoiceNumber = () => {
@@ -381,20 +241,29 @@ export const useBookingForm = () => {
 
   const createInvoice = async (bookingData: BookingFormData) => {
     try {
+      console.log('Creating invoice with booking data:', bookingData);
+      
       const creationDate = new Date().toISOString();
       const dueDate = calculateDueDate();
       const invoiceNumber = generateInvoiceNumber();
 
-      const basePrice = bookingData.price;
-      const priceAfterDiscount = basePrice - discountAmount;
-      
-      const stripeFee = bookingData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
-      
-      const subtotalBeforeVAT = priceAfterDiscount + stripeFee;
-      
-      const taxAmount = calculateTaxAmount(subtotalBeforeVAT);
-      
-      const totalAmount = subtotalBeforeVAT + taxAmount;
+      // Get the latest price calculation from the edge function to ensure consistency
+      const { data: priceDetails, error: priceError } = await supabase.functions.invoke('calculate-price', {
+        body: { 
+          checkin: bookingData.checkin, 
+          checkout: bookingData.checkout, 
+          roomType: bookingData.roomType,
+          paymentType: bookingData.paymentType,
+          privyId: user?.id
+        }
+      });
+
+      if (priceError) {
+        console.error('Error calculating price:', priceError);
+        throw new Error('Failed to calculate price');
+      }
+
+      console.log('Received price details for invoice:', priceDetails);
 
       const invoiceData = {
         creationDate,
@@ -406,7 +275,8 @@ export const useBookingForm = () => {
             tax: {
               type: "percentage",
               amount: "3.8"
-            }
+            },
+            unitPrice: `${Math.round(priceDetails.subtotalBeforeVAT)}00` // Send price before VAT (with Stripe fee if applicable)
           }
         ],
         invoiceNumber,
@@ -419,14 +289,18 @@ export const useBookingForm = () => {
           },
           email: bookingData.email,
           firstName: bookingData.firstName,
-          lastName: bookingData.lastName
+          lastName: bookingData.lastName,
+          street: bookingData.address
         },
         paymentTerms: {
           dueDate
         },
         meta: {
           format: "rnf_invoice",
-          version: "0.0.3"
+          version: "0.0.3",
+          checkin: bookingData.checkin,
+          checkout: bookingData.checkout,
+          roomType: bookingData.roomType
         }
       };
 
@@ -434,7 +308,8 @@ export const useBookingForm = () => {
         body: { 
           invoiceData,
           paymentType: bookingData.paymentType,
-          priceAfterDiscount
+          priceAfterDiscount: priceDetails.priceAfterDiscount,
+          privyId: user?.id
         }
       });
 
@@ -453,7 +328,7 @@ export const useBookingForm = () => {
           invoice_uid: invoiceNumber,
           payment_link: invoiceResponse.paymentLink,
           status: 'pending',
-          price: totalAmount,
+          price: priceDetails.totalAmount,
           payment_type: bookingData.paymentType,
           due_date: dueDate,
           checkin: bookingData.checkin,
@@ -467,14 +342,7 @@ export const useBookingForm = () => {
             city: bookingData.city,
             zip: bookingData.zip,
             country: bookingData.country,
-            basePrice,
-            discountAmount,
-            discountName,
-            stripeFee,
-            subtotalBeforeVAT,
-            taxAmount,
-            totalAmount,
-            isRoleBasedDiscount
+            priceCalculation: priceDetails
           }
         });
 
@@ -493,22 +361,6 @@ export const useBookingForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    const days = differenceInDays(
-      new Date(formData.checkout),
-      new Date(formData.checkin)
-    );
-
-    const validationError = validateMinimumStay(days, formData.roomType);
-    if (validationError) {
-      toast({
-        title: "Validation Error",
-        description: validationError,
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
 
     try {
       const { data: existingInvoices, error: checkError } = await supabase
@@ -588,6 +440,5 @@ export const useBookingForm = () => {
     handleSubmit,
     handleCountryChange,
     handlePaymentTypeChange,
-    calculateTaxAmount,
   };
 };

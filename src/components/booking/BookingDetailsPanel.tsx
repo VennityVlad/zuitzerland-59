@@ -101,21 +101,55 @@ const BookingDetailsPanel = ({
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
+  const { user } = usePrivy();
 
-  // Calculate price after discount
-  const priceAfterDiscount = formData.price - discountAmount;
-  
-  // Calculate Stripe fee if payment method is credit card
-  const stripeFee = formData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
-  
-  // Add Stripe fee to get subtotal before VAT
-  const subtotalBeforeVAT = priceAfterDiscount + stripeFee;
-  
-  // Calculate VAT on the price after Stripe fee
-  const taxAmount = subtotalBeforeVAT * VAT_RATE;
-  
-  // Calculate final total amount
-  const totalAmount = subtotalBeforeVAT + taxAmount;
+  // Get the latest price calculation from the edge function
+  const { data: priceDetails } = useQuery({
+    queryKey: ['bookingPriceDetails', formData.checkin, formData.checkout, formData.roomType, formData.paymentType, user?.id],
+    queryFn: async () => {
+      if (!formData.checkin || !formData.checkout || !formData.roomType) {
+        return {
+          basePrice: formData.price,
+          priceAfterDiscount: formData.price - discountAmount,
+          stripeFee: formData.paymentType === "fiat" ? (formData.price - discountAmount) * STRIPE_FEE_RATE : 0,
+          subtotalBeforeVAT: formData.paymentType === "fiat" 
+            ? (formData.price - discountAmount) * (1 + STRIPE_FEE_RATE) 
+            : (formData.price - discountAmount),
+          vatAmount: formData.paymentType === "fiat" 
+            ? (formData.price - discountAmount) * (1 + STRIPE_FEE_RATE) * VAT_RATE 
+            : (formData.price - discountAmount) * VAT_RATE,
+          totalAmount: formData.paymentType === "fiat" 
+            ? (formData.price - discountAmount) * (1 + STRIPE_FEE_RATE) * (1 + VAT_RATE) 
+            : (formData.price - discountAmount) * (1 + VAT_RATE)
+        };
+      }
+      
+      const { data, error } = await supabase.functions.invoke('calculate-price', {
+        body: { 
+          checkin: formData.checkin, 
+          checkout: formData.checkout, 
+          roomType: formData.roomType,
+          paymentType: formData.paymentType,
+          privyId: user?.id
+        }
+      });
+
+      if (error) {
+        console.error('Error calculating price details:', error);
+        return null;
+      }
+
+      return data;
+    },
+    enabled: Boolean(formData.checkin && formData.checkout && formData.roomType)
+  });
+
+  // If we don't have price details yet, calculate them locally
+  const priceAfterDiscount = priceDetails?.priceAfterDiscount || (formData.price - discountAmount);
+  const stripeFee = priceDetails?.stripeFee || (formData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0);
+  const subtotalBeforeVAT = priceDetails?.subtotalBeforeVAT || (priceAfterDiscount + stripeFee);
+  const taxAmount = priceDetails?.vatAmount || (subtotalBeforeVAT * VAT_RATE);
+  const totalAmount = priceDetails?.totalAmount || (subtotalBeforeVAT + taxAmount);
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
