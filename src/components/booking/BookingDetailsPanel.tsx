@@ -19,8 +19,8 @@ interface BookingDetailsPanelProps {
   discountAmount: number;
   isRoleBasedDiscount: boolean;
   discountName: string | null;
-  discountPercentage?: number; // Add discountPercentage prop
-  discountMonth?: string | null; // Add discountMonth prop
+  discountPercentage?: number;
+  discountMonth?: string | null;
 }
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
@@ -96,8 +96,8 @@ const BookingDetailsPanel = ({
   discountAmount,
   isRoleBasedDiscount,
   discountName,
-  discountPercentage = 0, // Default to 0
-  discountMonth = null, // Default to null
+  discountPercentage = 0,
+  discountMonth = null,
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);

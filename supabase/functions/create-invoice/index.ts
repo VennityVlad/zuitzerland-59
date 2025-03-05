@@ -10,6 +10,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const VAT_RATE = 0.038; // 3.8% VAT rate
+const STRIPE_FEE_RATE = 0.03; // 3% Stripe fee
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -82,11 +85,11 @@ serve(async (req) => {
 
     // Calculate price with Stripe fee if payment type is fiat
     const priceWithStripeFee = paymentType === 'fiat' 
-      ? priceAfterDiscount * 1.03  // Add 3% Stripe fee
+      ? priceAfterDiscount * (1 + STRIPE_FEE_RATE)  // Add 3% Stripe fee
       : priceAfterDiscount;
 
     // Calculate VAT separately - Request Finance will handle this based on the tax info we provide
-    const vatAmount = priceWithStripeFee * 0.038;
+    const vatAmount = priceWithStripeFee * VAT_RATE;
     
     // Final price including all fees (for our records)
     const finalPrice = priceWithStripeFee + vatAmount;
@@ -225,7 +228,7 @@ serve(async (req) => {
           
           // Booking details
           basePrice: priceAfterDiscount,
-          stripeFee: paymentType === 'fiat' ? priceAfterDiscount * 0.03 : 0,
+          stripeFee: paymentType === 'fiat' ? priceAfterDiscount * STRIPE_FEE_RATE : 0,
           vatAmount: vatAmount,
           totalAmount: finalPrice,
           checkinDate: invoiceData.meta.checkin,
@@ -265,7 +268,16 @@ serve(async (req) => {
         first_name: invoiceData.buyerInfo.firstName,
         last_name: invoiceData.buyerInfo.lastName,
         due_date: onChainInvoice.dueDate,
-        booking_details: invoiceData,
+        booking_details: {
+          ...invoiceData,
+          priceCalculation: {
+            priceAfterDiscount,
+            stripeFee: paymentType === 'fiat' ? priceAfterDiscount * STRIPE_FEE_RATE : 0,
+            priceWithStripeFee,
+            vatAmount,
+            finalPrice
+          }
+        },
         payment_type: paymentType,
         privy_id: privyId,
         profile_id: profileId

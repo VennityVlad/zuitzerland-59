@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +8,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
+const STRIPE_FEE_RATE = 0.03; // 3% Stripe fee for credit card payments
 
 export const useBookingForm = () => {
   const { toast } = useToast();
@@ -125,7 +125,6 @@ export const useBookingForm = () => {
 
   const calculateDiscount = async (basePrice: number, checkinDate: string) => {
     try {
-      // Use current date instead of check-in date for discount eligibility
       const currentDate = format(new Date(), 'yyyy-MM-dd');
       console.log('Calculating discount based on current date:', currentDate);
       
@@ -228,8 +227,8 @@ export const useBookingForm = () => {
     }
   };
 
-  const calculateTaxAmount = (basePrice: number): number => {
-    return basePrice * VAT_RATE;
+  const calculateTaxAmount = (priceWithFees: number): number => {
+    return priceWithFees * VAT_RATE;
   };
 
   const validateEmail = (email: string): boolean => {
@@ -388,8 +387,14 @@ export const useBookingForm = () => {
 
       const basePrice = bookingData.price;
       const priceAfterDiscount = basePrice - discountAmount;
-      const taxAmount = calculateTaxAmount(priceAfterDiscount);
-      const totalAmount = priceAfterDiscount + taxAmount;
+      
+      const stripeFee = bookingData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
+      
+      const subtotalBeforeVAT = priceAfterDiscount + stripeFee;
+      
+      const taxAmount = calculateTaxAmount(subtotalBeforeVAT);
+      
+      const totalAmount = subtotalBeforeVAT + taxAmount;
 
       const invoiceData = {
         creationDate,
@@ -465,6 +470,8 @@ export const useBookingForm = () => {
             basePrice,
             discountAmount,
             discountName,
+            stripeFee,
+            subtotalBeforeVAT,
             taxAmount,
             totalAmount,
             isRoleBasedDiscount
