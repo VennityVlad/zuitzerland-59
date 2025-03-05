@@ -1,3 +1,4 @@
+
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import type { BookingFormData } from "@/types/booking";
@@ -115,15 +116,6 @@ const BookingDetailsPanel = ({
   
   // Calculate final total amount
   const totalAmount = subtotalBeforeVAT + taxAmount;
-
-  // Log the current price state for debugging
-  useEffect(() => {
-    console.log('BookingDetailsPanel: Current price state:', {
-      basePrice: formData.price,
-      afterDiscount: priceAfterDiscount,
-      total: totalAmount
-    });
-  }, [formData.price, discountAmount, formData.paymentType]);
 
   useEffect(() => {
     const fetchExchangeRate = async () => {

@@ -7,7 +7,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parse, format } from "date-fns";
-import { useEffect, useCallback } from "react";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -60,29 +59,15 @@ const DateSelectionFields = ({
   minDate,
   maxDate,
 }: DateSelectionFieldsProps) => {
-  const handleDateRangeChange = useCallback((startDate: string, endDate: string) => {
-    console.log('DateSelectionFields: handleDateRangeChange called:', { startDate, endDate });
-    
-    // Update check-in date
+  const handleDateRangeChange = (startDate: string, endDate: string) => {
     handleInputChange({
       target: { name: "checkin", value: startDate }
     } as React.ChangeEvent<HTMLInputElement>);
     
-    // Update check-out date
     handleInputChange({
       target: { name: "checkout", value: endDate }
     } as React.ChangeEvent<HTMLInputElement>);
-    
-    // Reset price if dates are cleared
-    if (!startDate || !endDate) {
-      console.log('DateSelectionFields: Dates cleared, resetting price to 0');
-      setTimeout(() => {
-        handleInputChange({
-          target: { name: "price", value: "0" }
-        } as React.ChangeEvent<HTMLInputElement>);
-      }, 50);
-    }
-  }, [handleInputChange]);
+  };
 
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', formData.roomType],
@@ -124,15 +109,6 @@ const DateSelectionFields = ({
                             formData.roomType && 
                             roomTypeDetails &&
                             !meetsMinimumStay();
-                            
-  useEffect(() => {
-    console.log("DateSelectionFields: Dates or room changed:", {
-      checkin: formData.checkin,
-      checkout: formData.checkout,
-      roomType: formData.roomType,
-      price: formData.price
-    });
-  }, [formData.checkin, formData.checkout, formData.roomType, formData.price]);
 
   return (
     <div className="space-y-6">

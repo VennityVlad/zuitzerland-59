@@ -75,7 +75,7 @@ export const useBookingForm = () => {
     console.log('calculatePrice called with:', { checkin, checkout, roomType });
     
     if (!checkin || !checkout || !roomType) {
-      console.log('Missing required parameters for price calculation:', { checkin, checkout, roomType });
+      console.log('Missing required parameters:', { checkin, checkout, roomType });
       return 0;
     }
     
@@ -337,13 +337,6 @@ export const useBookingForm = () => {
     const { name, value } = e.target;
     console.log('Input changed:', { name, value });
     
-    if (name === "price" && value === "0") {
-      console.log('Direct price reset to 0 detected');
-      setFormData(prev => ({ ...prev, price: 0 }));
-      setDiscountAmount(0);
-      return;
-    }
-    
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
 
@@ -354,7 +347,6 @@ export const useBookingForm = () => {
           newData.checkout &&
           newData.roomType
         ) {
-          console.log('Recalculating price due to date or room type change');
           const basePrice = await calculatePrice(
             newData.checkin,
             newData.checkout,
@@ -368,13 +360,7 @@ export const useBookingForm = () => {
           setDiscountPercentage(percentage || 0);
           setDiscountMonth(month);
           
-          console.log('Setting new price to:', basePrice);
           newData.price = basePrice;
-        } else if ((name === "checkin" || name === "checkout") && (!newData.checkin || !newData.checkout)) {
-          // Reset price if either date is cleared
-          console.log('Resetting price due to date being cleared');
-          newData.price = 0;
-          setDiscountAmount(0);
         }
       };
 
@@ -574,10 +560,6 @@ export const useBookingForm = () => {
     formData.paymentType,
     roomTypeDetails
   ]);
-
-  useEffect(() => {
-    console.log('Price changed in useBookingForm:', formData.price);
-  }, [formData.price]);
 
   return {
     formData,

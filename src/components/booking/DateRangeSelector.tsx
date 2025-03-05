@@ -42,18 +42,25 @@ interface DateRangeSelectorProps {
 const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
   const [selectedRanges, setSelectedRanges] = React.useState<string[]>([]);
 
-  React.useEffect(() => {
-    // This effect handles propagating date changes whenever selectedRanges changes
-    console.log('Selected ranges changed effect:', selectedRanges);
+  const handleCheckboxChange = (rangeId: string, checked: boolean) => {
+    console.log('Checkbox change:', rangeId, checked);
+    let newSelectedRanges: string[];
     
-    // Clear the dates when no selections
-    if (selectedRanges.length === 0) {
-      console.log('No dates selected, clearing date range');
+    if (checked) {
+      newSelectedRanges = [...selectedRanges, rangeId];
+    } else {
+      newSelectedRanges = selectedRanges.filter(id => id !== rangeId);
+    }
+    
+    setSelectedRanges(newSelectedRanges);
+    console.log('New selected ranges:', newSelectedRanges);
+    
+    if (newSelectedRanges.length === 0) {
       onDateRangeChange("", "");
       return;
     }
     
-    const selectedDateRanges = DATE_RANGES.filter(range => selectedRanges.includes(range.id));
+    const selectedDateRanges = DATE_RANGES.filter(range => newSelectedRanges.includes(range.id));
     
     // Extract dates and convert to Date objects for proper comparison
     const startDatesAsObjects = selectedDateRanges.map(range => new Date(range.startDate));
@@ -74,21 +81,7 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
       endDates: selectedDateRanges.map(r => r.endDate)
     });
     
-    // Call the callback with the new date range
     onDateRangeChange(earliestStart, latestEnd);
-  }, [selectedRanges, onDateRangeChange]);
-
-  const handleCheckboxChange = (rangeId: string, checked: boolean) => {
-    console.log('Checkbox change:', rangeId, checked);
-    
-    // Update selectedRanges based on the checkbox change
-    setSelectedRanges(prev => {
-      if (checked) {
-        return [...prev, rangeId];
-      } else {
-        return prev.filter(id => id !== rangeId);
-      }
-    });
   };
 
   const formatDateEuropean = (dateStr: string): string => {
