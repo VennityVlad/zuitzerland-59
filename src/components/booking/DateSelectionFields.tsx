@@ -1,4 +1,3 @@
-
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parse, format } from "date-fns";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -61,7 +60,7 @@ const DateSelectionFields = ({
   minDate,
   maxDate,
 }: DateSelectionFieldsProps) => {
-  const handleDateRangeChange = (startDate: string, endDate: string) => {
+  const handleDateRangeChange = useCallback((startDate: string, endDate: string) => {
     console.log('DateSelectionFields: handleDateRangeChange:', { startDate, endDate });
     
     // Update check-in date
@@ -77,11 +76,13 @@ const DateSelectionFields = ({
     // Reset price if dates are cleared
     if (!startDate || !endDate) {
       console.log('Dates cleared, explicitly resetting price to 0');
-      handleInputChange({
-        target: { name: "price", value: "0" }
-      } as React.ChangeEvent<HTMLInputElement>);
+      setTimeout(() => {
+        handleInputChange({
+          target: { name: "price", value: "0" }
+        } as React.ChangeEvent<HTMLInputElement>);
+      }, 0);
     }
-  };
+  }, [handleInputChange]);
 
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', formData.roomType],
@@ -124,13 +125,13 @@ const DateSelectionFields = ({
                             roomTypeDetails &&
                             !meetsMinimumStay();
                             
-  // Add an effect to ensure price is recalculated when dates change
   useEffect(() => {
     console.log("DateSelectionFields: Dates changed effect triggered", {
       checkin: formData.checkin,
-      checkout: formData.checkout
+      checkout: formData.checkout,
+      roomType: formData.roomType
     });
-  }, [formData.checkin, formData.checkout]);
+  }, [formData.checkin, formData.checkout, formData.roomType]);
 
   return (
     <div className="space-y-6">

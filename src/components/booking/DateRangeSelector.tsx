@@ -42,18 +42,9 @@ interface DateRangeSelectorProps {
 const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
   const [selectedRanges, setSelectedRanges] = React.useState<string[]>([]);
 
-  const handleCheckboxChange = (rangeId: string, checked: boolean) => {
-    console.log('Checkbox change:', rangeId, checked);
-    let newSelectedRanges: string[];
-    
-    if (checked) {
-      newSelectedRanges = [...selectedRanges, rangeId];
-    } else {
-      newSelectedRanges = selectedRanges.filter(id => id !== rangeId);
-    }
-    
-    setSelectedRanges(newSelectedRanges);
-    console.log('New selected ranges:', newSelectedRanges);
+  // Function to calculate and propagate date range changes
+  const updateDateRange = React.useCallback((newSelectedRanges: string[]) => {
+    console.log('Updating date range with selected ranges:', newSelectedRanges);
     
     // Clear the dates when no selections
     if (newSelectedRanges.length === 0) {
@@ -83,13 +74,28 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
       endDates: selectedDateRanges.map(r => r.endDate)
     });
     
-    // Force an immediate state update to ensure UI reflects changes
-    React.useEffect(() => {
-      onDateRangeChange(earliestStart, latestEnd);
-    }, [earliestStart, latestEnd]);
-    
-    // Also call directly to ensure the change is processed right away
+    // Directly call the callback with the new date range
     onDateRangeChange(earliestStart, latestEnd);
+  }, [onDateRangeChange]);
+
+  // Effect to update date range whenever selected ranges change
+  React.useEffect(() => {
+    updateDateRange(selectedRanges);
+  }, [selectedRanges, updateDateRange]);
+
+  const handleCheckboxChange = (rangeId: string, checked: boolean) => {
+    console.log('Checkbox change:', rangeId, checked);
+    
+    let newSelectedRanges: string[];
+    
+    if (checked) {
+      newSelectedRanges = [...selectedRanges, rangeId];
+    } else {
+      newSelectedRanges = selectedRanges.filter(id => id !== rangeId);
+    }
+    
+    setSelectedRanges(newSelectedRanges);
+    console.log('New selected ranges:', newSelectedRanges);
   };
 
   const formatDateEuropean = (dateStr: string): string => {
