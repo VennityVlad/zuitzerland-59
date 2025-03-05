@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +19,8 @@ export const useBookingForm = () => {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [isRoleBasedDiscount, setIsRoleBasedDiscount] = useState(false);
   const [discountName, setDiscountName] = useState<string | null>(null);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [discountMonth, setDiscountMonth] = useState<string | null>(null);
   const [formData, setFormData] = useState<BookingFormData>({
     firstName: "",
     lastName: "",
@@ -35,7 +36,6 @@ export const useBookingForm = () => {
     paymentType: "fiat", // Default to fiat
   });
 
-  // Query to get room type details for minimum stay validation
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', formData.roomType],
     queryFn: async () => {
@@ -73,7 +73,6 @@ export const useBookingForm = () => {
     }
 
     try {
-      // First get the room code from room_types table
       const { data: roomData, error: roomError } = await supabase
         .from('room_types')
         .select('code')
@@ -85,7 +84,6 @@ export const useBookingForm = () => {
         return 0;
       }
 
-      // Get the applicable price based on the duration
       const { data: prices, error } = await supabase
         .from('prices')
         .select('*')
@@ -110,7 +108,6 @@ export const useBookingForm = () => {
       const applicablePrice = prices[0];
       console.log('Found applicable price:', applicablePrice);
       
-      // Calculate total price based on the daily rate and number of days
       const totalPrice = applicablePrice.price * days;
       console.log('Calculated total price:', { 
         dailyRate: applicablePrice.price,
@@ -127,11 +124,9 @@ export const useBookingForm = () => {
 
   const calculateDiscount = async (basePrice: number, checkinDate: string) => {
     try {
-      // Parse the check-in date from string to Date object
       const checkinDateObj = parse(checkinDate, 'yyyy-MM-dd', new Date());
       console.log('Calculating discount for check-in date:', checkinDateObj);
       
-      // First, check if the user has a co-designer or co-curator role
       if (user?.id) {
         const { data: userProfile } = await supabase
           .from('profiles')
@@ -143,7 +138,6 @@ export const useBookingForm = () => {
         console.log('User has eligible role for discount:', isEligibleRole);
 
         if (isEligibleRole) {
-          // Query role-based discounts that are active and applicable to the booking dates
           const { data: discounts, error } = await supabase
             .from('discounts')
             .select('*')
@@ -154,7 +148,13 @@ export const useBookingForm = () => {
 
           if (error) {
             console.error('Error fetching role-based discounts:', error);
-            return { amount: 0, isRoleBasedDiscount: false, name: null };
+            return { 
+              amount: 0, 
+              isRoleBasedDiscount: false, 
+              name: null, 
+              percentage: 0, 
+              month: null 
+            };
           }
 
           if (discounts && discounts.length > 0) {
@@ -165,13 +165,14 @@ export const useBookingForm = () => {
               amount: (basePrice * discount.percentage) / 100,
               isRoleBasedDiscount: true,
               name: discount.month ? `${discount.month.charAt(0).toUpperCase() + discount.month.slice(1)} Special` : 
-                    `Special Discount (${format(new Date(discount.start_date), 'MMM d')} - ${format(new Date(discount.end_date), 'MMM d')})`
+                    `Special Discount (${format(new Date(discount.start_date), 'MMM d')} - ${format(new Date(discount.end_date), 'MMM d')})`,
+              percentage: discount.percentage,
+              month: discount.month
             };
           }
         }
       }
 
-      // If no role-based discount applies, check for regular discounts
       const { data: regularDiscounts, error } = await supabase
         .from('discounts')
         .select('*')
@@ -182,7 +183,13 @@ export const useBookingForm = () => {
 
       if (error) {
         console.error('Error fetching regular discounts:', error);
-        return { amount: 0, isRoleBasedDiscount: false, name: null };
+        return { 
+          amount: 0, 
+          isRoleBasedDiscount: false, 
+          name: null, 
+          percentage: 0, 
+          month: null 
+        };
       }
 
       if (regularDiscounts && regularDiscounts.length > 0) {
@@ -193,15 +200,29 @@ export const useBookingForm = () => {
           amount: (basePrice * discount.percentage) / 100,
           isRoleBasedDiscount: false,
           name: discount.month ? `${discount.month.charAt(0).toUpperCase() + discount.month.slice(1)} Special` : 
-                `Special Discount (${format(new Date(discount.start_date), 'MMM d')} - ${format(new Date(discount.end_date), 'MMM d')})`
+                `Special Discount (${format(new Date(discount.start_date), 'MMM d')} - ${format(new Date(discount.end_date), 'MMM d')})`,
+          percentage: discount.percentage,
+          month: discount.month
         };
       }
 
       console.log('No applicable discounts found');
-      return { amount: 0, isRoleBasedDiscount: false, name: null };
+      return { 
+        amount: 0, 
+        isRoleBasedDiscount: false, 
+        name: null, 
+        percentage: 0, 
+        month: null 
+      };
     } catch (error) {
       console.error('Error calculating discount:', error);
-      return { amount: 0, isRoleBasedDiscount: false, name: null };
+      return { 
+        amount: 0, 
+        isRoleBasedDiscount: false, 
+        name: null, 
+        percentage: 0, 
+        month: null 
+      };
     }
   };
 
@@ -314,10 +335,12 @@ export const useBookingForm = () => {
             newData.roomType
           );
           
-          const { amount, isRoleBasedDiscount, name } = await calculateDiscount(basePrice, newData.checkin);
+          const { amount, isRoleBasedDiscount, name, percentage, month } = await calculateDiscount(basePrice, newData.checkin);
           setDiscountAmount(amount);
           setIsRoleBasedDiscount(isRoleBasedDiscount);
           setDiscountName(name);
+          setDiscountPercentage(percentage || 0);
+          setDiscountMonth(month);
           
           newData.price = basePrice;
         }
@@ -479,7 +502,6 @@ export const useBookingForm = () => {
     }
 
     try {
-      // Check for existing non-cancelled bookings
       const { data: existingInvoices, error: checkError } = await supabase
         .from('invoices')
         .select('*')
@@ -500,7 +522,6 @@ export const useBookingForm = () => {
 
       const invoiceResponse = await createInvoice(formData);
       
-      // Open payment link in new window
       if (invoiceResponse.paymentLink) {
         window.open(invoiceResponse.paymentLink, '_blank');
       }
@@ -552,6 +573,8 @@ export const useBookingForm = () => {
     discountAmount,
     isRoleBasedDiscount,
     discountName,
+    discountPercentage,
+    discountMonth,
     handleInputChange,
     handleSubmit,
     handleCountryChange,

@@ -23,6 +23,8 @@ const BookingForm = () => {
     discountAmount,
     isRoleBasedDiscount,
     discountName,
+    discountPercentage,
+    discountMonth,
     handleInputChange,
     handleSubmit,
     handleCountryChange,
@@ -118,6 +120,8 @@ const BookingForm = () => {
         discountAmount={discountAmount}
         isRoleBasedDiscount={isRoleBasedDiscount}
         discountName={discountName}
+        discountPercentage={discountPercentage}
+        discountMonth={discountMonth}
       />
     </div>
   );

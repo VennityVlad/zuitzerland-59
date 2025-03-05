@@ -19,6 +19,8 @@ interface BookingDetailsPanelProps {
   discountAmount: number;
   isRoleBasedDiscount: boolean;
   discountName: string | null;
+  discountPercentage?: number; // Add discountPercentage prop
+  discountMonth?: string | null; // Add discountMonth prop
 }
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
@@ -94,6 +96,8 @@ const BookingDetailsPanel = ({
   discountAmount,
   isRoleBasedDiscount,
   discountName,
+  discountPercentage = 0, // Default to 0
+  discountMonth = null, // Default to null
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
@@ -195,6 +199,8 @@ const BookingDetailsPanel = ({
             <div className="flex justify-between items-center text-green-600">
               <span>
                 {discountName || (isRoleBasedDiscount ? 'Co-designer Discount' : 'Special Discount')}
+                {discountPercentage > 0 && ` (${discountPercentage}%)`}
+                {discountMonth && ` (${discountMonth})`}
               </span>
               <span>- CHF {discountAmount.toFixed(2)}</span>
             </div>
