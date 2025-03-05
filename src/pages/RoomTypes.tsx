@@ -13,7 +13,7 @@ import { DatabaseRoomType } from "@/types/booking";
 
 interface RoomType {
   id: string;
-  code: DatabaseRoomType;
+  code: string; // Changed from DatabaseRoomType to string to match Supabase response
   display_name: string;
   description: string | null;
   price_range_min: number | null;
@@ -32,7 +32,7 @@ const RoomTypes = () => {
   const [editValues, setEditValues] = useState<Partial<RoomType>>({});
   const [newRoomType, setNewRoomType] = useState<Partial<RoomType>>({
     display_name: "",
-    code: "" as DatabaseRoomType,
+    code: "", // Changed from DatabaseRoomType to string
     description: "",
     price_range_min: 0,
     price_range_max: 0,
@@ -234,7 +234,7 @@ const RoomTypes = () => {
       setShowNewForm(false);
       setNewRoomType({
         display_name: "",
-        code: "" as DatabaseRoomType,
+        code: "",
         description: "",
         price_range_min: 0,
         price_range_max: 0,

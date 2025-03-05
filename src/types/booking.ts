@@ -21,13 +21,15 @@ export interface BookingFormData {
   paymentType: 'fiat' | 'crypto';
 }
 
+// Adding string to the DatabaseRoomType to make it more flexible
 export type DatabaseRoomType = 
   | 'hotel_room_queen'
   | 'apartment_3br_couple'
   | 'apartment_3_4br_queen_single'
   | 'apartment_3_4br_twin_single'
   | 'apartment_2br_twin_single'
-  | 'apartment_2br_triple';
+  | 'apartment_2br_triple'
+  | string; // Added string to make it compatible with dynamic values from database
 
 export interface PriceData {
   room_type: DatabaseRoomType;
