@@ -37,6 +37,23 @@ export const useBookingForm = () => {
     paymentType: "fiat", // Default to fiat
   });
 
+  const { data: userProfile } = useQuery({
+    queryKey: ['userProfile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('privy_id', user.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: Boolean(user?.id)
+  });
+
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', formData.roomType],
     queryFn: async () => {
@@ -381,6 +398,8 @@ export const useBookingForm = () => {
 
   const createInvoice = async (bookingData: BookingFormData) => {
     try {
+      console.log('Creating invoice with user profile data:', userProfile);
+      
       const creationDate = new Date().toISOString();
       const dueDate = calculateDueDate();
       const invoiceNumber = generateInvoiceNumber();
@@ -426,7 +445,12 @@ export const useBookingForm = () => {
         },
         meta: {
           format: "rnf_invoice",
-          version: "0.0.3"
+          version: "0.0.3",
+          booking: {
+            checkin: bookingData.checkin,
+            checkout: bookingData.checkout,
+            roomType: bookingData.roomType
+          }
         }
       };
 
@@ -434,7 +458,8 @@ export const useBookingForm = () => {
         body: { 
           invoiceData,
           paymentType: bookingData.paymentType,
-          priceAfterDiscount
+          priceAfterDiscount,
+          privyId: user?.id
         }
       });
 
@@ -444,45 +469,7 @@ export const useBookingForm = () => {
       }
 
       console.log('Invoice created successfully:', invoiceResponse);
-
-      const { error: dbError } = await supabase
-        .from('invoices')
-        .insert({
-          privy_id: user?.id,
-          request_invoice_id: invoiceResponse.invoiceId,
-          invoice_uid: invoiceNumber,
-          payment_link: invoiceResponse.paymentLink,
-          status: 'pending',
-          price: totalAmount,
-          payment_type: bookingData.paymentType,
-          due_date: dueDate,
-          checkin: bookingData.checkin,
-          checkout: bookingData.checkout,
-          room_type: bookingData.roomType,
-          first_name: bookingData.firstName,
-          last_name: bookingData.lastName,
-          email: bookingData.email,
-          booking_details: {
-            address: bookingData.address,
-            city: bookingData.city,
-            zip: bookingData.zip,
-            country: bookingData.country,
-            basePrice,
-            discountAmount,
-            discountName,
-            stripeFee,
-            subtotalBeforeVAT,
-            taxAmount,
-            totalAmount,
-            isRoleBasedDiscount
-          }
-        });
-
-      if (dbError) {
-        console.error('Error storing invoice in database:', dbError);
-        throw dbError;
-      }
-
+      
       return invoiceResponse;
     } catch (error) {
       console.error('Error in createInvoice:', error);

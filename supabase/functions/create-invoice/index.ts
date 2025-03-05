@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
@@ -59,6 +60,7 @@ serve(async (req) => {
     // Retrieve the profile ID for the user if privyId is provided
     let profileId = null;
     if (privyId) {
+      console.log('Looking up profile with privyId:', privyId);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id')
@@ -135,10 +137,47 @@ serve(async (req) => {
         }
       ];
 
-    // Create the final invoice data with adjusted payment options
+    // Fix any potential properties in buyerInfo that should not exist (like street)
+    const sanitizedBuyerInfo = { ...invoiceData.buyerInfo };
+    if (sanitizedBuyerInfo.street) {
+      // Move street to address.streetAddress if it exists directly on buyerInfo
+      if (!sanitizedBuyerInfo.address) {
+        sanitizedBuyerInfo.address = {
+          streetAddress: sanitizedBuyerInfo.street
+        };
+      } else if (!sanitizedBuyerInfo.address.streetAddress) {
+        sanitizedBuyerInfo.address.streetAddress = sanitizedBuyerInfo.street;
+      }
+      // Remove the top-level street property
+      delete sanitizedBuyerInfo.street;
+    }
+
+    // Ensure meta field is properly formatted with booking info in a nested object
+    const sanitizedMeta = {
+      format: "rnf_invoice",
+      version: "0.0.3",
+      booking: {}
+    };
+
+    // If meta object has booking-related properties, move them to the booking object
+    if (invoiceData.meta) {
+      if (invoiceData.meta.checkin) {
+        sanitizedMeta.booking.checkin = invoiceData.meta.checkin;
+      }
+      if (invoiceData.meta.checkout) {
+        sanitizedMeta.booking.checkout = invoiceData.meta.checkout;
+      }
+      if (invoiceData.meta.roomType) {
+        sanitizedMeta.booking.roomType = invoiceData.meta.roomType;
+      }
+    }
+
+    // Create the final invoice data with adjusted payment options and sanitized properties
     const finalInvoiceData = {
       ...invoiceData,
       paymentOptions,
+      buyerInfo: sanitizedBuyerInfo,
+      meta: sanitizedMeta,
       invoiceItems: [{
         ...invoiceData.invoiceItems[0],
         name: "Zuitzerland reservation",
@@ -222,26 +261,31 @@ serve(async (req) => {
           // Customer details
           customerName: `${invoiceData.buyerInfo.firstName} ${invoiceData.buyerInfo.lastName}`,
           customerEmail: invoiceData.buyerInfo.email,
-          customerAddress: invoiceData.buyerInfo.street,
-          customerCity: invoiceData.buyerInfo.city,
-          customerCountry: invoiceData.buyerInfo.country,
+          customerAddress: sanitizedBuyerInfo.address?.streetAddress || '',
+          customerCity: sanitizedBuyerInfo.address?.city || '',
+          customerCountry: sanitizedBuyerInfo.address?.country || '',
           
           // Booking details
           basePrice: priceAfterDiscount,
           stripeFee: paymentType === 'fiat' ? priceAfterDiscount * STRIPE_FEE_RATE : 0,
           vatAmount: vatAmount,
           totalAmount: finalPrice,
-          checkinDate: invoiceData.meta.checkin,
-          checkoutDate: invoiceData.meta.checkout,
-          roomType: invoiceData.meta.roomType,
-          numberOfNights: Math.ceil((new Date(invoiceData.meta.checkout).getTime() - new Date(invoiceData.meta.checkin).getTime()) / (1000 * 60 * 60 * 24)),
+          checkinDate: sanitizedMeta.booking.checkin || '',
+          checkoutDate: sanitizedMeta.booking.checkout || '',
+          roomType: sanitizedMeta.booking.roomType || '',
+          numberOfNights: sanitizedMeta.booking.checkin && sanitizedMeta.booking.checkout ? 
+            Math.ceil((new Date(sanitizedMeta.booking.checkout).getTime() - new Date(sanitizedMeta.booking.checkin).getTime()) / (1000 * 60 * 60 * 24)) : 0,
           
           // Payment details
           paymentType: paymentType,
           currency: paymentType === 'fiat' ? 'CHF' : 'CRYPTO',
           
           // Timestamp
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          
+          // User identification 
+          privyId: privyId,
+          profileId: profileId
         })
       });
 
@@ -256,14 +300,16 @@ serve(async (req) => {
     
     // Store the invoice data in our database with the profile ID
     try {
+      console.log('Storing invoice data in Supabase with profile_id:', profileId);
+      
       const { error: dbError } = await supabase.from('invoices').insert({
         request_invoice_id: onChainInvoice.id,
         invoice_uid: onChainInvoice.invoiceNumber || crypto.randomUUID(),
         payment_link: onChainInvoice.invoiceLinks.pay,
         price: finalPrice,
-        room_type: invoiceData.meta.roomType,
-        checkin: invoiceData.meta.checkin,
-        checkout: invoiceData.meta.checkout,
+        room_type: sanitizedMeta.booking.roomType || '',
+        checkin: sanitizedMeta.booking.checkin || null,
+        checkout: sanitizedMeta.booking.checkout || null,
         email: invoiceData.buyerInfo.email,
         first_name: invoiceData.buyerInfo.firstName,
         last_name: invoiceData.buyerInfo.lastName,
@@ -285,6 +331,8 @@ serve(async (req) => {
 
       if (dbError) {
         console.error('Error storing invoice in database:', dbError);
+      } else {
+        console.log('Successfully stored invoice in database with profile_id:', profileId);
       }
     } catch (dbError) {
       console.error('Exception storing invoice in database:', dbError);
