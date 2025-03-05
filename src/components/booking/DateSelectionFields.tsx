@@ -61,7 +61,7 @@ const DateSelectionFields = ({
   maxDate,
 }: DateSelectionFieldsProps) => {
   const handleDateRangeChange = useCallback((startDate: string, endDate: string) => {
-    console.log('DateSelectionFields: handleDateRangeChange:', { startDate, endDate });
+    console.log('DateSelectionFields: handleDateRangeChange called:', { startDate, endDate });
     
     // Update check-in date
     handleInputChange({
@@ -75,12 +75,12 @@ const DateSelectionFields = ({
     
     // Reset price if dates are cleared
     if (!startDate || !endDate) {
-      console.log('Dates cleared, explicitly resetting price to 0');
+      console.log('DateSelectionFields: Dates cleared, resetting price to 0');
       setTimeout(() => {
         handleInputChange({
           target: { name: "price", value: "0" }
         } as React.ChangeEvent<HTMLInputElement>);
-      }, 0);
+      }, 50);
     }
   }, [handleInputChange]);
 
@@ -126,12 +126,13 @@ const DateSelectionFields = ({
                             !meetsMinimumStay();
                             
   useEffect(() => {
-    console.log("DateSelectionFields: Dates changed effect triggered", {
+    console.log("DateSelectionFields: Dates or room changed:", {
       checkin: formData.checkin,
       checkout: formData.checkout,
-      roomType: formData.roomType
+      roomType: formData.roomType,
+      price: formData.price
     });
-  }, [formData.checkin, formData.checkout, formData.roomType]);
+  }, [formData.checkin, formData.checkout, formData.roomType, formData.price]);
 
   return (
     <div className="space-y-6">
