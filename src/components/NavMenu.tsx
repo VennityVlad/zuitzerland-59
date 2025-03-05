@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { UserAvatar } from "./UserAvatar";
 
 const NavMenu = () => {
   const { logout, user } = usePrivy();
@@ -34,6 +34,7 @@ const NavMenu = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
   
+  // Auto-collapse sidebar on mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -42,6 +43,7 @@ const NavMenu = () => {
     }
   }, [isMobile]);
 
+  // Close sidebar when navigating on mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -125,9 +127,11 @@ const NavMenu = () => {
     );
   };
 
+  // Mobile header with hamburger menu
   if (isMobile) {
     return (
       <>
+        {/* Mobile hamburger button */}
         <div className="fixed top-4 left-4 z-50">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
             {sidebarOpen ? (
@@ -145,10 +149,7 @@ const NavMenu = () => {
           </Button>
         </div>
 
-        <div className="fixed top-4 right-4 z-50">
-          <UserAvatar />
-        </div>
-
+        {/* Mobile sidebar overlay */}
         {sidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/50 z-40"
@@ -156,6 +157,7 @@ const NavMenu = () => {
           />
         )}
 
+        {/* Mobile sidebar */}
         <div className={cn(
           "fixed top-0 left-0 z-40 h-full w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -178,6 +180,7 @@ const NavMenu = () => {
           </div>
 
           <div className="absolute bottom-0 left-0 right-0 p-3">
+            {/* Profile button */}
             <NavItem 
               item={{
                 label: "Profile",
@@ -201,12 +204,9 @@ const NavMenu = () => {
     );
   }
 
+  // Desktop sidebar
   return (
     <>
-      <div className="fixed top-4 right-4 z-50">
-        <UserAvatar />
-      </div>
-      
       <div className={cn(
         "fixed top-0 left-0 z-40 h-full bg-white shadow-lg transition-all duration-300 ease-in-out",
         sidebarOpen ? "w-64" : "w-20"
@@ -238,6 +238,7 @@ const NavMenu = () => {
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-3">
+          {/* Profile button */}
           <NavItem 
             item={{
               label: "Profile",
@@ -263,6 +264,7 @@ const NavMenu = () => {
         </div>
       </div>
 
+      {/* Main content spacer to prevent overlap with sidebar */}
       <div className={cn(
         "transition-all duration-300 ease-in-out",
         sidebarOpen ? "ml-64" : "ml-20"
