@@ -83,6 +83,12 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
       endDates: selectedDateRanges.map(r => r.endDate)
     });
     
+    // Force an immediate state update to ensure UI reflects changes
+    React.useEffect(() => {
+      onDateRangeChange(earliestStart, latestEnd);
+    }, [earliestStart, latestEnd]);
+    
+    // Also call directly to ensure the change is processed right away
     onDateRangeChange(earliestStart, latestEnd);
   };
 

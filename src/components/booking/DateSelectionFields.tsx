@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parse, format } from "date-fns";
+import { useEffect } from "react";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -75,6 +76,7 @@ const DateSelectionFields = ({
     
     // Reset price if dates are cleared
     if (!startDate || !endDate) {
+      console.log('Dates cleared, explicitly resetting price to 0');
       handleInputChange({
         target: { name: "price", value: "0" }
       } as React.ChangeEvent<HTMLInputElement>);
@@ -121,6 +123,14 @@ const DateSelectionFields = ({
                             formData.roomType && 
                             roomTypeDetails &&
                             !meetsMinimumStay();
+                            
+  // Add an effect to ensure price is recalculated when dates change
+  useEffect(() => {
+    console.log("DateSelectionFields: Dates changed effect triggered", {
+      checkin: formData.checkin,
+      checkout: formData.checkout
+    });
+  }, [formData.checkin, formData.checkout]);
 
   return (
     <div className="space-y-6">

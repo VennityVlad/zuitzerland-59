@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -338,6 +337,13 @@ export const useBookingForm = () => {
     const { name, value } = e.target;
     console.log('Input changed:', { name, value });
     
+    if (name === "price" && value === "0") {
+      console.log('Direct price reset to 0 detected');
+      setFormData(prev => ({ ...prev, price: 0 }));
+      setDiscountAmount(0);
+      return;
+    }
+    
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
 
@@ -362,8 +368,8 @@ export const useBookingForm = () => {
           setDiscountPercentage(percentage || 0);
           setDiscountMonth(month);
           
+          console.log('Setting new price to:', basePrice);
           newData.price = basePrice;
-          console.log('Updated price:', basePrice);
         } else if ((name === "checkin" || name === "checkout") && (!newData.checkin || !newData.checkout)) {
           // Reset price if either date is cleared
           console.log('Resetting price due to date being cleared');
@@ -568,6 +574,10 @@ export const useBookingForm = () => {
     formData.paymentType,
     roomTypeDetails
   ]);
+
+  useEffect(() => {
+    console.log('Price changed in useBookingForm:', formData.price);
+  }, [formData.price]);
 
   return {
     formData,
