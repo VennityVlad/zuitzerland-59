@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -124,8 +125,9 @@ export const useBookingForm = () => {
 
   const calculateDiscount = async (basePrice: number, checkinDate: string) => {
     try {
-      const checkinDateObj = parse(checkinDate, 'yyyy-MM-dd', new Date());
-      console.log('Calculating discount for check-in date:', checkinDateObj);
+      // Use current date instead of check-in date for discount eligibility
+      const currentDate = format(new Date(), 'yyyy-MM-dd');
+      console.log('Calculating discount based on current date:', currentDate);
       
       if (user?.id) {
         const { data: userProfile } = await supabase
@@ -143,8 +145,8 @@ export const useBookingForm = () => {
             .select('*')
             .eq('active', true)
             .eq('is_role_based', true)
-            .lte('start_date', checkinDate)
-            .gte('end_date', checkinDate);
+            .lte('start_date', currentDate)
+            .gte('end_date', currentDate);
 
           if (error) {
             console.error('Error fetching role-based discounts:', error);
@@ -178,8 +180,8 @@ export const useBookingForm = () => {
         .select('*')
         .eq('active', true)
         .eq('is_role_based', false)
-        .lte('start_date', checkinDate)
-        .gte('end_date', checkinDate);
+        .lte('start_date', currentDate)
+        .gte('end_date', currentDate);
 
       if (error) {
         console.error('Error fetching regular discounts:', error);
