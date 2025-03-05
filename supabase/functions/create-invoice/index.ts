@@ -90,9 +90,9 @@ serve(async (req) => {
         'Authorization': `Bearer ${supabaseKey}`
       },
       body: JSON.stringify({
-        checkin: invoiceData.meta.checkin,
-        checkout: invoiceData.meta.checkout,
-        roomType: invoiceData.meta.roomType,
+        checkin: invoiceData.meta.booking.checkin,
+        checkout: invoiceData.meta.booking.checkout,
+        roomType: invoiceData.meta.booking.roomType,
         paymentType,
         privyId
       })
@@ -164,6 +164,16 @@ serve(async (req) => {
         name: "Zuitzerland reservation",
         unitPrice: `${Math.round(priceDetails.subtotalBeforeVAT)}00` // Send price before VAT but after discounts and fees
       }],
+      // The meta field in Request Finance needs to follow specific format requirements
+      meta: {
+        format: "rnf_invoice",
+        version: "0.0.3",
+        booking: {
+          checkin: invoiceData.meta.booking.checkin,
+          checkout: invoiceData.meta.booking.checkout,
+          roomType: invoiceData.meta.booking.roomType
+        }
+      },
       tags: []
     };
 
@@ -254,9 +264,9 @@ serve(async (req) => {
           subtotalBeforeVAT: priceDetails.subtotalBeforeVAT,
           vatAmount: priceDetails.vatAmount,
           totalAmount: priceDetails.totalAmount,
-          checkinDate: invoiceData.meta.checkin,
-          checkoutDate: invoiceData.meta.checkout,
-          roomType: invoiceData.meta.roomType,
+          checkinDate: invoiceData.meta.booking.checkin,
+          checkoutDate: invoiceData.meta.booking.checkout,
+          roomType: invoiceData.meta.booking.roomType,
           numberOfNights: priceDetails.days,
           
           // Payment details
@@ -284,9 +294,9 @@ serve(async (req) => {
         invoice_uid: onChainInvoice.invoiceNumber || crypto.randomUUID(),
         payment_link: onChainInvoice.invoiceLinks.pay,
         price: priceDetails.totalAmount,
-        room_type: invoiceData.meta.roomType,
-        checkin: invoiceData.meta.checkin,
-        checkout: invoiceData.meta.checkout,
+        room_type: invoiceData.meta.booking.roomType,
+        checkin: invoiceData.meta.booking.checkin,
+        checkout: invoiceData.meta.booking.checkout,
         email: invoiceData.buyerInfo.email,
         first_name: invoiceData.buyerInfo.firstName,
         last_name: invoiceData.buyerInfo.lastName,

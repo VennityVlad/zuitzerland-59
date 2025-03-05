@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -296,9 +297,11 @@ export const useBookingForm = () => {
         meta: {
           format: "rnf_invoice",
           version: "0.0.3",
-          checkin: bookingData.checkin,
-          checkout: bookingData.checkout,
-          roomType: bookingData.roomType
+          booking: {
+            checkin: bookingData.checkin,
+            checkout: bookingData.checkout,
+            roomType: bookingData.roomType
+          }
         }
       };
 
