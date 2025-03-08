@@ -157,23 +157,24 @@ serve(async (req) => {
       sanitizedBuyerInfo.address = {};
     }
 
-    // Ensure meta field is properly formatted with booking info in a nested object
+    // Fix the meta field - Remove booking info and just use the required format and version
     const sanitizedMeta = {
       format: "rnf_invoice",
-      version: "0.0.3",
-      booking: {}
+      version: "0.0.3"
     };
 
-    // If meta object has booking-related properties, move them to the booking object
+    // Store booking info separately for our database, but don't send it to Request Finance
+    const bookingInfo = {};
+    
     if (invoiceData.meta) {
       if (invoiceData.meta.checkin) {
-        sanitizedMeta.booking.checkin = invoiceData.meta.checkin;
+        bookingInfo.checkin = invoiceData.meta.checkin;
       }
       if (invoiceData.meta.checkout) {
-        sanitizedMeta.booking.checkout = invoiceData.meta.checkout;
+        bookingInfo.checkout = invoiceData.meta.checkout;
       }
       if (invoiceData.meta.roomType) {
-        sanitizedMeta.booking.roomType = invoiceData.meta.roomType;
+        bookingInfo.roomType = invoiceData.meta.roomType;
       }
     }
 
@@ -200,7 +201,7 @@ serve(async (req) => {
       ...invoiceData,
       paymentOptions,
       buyerInfo: sanitizedBuyerInfo,
-      meta: sanitizedMeta,
+      meta: sanitizedMeta, // Using the corrected meta field without booking info
       invoiceItems,
       tags: []
     };
@@ -291,11 +292,11 @@ serve(async (req) => {
           stripeFee: paymentType === 'fiat' ? priceAfterDiscount * STRIPE_FEE_RATE : 0,
           vatAmount: vatAmount,
           totalAmount: finalPrice,
-          checkinDate: sanitizedMeta.booking.checkin || '',
-          checkoutDate: sanitizedMeta.booking.checkout || '',
-          roomType: sanitizedMeta.booking.roomType || '',
-          numberOfNights: sanitizedMeta.booking.checkin && sanitizedMeta.booking.checkout ? 
-            Math.ceil((new Date(sanitizedMeta.booking.checkout).getTime() - new Date(sanitizedMeta.booking.checkin).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+          checkinDate: bookingInfo.checkin || '',
+          checkoutDate: bookingInfo.checkout || '',
+          roomType: bookingInfo.roomType || '',
+          numberOfNights: bookingInfo.checkin && bookingInfo.checkout ? 
+            Math.ceil((new Date(bookingInfo.checkout).getTime() - new Date(bookingInfo.checkin).getTime()) / (1000 * 60 * 60 * 24)) : 0,
           
           // Payment details
           paymentType: paymentType,
@@ -329,15 +330,16 @@ serve(async (req) => {
         invoice_uid: onChainInvoice.invoiceNumber || crypto.randomUUID(),
         payment_link: onChainInvoice.invoiceLinks.pay,
         price: finalPrice,
-        room_type: sanitizedMeta.booking.roomType || '',
-        checkin: sanitizedMeta.booking.checkin || null,
-        checkout: sanitizedMeta.booking.checkout || null,
+        room_type: bookingInfo.roomType || '',
+        checkin: bookingInfo.checkin || null,
+        checkout: bookingInfo.checkout || null,
         email: sanitizedBuyerInfo.email,
         first_name: sanitizedBuyerInfo.firstName,
         last_name: sanitizedBuyerInfo.lastName,
         due_date: onChainInvoice.dueDate,
         booking_details: {
           ...invoiceData,
+          bookingInfo, // Store the booking info here instead of in meta
           priceCalculation: {
             priceAfterDiscount,
             stripeFee: paymentType === 'fiat' ? priceAfterDiscount * STRIPE_FEE_RATE : 0,

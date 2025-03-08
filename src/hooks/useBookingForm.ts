@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -415,6 +416,7 @@ export const useBookingForm = () => {
       
       const totalAmount = subtotalBeforeVAT + taxAmount;
 
+      // Create invoice data without putting booking info in meta
       const invoiceData = {
         creationDate,
         invoiceItems: [
@@ -445,21 +447,22 @@ export const useBookingForm = () => {
         },
         meta: {
           format: "rnf_invoice",
-          version: "0.0.3",
-          booking: {
-            checkin: bookingData.checkin,
-            checkout: bookingData.checkout,
-            roomType: bookingData.roomType
-          }
+          version: "0.0.3"
         }
       };
 
+      // Send booking info separately in the request body, not as part of meta
       const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-invoice', {
         body: { 
           invoiceData,
           paymentType: bookingData.paymentType,
           priceAfterDiscount,
-          privyId: user?.id
+          privyId: user?.id,
+          bookingInfo: {
+            checkin: bookingData.checkin,
+            checkout: bookingData.checkout,
+            roomType: bookingData.roomType
+          }
         }
       });
 
