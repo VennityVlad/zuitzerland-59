@@ -46,7 +46,7 @@ serve(async (req) => {
       throw new Error('Invalid request body format');
     }
 
-    const { invoiceData, paymentType, priceAfterDiscount, privyId } = body;
+    const { invoiceData, paymentType, priceAfterDiscount, privyId, bookingInfo } = body;
     
     if (!invoiceData || !paymentType || typeof priceAfterDiscount !== 'number') {
       console.error('Missing required fields:', { 
@@ -55,6 +55,12 @@ serve(async (req) => {
         priceAfterDiscount 
       });
       throw new Error('Missing required fields in request');
+    }
+
+    // Ensure we have valid booking info
+    if (!bookingInfo || !bookingInfo.checkin || !bookingInfo.checkout || !bookingInfo.roomType) {
+      console.error('Missing required booking info:', bookingInfo);
+      throw new Error('Missing required booking information');
     }
 
     // Retrieve the profile ID for the user if privyId is provided
@@ -82,7 +88,8 @@ serve(async (req) => {
       priceAfterDiscount,
       buyerInfo: invoiceData.buyerInfo,
       privyId,
-      profileId
+      profileId,
+      bookingInfo
     });
 
     // Calculate price with Stripe fee if payment type is fiat
@@ -162,21 +169,6 @@ serve(async (req) => {
       format: "rnf_invoice",
       version: "0.0.3"
     };
-
-    // Store booking info separately for our database, but don't send it to Request Finance
-    const bookingInfo = {};
-    
-    if (invoiceData.meta) {
-      if (invoiceData.meta.checkin) {
-        bookingInfo.checkin = invoiceData.meta.checkin;
-      }
-      if (invoiceData.meta.checkout) {
-        bookingInfo.checkout = invoiceData.meta.checkout;
-      }
-      if (invoiceData.meta.roomType) {
-        bookingInfo.roomType = invoiceData.meta.roomType;
-      }
-    }
 
     // Ensure invoiceItems has the necessary properties
     const invoiceItems = Array.isArray(invoiceData.invoiceItems) && invoiceData.invoiceItems.length > 0
@@ -325,7 +317,8 @@ serve(async (req) => {
     try {
       console.log('Storing invoice data in Supabase with profile_id:', profileId);
       
-      const { error: dbError } = await supabase.from('invoices').insert({
+      // Insert data into the database - create a detailed object
+      const invoiceInsertData = {
         request_invoice_id: onChainInvoice.id,
         invoice_uid: onChainInvoice.invoiceNumber || crypto.randomUUID(),
         payment_link: onChainInvoice.invoiceLinks.pay,
@@ -351,15 +344,26 @@ serve(async (req) => {
         payment_type: paymentType,
         privy_id: privyId,
         profile_id: profileId
-      });
+      };
+
+      console.log('Invoice insert data prepared:', JSON.stringify(invoiceInsertData, null, 2));
+      
+      const { data: insertedData, error: dbError } = await supabase
+        .from('invoices')
+        .insert(invoiceInsertData)
+        .select()
+        .single();
 
       if (dbError) {
-        console.error('Error storing invoice in database:', dbError);
+        console.error('Error storing invoice in database:', dbError.message);
+        console.error('Full error details:', JSON.stringify(dbError, null, 2));
+        // Continue execution even if storing in the database fails, but log details
       } else {
-        console.log('Successfully stored invoice in database with profile_id:', profileId);
+        console.log('Successfully stored invoice in database with ID:', insertedData.id);
       }
     } catch (dbError) {
       console.error('Exception storing invoice in database:', dbError);
+      console.error('Full error stack:', dbError.stack || 'No stack trace available');
       // Continue execution even if storing in the database fails
     }
     
