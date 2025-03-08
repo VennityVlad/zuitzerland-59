@@ -313,6 +313,16 @@ serve(async (req) => {
       // Continue execution even if the Zapier webhook fails
     }
     
+    // Check if we have a valid due date from the on-chain invoice
+    if (!onChainInvoice.dueDate) {
+      console.error('Missing due_date in onChainInvoice:', onChainInvoice);
+      // Create a default due date 7 days in the future
+      const defaultDueDate = new Date();
+      defaultDueDate.setDate(defaultDueDate.getDate() + 7);
+      onChainInvoice.dueDate = defaultDueDate.toISOString();
+      console.log('Created default due_date:', onChainInvoice.dueDate);
+    }
+    
     // Store the invoice data in our database with the profile ID
     try {
       console.log('Storing invoice data in Supabase with profile_id:', profileId);
@@ -348,19 +358,50 @@ serve(async (req) => {
 
       console.log('Invoice insert data prepared:', JSON.stringify(invoiceInsertData, null, 2));
       
-      const { data: insertedData, error: dbError } = await supabase
-        .from('invoices')
-        .insert(invoiceInsertData)
-        .select()
-        .single();
-
-      if (dbError) {
-        console.error('Error storing invoice in database:', dbError.message);
-        console.error('Full error details:', JSON.stringify(dbError, null, 2));
-        // Continue execution even if storing in the database fails, but log details
-      } else {
-        console.log('Successfully stored invoice in database with ID:', insertedData.id);
+      // Use a different approach to troubleshoot the database insertion
+      try {
+        console.log('Attempting to insert invoice record into database');
+        const insertResult = await supabase
+          .from('invoices')
+          .insert(invoiceInsertData);
+        
+        console.log('Raw insert result:', JSON.stringify(insertResult, null, 2));
+        
+        if (insertResult.error) {
+          console.error('Error inserting invoice:', insertResult.error.message);
+          console.error('Full error details:', JSON.stringify(insertResult.error, null, 2));
+          
+          // Try to diagnose specific issues
+          if (insertResult.error.message.includes('violates not-null constraint')) {
+            console.error('NULL value constraint violation. Checking invoice data for missing required fields:');
+            const nullableFields = Object.entries(invoiceInsertData)
+              .filter(([_, value]) => value === null || value === undefined)
+              .map(([key]) => key);
+            console.error('Fields with null values:', nullableFields);
+          }
+        } else {
+          console.log('Successfully stored invoice in database!');
+          
+          // Double-check that the record was actually inserted
+          const { data: checkData, error: checkError } = await supabase
+            .from('invoices')
+            .select('id')
+            .eq('request_invoice_id', onChainInvoice.id)
+            .maybeSingle();
+            
+          if (checkError) {
+            console.error('Error checking if invoice was inserted:', checkError);
+          } else if (checkData) {
+            console.log('Confirmed invoice was inserted with ID:', checkData.id);
+          } else {
+            console.error('CRITICAL: Invoice appears to be missing after "successful" insert!');
+          }
+        }
+      } catch (insertError) {
+        console.error('Exception during insert operation:', insertError);
+        console.error('Stack trace:', insertError.stack || 'No stack trace available');
       }
+      
     } catch (dbError) {
       console.error('Exception storing invoice in database:', dbError);
       console.error('Full error stack:', dbError.stack || 'No stack trace available');

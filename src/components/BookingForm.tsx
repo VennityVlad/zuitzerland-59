@@ -1,3 +1,4 @@
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useBookingForm } from "@/hooks/useBookingForm";
@@ -13,8 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parse } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 const BookingForm = () => {
+  const { toast } = useToast();
   const {
     formData,
     isLoading,
@@ -82,12 +85,29 @@ const BookingForm = () => {
     return days >= (roomTypeDetails.min_stay_days || 0);
   };
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!termsAccepted || !meetsMinimumStay()) {
+      toast({
+        title: "Error",
+        description: !termsAccepted 
+          ? "Please accept the terms and conditions" 
+          : "Please ensure your stay meets the minimum stay requirements",
+        variant: "destructive"
+      });
       return;
     }
-    handleSubmit(e);
+    
+    try {
+      await handleSubmit(e);
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem submitting your booking. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const renderContactInfo = () => (
