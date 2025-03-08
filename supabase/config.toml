@@ -4,7 +4,7 @@ enable_signup = true
 
 [functions]
 [functions.create-invoice]
-verify_jwt = true
+verify_jwt = false
 
 [functions.create-profile-from-airtable]
 verify_jwt = false

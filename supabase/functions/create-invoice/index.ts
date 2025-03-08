@@ -40,7 +40,7 @@ serve(async (req) => {
     let body;
     try {
       body = await req.json();
-      console.log('Parsed request body successfully');
+      console.log('Parsed request body:', JSON.stringify(body, null, 2));
     } catch (e) {
       console.error('Error parsing request body:', e);
       throw new Error('Invalid request body format');
@@ -152,6 +152,11 @@ serve(async (req) => {
       delete sanitizedBuyerInfo.street;
     }
 
+    // Ensure address exists
+    if (!sanitizedBuyerInfo.address) {
+      sanitizedBuyerInfo.address = {};
+    }
+
     // Ensure meta field is properly formatted with booking info in a nested object
     const sanitizedMeta = {
       format: "rnf_invoice",
@@ -172,17 +177,31 @@ serve(async (req) => {
       }
     }
 
+    // Ensure invoiceItems has the necessary properties
+    const invoiceItems = Array.isArray(invoiceData.invoiceItems) && invoiceData.invoiceItems.length > 0
+      ? [{
+          ...invoiceData.invoiceItems[0],
+          name: "Zuitzerland reservation",
+          unitPrice: `${Math.round(priceWithStripeFee)}00` // Send price with Stripe fee but before VAT
+        }]
+      : [{
+          currency: "CHF",
+          name: "Zuitzerland reservation",
+          quantity: 1,
+          unitPrice: `${Math.round(priceWithStripeFee)}00`,
+          tax: {
+            type: "percentage",
+            amount: "3.8"
+          }
+        }];
+
     // Create the final invoice data with adjusted payment options and sanitized properties
     const finalInvoiceData = {
       ...invoiceData,
       paymentOptions,
       buyerInfo: sanitizedBuyerInfo,
       meta: sanitizedMeta,
-      invoiceItems: [{
-        ...invoiceData.invoiceItems[0],
-        name: "Zuitzerland reservation",
-        unitPrice: `${Math.round(priceWithStripeFee)}00` // Send price with Stripe fee but before VAT
-      }],
+      invoiceItems,
       tags: []
     };
 
@@ -246,7 +265,9 @@ serve(async (req) => {
     // Step 3: Trigger Zapier webhook with enhanced invoice details
     try {
       console.log('Triggering Zapier webhook with enhanced details');
-      const zapierResponse = await fetch('https://hooks.zapier.com/hooks/catch/15806559/2w3ifi2/', {
+      const zapierWebhookUrl = Deno.env.get('ZAPIER_WEBHOOK_URL') || 'https://hooks.zapier.com/hooks/catch/15806559/2w3ifi2/';
+      
+      const zapierResponse = await fetch(zapierWebhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -259,8 +280,8 @@ serve(async (req) => {
           invoiceStatus: onChainInvoice.status,
           
           // Customer details
-          customerName: `${invoiceData.buyerInfo.firstName} ${invoiceData.buyerInfo.lastName}`,
-          customerEmail: invoiceData.buyerInfo.email,
+          customerName: `${sanitizedBuyerInfo.firstName} ${sanitizedBuyerInfo.lastName}`,
+          customerEmail: sanitizedBuyerInfo.email,
           customerAddress: sanitizedBuyerInfo.address?.streetAddress || '',
           customerCity: sanitizedBuyerInfo.address?.city || '',
           customerCountry: sanitizedBuyerInfo.address?.country || '',
@@ -296,6 +317,7 @@ serve(async (req) => {
       }
     } catch (zapierError) {
       console.error('Error triggering Zapier webhook:', zapierError);
+      // Continue execution even if the Zapier webhook fails
     }
     
     // Store the invoice data in our database with the profile ID
@@ -310,9 +332,9 @@ serve(async (req) => {
         room_type: sanitizedMeta.booking.roomType || '',
         checkin: sanitizedMeta.booking.checkin || null,
         checkout: sanitizedMeta.booking.checkout || null,
-        email: invoiceData.buyerInfo.email,
-        first_name: invoiceData.buyerInfo.firstName,
-        last_name: invoiceData.buyerInfo.lastName,
+        email: sanitizedBuyerInfo.email,
+        first_name: sanitizedBuyerInfo.firstName,
+        last_name: sanitizedBuyerInfo.lastName,
         due_date: onChainInvoice.dueDate,
         booking_details: {
           ...invoiceData,
@@ -336,6 +358,7 @@ serve(async (req) => {
       }
     } catch (dbError) {
       console.error('Exception storing invoice in database:', dbError);
+      // Continue execution even if storing in the database fails
     }
     
     console.log('Sending successful response');
