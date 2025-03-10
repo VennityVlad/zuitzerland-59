@@ -100,17 +100,27 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Record that a reminder was sent for this invoice
+    // First, increment the reminder count
+    const { data: newCount, error: rpcError } = await supabase
+      .rpc('increment_reminder_count', { invoice_id: invoiceId });
+
+    if (rpcError) {
+      console.error('Error incrementing reminder count:', rpcError);
+      throw new Error('Failed to increment reminder count');
+    }
+
+    // Then, update the last_reminder_sent timestamp and the reminder_count
     const { error: updateError } = await supabase
       .from('invoices')
       .update({ 
         last_reminder_sent: new Date().toISOString(),
-        reminder_count: supabase.rpc('increment_reminder_count', { invoice_id: invoiceId })
+        reminder_count: newCount
       })
       .eq('id', invoiceId);
 
     if (updateError) {
       console.error('Error updating invoice reminder status:', updateError);
+      throw new Error('Failed to update invoice reminder status');
     }
 
     return new Response(
