@@ -13,7 +13,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 240 56% 42%;
+    --primary: 222 28% 14%;
     --primary-foreground: 210 40% 98%;
     --secondary: 150 55% 88%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -25,7 +25,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 240 56% 42%;
+    --ring: 222 28% 14%;
     --radius: 0.5rem;
   }
 
@@ -65,4 +65,18 @@
   margin: 0;
   padding: 0;
   text-align: left;
+}
+
+/* Button hover effects */
+.btn-hover-grow {
+  @apply transition-transform duration-200 hover:scale-105;
+}
+
+/* Custom button classes */
+.btn-dark {
+  @apply bg-[#1A1F2C] text-white hover:bg-[#1A1F2C]/90 rounded-full;
+}
+
+.btn-light {
+  @apply border-2 border-[#1A1F2C] bg-white text-[#1A1F2C] hover:bg-gray-50 rounded-full;
 }
