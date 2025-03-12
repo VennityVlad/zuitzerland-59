@@ -166,7 +166,7 @@ const BookingForm = () => {
 
   const renderMobileView = () => (
     <Tabs defaultValue="booking" className="w-full" value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10">
         <TabsTrigger value="booking" className="text-sm">
           Booking Details
         </TabsTrigger>
@@ -177,7 +177,7 @@ const BookingForm = () => {
           )}
         </TabsTrigger>
       </TabsList>
-      <div className="mt-6">
+      <div className="mt-4">
         <TabsContent value="booking" className="m-0">
           {renderBookingDetails()}
         </TabsContent>
@@ -216,7 +216,11 @@ const BookingForm = () => {
   return (
     <form
       onSubmit={onSubmit}
-      className="max-w-6xl mx-auto p-8 mt-16 sm:mt-0 space-y-8 bg-white rounded-xl shadow-lg border border-secondary"
+      className={`${
+        isMobile 
+          ? 'p-4 mt-0 space-y-6 bg-white mobile-full-width' 
+          : 'max-w-6xl mx-auto p-8 mt-16 sm:mt-0 space-y-8 bg-white rounded-xl shadow-lg border border-secondary'
+      }`}
     >
       <BookingFormHeader
         title="Complete Your Booking"

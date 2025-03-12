@@ -34,7 +34,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-montserrat;
+    @apply bg-white text-foreground font-montserrat;
   }
 }
 
@@ -70,8 +70,10 @@
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .container {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
   }
   
   input, select, textarea {
@@ -80,6 +82,11 @@
   
   .form-field {
     @apply mb-6; /* More spacing between form fields on mobile */
+  }
+  
+  /* Remove rounded corners on mobile for full-width appearance */
+  .mobile-full-width {
+    @apply rounded-none border-l-0 border-r-0 shadow-none w-full;
   }
 }
 

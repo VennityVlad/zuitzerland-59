@@ -10,11 +10,13 @@ import { InvoiceFilter, InvoiceFilters } from "@/components/invoices/InvoiceFilt
 import { Button } from "@/components/ui/button";
 import { parseISO, subDays, subMonths } from "date-fns";
 import { PageTitle } from "@/components/PageTitle";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Invoices = () => {
   const { user } = usePrivy();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useIsMobile();
   const [filters, setFilters] = useState<InvoiceFilters>({
     status: null,
     name: null,
@@ -129,8 +131,8 @@ const Invoices = () => {
     return (
       <div className="flex flex-col h-full">
         <PageTitle title="Invoices" />
-        <div className="py-8 px-4 flex-grow">
-          <div className="container mx-auto">
+        <div className={`py-4 ${isMobile ? 'px-0' : 'px-4'} flex-grow`}>
+          <div className={`container ${isMobile ? 'mx-0 max-w-none' : 'mx-auto'}`}>
             <InvoiceLoader />
           </div>
         </div>
@@ -141,9 +143,9 @@ const Invoices = () => {
   return (
     <div className="flex flex-col h-full">
       <PageTitle title={isAdmin ? 'All Invoices (Admin View)' : 'My Invoices'} />
-      <div className="py-8 px-4 flex-grow">
-        <div className="container mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
+      <div className={`py-4 ${isMobile ? 'px-0' : 'px-4'} flex-grow`}>
+        <div className={`container ${isMobile ? 'mx-0 max-w-none' : 'mx-auto'}`}>
+          <div className={`bg-white ${isMobile ? 'mobile-full-width' : 'rounded-lg shadow-lg'} p-4 md:p-8`}>
             {!invoicesLoading && (
               <InvoiceFilter 
                 filters={filters} 
