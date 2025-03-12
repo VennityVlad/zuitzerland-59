@@ -1,20 +1,47 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, CalendarDays, FileText, User } from "lucide-react";
+import { Home, CalendarDays, FileText, MoreHorizontal, User, Percent, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePrivy } from "@privy-io/react-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = usePrivy();
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const { logout, user } = usePrivy();
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Close user menu when navigating
+  // Close more menu when navigating
   useEffect(() => {
-    setShowUserMenu(false);
+    setShowMoreMenu(false);
   }, [location.pathname]);
+
+  // Check if user is admin
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        setIsAdmin(data?.role === 'admin');
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    if (user?.id) {
+      fetchProfile();
+    }
+  }, [user?.id]);
 
   const navItems = [
     {
@@ -33,29 +60,60 @@ const BottomNav = () => {
       path: "/invoices",
     },
     {
-      label: "Profile",
-      icon: <User className="h-6 w-6" />,
-      onClick: () => setShowUserMenu(!showUserMenu),
-      path: "/profile",
+      label: "More",
+      icon: <MoreHorizontal className="h-6 w-6" />,
+      onClick: () => setShowMoreMenu(!showMoreMenu),
     },
   ];
 
+  const moreMenuItems = [
+    {
+      label: "Profile",
+      icon: <User className="h-5 w-5" />,
+      path: "/profile",
+    }
+  ];
+
+  // Add admin-only menu items
+  if (isAdmin) {
+    moreMenuItems.push(
+      {
+        label: "Discounts",
+        icon: <Percent className="h-5 w-5" />,
+        path: "/discounts",
+      },
+      {
+        label: "Room Types",
+        icon: <Layers className="h-5 w-5" />,
+        path: "/room-types",
+      }
+    );
+  }
+
   return (
     <>
-      {/* User menu popup */}
-      {showUserMenu && (
-        <div className="fixed bottom-20 right-4 bg-white rounded-lg shadow-lg p-2 z-50 w-48 border">
+      {/* More menu popup */}
+      {showMoreMenu && (
+        <div className="fixed bottom-20 right-4 bg-white rounded-lg shadow-lg z-50 w-56 border divide-y">
+          {moreMenuItems.map((item) => (
+            <div 
+              key={item.label}
+              className="p-3 hover:bg-gray-100 rounded-md cursor-pointer flex items-center gap-3"
+              onClick={() => {
+                navigate(item.path);
+                setShowMoreMenu(false);
+              }}
+            >
+              {item.icon}
+              <span className="text-sm font-medium">{item.label}</span>
+            </div>
+          ))}
           <div 
-            className="p-2 hover:bg-gray-100 rounded-md cursor-pointer"
-            onClick={() => navigate("/profile")}
-          >
-            <span className="text-sm">Profile</span>
-          </div>
-          <div 
-            className="p-2 hover:bg-gray-100 rounded-md cursor-pointer text-red-500"
+            className="p-3 hover:bg-gray-100 rounded-md cursor-pointer text-red-500 flex items-center gap-3"
             onClick={() => logout()}
           >
-            <span className="text-sm">Log out</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span className="text-sm font-medium">Log out</span>
           </div>
         </div>
       )}
@@ -64,7 +122,7 @@ const BottomNav = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16">
         <div className="grid grid-cols-4 h-full">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = item.path ? location.pathname === item.path : false;
             
             return (
               <button
@@ -76,7 +134,7 @@ const BottomNav = () => {
                 onClick={() => {
                   if (item.onClick) {
                     item.onClick();
-                  } else {
+                  } else if (item.path) {
                     navigate(item.path);
                   }
                 }}
