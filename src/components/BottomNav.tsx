@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { CalendarDays, FileText, MoreHorizontal, User, Percent, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,25 +14,58 @@ const BottomNav = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [visible, setVisible] = useState(true);
   const [prevScrollPos, setPrevScrollPos] = useState(0);
+  const [isScrollingUp, setIsScrollingUp] = useState(false);
+  const lastScrollY = useRef(0);
+  const scrollTimeoutRef = useRef<number | null>(null);
 
   // Handle scroll events to show/hide the bottom navigation
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollPos = window.scrollY;
+      const isMovingUp = currentScrollPos < lastScrollY.current;
       
-      // Only show nav when explicitly scrolling up
-      if (currentScrollPos > prevScrollPos && visible && currentScrollPos > 10) {
-        setVisible(false);
-      } else if (currentScrollPos < prevScrollPos && !visible) {
-        setVisible(true);
+      // Determine real scroll direction ignoring small fluctuations
+      if (Math.abs(currentScrollPos - lastScrollY.current) > 5) {
+        setIsScrollingUp(isMovingUp);
       }
       
+      // Check if we're at the bottom of the page with a buffer
+      const isAtBottom = 
+        window.innerHeight + currentScrollPos >= 
+        document.documentElement.scrollHeight - 10;
+
+      // Clear any existing timeout to handle frequent scroll events
+      if (scrollTimeoutRef.current !== null) {
+        window.clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Hide nav when scrolling down
+      if (currentScrollPos > lastScrollY.current && visible && currentScrollPos > 10) {
+        setVisible(false);
+      } 
+      // Only show nav when explicitly scrolling up AND not at the bottom of the page due to bounce
+      else if (isMovingUp && !visible && !isAtBottom) {
+        // Using a short timeout to avoid flickering during iOS bounce effect
+        scrollTimeoutRef.current = window.setTimeout(() => {
+          // Recheck if we're still scrolling up after the timeout
+          if (isScrollingUp) {
+            setVisible(true);
+          }
+        }, 150);
+      }
+      
+      lastScrollY.current = currentScrollPos;
       setPrevScrollPos(currentScrollPos);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [prevScrollPos, visible]);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current !== null) {
+        window.clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [prevScrollPos, visible, isScrollingUp]);
 
   // Close more menu when navigating
   useEffect(() => {
@@ -192,3 +225,4 @@ const BottomNav = () => {
 };
 
 export default BottomNav;
+
