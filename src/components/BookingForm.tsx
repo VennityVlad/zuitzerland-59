@@ -1,11 +1,9 @@
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useBookingForm } from "@/hooks/useBookingForm";
 import PersonalInfoFields from "./booking/PersonalInfoFields";
 import BookingDetailsPanel from "./booking/BookingDetailsPanel";
 import { BookingFormHeader } from "./booking/BookingFormHeader";
-import PaymentTypeSelector from "./booking/PaymentTypeSelector";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import TermsDialog from "./booking/TermsDialog";
@@ -122,10 +120,6 @@ const BookingForm = () => {
           handleInputChange={handleInputChange}
           onCountryChange={handleCountryChange}
         />
-        <PaymentTypeSelector
-          value={formData.paymentType}
-          onChange={handlePaymentTypeChange}
-        />
       </div>
     </div>
   );
@@ -135,6 +129,7 @@ const BookingForm = () => {
       <BookingDetailsPanel
         formData={formData}
         handleInputChange={handleInputChange}
+        handlePaymentTypeChange={handlePaymentTypeChange}
         minDate={minDate}
         maxDate={maxDate}
         discountAmount={discountAmount}

@@ -1,6 +1,7 @@
 
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
+import PaymentTypeSelector from "./PaymentTypeSelector";
 import type { BookingFormData } from "@/types/booking";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { usePrivy } from "@privy-io/react-auth";
 interface BookingDetailsPanelProps {
   formData: BookingFormData;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handlePaymentTypeChange: (value: string) => void;
   minDate: string;
   maxDate: string;
   discountAmount: number;
@@ -91,6 +93,7 @@ const PriceBreakdown = ({ checkin, checkout, roomType }: { checkin: string; chec
 const BookingDetailsPanel = ({
   formData,
   handleInputChange,
+  handlePaymentTypeChange,
   minDate,
   maxDate,
   discountAmount,
@@ -170,6 +173,13 @@ const BookingDetailsPanel = ({
                 target: { name: "roomType", value },
               } as React.ChangeEvent<HTMLInputElement>)
             }
+          />
+        </div>
+
+        <div className="space-y-4">
+          <PaymentTypeSelector
+            value={formData.paymentType}
+            onChange={handlePaymentTypeChange}
           />
         </div>
 
