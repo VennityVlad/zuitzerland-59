@@ -1,3 +1,4 @@
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useBookingForm } from "@/hooks/useBookingForm";
@@ -5,7 +6,7 @@ import PersonalInfoFields from "./booking/PersonalInfoFields";
 import BookingDetailsPanel from "./booking/BookingDetailsPanel";
 import { BookingFormHeader } from "./booking/BookingFormHeader";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TermsDialog from "./booking/TermsDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,7 @@ import { differenceInDays, parse } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { AlertCircle } from "lucide-react";
 
 const BookingForm = () => {
   const { toast } = useToast();
@@ -36,6 +38,7 @@ const BookingForm = () => {
   const [showTerms, setShowTerms] = useState(false);
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("booking");
+  const [contactFieldsComplete, setContactFieldsComplete] = useState(false);
 
   const minDate = "2025-05-01";
   const maxDate = "2025-05-25";
@@ -56,6 +59,26 @@ const BookingForm = () => {
     },
     enabled: Boolean(formData.roomType)
   });
+
+  // Check if contact fields are all filled out
+  useEffect(() => {
+    const requiredContactFields = [
+      'firstName', 
+      'lastName', 
+      'email', 
+      'address', 
+      'city', 
+      'zip', 
+      'country'
+    ];
+    
+    const allContactFieldsFilled = requiredContactFields.every(field => 
+      formData[field as keyof typeof formData] && 
+      formData[field as keyof typeof formData].toString().trim() !== ''
+    );
+    
+    setContactFieldsComplete(allContactFieldsFilled);
+  }, [formData]);
 
   const meetsMinimumStay = (): boolean => {
     console.log('Checking minimum stay:', {
@@ -147,8 +170,11 @@ const BookingForm = () => {
         <TabsTrigger value="booking" className="text-sm">
           Booking Details
         </TabsTrigger>
-        <TabsTrigger value="contact" className="text-sm">
+        <TabsTrigger value="contact" className="text-sm relative">
           Contact Info
+          {!contactFieldsComplete && activeTab !== "contact" && (
+            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full" />
+          )}
         </TabsTrigger>
       </TabsList>
       <div className="mt-6">
@@ -156,6 +182,14 @@ const BookingForm = () => {
           {renderBookingDetails()}
         </TabsContent>
         <TabsContent value="contact" className="m-0">
+          {!contactFieldsComplete && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please complete all contact information fields
+              </AlertDescription>
+            </Alert>
+          )}
           {renderContactInfo()}
         </TabsContent>
       </div>
