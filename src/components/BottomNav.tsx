@@ -19,12 +19,11 @@ const BottomNav = () => {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollPos = window.scrollY;
-      const isScrollingDown = currentScrollPos > prevScrollPos;
-      const isScrollingUp = currentScrollPos < prevScrollPos;
       
-      if (isScrollingDown && visible && currentScrollPos > 10) {
+      // Only show nav when explicitly scrolling up
+      if (currentScrollPos > prevScrollPos && visible && currentScrollPos > 10) {
         setVisible(false);
-      } else if (isScrollingUp && !visible) {
+      } else if (currentScrollPos < prevScrollPos && !visible) {
         setVisible(true);
       }
       
