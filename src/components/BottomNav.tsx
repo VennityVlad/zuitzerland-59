@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, CalendarDays, FileText, MoreHorizontal, User, Percent, Layers } from "lucide-react";
+import { CalendarDays, FileText, MoreHorizontal, User, Percent, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePrivy } from "@privy-io/react-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,12 +43,8 @@ const BottomNav = () => {
     }
   }, [user?.id]);
 
-  const navItems = [
-    {
-      label: "Home",
-      icon: <Home className="h-6 w-6" />,
-      path: "/",
-    },
+  // Base navigation items for all users
+  let navItems = [
     {
       label: "Book",
       icon: <CalendarDays className="h-6 w-6" />,
@@ -66,6 +62,21 @@ const BottomNav = () => {
     },
   ];
 
+  // Add Discounts button for admin users
+  if (isAdmin) {
+    // Insert Discounts before More
+    navItems = [
+      ...navItems.slice(0, 2),
+      {
+        label: "Discounts",
+        icon: <Percent className="h-6 w-6" />,
+        path: "/discounts",
+      },
+      navItems[2] // More menu
+    ];
+  }
+
+  // Items that will appear in the More menu
   const moreMenuItems = [
     {
       label: "Profile",
@@ -74,14 +85,9 @@ const BottomNav = () => {
     }
   ];
 
-  // Add admin-only menu items
+  // Add Room Types to More menu for admin users
   if (isAdmin) {
     moreMenuItems.push(
-      {
-        label: "Discounts",
-        icon: <Percent className="h-5 w-5" />,
-        path: "/discounts",
-      },
       {
         label: "Room Types",
         icon: <Layers className="h-5 w-5" />,
@@ -120,7 +126,10 @@ const BottomNav = () => {
 
       {/* Bottom navigation bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16">
-        <div className="grid grid-cols-4 h-full">
+        <div className={cn(
+          "grid h-full",
+          isAdmin ? "grid-cols-4" : "grid-cols-3"
+        )}>
           {navItems.map((item) => {
             const isActive = item.path ? location.pathname === item.path : false;
             
