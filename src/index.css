@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -36,6 +35,23 @@
   body {
     @apply bg-white text-foreground font-montserrat;
   }
+}
+
+/* Bottom navigation styles */
+.bottom-nav {
+  @apply fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16;
+}
+
+.bottom-nav-item {
+  @apply flex flex-col items-center justify-center h-full;
+}
+
+.bottom-nav-item-active {
+  @apply text-primary;
+}
+
+.bottom-nav-item-inactive {
+  @apply text-gray-500;
 }
 
 .date-picker {
@@ -87,6 +103,11 @@
   /* Remove rounded corners on mobile for full-width appearance */
   .mobile-full-width {
     @apply rounded-none border-l-0 border-r-0 shadow-none w-full;
+  }
+
+  /* Content padding for bottom navigation */
+  .mobile-bottom-nav-padding {
+    @apply pb-16;
   }
 }
 

@@ -25,6 +25,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import BottomNav from "./BottomNav";
 
 const NavMenu = () => {
   const { logout, user } = usePrivy();
@@ -127,81 +128,9 @@ const NavMenu = () => {
     );
   };
 
-  // Mobile header with hamburger menu
+  // Mobile bottom navigation
   if (isMobile) {
-    return (
-      <>
-        {/* Mobile hamburger button */}
-        <div className="fixed top-4 left-4 z-50">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            {sidebarOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <div className="flex items-center">
-                <img 
-                  src="/lovable-uploads/e2be13a0-6853-41c8-aa7c-51ab5d5dd119.png" 
-                  alt="Menu Logo" 
-                  className="h-8 w-8 mr-2"
-                />
-                <Menu className="h-6 w-6" />
-              </div>
-            )}
-          </Button>
-        </div>
-
-        {/* Mobile sidebar overlay */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-40"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Mobile sidebar */}
-        <div className={cn(
-          "fixed top-0 left-0 z-40 h-full w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
-          <div className="flex items-center justify-between p-4 border-b">
-            <img 
-              src="/lovable-uploads/e2be13a0-6853-41c8-aa7c-51ab5d5dd119.png" 
-              alt="Logo" 
-              className="h-10 w-10"
-            />
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-
-          <div className="flex flex-col p-3 space-y-1">
-            {menuItems.map((item) => (
-              <NavItem key={item.path} item={item} />
-            ))}
-          </div>
-
-          <div className="absolute bottom-0 left-0 right-0 p-3">
-            {/* Profile button */}
-            <NavItem 
-              item={{
-                label: "Profile",
-                icon: <User className="h-5 w-5" />,
-                path: "/profile"
-              }} 
-            />
-            <div className="border-t my-2"></div>
-            <Button 
-              variant="ghost" 
-              size="lg"
-              className="w-full justify-start gap-3 px-3 py-6 text-base font-medium text-red-500 hover:bg-red-50 hover:text-red-700"
-              onClick={() => logout()}
-            >
-              <LogOut className="h-5 w-5" />
-              <span>Log out</span>
-            </Button>
-          </div>
-        </div>
-      </>
-    );
+    return <BottomNav />;
   }
 
   // Desktop sidebar

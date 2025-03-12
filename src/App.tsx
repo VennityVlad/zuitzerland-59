@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,11 +20,13 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./components/ui/use-toast";
+import { useIsMobile } from "./hooks/use-mobile";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { authenticated, ready } = usePrivy();
+  const isMobile = useIsMobile();
 
   if (!ready) {
     return (
@@ -38,7 +41,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <div className="flex min-h-screen bg-secondary/30">
+    <div className={`flex min-h-screen ${isMobile ? 'bg-white' : 'bg-secondary/30'}`}>
       <NavMenu />
       <div className="flex-1 relative">
         {children}
