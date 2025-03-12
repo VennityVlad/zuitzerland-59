@@ -12,6 +12,28 @@ const BottomNav = () => {
   const { logout, user } = usePrivy();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const [prevScrollPos, setPrevScrollPos] = useState(0);
+
+  // Handle scroll events to show/hide the bottom navigation
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollPos = window.scrollY;
+      const isScrollingDown = currentScrollPos > prevScrollPos;
+      const isScrollingUp = currentScrollPos < prevScrollPos;
+      
+      if (isScrollingDown && visible && currentScrollPos > 10) {
+        setVisible(false);
+      } else if (isScrollingUp && !visible) {
+        setVisible(true);
+      }
+      
+      setPrevScrollPos(currentScrollPos);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [prevScrollPos, visible]);
 
   // Close more menu when navigating
   useEffect(() => {
@@ -125,7 +147,12 @@ const BottomNav = () => {
       )}
 
       {/* Bottom navigation bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16">
+      <div 
+        className={cn(
+          "fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16 transition-transform duration-300",
+          !visible && "transform translate-y-full"
+        )}
+      >
         <div className={cn(
           "grid h-full",
           isAdmin ? "grid-cols-4" : "grid-cols-3"
@@ -156,8 +183,11 @@ const BottomNav = () => {
         </div>
       </div>
       
-      {/* Bottom padding to prevent content from being hidden behind the nav bar */}
-      <div className="h-16"></div>
+      {/* Dynamic bottom padding that adjusts based on nav visibility */}
+      <div className={cn(
+        "h-16 transition-all duration-300",
+        !visible && "h-0"
+      )}></div>
     </>
   );
 };

@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -39,7 +40,15 @@
 
 /* Bottom navigation styles */
 .bottom-nav {
-  @apply fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16;
+  @apply fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16 transition-transform duration-300;
+}
+
+.bottom-nav-hidden {
+  @apply transform translate-y-full;
+}
+
+.bottom-nav-visible {
+  @apply transform translate-y-0;
 }
 
 .bottom-nav-item {
@@ -124,3 +133,4 @@
 .btn-light {
   @apply border-2 border-[#1A1F2C] bg-white text-[#1A1F2C] hover:bg-gray-50 rounded-full;
 }
+
