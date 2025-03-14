@@ -35,7 +35,8 @@ export const MonthlyRevenue = () => {
 
         // Process the returned data
         if (data) {
-          setMonthlyData(data as MonthlyData[]);
+          // Add type assertion to make TypeScript happy
+          setMonthlyData(data as unknown as MonthlyData[]);
         } else {
           // If the function doesn't exist yet, use client-side calculation
           await fetchAndCalculateMonthlyData();

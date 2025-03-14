@@ -208,7 +208,7 @@ export const RevenueByRoomType = () => {
             valueFormatter={(value) => formatCurrency(value)}
             yAxisWidth={80}
             className="h-[300px]"
-          />
+            />
         </CardContent>
       </Card>
     </div>

@@ -36,7 +36,8 @@ export const StatusDistribution = () => {
         if (error) throw error;
 
         if (data) {
-          setStatusData(data as StatusData[]);
+          // Add type assertion to make TypeScript happy
+          setStatusData(data as unknown as StatusData[]);
         } else {
           // If no data returned or function fails, use client-side calculation
           await fetchAndCalculateStatusData(timeFilter);

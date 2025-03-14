@@ -305,6 +305,27 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_invoice_status_distribution: {
+        Args: {
+          time_filter?: string
+        }
+        Returns: {
+          status: string
+          count: number
+          revenue: number
+        }[]
+      }
+      get_monthly_revenue: {
+        Args: {
+          year_filter: number
+        }
+        Returns: {
+          month: string
+          revenue: number
+          invoice_count: number
+          avg_value: number
+        }[]
+      }
       has_role: {
         Args: {
           user_id: string
