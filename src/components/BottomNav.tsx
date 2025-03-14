@@ -16,22 +16,27 @@ const BottomNav = () => {
   const lastScrollY = useRef(0);
   const scrollTimeoutRef = useRef<number | null>(null);
 
+  // Handle scroll events to show/hide the bottom navigation
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollPos = window.scrollY;
       const isMovingUp = currentScrollPos < lastScrollY.current;
       
+      // Check if we're at the bottom of the page with a buffer
       const isAtBottom = 
         window.innerHeight + currentScrollPos >= 
         document.documentElement.scrollHeight - 10;
 
+      // Clear any existing timeout to handle frequent scroll events
       if (scrollTimeoutRef.current !== null) {
         window.clearTimeout(scrollTimeoutRef.current);
       }
       
+      // Hide nav when scrolling down
       if (currentScrollPos > lastScrollY.current && visible && currentScrollPos > 10) {
         setVisible(false);
       } 
+      // Show nav when scrolling up, but not during iOS bounce effect at bottom
       else if (isMovingUp && !visible && !isAtBottom) {
         setVisible(true);
       }
@@ -49,10 +54,12 @@ const BottomNav = () => {
     };
   }, [prevScrollPos, visible]);
 
+  // Close more menu when navigating
   useEffect(() => {
     setShowMoreMenu(false);
   }, [location.pathname]);
 
+  // Check if user is admin
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user?.id) return;
@@ -77,6 +84,7 @@ const BottomNav = () => {
     }
   }, [user?.id]);
 
+  // Base navigation items for all users
   let navItems = [
     {
       label: "Book",
@@ -95,14 +103,11 @@ const BottomNav = () => {
     },
   ];
 
+  // Add Discounts button for admin users
   if (isAdmin) {
+    // Insert Discounts before More
     navItems = [
       ...navItems.slice(0, 2),
-      {
-        label: "Reports",
-        icon: <FileText className="h-6 w-6" />,
-        path: "/reports",
-      },
       {
         label: "Discounts",
         icon: <Percent className="h-6 w-6" />,
@@ -112,6 +117,7 @@ const BottomNav = () => {
     ];
   }
 
+  // Items that will appear in the More menu
   const moreMenuItems = [
     {
       label: "Profile",
@@ -120,6 +126,7 @@ const BottomNav = () => {
     }
   ];
 
+  // Add Room Types to More menu for admin users
   if (isAdmin) {
     moreMenuItems.push(
       {
@@ -132,6 +139,7 @@ const BottomNav = () => {
 
   return (
     <>
+      {/* More menu popup */}
       {showMoreMenu && (
         <div className="fixed bottom-20 right-4 bg-white rounded-lg shadow-lg z-50 w-56 border divide-y">
           {moreMenuItems.map((item) => (
@@ -157,6 +165,7 @@ const BottomNav = () => {
         </div>
       )}
 
+      {/* Bottom navigation bar */}
       <div 
         className={cn(
           "fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16 transition-transform duration-300",
@@ -193,6 +202,7 @@ const BottomNav = () => {
         </div>
       </div>
       
+      {/* Dynamic bottom padding that adjusts based on nav visibility */}
       <div className={cn(
         "h-16 transition-all duration-300",
         !visible && "h-0"
