@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect, useMemo } from "react";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
@@ -11,9 +10,13 @@ import { Button } from "@/components/ui/button";
 import { parseISO, subDays, subMonths } from "date-fns";
 import { PageTitle } from "@/components/PageTitle";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Download } from "lucide-react";
+import { convertInvoicesToCSV, downloadCSV } from "@/utils/exportUtils";
+import { useToast } from "@/hooks/use-toast";
 
 const Invoices = () => {
   const { user } = usePrivy();
+  const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
@@ -24,6 +27,7 @@ const Invoices = () => {
     roomType: null,
     dateRange: null,
   });
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -127,6 +131,32 @@ const Invoices = () => {
     window.open(paymentLink, '_blank');
   };
 
+  const handleExportCSV = () => {
+    try {
+      setIsExporting(true);
+      
+      const date = new Date();
+      const filename = `invoices_export_${date.toISOString().slice(0, 10)}.csv`;
+      
+      const csvContent = convertInvoicesToCSV(filteredInvoices);
+      downloadCSV(csvContent, filename);
+      
+      toast({
+        title: "Export successful",
+        description: `${filteredInvoices.length} invoices exported to ${filename}`,
+      });
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      toast({
+        title: "Export failed",
+        description: "An error occurred while exporting the data.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
@@ -146,15 +176,30 @@ const Invoices = () => {
       <div className={`py-4 ${isMobile ? 'px-0' : 'px-4'} flex-grow`}>
         <div className={`container ${isMobile ? 'mx-0 max-w-none' : 'mx-auto'}`}>
           <div className={`bg-white ${isMobile ? 'mobile-full-width' : 'rounded-lg shadow-lg'} p-4 md:p-8`}>
-            {!invoicesLoading && (
-              <InvoiceFilter 
-                filters={filters} 
-                onFilterChange={handleFilterChange} 
-                onClearFilters={clearFilters} 
-                isAdmin={isAdmin}
-                roomTypes={roomTypes}
-              />
-            )}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+              {!invoicesLoading && (
+                <InvoiceFilter 
+                  filters={filters} 
+                  onFilterChange={handleFilterChange} 
+                  onClearFilters={clearFilters} 
+                  isAdmin={isAdmin}
+                  roomTypes={roomTypes}
+                />
+              )}
+              
+              {isAdmin && (
+                <Button
+                  onClick={handleExportCSV}
+                  variant="outline"
+                  size="sm"
+                  disabled={isExporting || filteredInvoices.length === 0}
+                  className="flex items-center gap-2 mt-4 md:mt-0"
+                >
+                  <Download className="h-4 w-4" />
+                  {isExporting ? 'Exporting...' : 'Export CSV'}
+                </Button>
+              )}
+            </div>
             
             {invoicesLoading ? (
               <InvoiceLoader />
