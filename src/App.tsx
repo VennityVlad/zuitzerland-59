@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Root from './pages/Root';
+import Root from '@/pages/Root';
 import Book from './pages/Book';
 import Invoices from './pages/Invoices';
 import Profile from './pages/Profile';
