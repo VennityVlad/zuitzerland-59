@@ -90,6 +90,11 @@ const NavMenu = () => {
 
   const adminItems = [
     {
+      label: "Reports",
+      icon: <FileText className="h-5 w-5" />,
+      path: "/reports",
+    },
+    {
       label: "Discounts",
       icon: <Percent className="h-5 w-5" />,
       path: "/discounts",
