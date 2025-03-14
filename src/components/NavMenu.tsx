@@ -77,7 +77,7 @@ const NavMenu = () => {
     }
   }, [user?.id]);
 
-  // Only include Book in the initial menu items
+  // Base menu items (Book is always included)
   const menuItems = [
     {
       label: "Book",
@@ -93,6 +93,13 @@ const NavMenu = () => {
       icon: <FileText className="h-5 w-5" />,
       path: "/invoices",
     });
+    
+    // Add Users management for admins
+    menuItems.push({
+      label: "Users",
+      icon: <Users className="h-5 w-5" />,
+      path: "/user-management",
+    });
   }
 
   const adminItems = [
@@ -100,11 +107,6 @@ const NavMenu = () => {
       label: "Reports",
       icon: <BarChart className="h-5 w-5" />,
       path: "/reports",
-    },
-    {
-      label: "Users",
-      icon: <Users className="h-5 w-5" />,
-      path: "/user-management",
     },
     {
       label: "Discounts",
@@ -118,6 +120,7 @@ const NavMenu = () => {
     }
   ];
 
+  // Add admin items to the menu for desktop view
   if (isAdmin) {
     menuItems.push(...adminItems);
   }

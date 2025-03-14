@@ -2,9 +2,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { CalendarDays, FileText, User, ChevronUp } from "lucide-react";
+import { CalendarDays, FileText, Users, MoreHorizontal, User, LogOut } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const BottomNav = () => {
   const navigate = useNavigate();
@@ -13,7 +19,7 @@ const BottomNav = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [atBottom, setAtBottom] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const { user } = usePrivy();
+  const { user, logout } = usePrivy();
 
   // Check if user is admin
   useEffect(() => {
@@ -71,29 +77,87 @@ const BottomNav = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Default menu items (always show Book and Profile)
-  const menuItems = [
-    {
-      icon: CalendarDays,
-      label: "Book",
-      path: "/book",
-    },
+  // Create menu items based on admin status
+  let menuItems = [];
+  
+  if (isAdmin) {
+    // Admin menu: Book, Invoices, Users, More
+    menuItems = [
+      {
+        icon: CalendarDays,
+        label: "Book",
+        path: "/book",
+        action: () => navigate("/book")
+      },
+      {
+        icon: FileText,
+        label: "Invoices",
+        path: "/invoices",
+        action: () => navigate("/invoices")
+      },
+      {
+        icon: Users,
+        label: "Users",
+        path: "/user-management",
+        action: () => navigate("/user-management")
+      },
+      {
+        icon: MoreHorizontal,
+        label: "More",
+        isDropdown: true
+      }
+    ];
+  } else {
+    // Non-admin menu: Book, Profile, Logout
+    menuItems = [
+      {
+        icon: CalendarDays,
+        label: "Book",
+        path: "/book",
+        action: () => navigate("/book")
+      },
+      {
+        icon: User,
+        label: "Profile",
+        path: "/profile",
+        action: () => navigate("/profile")
+      },
+      {
+        icon: LogOut,
+        label: "Log Out",
+        action: () => logout()
+      }
+    ];
+  }
+
+  // Define dropdown items for "More" menu (admin only)
+  const moreMenuItems = [
     {
       icon: User,
       label: "Profile",
-      path: "/profile",
+      action: () => navigate("/profile")
     },
-  ];
-
-  // Only add Invoices tab for admin users
-  if (isAdmin) {
-    // Insert Invoices between Book and Profile
-    menuItems.splice(1, 0, {
+    {
+      icon: CalendarDays,
+      label: "Reports",
+      action: () => navigate("/reports")
+    },
+    {
       icon: FileText,
-      label: "Invoices",
-      path: "/invoices",
-    });
-  }
+      label: "Discounts",
+      action: () => navigate("/discounts")
+    },
+    {
+      icon: FileText,
+      label: "Room Types",
+      action: () => navigate("/room-types")
+    },
+    {
+      icon: LogOut,
+      label: "Log Out",
+      action: () => logout()
+    }
+  ];
 
   return (
     <div
@@ -103,19 +167,50 @@ const BottomNav = () => {
         atBottom && "hidden" // Hide when at bottom
       )}
     >
-      <div className="grid grid-cols-3 h-16">
-        {menuItems.map((item) => {
-          const isActive = location.pathname === item.path;
+      <div className={`grid ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'} h-16`}>
+        {menuItems.map((item, index) => {
+          const isActive = !item.isDropdown && location.pathname === item.path;
+          
+          if (item.isDropdown) {
+            return (
+              <DropdownMenu key={`more-${index}`}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "flex flex-col items-center justify-center space-y-1",
+                      "text-gray-500 hover:text-gray-900"
+                    )}
+                  >
+                    <item.icon size={20} />
+                    <span className="text-xs">{item.label}</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 rounded-t-none rounded-b-lg">
+                  {moreMenuItems.map((dropdownItem, idx) => (
+                    <DropdownMenuItem
+                      key={idx}
+                      className="cursor-pointer py-2"
+                      onClick={dropdownItem.action}
+                    >
+                      <dropdownItem.icon className="mr-2 h-4 w-4" />
+                      <span>{dropdownItem.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          }
+
           return (
             <button
-              key={item.path}
+              key={item.label}
               className={cn(
                 "flex flex-col items-center justify-center space-y-1",
                 isActive 
                   ? "text-primary" 
                   : "text-gray-500 hover:text-gray-900"
               )}
-              onClick={() => navigate(item.path)}
+              onClick={item.action}
             >
               <item.icon size={20} />
               <span className="text-xs">{item.label}</span>
