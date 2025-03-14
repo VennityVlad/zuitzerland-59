@@ -5,7 +5,7 @@ import { Search, Plus, Filter } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import PageTitle from "@/components/PageTitle";
+import { PageTitle } from "@/components/PageTitle";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
