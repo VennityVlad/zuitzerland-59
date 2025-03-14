@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,7 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 const profileSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   username: z.string().min(3, "Username must be at least 3 characters").optional(),
-  role: z.enum(["admin", "team", "co-curator", "co-designer"]).optional(),
+  role: z.enum(["admin", "co-curator", "co-designer"]).optional(),
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
 });
 
@@ -232,7 +231,6 @@ export function AddProfileDialog({ open, onOpenChange, onSuccess }: AddProfileDi
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="team">Team</SelectItem>
                       <SelectItem value="co-curator">Co-Curator</SelectItem>
                       <SelectItem value="co-designer">Co-Designer</SelectItem>
                     </SelectContent>

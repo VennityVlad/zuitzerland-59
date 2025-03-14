@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -43,7 +42,7 @@ import {
 const profileSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   username: z.string().min(3, "Username must be at least 3 characters").optional(),
-  role: z.enum(["admin", "team", "co-curator", "co-designer"]).nullable().optional(),
+  role: z.enum(["admin", "co-curator", "co-designer"]).nullable().optional(),
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
 });
 
@@ -68,7 +67,6 @@ const ProfileEdit = () => {
     },
   });
 
-  // Check if user is admin, redirect if not
   useEffect(() => {
     if (!roles.admin) {
       toast({
@@ -80,7 +78,6 @@ const ProfileEdit = () => {
     }
   }, [roles, navigate, toast]);
 
-  // Fetch profile data
   useEffect(() => {
     const fetchProfile = async () => {
       if (!id) return;
@@ -263,7 +260,6 @@ const ProfileEdit = () => {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="team">Team</SelectItem>
                             <SelectItem value="co-curator">Co-Curator</SelectItem>
                             <SelectItem value="co-designer">Co-Designer</SelectItem>
                           </SelectContent>

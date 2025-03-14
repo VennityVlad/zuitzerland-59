@@ -1,9 +1,8 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { PrivyProvider } from '@privy-io/react-auth';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
-import { createBrowserSupabaseClient } from '@supabase/auth-helpers-sveltekit';
 import { Session } from '@supabase/supabase-js';
 import Index from './pages/Index';
 import SignIn from './pages/SignIn';
@@ -19,22 +18,22 @@ import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import PrivyRoute from './components/PrivyRoute';
 import UserManagement from './pages/UserManagement';
 import ProfileEdit from './pages/ProfileEdit';
+import { supabase } from './integrations/supabase/client';
 
 const queryClient = new QueryClient();
 
 function App() {
-  const [supabaseClient] = useState(() => createBrowserSupabaseClient());
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-  }, [supabaseClient]);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -46,8 +45,6 @@ function App() {
               loginMethods: ['email', 'google', 'apple', 'twitter', 'discord'],
               appearance: {
                 accentColor: '#1A1F2C',
-                fontFamily: 'Inter, sans-serif',
-                borderRadius: 12,
                 theme: 'light',
               },
             }}

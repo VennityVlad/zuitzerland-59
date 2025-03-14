@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MagnifyingGlass, UserPlus, Pencil } from "lucide-react";
+import { Search, UserPlus, Pencil } from "lucide-react";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { useNavigate } from "react-router-dom";
 import { AddProfileDialog } from "@/components/profiles/AddProfileDialog";
@@ -98,7 +98,7 @@ const UserManagement = () => {
         <div className="container max-w-7xl mx-auto">
           <div className="mb-6 flex flex-col sm:flex-row justify-between gap-4">
             <div className="relative flex-1 max-w-md">
-              <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 type="text"
                 placeholder="Search by name, email, or role..."
