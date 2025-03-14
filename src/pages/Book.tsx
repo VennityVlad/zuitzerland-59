@@ -1,17 +1,89 @@
 
+import { useState, useEffect } from "react";
 import BookingForm from "@/components/BookingForm";
 import { PageTitle } from "@/components/PageTitle";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePrivy } from "@privy-io/react-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { Invoice } from "@/types/invoice";
+import { UserInvoiceView } from "@/components/booking/UserInvoiceView";
 
 const Book = () => {
   const isMobile = useIsMobile();
+  const { user } = usePrivy();
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        setIsAdmin(data?.role === 'admin');
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    if (user?.id) {
+      checkAdminStatus();
+    }
+  }, [user?.id]);
+
+  // Fetch user's invoice if they have one
+  const { data: userInvoice, isLoading } = useQuery({
+    queryKey: ['userInvoice', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      // First get the profile id for the current user
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('privy_id', user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+      if (!profileData) return null;
+
+      // Get the user's invoice
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('profile_id', profileData.id)
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      return data && data.length > 0 ? data[0] as Invoice : null;
+    },
+    enabled: Boolean(user?.id)
+  });
   
   return (
     <div className="flex flex-col h-full">
-      <PageTitle title="Book Your Stay" />
+      <PageTitle title={userInvoice && !isAdmin ? "Your Booking" : "Book Your Stay"} />
       <div className={`py-4 ${isMobile ? 'px-0' : 'px-4 md:px-8'} flex-grow`}>
         <div className={`container ${isMobile ? 'mx-0 max-w-none' : 'max-w-4xl mx-auto'}`}>
-          <BookingForm />
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <div className="animate-pulse">Loading your booking information...</div>
+            </div>
+          ) : isAdmin || !userInvoice ? (
+            <BookingForm />
+          ) : (
+            <UserInvoiceView invoice={userInvoice} />
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,14 +22,56 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./components/ui/use-toast";
 import { useIsMobile } from "./hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ 
+  children, 
+  adminOnly = false 
+}: { 
+  children: React.ReactNode;
+  adminOnly?: boolean;
+}) => {
   const { authenticated, ready } = usePrivy();
   const isMobile = useIsMobile();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = usePrivy();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
 
-  if (!ready) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        setIsAdmin(data?.role === 'admin');
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user?.id) {
+      checkAdminStatus();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
+
+  if (!ready || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse">Loading...</div>
@@ -40,6 +81,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (!authenticated) {
     return <Navigate to="/signin" replace />;
+  }
+
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/book" replace />;
   }
 
   return (
@@ -149,7 +194,6 @@ const App = () => {
             <Sonner />
             <BrowserRouter>
               <Routes>
-                {/* Test route for Supabase auth */}
                 <Route path="/supabase-signin" element={<SupabaseSignIn />} />
                 
                 <Route path="/signin" element={<SignIn />} />
@@ -180,7 +224,7 @@ const App = () => {
                 <Route
                   path="/invoices"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute adminOnly={true}>
                       <Invoices />
                     </ProtectedRoute>
                   }
@@ -188,7 +232,7 @@ const App = () => {
                 <Route
                   path="/reports"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute adminOnly={true}>
                       <Reports />
                     </ProtectedRoute>
                   }
@@ -196,7 +240,7 @@ const App = () => {
                 <Route
                   path="/discounts"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute adminOnly={true}>
                       <Discounts />
                     </ProtectedRoute>
                   }
@@ -204,7 +248,7 @@ const App = () => {
                 <Route
                   path="/room-types"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute adminOnly={true}>
                       <RoomTypes />
                     </ProtectedRoute>
                   }
@@ -212,7 +256,7 @@ const App = () => {
                 <Route
                   path="/user-management"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute adminOnly={true}>
                       <UserManagement />
                     </ProtectedRoute>
                   }

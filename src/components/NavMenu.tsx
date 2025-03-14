@@ -77,18 +77,23 @@ const NavMenu = () => {
     }
   }, [user?.id]);
 
+  // Only include Book in the initial menu items
   const menuItems = [
     {
       label: "Book",
       icon: <CalendarDays className="h-5 w-5" />,
       path: "/book",
-    },
-    {
+    }
+  ];
+
+  // Add Invoices to menu only for admin users
+  if (isAdmin) {
+    menuItems.push({
       label: "Invoices",
       icon: <FileText className="h-5 w-5" />,
       path: "/invoices",
-    }
-  ];
+    });
+  }
 
   const adminItems = [
     {
