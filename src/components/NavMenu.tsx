@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,6 @@ const NavMenu = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
   
-  // Auto-collapse sidebar on mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -45,7 +43,6 @@ const NavMenu = () => {
     }
   }, [isMobile]);
 
-  // Close sidebar when navigating on mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -104,6 +101,11 @@ const NavMenu = () => {
       label: "Room Types",
       icon: <Layers className="h-5 w-5" />,
       path: "/room-types",
+    },
+    {
+      label: "User Management",
+      icon: <User className="h-5 w-5" />,
+      path: "/user-management",
     }
   ];
 
@@ -134,12 +136,10 @@ const NavMenu = () => {
     );
   };
 
-  // Mobile bottom navigation
   if (isMobile) {
     return <BottomNav />;
   }
 
-  // Desktop sidebar
   return (
     <>
       <div className={cn(
@@ -173,7 +173,6 @@ const NavMenu = () => {
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-3">
-          {/* Profile button */}
           <NavItem 
             item={{
               label: "Profile",
@@ -199,7 +198,6 @@ const NavMenu = () => {
         </div>
       </div>
 
-      {/* Main content spacer to prevent overlap with sidebar */}
       <div className={cn(
         "transition-all duration-300 ease-in-out",
         sidebarOpen ? "ml-64" : "ml-20"
