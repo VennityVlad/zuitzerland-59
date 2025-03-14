@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -76,8 +75,11 @@ export const RevenueOverview = () => {
           return;
         }
         
-        // Calculate overview statistics
-        const totalRevenue = invoices.reduce((sum, invoice) => sum + invoice.price, 0);
+        // Filter out cancelled invoices for total revenue calculation
+        const activeInvoices = invoices.filter(invoice => invoice.status !== 'cancelled');
+        
+        // Calculate overview statistics excluding cancelled invoices
+        const totalRevenue = activeInvoices.reduce((sum, invoice) => sum + invoice.price, 0);
         const paidRevenue = invoices
           .filter(invoice => invoice.status === 'paid')
           .reduce((sum, invoice) => sum + invoice.price, 0);
@@ -87,8 +89,10 @@ export const RevenueOverview = () => {
         const overdueRevenue = invoices
           .filter(invoice => invoice.status === 'overdue')
           .reduce((sum, invoice) => sum + invoice.price, 0);
-        const invoiceCount = invoices.length;
-        const averageValue = totalRevenue / invoiceCount;
+        
+        // Only count active invoices for the invoice count
+        const invoiceCount = activeInvoices.length;
+        const averageValue = invoiceCount > 0 ? totalRevenue / invoiceCount : 0;
         
         // Prepare status distribution data for the pie chart
         const statusCounts: Record<string, { count: number, color: string }> = {
@@ -111,10 +115,10 @@ export const RevenueOverview = () => {
           color: data.color
         }));
         
-        // Prepare room type data
+        // Prepare room type data (exclude cancelled invoices for room type analysis)
         const roomTypeRevenue: Record<string, number> = {};
         
-        invoices.forEach(invoice => {
+        activeInvoices.forEach(invoice => {
           if (!roomTypeRevenue[invoice.room_type]) {
             roomTypeRevenue[invoice.room_type] = 0;
           }
@@ -127,7 +131,7 @@ export const RevenueOverview = () => {
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 5);
         
-        // Prepare trend data
+        // Prepare trend data (exclude cancelled invoices for trend data)
         // For better visualization, we'll group by days or weeks depending on the time range
         const trendMap: Record<string, number> = {};
         let dateFormat: string;
@@ -172,8 +176,8 @@ export const RevenueOverview = () => {
           }
         }
         
-        // Populate trend data
-        invoices.forEach(invoice => {
+        // Populate trend data with only active invoices
+        activeInvoices.forEach(invoice => {
           const createdAt = new Date(invoice.created_at);
           
           if (dateFormat === 'day') {
@@ -246,7 +250,6 @@ export const RevenueOverview = () => {
     );
   }
   
-  // If no data yet, create dummy data for demonstration
   const overviewData = stats || {
     totalRevenue: 85700,
     paidRevenue: 62300,
@@ -304,7 +307,7 @@ export const RevenueOverview = () => {
               {formatCurrency(overviewData.totalRevenue)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {overviewData.invoiceCount} invoices
+              {overviewData.invoiceCount} invoices (excl. cancelled)
             </p>
           </CardContent>
         </Card>

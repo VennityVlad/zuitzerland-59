@@ -1,5 +1,4 @@
 
-// Fix imports and add type assertion for Supabase query
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -60,10 +59,13 @@ export const RevenueByRoomType = () => {
           return;
         }
 
-        // Aggregate data by room type
+        // Filter out cancelled invoices
+        const activeInvoices = invoices.filter(invoice => invoice.status !== 'cancelled');
+
+        // Aggregate data by room type (excluding cancelled invoices)
         const roomTypeMap: Record<string, { count: number; revenue: number }> = {};
         
-        invoices.forEach(invoice => {
+        activeInvoices.forEach(invoice => {
           if (!roomTypeMap[invoice.room_type]) {
             roomTypeMap[invoice.room_type] = { count: 0, revenue: 0 };
           }
