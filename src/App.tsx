@@ -14,6 +14,7 @@ import Profile from "./pages/Profile";
 import Invoices from "./pages/Invoices";
 import Discounts from "./pages/Discounts";
 import RoomTypes from "./pages/RoomTypes";
+import Reports from "./pages/Reports";
 import Book from "./pages/Book";
 import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
@@ -180,6 +181,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <Invoices />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <ProtectedRoute>
+                      <Reports />
                     </ProtectedRoute>
                   }
                 />
