@@ -35,7 +35,7 @@ export const MonthlyRevenue = () => {
 
         // Process the returned data
         if (data) {
-          setMonthlyData(data);
+          setMonthlyData(data as MonthlyData[]);
         } else {
           // If the function doesn't exist yet, use client-side calculation
           await fetchAndCalculateMonthlyData();
@@ -130,7 +130,7 @@ export const MonthlyRevenue = () => {
   const chartData = monthlyData.length > 0 ? monthlyData : [
     { month: 'January', revenue: 12400, invoiceCount: 8, avgValue: 1550 },
     { month: 'February', revenue: 15600, invoiceCount: 10, avgValue: 1560 },
-    { month: 'March', revenue: 18900, revenue: 12, avgValue: 1575 },
+    { month: 'March', revenue: 18900, invoiceCount: 12, avgValue: 1575 },
     { month: 'April', revenue: 22500, invoiceCount: 14, avgValue: 1607 },
     { month: 'May', revenue: 24800, invoiceCount: 15, avgValue: 1653 },
     { month: 'June', revenue: 28900, invoiceCount: 17, avgValue: 1700 },

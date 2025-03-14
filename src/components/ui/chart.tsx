@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 
@@ -353,6 +354,19 @@ function getPayloadConfigFromPayload(
     : config[key as keyof typeof config]
 }
 
+// Add the missing chart component exports
+const BarChart = (props: React.ComponentProps<typeof RechartsPrimitive.BarChart>) => {
+  return <RechartsPrimitive.BarChart {...props} />
+}
+
+const LineChart = (props: React.ComponentProps<typeof RechartsPrimitive.LineChart>) => {
+  return <RechartsPrimitive.LineChart {...props} />
+}
+
+const PieChart = (props: React.ComponentProps<typeof RechartsPrimitive.PieChart>) => {
+  return <RechartsPrimitive.PieChart {...props} />
+}
+
 export {
   ChartContainer,
   ChartTooltip,
@@ -360,4 +374,7 @@ export {
   ChartLegend,
   ChartLegendContent,
   ChartStyle,
+  BarChart,
+  LineChart,
+  PieChart
 }

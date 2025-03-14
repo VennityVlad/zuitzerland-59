@@ -29,21 +29,86 @@ export const StatusDistribution = () => {
           timeRange === "quarter" ? "and created_at > now() - interval '3 months'" :
           timeRange === "year" ? "and created_at > now() - interval '1 year'" : "";
         
+        // Call the function with the proper parameter
         const { data, error } = await supabase
           .rpc('get_invoice_status_distribution', { time_filter: timeFilter });
 
         if (error) throw error;
 
-        setStatusData(data || []);
+        if (data) {
+          setStatusData(data as StatusData[]);
+        } else {
+          // If no data returned or function fails, use client-side calculation
+          await fetchAndCalculateStatusData(timeFilter);
+        }
       } catch (error) {
         console.error('Error fetching status distribution:', error);
+        // Fall back to client-side calculation
+        await fetchAndCalculateStatusData();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchAndCalculateStatusData = async (timeFilter: string = "") => {
+      try {
+        // Build the query based on the time filter
+        let query = supabase.from('invoices').select('*');
+        
+        if (timeFilter.includes("interval '1 month'")) {
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+          query = query.gte('created_at', oneMonthAgo.toISOString());
+        } else if (timeFilter.includes("interval '3 months'")) {
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+          query = query.gte('created_at', threeMonthsAgo.toISOString());
+        } else if (timeFilter.includes("interval '1 year'")) {
+          const oneYearAgo = new Date();
+          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+          query = query.gte('created_at', oneYearAgo.toISOString());
+        }
+        
+        const { data: invoices, error } = await query;
+
+        if (error) throw error;
+
+        if (!invoices || invoices.length === 0) {
+          setStatusData([]);
+          return;
+        }
+
+        // Calculate status distribution
+        const statusMap: Record<string, {count: number, revenue: number}> = {};
+        
+        invoices.forEach(invoice => {
+          if (!statusMap[invoice.status]) {
+            statusMap[invoice.status] = { count: 0, revenue: 0 };
+          }
+          
+          statusMap[invoice.status].count += 1;
+          statusMap[invoice.status].revenue += invoice.price;
+        });
+        
+        // Format data for the chart
+        const formattedData = Object.entries(statusMap).map(([status, data]) => ({
+          status,
+          count: data.count,
+          revenue: data.revenue
+        }));
+        
+        // Sort by count descending
+        formattedData.sort((a, b) => b.count - a.count);
+        
+        setStatusData(formattedData);
+      } catch (error) {
+        console.error('Error in client-side calculation:', error);
         toast({
           title: "Error",
           description: "Failed to load status distribution data",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
+        setStatusData([]);
       }
     };
 
