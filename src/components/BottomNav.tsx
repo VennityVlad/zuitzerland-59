@@ -1,6 +1,6 @@
 
 import { usePrivy } from "@privy-io/react-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   CalendarDays, 
@@ -32,6 +32,11 @@ const BottomNav = () => {
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollThreshold = 10; // Minimum scroll amount to trigger hide/show
+  const scrollTimeout = useRef<number | null>(null);
+  const scrollEndTimeout = 300; // Time in ms to wait after scrolling stops
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -56,6 +61,47 @@ const BottomNav = () => {
       fetchProfile();
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const documentHeight = document.documentElement.scrollHeight;
+      const windowHeight = window.innerHeight;
+      const isAtBottom = currentScrollY + windowHeight >= documentHeight - 10;
+      const isAtTop = currentScrollY < 10;
+      
+      // Don't hide nav when at the very top or bottom of the page
+      if (isAtTop || isAtBottom) {
+        setIsVisible(true);
+        return;
+      }
+      
+      // Determine scroll direction and distance
+      if (Math.abs(currentScrollY - lastScrollY.current) > scrollThreshold) {
+        setIsVisible(currentScrollY < lastScrollY.current);
+        lastScrollY.current = currentScrollY;
+      }
+      
+      // Reset timeout to detect when scrolling stops
+      if (scrollTimeout.current !== null) {
+        window.clearTimeout(scrollTimeout.current);
+      }
+      
+      // Set nav to visible a short time after scrolling stops
+      scrollTimeout.current = window.setTimeout(() => {
+        setIsVisible(true);
+      }, scrollEndTimeout);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout.current !== null) {
+        window.clearTimeout(scrollTimeout.current);
+      }
+    };
+  }, []);
 
   const mainNavItems = [
     {
@@ -127,7 +173,10 @@ const BottomNav = () => {
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200">
+      <div className={cn(
+        "bottom-nav",
+        isVisible ? "bottom-nav-visible" : "bottom-nav-hidden"
+      )}>
         <div className="flex items-center justify-around h-16">
           {filteredMainNavItems.map((item, index) => {
             const isActive = item.path ? location.pathname === item.path : false;
@@ -135,8 +184,8 @@ const BottomNav = () => {
               <button
                 key={index}
                 className={cn(
-                  "flex flex-col items-center justify-center w-full h-full p-1",
-                  isActive ? "text-primary" : "text-gray-500"
+                  "bottom-nav-item",
+                  isActive ? "bottom-nav-item-active" : "bottom-nav-item-inactive"
                 )}
                 onClick={() => handleNavigation(item)}
               >
