@@ -36,7 +36,8 @@ const BottomNav = () => {
   const lastScrollY = useRef(0);
   const scrollThreshold = 10; // Minimum scroll amount to trigger hide/show
   const scrollTimeout = useRef<number | null>(null);
-  const scrollEndTimeout = 300; // Time in ms to wait after scrolling stops
+  const isScrollingUp = useRef(false);
+  const reachedBottom = useRef(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -67,30 +68,47 @@ const BottomNav = () => {
       const currentScrollY = window.scrollY;
       const documentHeight = document.documentElement.scrollHeight;
       const windowHeight = window.innerHeight;
-      const isAtBottom = currentScrollY + windowHeight >= documentHeight - 10;
+      const isAtBottom = currentScrollY + windowHeight >= documentHeight - 20; // Added some buffer
       const isAtTop = currentScrollY < 10;
       
-      // Don't hide nav when at the very top or bottom of the page
-      if (isAtTop || isAtBottom) {
+      // Handle scroll direction detection
+      if (currentScrollY < lastScrollY.current) {
+        isScrollingUp.current = true;
+      } else if (currentScrollY > lastScrollY.current) {
+        isScrollingUp.current = false;
+      }
+      
+      // Track if we're at the bottom to handle bounce effects
+      if (isAtBottom) {
+        reachedBottom.current = true;
+      } else if (currentScrollY < documentHeight - windowHeight - 50) {
+        reachedBottom.current = false;
+      }
+      
+      // Don't hide nav when at the very top
+      if (isAtTop) {
         setIsVisible(true);
+        lastScrollY.current = currentScrollY;
         return;
       }
       
-      // Determine scroll direction and distance
+      // Handle visibility based on scroll direction and position
       if (Math.abs(currentScrollY - lastScrollY.current) > scrollThreshold) {
-        setIsVisible(currentScrollY < lastScrollY.current);
+        // Only show on genuine upward scroll, not bounce effects
+        if (isScrollingUp.current && !reachedBottom.current) {
+          setIsVisible(true);
+        } else if (!isScrollingUp.current) {
+          // Hide when scrolling down
+          setIsVisible(false);
+        }
+        
         lastScrollY.current = currentScrollY;
       }
       
-      // Reset timeout to detect when scrolling stops
+      // Clear any existing timeouts
       if (scrollTimeout.current !== null) {
         window.clearTimeout(scrollTimeout.current);
       }
-      
-      // Set nav to visible a short time after scrolling stops
-      scrollTimeout.current = window.setTimeout(() => {
-        setIsVisible(true);
-      }, scrollEndTimeout);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
