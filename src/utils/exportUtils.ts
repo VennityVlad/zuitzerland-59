@@ -18,7 +18,7 @@ export const convertInvoicesToCSV = (invoices: Invoice[]): string => {
     "Amount (CHF)",
     "Due Date",
     "Status",
-    "Payment Type",
+    "Payment Method",
     "Last Reminder"
   ];
 
@@ -35,7 +35,7 @@ export const convertInvoicesToCSV = (invoices: Invoice[]): string => {
       invoice.price.toFixed(2),
       format(parseISO(invoice.due_date), 'yyyy-MM-dd'),
       invoice.status,
-      invoice.payment_type,
+      invoice.payment_link.includes('stripe') ? 'Stripe' : 'Bank Transfer', // Determine payment method from link
       invoice.last_reminder_sent ? format(parseISO(invoice.last_reminder_sent), 'yyyy-MM-dd HH:mm') : '-'
     ].map(value => `"${value || ''}"`).join(',');
   });
