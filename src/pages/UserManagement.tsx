@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Filter } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
@@ -36,84 +36,92 @@ const UserManagement = () => {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Check if user is admin
-  useEffect(() => {
-    const checkIfAdmin = async () => {
-      if (!user?.id) return;
+  // Check if user is admin - using useCallback to prevent recreating this function
+  const checkIfAdmin = useCallback(async () => {
+    if (!user?.id) return;
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('privy_id', user.id)
-          .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('privy_id', user.id)
+        .maybeSingle();
 
-        if (error) throw error;
-        
-        if (data?.role !== 'admin') {
-          toast({
-            title: "Access denied",
-            description: "You need admin permissions to access this page",
-            variant: "destructive",
-          });
-          navigate('/');
-        } else {
-          setIsAdmin(true);
-        }
-      } catch (error) {
-        console.error('Error checking admin status:', error);
+      if (error) throw error;
+      
+      if (data?.role !== 'admin') {
         toast({
-          title: "Error",
-          description: "Failed to verify permissions",
+          title: "Access denied",
+          description: "You need admin permissions to access this page",
           variant: "destructive",
         });
         navigate('/');
+      } else {
+        setIsAdmin(true);
       }
-    };
-
-    checkIfAdmin();
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to verify permissions",
+        variant: "destructive",
+      });
+      navigate('/');
+    }
   }, [user?.id, navigate, toast]);
 
-  // Fetch profiles
-  useEffect(() => {
-    const fetchProfiles = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, username, email, role, avatar_url, full_name')
-          .order('created_at', { ascending: false });
+  // Fetch profiles with useCallback to prevent recreation on each render
+  const fetchProfiles = useCallback(async () => {
+    if (!isAdmin) return;
+    
+    try {
+      setIsRefreshing(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, email, role, avatar_url, full_name')
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        
-        setProfiles(data);
-        setFilteredProfiles(data);
-      } catch (error) {
-        console.error('Error fetching profiles:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load user profiles",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isAdmin) {
-      fetchProfiles();
+      if (error) throw error;
+      
+      setProfiles(data || []);
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load user profiles",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [isAdmin, toast]);
 
-  // Filter profiles based on search term and selected role
+  // Check admin status only when user changes
   useEffect(() => {
-    let results = profiles;
+    checkIfAdmin();
+  }, [checkIfAdmin]);
+
+  // Fetch profiles only when isAdmin changes
+  useEffect(() => {
+    if (isAdmin) {
+      fetchProfiles();
+    }
+  }, [isAdmin, fetchProfiles]);
+
+  // Filter profiles based on search term and selected role
+  // Use useEffect with memo dependencies to prevent unnecessary recalculations
+  useEffect(() => {
+    let results = [...profiles];
     
     if (searchTerm) {
+      const lowercaseSearch = searchTerm.toLowerCase();
       results = results.filter(profile => 
-        profile.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        profile.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        profile.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        (profile.username?.toLowerCase().includes(lowercaseSearch) || false) ||
+        (profile.email?.toLowerCase().includes(lowercaseSearch) || false) ||
+        (profile.full_name?.toLowerCase().includes(lowercaseSearch) || false)
       );
     }
     
@@ -125,27 +133,13 @@ const UserManagement = () => {
   }, [searchTerm, selectedRole, profiles]);
 
   const handleRefreshProfiles = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, email, role, avatar_url, full_name')
-        .order('created_at', { ascending: false });
+    if (isRefreshing) return; // Prevent multiple simultaneous refreshes
+    await fetchProfiles();
+  };
 
-      if (error) throw error;
-      
-      setProfiles(data);
-      setFilteredProfiles(data);
-    } catch (error) {
-      console.error('Error refreshing profiles:', error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh user profiles",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  // Debounce search to prevent excessive filtering on each keystroke
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
   if (!isAdmin) {
@@ -171,7 +165,7 @@ const UserManagement = () => {
           <Input
             placeholder="Search users by name, email, or username"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             className="pl-10"
           />
         </div>
@@ -184,8 +178,12 @@ const UserManagement = () => {
             Filters
             {selectedRole && <Badge className="ml-2 bg-primary">{selectedRole}</Badge>}
           </Button>
-          <Button variant="outline" onClick={handleRefreshProfiles}>
-            Refresh
+          <Button 
+            variant="outline" 
+            onClick={handleRefreshProfiles}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
       </div>
