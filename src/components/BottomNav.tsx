@@ -2,7 +2,7 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CalendarDays, FileText, User, Percent, Layers, BarChart } from "lucide-react";
+import { CalendarDays, FileText, User, Percent, Layers, BarChart, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -57,9 +57,9 @@ const BottomNav = () => {
   // Add admin-only items if the user is an admin
   if (isAdmin) {
     navItems.splice(2, 0, {
-      label: "Reports",
-      icon: <BarChart className="h-5 w-5" />,
-      path: "/reports",
+      label: "Users",
+      icon: <Users className="h-5 w-5" />,
+      path: "/user-management",
     });
   }
 

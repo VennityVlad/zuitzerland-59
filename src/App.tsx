@@ -16,6 +16,7 @@ import Discounts from "./pages/Discounts";
 import RoomTypes from "./pages/RoomTypes";
 import Reports from "./pages/Reports";
 import Book from "./pages/Book";
+import UserManagement from "./pages/UserManagement";
 import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
@@ -205,6 +206,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <RoomTypes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/user-management"
+                  element={
+                    <ProtectedRoute>
+                      <UserManagement />
                     </ProtectedRoute>
                   }
                 />

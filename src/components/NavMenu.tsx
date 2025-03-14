@@ -20,7 +20,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  BarChart
+  BarChart,
+  Users
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,6 +95,11 @@ const NavMenu = () => {
       label: "Reports",
       icon: <BarChart className="h-5 w-5" />,
       path: "/reports",
+    },
+    {
+      label: "Users",
+      icon: <Users className="h-5 w-5" />,
+      path: "/user-management",
     },
     {
       label: "Discounts",
