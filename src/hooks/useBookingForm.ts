@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -397,15 +396,15 @@ export const useBookingForm = () => {
     return dueDate.toISOString();
   };
 
-  const createInvoice = async (bookingData: BookingFormData) => {
+  const createInvoice = async (bookingData: BookingFormData, customProfileId?: string, customPrice?: number) => {
     try {
-      console.log('Creating invoice with user profile data:', userProfile);
+      console.log('Creating invoice with profile ID:', customProfileId || 'Default');
       
       const creationDate = new Date().toISOString();
       const dueDate = calculateDueDate();
       const invoiceNumber = generateInvoiceNumber();
 
-      const basePrice = bookingData.price;
+      const basePrice = customPrice !== undefined ? customPrice : bookingData.price;
       const priceAfterDiscount = basePrice - discountAmount;
       
       const stripeFee = bookingData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
@@ -416,7 +415,6 @@ export const useBookingForm = () => {
       
       const totalAmount = subtotalBeforeVAT + taxAmount;
 
-      // Create invoice data without putting booking info in meta
       const invoiceData = {
         creationDate,
         invoiceItems: [
@@ -451,13 +449,13 @@ export const useBookingForm = () => {
         }
       };
 
-      // Send booking info separately in the request body, not as part of meta
       const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-invoice', {
         body: { 
           invoiceData,
           paymentType: bookingData.paymentType,
-          priceAfterDiscount,
-          privyId: user?.id,
+          priceAfterDiscount: customPrice !== undefined ? customPrice - discountAmount : priceAfterDiscount,
+          privyId: customProfileId ? null : user?.id,
+          profileId: customProfileId || null,
           bookingInfo: {
             checkin: bookingData.checkin,
             checkout: bookingData.checkout,
@@ -480,16 +478,18 @@ export const useBookingForm = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, adminFormData?: BookingFormData, isAdminMode?: boolean) => {
     e.preventDefault();
     setIsLoading(true);
 
+    const submissionData = isAdminMode && adminFormData ? adminFormData : formData;
+
     const days = differenceInDays(
-      new Date(formData.checkout),
-      new Date(formData.checkin)
+      new Date(submissionData.checkout),
+      new Date(submissionData.checkin)
     );
 
-    const validationError = validateMinimumStay(days, formData.roomType);
+    const validationError = validateMinimumStay(days, submissionData.roomType);
     if (validationError) {
       toast({
         title: "Validation Error",
@@ -501,6 +501,23 @@ export const useBookingForm = () => {
     }
 
     try {
+      if (isAdminMode && adminFormData && adminFormData.profileId) {
+        const customPrice = typeof adminFormData.price === 'number' ? adminFormData.price : undefined;
+        const invoiceResponse = await createInvoice(adminFormData, adminFormData.profileId, customPrice);
+        
+        if (invoiceResponse.paymentLink) {
+          window.open(invoiceResponse.paymentLink, '_blank');
+        }
+
+        toast({
+          title: "Booking Created",
+          description: "The booking has been successfully created for this user!",
+        });
+
+        navigate('/invoices');
+        return;
+      }
+
       const { data: existingInvoices, error: checkError } = await supabase
         .from('invoices')
         .select('*')
@@ -519,7 +536,7 @@ export const useBookingForm = () => {
         return;
       }
 
-      const invoiceResponse = await createInvoice(formData);
+      const invoiceResponse = await createInvoice(submissionData);
       
       if (invoiceResponse.paymentLink) {
         window.open(invoiceResponse.paymentLink, '_blank');

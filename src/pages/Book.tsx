@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import BookingForm from "@/components/BookingForm";
+import AdminBookingForm from "@/components/AdminBookingForm";
 import { PageTitle } from "@/components/PageTitle";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePrivy } from "@privy-io/react-auth";
@@ -72,17 +73,19 @@ const Book = () => {
   
   return (
     <div className="flex flex-col h-full">
-      <PageTitle title={userInvoice && !isAdmin ? "Your Booking" : "Book Your Stay"} />
+      <PageTitle title={userInvoice && !isAdmin ? "Your Booking" : isAdmin ? "Admin Booking Form" : "Book Your Stay"} />
       <div className={`py-4 ${isMobile ? 'px-0' : 'px-4 md:px-8'} flex-grow`}>
         <div className={`container ${isMobile ? 'mx-0 max-w-none' : 'max-w-4xl mx-auto'}`}>
           {isLoading ? (
             <div className="flex justify-center p-8">
               <div className="animate-pulse">Loading your booking information...</div>
             </div>
-          ) : isAdmin || !userInvoice ? (
-            <BookingForm />
-          ) : (
+          ) : isAdmin ? (
+            <AdminBookingForm />
+          ) : userInvoice ? (
             <UserInvoiceView invoice={userInvoice} />
+          ) : (
+            <BookingForm />
           )}
         </div>
       </div>

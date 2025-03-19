@@ -1,4 +1,3 @@
-
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import PaymentTypeSelector from "./PaymentTypeSelector";
@@ -23,6 +22,7 @@ interface BookingDetailsPanelProps {
   discountName: string | null;
   discountPercentage?: number;
   discountMonth?: string | null;
+  customPrice?: number;
 }
 
 const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
@@ -101,23 +101,21 @@ const BookingDetailsPanel = ({
   discountName,
   discountPercentage = 0,
   discountMonth = null,
+  customPrice,
 }: BookingDetailsPanelProps) => {
   const [usdPrice, setUsdPrice] = useState<number | null>(null);
   const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
 
-  // Calculate price after discount
-  const priceAfterDiscount = formData.price - discountAmount;
+  const effectiveBasePrice = customPrice !== undefined ? customPrice : formData.price;
   
-  // Calculate Stripe fee if payment method is credit card
+  const priceAfterDiscount = effectiveBasePrice - discountAmount;
+  
   const stripeFee = formData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
   
-  // Add Stripe fee to get subtotal before VAT
   const subtotalBeforeVAT = priceAfterDiscount + stripeFee;
   
-  // Calculate VAT on the price after Stripe fee
   const taxAmount = subtotalBeforeVAT * VAT_RATE;
   
-  // Calculate final total amount
   const totalAmount = subtotalBeforeVAT + taxAmount;
 
   useEffect(() => {
@@ -187,7 +185,7 @@ const BookingDetailsPanel = ({
           <div className="flex justify-between items-center text-gray-600">
             <span className="flex items-center gap-2">
               Base Price
-              {formData.checkin && formData.checkout && formData.roomType && (
+              {formData.checkin && formData.checkout && formData.roomType && !customPrice && (
                 <Popover>
                   <PopoverTrigger>
                     <HelpCircle className="h-4 w-4 text-gray-500 hover:text-gray-700 cursor-help" />
@@ -201,8 +199,11 @@ const BookingDetailsPanel = ({
                   </PopoverContent>
                 </Popover>
               )}
+              {customPrice !== undefined && (
+                <span className="ml-1 text-xs text-orange-500">(Custom price)</span>
+              )}
             </span>
-            <span>CHF {formData.price.toFixed(2)}</span>
+            <span>CHF {effectiveBasePrice.toFixed(2)}</span>
           </div>
           
           {discountAmount > 0 && (
