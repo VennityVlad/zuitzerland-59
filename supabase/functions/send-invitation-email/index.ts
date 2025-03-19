@@ -56,6 +56,10 @@ serve(async (req) => {
             content: name 
           },
           {
+            name: "EMAIL",
+            content: email
+          },
+          {
             name: "ROLE",
             content: role.replace('-', ' ') // Format role for display (e.g., "co-curator" to "co curator")
           },
