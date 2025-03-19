@@ -1,4 +1,3 @@
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,21 +64,17 @@ const AdminBookingForm = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, email, username')
-        .order('full_name', { ascending: true });
+        .order('email', { ascending: true });
       
       if (error) throw error;
       return data || [];
     }
   });
 
-  // Filter profiles based on search term - with proper null checking
+  // Filter profiles based on email only
   const filteredProfiles = profiles ? profiles.filter(profile => {
     const searchLower = searchTerm.toLowerCase();
-    return (
-      (profile.full_name && profile.full_name.toLowerCase().includes(searchLower)) ||
-      (profile.email && profile.email.toLowerCase().includes(searchLower)) ||
-      (profile.username && profile.username.toLowerCase().includes(searchLower))
-    );
+    return profile.email && profile.email.toLowerCase().includes(searchLower);
   }) : [];
 
   // Handle profile selection
@@ -212,7 +207,7 @@ const AdminBookingForm = () => {
       <div className="space-y-6">
         <div className="pb-6 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-900 mb-1">Select User</h3>
-          <p className="text-sm text-gray-500">Search for a user to create a booking for</p>
+          <p className="text-sm text-gray-500">Search for a user by email</p>
         </div>
 
         <div className="space-y-4">
@@ -226,17 +221,17 @@ const AdminBookingForm = () => {
               >
                 {selectedProfile ? (
                   <span>
-                    {selectedProfile.full_name || selectedProfile.email || selectedProfile.username}
+                    {selectedProfile.email}
                   </span>
                 ) : (
-                  "Search for a user..."
+                  "Search for a user by email..."
                 )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-full p-0" align="start">
               <Command>
                 <CommandInput 
-                  placeholder="Search users..." 
+                  placeholder="Search users by email..." 
                   value={searchTerm}
                   onValueChange={setSearchTerm}
                 />
@@ -260,10 +255,10 @@ const AdminBookingForm = () => {
                           className="flex flex-col items-start"
                         >
                           <div className="font-medium">
-                            {profile.full_name || profile.username || "Unnamed User"}
+                            {profile.email}
                           </div>
-                          {profile.email && (
-                            <div className="text-sm text-muted-foreground">{profile.email}</div>
+                          {profile.full_name && (
+                            <div className="text-sm text-muted-foreground">{profile.full_name}</div>
                           )}
                         </CommandItem>
                       ))}
