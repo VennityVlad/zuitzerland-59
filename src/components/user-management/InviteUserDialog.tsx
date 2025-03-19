@@ -37,6 +37,7 @@ type InviteUserDialogProps = {
 };
 
 type FormValues = {
+  name: string;
   email: string;
   role: "admin" | "co-designer" | "co-curator";
 };
@@ -47,6 +48,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
 
   const form = useForm<FormValues>({
     defaultValues: {
+      name: "",
       email: "",
       role: "co-curator",
     },
@@ -79,15 +81,25 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
           id: uuidv4(),
           email: data.email,
           role: data.role,
+          full_name: data.name,
           username: `user_${Math.floor(Math.random() * 10000)}`
         });
 
       if (error) throw error;
 
-      // Send invitation email by calling the edge function
-      // Note: In a real implementation, we would have an edge function to send invite emails
-      // For this example, we'll just log it and show success
-      console.log(`Invitation would be sent to ${data.email} with role ${data.role}`);
+      // Send invitation email using our edge function
+      const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
+        body: {
+          name: data.name,
+          email: data.email,
+          role: data.role
+        }
+      });
+
+      if (emailError) {
+        console.error("Error sending invitation email:", emailError);
+        throw new Error("Failed to send invitation email");
+      }
 
       toast({
         title: "User invited",
@@ -121,6 +133,20 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="John Doe" required />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="email"
