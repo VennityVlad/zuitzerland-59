@@ -87,6 +87,22 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
 
       if (error) throw error;
 
+      // Add user to Privy allowlist
+      const { error: privyError } = await supabase.functions.invoke("add-to-privy-allowlist", {
+        body: {
+          email: data.email
+        }
+      });
+
+      if (privyError) {
+        console.error("Error adding user to Privy allowlist:", privyError);
+        toast({
+          title: "Warning",
+          description: "User was created but could not be added to the login allowlist. They may have trouble signing in.",
+          variant: "destructive",
+        });
+      }
+
       // Send invitation email using our edge function
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
         body: {

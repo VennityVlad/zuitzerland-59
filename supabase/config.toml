@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.send-email-reminder]
 verify_jwt = true
+
+[functions.add-to-privy-allowlist]
+verify_jwt = false
