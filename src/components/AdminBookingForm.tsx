@@ -1,3 +1,4 @@
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,17 +16,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const AdminBookingForm = () => {
   const { toast } = useToast();
@@ -51,8 +47,6 @@ const AdminBookingForm = () => {
   const [showTerms, setShowTerms] = useState(false);
   const [customPrice, setCustomPrice] = useState<string>('');
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [userSearchOpen, setUserSearchOpen] = useState(false);
 
   const minDate = "2025-05-01";
   const maxDate = "2025-05-25";
@@ -71,16 +65,14 @@ const AdminBookingForm = () => {
     }
   });
 
-  // Filter profiles based on email only
-  const filteredProfiles = profiles ? profiles.filter(profile => {
-    const searchLower = searchTerm.toLowerCase();
-    return profile.email && profile.email.toLowerCase().includes(searchLower);
-  }) : [];
-
   // Handle profile selection
-  const handleProfileSelect = (profile: any) => {
+  const handleProfileSelect = (profileId: string) => {
+    if (!profiles) return;
+    
+    const profile = profiles.find(p => p.id === profileId);
+    if (!profile) return;
+    
     setSelectedProfile(profile);
-    setUserSearchOpen(false);
     
     // Update form data with the selected profile's information
     const updatedFormData = {
@@ -207,67 +199,51 @@ const AdminBookingForm = () => {
       <div className="space-y-6">
         <div className="pb-6 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-900 mb-1">Select User</h3>
-          <p className="text-sm text-gray-500">Search for a user by email</p>
+          <p className="text-sm text-gray-500">Choose a user by email</p>
         </div>
 
         <div className="space-y-4">
-          <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={userSearchOpen}
-                className="w-full justify-between"
+          {profilesError ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>Error loading users. Please try again.</AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="userSelect">User</Label>
+              <Select
+                value={selectedProfile?.id || ""}
+                onValueChange={handleProfileSelect}
+                disabled={profilesLoading}
               >
-                {selectedProfile ? (
-                  <span>
-                    {selectedProfile.email}
-                  </span>
-                ) : (
-                  "Search for a user by email..."
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0" align="start">
-              <Command>
-                <CommandInput 
-                  placeholder="Search users by email..." 
-                  value={searchTerm}
-                  onValueChange={setSearchTerm}
-                />
-                {profilesLoading ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
-                    Loading users...
-                  </div>
-                ) : profilesError ? (
-                  <div className="py-6 text-center text-sm text-destructive">
-                    Error loading users
-                  </div>
-                ) : (
-                  <>
-                    <CommandEmpty>No users found.</CommandEmpty>
-                    <CommandGroup className="max-h-60 overflow-y-auto">
-                      {filteredProfiles.map((profile) => (
-                        <CommandItem
-                          key={profile.id}
-                          value={profile.id}
-                          onSelect={() => handleProfileSelect(profile)}
-                          className="flex flex-col items-start"
-                        >
-                          <div className="font-medium">
-                            {profile.email}
-                          </div>
+                <SelectTrigger className="w-full py-5">
+                  <SelectValue placeholder="Select a user by email" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profilesLoading ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      Loading users...
+                    </div>
+                  ) : profiles && profiles.length > 0 ? (
+                    profiles.map((profile) => (
+                      profile.email ? (
+                        <SelectItem key={profile.id} value={profile.id} className="py-2">
+                          <div className="font-medium">{profile.email}</div>
                           {profile.full_name && (
-                            <div className="text-sm text-muted-foreground">{profile.full_name}</div>
+                            <div className="text-xs text-muted-foreground">{profile.full_name}</div>
                           )}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </>
-                )}
-              </Command>
-            </PopoverContent>
-          </Popover>
+                        </SelectItem>
+                      ) : null
+                    ))
+                  ) : (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      No users found
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {selectedProfile && (
