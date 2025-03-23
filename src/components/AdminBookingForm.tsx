@@ -1,4 +1,3 @@
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,14 +71,11 @@ const AdminBookingForm = () => {
     }
   });
 
-  // Filter profiles based on email only - with improved safety checks
-  const filteredProfiles = Array.isArray(profiles) 
-    ? profiles.filter(profile => {
-        if (!profile || !profile.email) return false;
-        const searchLower = searchTerm.toLowerCase();
-        return profile.email.toLowerCase().includes(searchLower);
-      })
-    : [];
+  // Filter profiles based on email only
+  const filteredProfiles = profiles ? profiles.filter(profile => {
+    const searchLower = searchTerm.toLowerCase();
+    return profile.email && profile.email.toLowerCase().includes(searchLower);
+  }) : [];
 
   // Handle profile selection
   const handleProfileSelect = (profile: any) => {
@@ -233,48 +229,43 @@ const AdminBookingForm = () => {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-full p-0" align="start">
-              {profilesError ? (
-                <div className="p-4 text-center text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 mx-auto mb-2" />
-                  Error loading users: {profilesError.message}
-                </div>
-              ) : (
-                <Command>
-                  <CommandInput 
-                    placeholder="Search users by email..." 
-                    value={searchTerm}
-                    onValueChange={setSearchTerm}
-                  />
-                  {profilesLoading ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground">
-                      Loading users...
-                    </div>
-                  ) : (
-                    <>
-                      {filteredProfiles.length === 0 ? (
-                        <CommandEmpty>No users found.</CommandEmpty>
-                      ) : (
-                        <CommandGroup className="max-h-60 overflow-y-auto">
-                          {filteredProfiles.map((profile) => (
-                            <CommandItem
-                              key={profile.id}
-                              onSelect={() => handleProfileSelect(profile)}
-                              className="flex flex-col items-start"
-                            >
-                              <div className="font-medium">
-                                {profile.email}
-                              </div>
-                              {profile.full_name && (
-                                <div className="text-sm text-muted-foreground">{profile.full_name}</div>
-                              )}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      )}
-                    </>
-                  )}
-                </Command>
-              )}
+              <Command>
+                <CommandInput 
+                  placeholder="Search users by email..." 
+                  value={searchTerm}
+                  onValueChange={setSearchTerm}
+                />
+                {profilesLoading ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    Loading users...
+                  </div>
+                ) : profilesError ? (
+                  <div className="py-6 text-center text-sm text-destructive">
+                    Error loading users
+                  </div>
+                ) : (
+                  <>
+                    <CommandEmpty>No users found.</CommandEmpty>
+                    <CommandGroup className="max-h-60 overflow-y-auto">
+                      {filteredProfiles.map((profile) => (
+                        <CommandItem
+                          key={profile.id}
+                          value={profile.id}
+                          onSelect={() => handleProfileSelect(profile)}
+                          className="flex flex-col items-start"
+                        >
+                          <div className="font-medium">
+                            {profile.email}
+                          </div>
+                          {profile.full_name && (
+                            <div className="text-sm text-muted-foreground">{profile.full_name}</div>
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </>
+                )}
+              </Command>
             </PopoverContent>
           </Popover>
         </div>
