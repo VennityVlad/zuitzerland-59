@@ -24,6 +24,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "../ui/image-upload";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 type CreateTeamDialogProps = {
   open: boolean;
@@ -31,17 +33,20 @@ type CreateTeamDialogProps = {
   onTeamCreated: () => void;
 };
 
-type FormValues = {
-  name: string;
-  description: string;
-  logo_url: string;
-};
+const formSchema = z.object({
+  name: z.string().min(2, "Team name must be at least 2 characters"),
+  description: z.string().optional(),
+  logo_url: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 const CreateTeamDialog = ({ open, onOpenChange, onTeamCreated }: CreateTeamDialogProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -131,7 +136,7 @@ const CreateTeamDialog = ({ open, onOpenChange, onTeamCreated }: CreateTeamDialo
                   <FormLabel>Team Logo</FormLabel>
                   <FormControl>
                     <ImageUpload 
-                      value={field.value} 
+                      value={field.value || ""} 
                       onChange={field.onChange}
                       onUpload={handleImageUpload}
                     />

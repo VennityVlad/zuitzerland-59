@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import EditTeamDialog from "./EditTeamDialog";
+import TeamMembersDialog from "./TeamMembersDialog";
 
 type Team = {
   id: string;
@@ -42,7 +43,9 @@ const TeamCard = ({ team, onRefresh }: TeamCardProps) => {
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [memberCount, setMemberCount] = useState<number | null>(null);
 
   const getInitials = (name: string) => {
     return name
@@ -51,10 +54,38 @@ const TeamCard = ({ team, onRefresh }: TeamCardProps) => {
       .join('')
       .toUpperCase();
   };
+  
+  const fetchMemberCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', team.id);
+
+      if (error) throw error;
+      setMemberCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching member count:', error);
+    }
+  };
+  
+  // Fetch member count when component mounts
+  useState(() => {
+    fetchMemberCount();
+  });
 
   const handleDeleteTeam = async () => {
     setIsDeleting(true);
     try {
+      // First, remove all team associations from profiles
+      const { error: profilesError } = await supabase
+        .from('profiles')
+        .update({ team_id: null })
+        .eq('team_id', team.id);
+
+      if (profilesError) throw profilesError;
+      
+      // Then delete the team
       const { error } = await supabase
         .from('teams')
         .delete()
@@ -112,7 +143,7 @@ const TeamCard = ({ team, onRefresh }: TeamCardProps) => {
                   <Edit className="mr-2 h-4 w-4" />
                   Edit team
                 </DropdownMenuItem>
-                <DropdownMenuItem
+                <DropdownMenuItem 
                   className="text-red-600" 
                   onClick={() => setShowDeleteDialog(true)}
                 >
@@ -130,9 +161,19 @@ const TeamCard = ({ team, onRefresh }: TeamCardProps) => {
           </div>
           
           <div className="flex items-center mt-4">
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={() => setShowMembersDialog(true)}
+            >
               <Users className="h-4 w-4" />
               <span>View Members</span>
+              {memberCount !== null && memberCount > 0 && (
+                <span className="ml-1 text-xs bg-primary/20 text-primary rounded-full px-2 py-0.5">
+                  {memberCount}
+                </span>
+              )}
             </Button>
           </div>
         </CardContent>
@@ -165,6 +206,16 @@ const TeamCard = ({ team, onRefresh }: TeamCardProps) => {
         onOpenChange={setShowEditDialog} 
         team={team}
         onTeamUpdated={onRefresh}
+      />
+      
+      <TeamMembersDialog
+        open={showMembersDialog}
+        onOpenChange={setShowMembersDialog}
+        team={team}
+        onMembersUpdated={() => {
+          fetchMemberCount();
+          onRefresh();
+        }}
       />
     </>
   );
