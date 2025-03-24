@@ -267,6 +267,7 @@ const TeamMembersDialog = ({
                             variant="outline"
                             onClick={() => handleAddMember(user.id)}
                             disabled={isAddingMember}
+                            type="button"
                           >
                             Add
                           </Button>
@@ -342,6 +343,7 @@ const TeamMembersDialog = ({
                         size="sm"
                         onClick={() => handleRemoveMember(member.id)}
                         disabled={isRemovingMember}
+                        type="button"
                       >
                         <UserMinus className="h-4 w-4 mr-2" />
                         Remove
@@ -358,6 +360,7 @@ const TeamMembersDialog = ({
                 variant="outline"
                 className="mt-4"
                 onClick={() => setShowAddMemberPopover(true)}
+                type="button"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add your first member
