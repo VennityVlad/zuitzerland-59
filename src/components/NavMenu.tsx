@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,9 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart,
-  Users
+  Users,
+  UserPlus,
+  Building
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +38,6 @@ const NavMenu = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
   
-  // Auto-collapse sidebar on mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -46,7 +46,6 @@ const NavMenu = () => {
     }
   }, [isMobile]);
 
-  // Close sidebar when navigating on mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -77,7 +76,6 @@ const NavMenu = () => {
     }
   }, [user?.id]);
 
-  // Base menu items (Book is always included)
   const menuItems = [
     {
       label: "Book",
@@ -86,7 +84,6 @@ const NavMenu = () => {
     }
   ];
 
-  // Add Invoices to menu only for admin users
   if (isAdmin) {
     menuItems.push({
       label: "Invoices",
@@ -94,11 +91,16 @@ const NavMenu = () => {
       path: "/invoices",
     });
     
-    // Add Users management for admins
     menuItems.push({
       label: "Users",
       icon: <Users className="h-5 w-5" />,
       path: "/user-management",
+    });
+    
+    menuItems.push({
+      label: "Teams",
+      icon: <Building className="h-5 w-5" />,
+      path: "/teams",
     });
   }
 
@@ -120,7 +122,6 @@ const NavMenu = () => {
     }
   ];
 
-  // Add admin items to the menu for desktop view
   if (isAdmin) {
     menuItems.push(...adminItems);
   }
@@ -148,12 +149,10 @@ const NavMenu = () => {
     );
   };
 
-  // Mobile bottom navigation
   if (isMobile) {
     return <BottomNav />;
   }
 
-  // Desktop sidebar
   return (
     <>
       <div className={cn(
@@ -187,7 +186,6 @@ const NavMenu = () => {
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-3">
-          {/* Profile button */}
           <NavItem 
             item={{
               label: "Profile",
@@ -213,7 +211,6 @@ const NavMenu = () => {
         </div>
       </div>
 
-      {/* Main content spacer to prevent overlap with sidebar */}
       <div className={cn(
         "transition-all duration-300 ease-in-out",
         sidebarOpen ? "ml-64" : "ml-20"

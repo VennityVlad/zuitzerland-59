@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { CalendarDays, FileText, Users, MoreHorizontal, User, LogOut } from "lucide-react";
+import { CalendarDays, FileText, Users, MoreHorizontal, User, LogOut, Building } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -81,7 +81,7 @@ const BottomNav = () => {
   let menuItems = [];
   
   if (isAdmin) {
-    // Admin menu: Book, Invoices, Users, More
+    // Admin menu: Book, Invoices, Users, Teams, More
     menuItems = [
       {
         icon: CalendarDays,
@@ -100,6 +100,12 @@ const BottomNav = () => {
         label: "Users",
         path: "/user-management",
         action: () => navigate("/user-management")
+      },
+      {
+        icon: Building,
+        label: "Teams",
+        path: "/teams",
+        action: () => navigate("/teams")
       },
       {
         icon: MoreHorizontal,

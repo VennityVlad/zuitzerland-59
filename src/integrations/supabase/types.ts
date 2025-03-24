@@ -183,6 +183,7 @@ export type Database = {
           privy_id: string | null
           role: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid: string | null
+          team_id: string | null
           updated_at: string
           username: string | null
         }
@@ -198,6 +199,7 @@ export type Database = {
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
+          team_id?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -213,10 +215,19 @@ export type Database = {
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
+          team_id?: string | null
           updated_at?: string
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       room_types: {
         Row: {
@@ -272,6 +283,33 @@ export type Database = {
           id?: string
           name?: string
           value?: string
+        }
+        Relationships: []
+      }
+      teams: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
