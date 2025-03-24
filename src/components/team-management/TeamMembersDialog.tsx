@@ -69,7 +69,7 @@ const TeamMembersDialog = ({
     try {
       const { data: members, error } = await supabase
         .from("profiles")
-        .select("id, username, email, full_name, avatar_url, role")
+        .select("id, username, email, full_name, avatar_url, role, team_id")
         .eq("team_id", team.id);
 
       if (error) throw error;
