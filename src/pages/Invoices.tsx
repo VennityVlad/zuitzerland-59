@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect, useMemo } from "react";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
@@ -10,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { parseISO, subDays, subMonths } from "date-fns";
 import { PageTitle } from "@/components/PageTitle";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Download } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { convertInvoicesToCSV, downloadCSV } from "@/utils/exportUtils";
 import { useToast } from "@/hooks/use-toast";
+import { ImportInvoiceDialog } from "@/components/invoices/ImportInvoiceDialog";
 
 const Invoices = () => {
   const { user } = usePrivy();
@@ -28,6 +30,7 @@ const Invoices = () => {
     dateRange: null,
   });
   const [isExporting, setIsExporting] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -60,7 +63,7 @@ const Invoices = () => {
     }
   }, [user?.id]);
 
-  const { invoices, isLoading: invoicesLoading } = useInvoices(user?.id, isAdmin);
+  const { invoices, isLoading: invoicesLoading, refetchInvoices } = useInvoices(user?.id, isAdmin);
 
   const roomTypes = useMemo(() => {
     const types = new Set<string>();
@@ -188,16 +191,28 @@ const Invoices = () => {
               )}
               
               {isAdmin && (
-                <Button
-                  onClick={handleExportCSV}
-                  variant="outline"
-                  size="sm"
-                  disabled={isExporting || filteredInvoices.length === 0}
-                  className="flex items-center gap-2 mt-4 md:mt-0"
-                >
-                  <Download className="h-4 w-4" />
-                  {isExporting ? 'Exporting...' : 'Export CSV'}
-                </Button>
+                <div className="flex gap-2 mt-4 md:mt-0">
+                  <Button
+                    onClick={() => setIsImportDialogOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Import Invoice
+                  </Button>
+                  
+                  <Button
+                    onClick={handleExportCSV}
+                    variant="outline"
+                    size="sm"
+                    disabled={isExporting || filteredInvoices.length === 0}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isExporting ? 'Exporting...' : 'Export CSV'}
+                  </Button>
+                </div>
               )}
             </div>
             
@@ -229,6 +244,14 @@ const Invoices = () => {
           </div>
         </div>
       </div>
+      
+      {isAdmin && (
+        <ImportInvoiceDialog 
+          open={isImportDialogOpen}
+          onOpenChange={setIsImportDialogOpen}
+          onSuccess={refetchInvoices}
+        />
+      )}
     </div>
   );
 };
