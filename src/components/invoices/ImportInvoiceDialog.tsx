@@ -37,6 +37,7 @@ interface ImportPreviewData {
   status: string;
   invoice_uid: string;
   request_invoice_id: string;
+  payment_type: string; // Added payment_type field
 }
 
 export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInvoiceDialogProps) {
@@ -123,6 +124,13 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         }, 0);
       }
 
+      // Determine payment type based on invoice payment options
+      let paymentType = "crypto";
+      if (invoice.paymentOptions && invoice.paymentOptions.length > 0) {
+        const hasStripe = invoice.paymentOptions.some((option: any) => option.type === "stripe");
+        paymentType = hasStripe ? "fiat" : "crypto";
+      }
+
       // Prepare preview data
       const preview: ImportPreviewData = {
         room_type: roomType,
@@ -136,7 +144,8 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         payment_link: invoiceLinks.pay || "",
         status: invoice.status || "pending",
         invoice_uid: invoice.invoiceNumber || "",
-        request_invoice_id: invoice.id || ""
+        request_invoice_id: invoice.id || "",
+        payment_type: paymentType
       };
 
       setPreviewData(preview);
@@ -185,9 +194,21 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
       const { data, error } = await supabase
         .from('invoices')
         .insert({
-          ...previewData,
           profile_id: selectedProfileId,
-          booking_details: invoiceData, // Store the original invoice data
+          booking_details: invoiceData,
+          room_type: previewData.room_type,
+          price: previewData.price,
+          first_name: previewData.first_name,
+          last_name: previewData.last_name,
+          email: previewData.email,
+          checkin: previewData.checkin,
+          checkout: previewData.checkout,
+          due_date: previewData.due_date,
+          payment_link: previewData.payment_link,
+          status: previewData.status,
+          invoice_uid: previewData.invoice_uid,
+          request_invoice_id: previewData.request_invoice_id,
+          payment_type: previewData.payment_type // Make sure this is included
         })
         .select()
         .single();
@@ -300,6 +321,9 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
                       
                       <div className="text-sm font-medium">Price:</div>
                       <div className="text-sm">CHF {previewData.price.toFixed(2)}</div>
+                      
+                      <div className="text-sm font-medium">Payment Type:</div>
+                      <div className="text-sm">{previewData.payment_type === "fiat" ? "Credit Card" : "Crypto"}</div>
                       
                       <div className="text-sm font-medium">Due Date:</div>
                       <div className="text-sm">{formatDate(previewData.due_date)}</div>
