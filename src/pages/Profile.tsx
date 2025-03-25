@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -10,8 +11,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload } from "lucide-react";
+import { Upload, Users } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
+import { TeamBadge } from "@/components/TeamBadge";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
@@ -26,6 +28,7 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
+  const [team, setTeam] = useState<any>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -42,7 +45,7 @@ const Profile = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('*, teams:team_id(*)')
           .eq('privy_id', user.id)
           .maybeSingle();
 
@@ -53,6 +56,7 @@ const Profile = () => {
 
         if (data) {
           setProfileData(data);
+          setTeam(data.teams);
           form.reset({
             username: data.username || "",
             description: data.description || "",
@@ -231,7 +235,7 @@ const Profile = () => {
       <div className="py-8 px-4 flex-grow">
         <div className="container max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-lg p-8">
-            <div className="flex items-center gap-6 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center gap-6 mb-8">
               <div className="relative">
                 <Avatar className="h-20 w-20">
                   <AvatarImage src={profileData?.avatar_url} />
@@ -254,7 +258,7 @@ const Profile = () => {
                   />
                 </label>
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <h2 className="text-xl font-semibold">
                   {profileData?.username || 'Anonymous User'}
                 </h2>
@@ -262,6 +266,11 @@ const Profile = () => {
                   <p className="text-sm text-primary font-medium capitalize">
                     {profileData.role.replace(/-/g, ' ')}
                   </p>
+                )}
+                {team && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <TeamBadge team={team} />
+                  </div>
                 )}
               </div>
             </div>
