@@ -2,6 +2,7 @@
 import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface TeamBadgeProps {
   team: {
@@ -44,7 +45,16 @@ export const TeamBadge = ({ team, className }: TeamBadgeProps) => {
         className
       )}
     >
-      <Users className="h-3.5 w-3.5" />
+      {team.logo_url ? (
+        <Avatar className="h-4 w-4 border border-white/30">
+          <AvatarImage src={team.logo_url} alt={team.name} />
+          <AvatarFallback className="text-[8px]">
+            {team.name.charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <Users className="h-3.5 w-3.5" />
+      )}
       <span>{team.name}</span>
     </Badge>
   );
