@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Calendar } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DatePicker } from "@/components/ui/date-picker";
+import { formatInTimeZone } from "date-fns-tz";
 
 interface Profile {
   id: string;
@@ -37,7 +39,7 @@ interface ImportPreviewData {
   status: string;
   invoice_uid: string;
   request_invoice_id: string;
-  payment_type: string; // Added payment_type field
+  payment_type: string;
 }
 
 export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInvoiceDialogProps) {
@@ -49,6 +51,8 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [invoiceData, setInvoiceData] = useState<any>(null);
   const [previewData, setPreviewData] = useState<ImportPreviewData | null>(null);
+  const [checkinDate, setCheckinDate] = useState<Date | undefined>(undefined);
+  const [checkoutDate, setCheckoutDate] = useState<Date | undefined>(undefined);
 
   // Fetch profiles for dropdown
   useEffect(() => {
@@ -138,8 +142,8 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         first_name: buyerInfo.firstName || "",
         last_name: buyerInfo.lastName || "",
         email: buyerInfo.email || "",
-        checkin: null, // Not available in the API response
-        checkout: null, // Not available in the API response
+        checkin: null, // Will be populated from date picker
+        checkout: null, // Will be populated from date picker
         due_date: paymentTerms.dueDate || new Date().toISOString(),
         payment_link: invoiceLinks.pay || "",
         status: invoice.status || "pending",
@@ -190,6 +194,18 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
 
     setIsImporting(true);
     try {
+      // Format dates for database storage
+      let checkinStr = null;
+      let checkoutStr = null;
+      
+      if (checkinDate) {
+        checkinStr = formatInTimeZone(checkinDate, 'UTC', 'yyyy-MM-dd');
+      }
+      
+      if (checkoutDate) {
+        checkoutStr = formatInTimeZone(checkoutDate, 'UTC', 'yyyy-MM-dd');
+      }
+
       // Create invoice record
       const { data, error } = await supabase
         .from('invoices')
@@ -201,14 +217,14 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
           first_name: previewData.first_name,
           last_name: previewData.last_name,
           email: previewData.email,
-          checkin: previewData.checkin,
-          checkout: previewData.checkout,
+          checkin: checkinStr,
+          checkout: checkoutStr,
           due_date: previewData.due_date,
           payment_link: previewData.payment_link,
           status: previewData.status,
           invoice_uid: previewData.invoice_uid,
           request_invoice_id: previewData.request_invoice_id,
-          payment_type: previewData.payment_type // Make sure this is included
+          payment_type: previewData.payment_type
         })
         .select()
         .single();
@@ -239,6 +255,8 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
     setSelectedProfileId("");
     setInvoiceData(null);
     setPreviewData(null);
+    setCheckinDate(undefined);
+    setCheckoutDate(undefined);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -298,6 +316,27 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Check-in Date</Label>
+                  <DatePicker 
+                    date={checkinDate}
+                    onDateChange={setCheckinDate}
+                    placeholder="Select check-in date"
+                    toDate={checkoutDate}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Check-out Date</Label>
+                  <DatePicker 
+                    date={checkoutDate}
+                    onDateChange={setCheckoutDate}
+                    placeholder="Select check-out date"
+                    fromDate={checkinDate}
+                  />
+                </div>
+              </div>
               
               <div className="space-y-2">
                 <Label>Invoice Preview</Label>
@@ -329,10 +368,10 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
                       <div className="text-sm">{formatDate(previewData.due_date)}</div>
                       
                       <div className="text-sm font-medium">Check-in:</div>
-                      <div className="text-sm">{previewData.checkin ? formatDate(previewData.checkin) : "Not specified"}</div>
+                      <div className="text-sm">{checkinDate ? format(checkinDate, "MMM d, yyyy") : "Not specified"}</div>
                       
                       <div className="text-sm font-medium">Check-out:</div>
-                      <div className="text-sm">{previewData.checkout ? formatDate(previewData.checkout) : "Not specified"}</div>
+                      <div className="text-sm">{checkoutDate ? format(checkoutDate, "MMM d, yyyy") : "Not specified"}</div>
                     </div>
                   </div>
                 </ScrollArea>
