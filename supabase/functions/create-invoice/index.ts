@@ -336,9 +336,9 @@ serve(async (req) => {
         room_type: bookingInfo.roomType || '',
         checkin: bookingInfo.checkin || null,
         checkout: bookingInfo.checkout || null,
-        email: sanitizedBuyerInfo.email,
-        first_name: sanitizedBuyerInfo.firstName,
-        last_name: sanitizedBuyerInfo.lastName,
+        email: invoiceData.buyerInfo.email,
+        first_name: invoiceData.buyerInfo.firstName,
+        last_name: invoiceData.buyerInfo.lastName,
         due_date: onChainInvoice.dueDate,
         booking_details: {
           ...invoiceData,
@@ -393,6 +393,38 @@ serve(async (req) => {
             console.error('Error checking if invoice was inserted:', checkError);
           } else if (checkData) {
             console.log('Confirmed invoice was inserted with ID:', checkData.id);
+            
+            // NEW: Send welcome email after successful invoice creation
+            try {
+              console.log('Sending booking confirmation email');
+              
+              const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-reminder`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseKey}`
+                },
+                body: JSON.stringify({
+                  invoiceId: checkData.id,
+                  email: invoiceData.buyerInfo.email,
+                  firstName: invoiceData.buyerInfo.firstName,
+                  lastName: invoiceData.buyerInfo.lastName,
+                  invoiceAmount: finalPrice,
+                  dueDate: onChainInvoice.dueDate,
+                  paymentLink: onChainInvoice.invoiceLinks.pay,
+                  isNewBooking: true // Indicate this is a new booking, not a reminder
+                })
+              });
+              
+              if (!emailResponse.ok) {
+                console.error('Failed to send booking confirmation email:', await emailResponse.text());
+              } else {
+                console.log('Successfully sent booking confirmation email');
+              }
+            } catch (emailError) {
+              console.error('Error sending booking confirmation email:', emailError);
+              // Continue execution even if the email fails
+            }
           } else {
             console.error('CRITICAL: Invoice appears to be missing after "successful" insert!');
           }

@@ -10,6 +10,7 @@ interface EmailReminderRequest {
   invoiceAmount: number;
   dueDate: string;
   paymentLink: string;
+  isNewBooking?: boolean; // Added to differentiate between new bookings and reminders
 }
 
 serve(async (req) => {
@@ -19,7 +20,7 @@ serve(async (req) => {
   }
 
   try {
-    const { invoiceId, email, firstName, lastName, invoiceAmount, dueDate, paymentLink } = 
+    const { invoiceId, email, firstName, lastName, invoiceAmount, dueDate, paymentLink, isNewBooking } = 
       await req.json() as EmailReminderRequest;
 
     if (!invoiceId || !email) {
@@ -51,6 +52,11 @@ serve(async (req) => {
       }
     ];
 
+    // Determine the subject based on whether this is a new booking or reminder
+    const subject = isNewBooking 
+      ? "Your Zuitzerland Booking Confirmation" 
+      : "Reminder to Pay Your Zuitzerland Invoice";
+
     // Prepare the data for Mailchimp API with the specified structure
     const mailchimpData = {
       key: apiKey,
@@ -58,14 +64,18 @@ serve(async (req) => {
       template_content: [], // For transactional emails, this is often empty
       message: {
         to: recipients,
-        from_email: "isla@zuitzerland.ch",
-        from_name: "Isla from Zuitzerland",
-        subject: "Reminder to Pay Your Zuitzerland Invoice",
+        from_email: "team@zuitzerland.ch", // Updated as requested
+        from_name: "The Zuitzerland Team", // Updated as requested
+        subject: subject,
         merge_language: "mailchimp",
         global_merge_vars: [
           { 
             name: "INVOICE", 
             content: paymentLink // Using the payment link as the invoice link
+          },
+          {
+            name: "FNAME",
+            content: firstName // Adding first name as requested
           }
         ],
         headers: {
@@ -74,7 +84,8 @@ serve(async (req) => {
       }
     };
 
-    console.log('Sending reminder email to:', email);
+    const emailType = isNewBooking ? "booking confirmation" : "reminder";
+    console.log(`Sending ${emailType} email to:`, email);
     
     // Call Mailchimp Transactional API (Mandrill)
     const response = await fetch('https://mandrillapp.com/api/1.0/messages/send-template', {
@@ -94,37 +105,43 @@ serve(async (req) => {
     const result = await response.json();
     console.log('Email sent successfully:', result);
 
-    // Update the invoice in database to mark that a reminder was sent
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.39.7");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Only update reminder count and timestamp if this is a reminder (not a new booking)
+    if (!isNewBooking) {
+      // Update the invoice in database to mark that a reminder was sent
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.39.7");
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
+      const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // First, increment the reminder count
-    const { data: newCount, error: rpcError } = await supabase
-      .rpc('increment_reminder_count', { invoice_id: invoiceId });
+      // First, increment the reminder count
+      const { data: newCount, error: rpcError } = await supabase
+        .rpc('increment_reminder_count', { invoice_id: invoiceId });
 
-    if (rpcError) {
-      console.error('Error incrementing reminder count:', rpcError);
-      throw new Error('Failed to increment reminder count');
-    }
+      if (rpcError) {
+        console.error('Error incrementing reminder count:', rpcError);
+        throw new Error('Failed to increment reminder count');
+      }
 
-    // Then, update the last_reminder_sent timestamp and the reminder_count
-    const { error: updateError } = await supabase
-      .from('invoices')
-      .update({ 
-        last_reminder_sent: new Date().toISOString(),
-        reminder_count: newCount
-      })
-      .eq('id', invoiceId);
+      // Then, update the last_reminder_sent timestamp and the reminder_count
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({ 
+          last_reminder_sent: new Date().toISOString(),
+          reminder_count: newCount
+        })
+        .eq('id', invoiceId);
 
-    if (updateError) {
-      console.error('Error updating invoice reminder status:', updateError);
-      throw new Error('Failed to update invoice reminder status');
+      if (updateError) {
+        console.error('Error updating invoice reminder status:', updateError);
+        throw new Error('Failed to update invoice reminder status');
+      }
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "Email reminder sent successfully" }),
+      JSON.stringify({ 
+        success: true, 
+        message: isNewBooking ? "Booking confirmation email sent successfully" : "Email reminder sent successfully" 
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
