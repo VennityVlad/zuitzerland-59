@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail } from "lucide-react";
+import { ExternalLink, Mail, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Invoice } from "@/types/invoice";
 import { useState } from "react";
@@ -21,17 +21,20 @@ interface InvoiceTableProps {
   invoices: Invoice[];
   isAdmin: boolean;
   onPaymentClick: (paymentLink: string) => void;
-  useCardView?: boolean; // New prop to control view mode
+  useCardView?: boolean;
+  profileInvitationStatus?: Record<string, boolean>;
 }
 
 export const InvoiceTable = ({ 
   invoices, 
   isAdmin, 
   onPaymentClick,
-  useCardView = true // Default to card view
+  useCardView = true,
+  profileInvitationStatus = {}
 }: InvoiceTableProps) => {
   const { toast } = useToast();
   const [loadingInvoiceId, setLoadingInvoiceId] = useState<string | null>(null);
+  const [guildInviteLoading, setGuildInviteLoading] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     return format(parseISO(dateString), 'MMM d');
@@ -95,6 +98,52 @@ export const InvoiceTable = ({
     }
   };
 
+  const handleSendGuildInvite = async (invoice: Invoice, profileId: string) => {
+    if (!profileId) {
+      toast({
+        title: "Error",
+        description: "No profile ID available for this user",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setGuildInviteLoading(invoice.id);
+      
+      const response = await supabase.functions.invoke('send-guild-invitation', {
+        body: {
+          invoiceId: invoice.id,
+          profileId: profileId,
+          email: invoice.email,
+          firstName: invoice.first_name,
+          lastName: invoice.last_name
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to send guild invitation');
+      }
+
+      toast({
+        title: "Invitation Sent",
+        description: `Guild invitation sent to ${invoice.email}`,
+      });
+      
+      // Update local state to reflect the invitation was sent
+      profileInvitationStatus[profileId] = true;
+    } catch (error) {
+      console.error('Error sending guild invitation:', error);
+      toast({
+        title: "Failed to Send Invitation",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setGuildInviteLoading(null);
+    }
+  };
+
   // Card view (default view now)
   if (useCardView) {
     return (
@@ -105,7 +154,11 @@ export const InvoiceTable = ({
             invoice={invoice}
             onPaymentClick={onPaymentClick}
             onSendReminder={isAdmin ? handleSendReminder : undefined}
+            onSendGuildInvite={isAdmin ? handleSendGuildInvite : undefined}
             isLoading={loadingInvoiceId === invoice.id}
+            isGuildInviteLoading={guildInviteLoading === invoice.id}
+            isGuildInvited={invoice.profile_id ? profileInvitationStatus[invoice.profile_id] : false}
+            profileId={invoice.profile_id}
           />
         ))}
       </div>
@@ -191,6 +244,22 @@ export const InvoiceTable = ({
                           className="flex items-center gap-2"
                         >
                           {loadingInvoiceId === invoice.id ? 'Sending...' : 'Reminder'} <Mail className="h-4 w-4" />
+                        </Button>
+                      )}
+                      
+                      {invoice.status === 'paid' && invoice.profile_id && (
+                        <Button
+                          onClick={() => handleSendGuildInvite(invoice, invoice.profile_id!)}
+                          variant="outline"
+                          size="sm"
+                          disabled={guildInviteLoading === invoice.id || (invoice.profile_id ? profileInvitationStatus[invoice.profile_id] : false)}
+                          className="flex items-center gap-2"
+                        >
+                          {guildInviteLoading === invoice.id 
+                            ? 'Sending...' 
+                            : (invoice.profile_id && profileInvitationStatus[invoice.profile_id]) 
+                              ? 'Invited' 
+                              : 'Invite to Guild'} <Users className="h-4 w-4" />
                         </Button>
                       )}
                     </div>

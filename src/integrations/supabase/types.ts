@@ -180,6 +180,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_guild_invited: boolean | null
           privy_id: string | null
           role: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid: string | null
@@ -196,6 +197,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_guild_invited?: boolean | null
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
@@ -212,6 +214,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_guild_invited?: boolean | null
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null

@@ -21,3 +21,6 @@ verify_jwt = false
 [functions.fetch-request-finance-invoice]
 verify_jwt = true
 
+[functions.send-guild-invitation]
+verify_jwt = true
+

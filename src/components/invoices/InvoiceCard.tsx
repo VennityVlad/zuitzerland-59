@@ -3,21 +3,29 @@ import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail } from "lucide-react";
+import { ExternalLink, Mail, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface InvoiceCardProps {
   invoice: Invoice;
   onPaymentClick: (paymentLink: string) => void;
   onSendReminder?: (invoice: Invoice) => void;
+  onSendGuildInvite?: (invoice: Invoice, profileId: string) => void;
   isLoading?: boolean;
+  isGuildInviteLoading?: boolean;
+  isGuildInvited?: boolean;
+  profileId?: string;
 }
 
 export const InvoiceCard = ({ 
   invoice, 
   onPaymentClick, 
   onSendReminder,
-  isLoading 
+  onSendGuildInvite,
+  isLoading,
+  isGuildInviteLoading,
+  isGuildInvited,
+  profileId
 }: InvoiceCardProps) => {
   const formatDate = (dateString: string) => {
     return format(parseISO(dateString), 'MMM d, yyyy');
@@ -40,6 +48,8 @@ export const InvoiceCard = ({
         return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
     }
   };
+
+  const showGuildInviteButton = onSendGuildInvite && invoice.status === 'paid' && profileId;
 
   return (
     <Card className="mb-4">
@@ -97,6 +107,18 @@ export const InvoiceCard = ({
             className="flex items-center gap-2"
           >
             {isLoading ? 'Sending...' : 'Reminder'} <Mail className="h-4 w-4" />
+          </Button>
+        )}
+        
+        {showGuildInviteButton && (
+          <Button
+            onClick={() => onSendGuildInvite(invoice, profileId)}
+            variant="outline"
+            size="sm"
+            disabled={isGuildInviteLoading || isGuildInvited}
+            className="flex items-center gap-2"
+          >
+            {isGuildInviteLoading ? 'Sending...' : isGuildInvited ? 'Invited' : 'Invite to Guild'} <Users className="h-4 w-4" />
           </Button>
         )}
         
