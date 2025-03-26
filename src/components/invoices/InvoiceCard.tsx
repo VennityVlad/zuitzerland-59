@@ -3,7 +3,7 @@ import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Users } from "lucide-react";
+import { ExternalLink, Mail, Users, Download } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface InvoiceCardProps {
@@ -56,9 +56,16 @@ export const InvoiceCard = ({
       <CardContent className="pt-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <Badge className={getStatusStyle(invoice.status)}>
-              {invoice.status}
-            </Badge>
+            <div className="flex gap-2 items-center">
+              <Badge className={getStatusStyle(invoice.status)}>
+                {invoice.status}
+              </Badge>
+              {invoice.imported && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+                  Imported
+                </Badge>
+              )}
+            </div>
             <h3 className="text-lg font-medium mt-2">
               {invoice.first_name} {invoice.last_name}
             </h3>

@@ -53,6 +53,7 @@ export type Database = {
           email: string
           first_name: string
           id: string
+          imported: boolean | null
           invoice_uid: string
           last_name: string
           last_reminder_sent: string | null
@@ -76,6 +77,7 @@ export type Database = {
           email: string
           first_name: string
           id?: string
+          imported?: boolean | null
           invoice_uid: string
           last_name: string
           last_reminder_sent?: string | null
@@ -99,6 +101,7 @@ export type Database = {
           email?: string
           first_name?: string
           id?: string
+          imported?: boolean | null
           invoice_uid?: string
           last_name?: string
           last_reminder_sent?: string | null

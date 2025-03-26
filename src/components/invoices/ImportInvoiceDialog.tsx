@@ -224,7 +224,8 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
           status: previewData.status,
           invoice_uid: previewData.invoice_uid,
           request_invoice_id: previewData.request_invoice_id,
-          payment_type: previewData.payment_type
+          payment_type: previewData.payment_type,
+          imported: true // Set the imported flag to true
         })
         .select()
         .single();
