@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
-import { Loader2, Calendar } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatInTimeZone } from "date-fns-tz";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 
 interface Profile {
   id: string;
@@ -142,8 +142,8 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         first_name: buyerInfo.firstName || "",
         last_name: buyerInfo.lastName || "",
         email: buyerInfo.email || "",
-        checkin: null, // Will be populated from date picker
-        checkout: null, // Will be populated from date picker
+        checkin: null,
+        checkout: null,
         due_date: paymentTerms.dueDate || new Date().toISOString(),
         payment_link: invoiceLinks.pay || "",
         status: invoice.status || "pending",
@@ -269,14 +269,14 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
   };
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
+    <Sheet open={open} onOpenChange={(newOpen) => {
       if (!newOpen) resetForm();
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Import Invoice from Request Finance</DialogTitle>
-        </DialogHeader>
+      <SheetContent className="sm:max-w-[500px] md:max-w-[600px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Import Invoice from Request Finance</SheetTitle>
+        </SheetHeader>
         
         <div className="space-y-6 py-4">
           <div className="space-y-2">
@@ -317,7 +317,7 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Check-in Date</Label>
                   <DatePicker 
@@ -380,19 +380,21 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
           )}
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleImport} 
-            disabled={isImporting || !previewData || !selectedProfileId}
-          >
-            {isImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-            Import Invoice
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <SheetFooter className="pt-4">
+          <div className="flex justify-end gap-2 w-full">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleImport} 
+              disabled={isImporting || !previewData || !selectedProfileId}
+            >
+              {isImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Import Invoice
+            </Button>
+          </div>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
