@@ -15,4 +15,5 @@ export interface Invoice {
   due_date: string;
   last_reminder_sent?: string | null;
   reminder_count?: number;
+  profile_id?: string;
 }
