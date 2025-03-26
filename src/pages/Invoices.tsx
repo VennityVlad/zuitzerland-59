@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect, useMemo } from "react";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
@@ -14,6 +15,7 @@ import { Download, Upload } from "lucide-react";
 import { convertInvoicesToCSV, downloadCSV } from "@/utils/exportUtils";
 import { useToast } from "@/hooks/use-toast";
 import { ImportInvoiceDialog } from "@/components/invoices/ImportInvoiceDialog";
+import { InvoiceMassActions } from "@/components/invoices/InvoiceMassActions";
 
 const Invoices = () => {
   const { user } = usePrivy();
@@ -248,6 +250,13 @@ const Invoices = () => {
                 </div>
               )}
             </div>
+            
+            {isAdmin && filteredInvoices.length > 0 && (
+              <InvoiceMassActions 
+                invoices={filteredInvoices} 
+                onComplete={refetchInvoices}
+              />
+            )}
             
             {invoicesLoading ? (
               <InvoiceLoader />
