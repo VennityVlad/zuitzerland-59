@@ -6,7 +6,7 @@ import { InvoiceLoader } from "@/components/invoices/InvoiceLoader";
 import { NoInvoicesMessage } from "@/components/invoices/NoInvoicesMessage";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
 import { Button } from "@/components/ui/button";
-import { Download, Upload } from "lucide-react";
+import { Download, Plus, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ImportInvoiceDialog } from "@/components/invoices/ImportInvoiceDialog";
@@ -44,7 +44,6 @@ const InvoicesPage = () => {
       <>
         <Button
           onClick={() => setIsImportDialogOpen(true)}
-          variant="outline"
           size="sm"
           className="flex items-center gap-2"
         >
@@ -54,7 +53,6 @@ const InvoicesPage = () => {
         
         <Button
           onClick={handleExportCSV}
-          variant="outline"
           size="sm"
           disabled={isExporting || filteredInvoices.length === 0}
           className="flex items-center gap-2"
