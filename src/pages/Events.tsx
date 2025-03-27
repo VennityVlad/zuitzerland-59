@@ -8,7 +8,7 @@ import { usePrivy } from "@privy-io/react-auth";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import PageTitle from "@/components/PageTitle";
+import { PageTitle } from "@/components/PageTitle";
 import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 import { Badge } from "@/components/ui/badge";
 
