@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -18,6 +17,7 @@ import { useAdminStatus } from "./hooks/useAdminStatus";
 import { useProfileInvitationStatus } from "./hooks/useProfileInvitationStatus";
 import { useInvoiceExport } from "./hooks/useInvoiceExport";
 import { InvoiceFilterPanel } from "./components/InvoiceFilterPanel";
+import { useInvoices } from "@/hooks/useInvoices";
 
 const InvoicesPage = () => {
   const { user } = usePrivy();
@@ -26,7 +26,7 @@ const InvoicesPage = () => {
   
   // Custom hooks
   const { isAdmin, isLoading: isAdminLoading } = useAdminStatus(user?.id);
-  const { invoices, isLoading: invoicesLoading, refetchInvoices } = useInvoicesWithStatus(user?.id, isAdmin);
+  const { invoices, isLoading: invoicesLoading, refetchInvoices } = useInvoices(user?.id, isAdmin);
   const { filters, handleFilterChange, clearFilters } = useInvoiceFilters();
   const { roomTypes, filteredInvoices } = useFilteredInvoices(invoices, filters);
   const { profileInvitationStatus } = useProfileInvitationStatus(isAdmin, invoicesLoading, invoices);
@@ -154,8 +154,5 @@ const EmptyInvoiceState = ({ hasFilters, onClearFilters }: { hasFilters: boolean
   
   return <NoInvoicesMessage />;
 };
-
-// Re-export the custom hook for invoices with status
-export const useInvoicesWithStatus = useInvoices;
 
 export default InvoicesPage;
