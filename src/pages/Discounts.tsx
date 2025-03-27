@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PageTitle } from "@/components/PageTitle";
+import { CreateDiscountSheet } from "@/components/discounts/CreateDiscountSheet";
 
 interface Discount {
   id: string;
@@ -30,15 +32,7 @@ const Discounts = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<Discount>>({});
-  const [newDiscount, setNewDiscount] = useState<Partial<Discount>>({
-    percentage: 0,
-    active: true,
-    is_role_based: false,
-    discountName: "",
-    start_date: format(new Date(), 'yyyy-MM-dd'),
-    end_date: format(new Date(new Date().setMonth(new Date().getMonth() + 1)), 'yyyy-MM-dd')
-  });
-  const [showNewForm, setShowNewForm] = useState(false);
+  const [isNewDiscountSheetOpen, setIsNewDiscountSheetOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -181,72 +175,6 @@ const Discounts = () => {
     }
   };
 
-  const handleCreateDiscount = async () => {
-    try {
-      if (!newDiscount.discountName) {
-        toast({
-          title: "Error",
-          description: "Discount name is required",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!newDiscount.percentage || newDiscount.percentage <= 0 || newDiscount.percentage > 100) {
-        toast({
-          title: "Error",
-          description: "Percentage must be between 1 and 100",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log("Creating new discount:", newDiscount);
-
-      const { data, error } = await supabase
-        .from('discounts')
-        .insert({
-          percentage: newDiscount.percentage,
-          active: newDiscount.active,
-          is_role_based: newDiscount.is_role_based,
-          start_date: newDiscount.start_date,
-          end_date: newDiscount.end_date,
-          discountName: newDiscount.discountName
-        })
-        .select();
-
-      if (error) {
-        console.error("Supabase insert error:", error);
-        throw error;
-      }
-
-      console.log("Insert response from Supabase:", data);
-
-      toast({
-        title: "Success",
-        description: "Discount created successfully",
-      });
-      
-      fetchDiscounts();
-      setShowNewForm(false);
-      setNewDiscount({
-        percentage: 0,
-        active: true,
-        is_role_based: false,
-        discountName: "",
-        start_date: format(new Date(), 'yyyy-MM-dd'),
-        end_date: format(new Date(new Date().setMonth(new Date().getMonth() + 1)), 'yyyy-MM-dd')
-      });
-    } catch (error) {
-      console.error('Error creating discount:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create discount: " + (error instanceof Error ? error.message : "Unknown error"),
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleDeleteDiscount = async (id: string) => {
     try {
       console.log("Deleting discount:", id);
@@ -305,113 +233,13 @@ const Discounts = () => {
           <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
             <div className="flex justify-end mb-6">
               <Button 
-                onClick={() => setShowNewForm(!showNewForm)}
-                variant="outline"
+                onClick={() => setIsNewDiscountSheetOpen(true)}
                 className="flex items-center gap-2"
               >
-                {showNewForm ? "Cancel" : "Add New Discount"}
+                <Plus className="h-4 w-4" />
+                Add New Discount
               </Button>
             </div>
-
-            {showNewForm && (
-              <Card className="mb-8 border-dashed border-2 border-blue-300">
-                <CardHeader>
-                  <CardTitle>Create New Discount</CardTitle>
-                  <CardDescription>Fill in the details to create a new discount</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="new-name">Discount Name</Label>
-                      <Input 
-                        id="new-name" 
-                        value={newDiscount.discountName || ''}
-                        onChange={(e) => setNewDiscount({...newDiscount, discountName: e.target.value})}
-                        placeholder="Summer Sale"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="new-percentage">Percentage (%)</Label>
-                      <Input 
-                        id="new-percentage" 
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={newDiscount.percentage || 0}
-                        onChange={(e) => setNewDiscount({...newDiscount, percentage: Number(e.target.value)})}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Start Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {newDiscount.start_date ? format(parseISO(newDiscount.start_date), 'PPP') : <span>Pick a date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={newDiscount.start_date ? parseISO(newDiscount.start_date) : undefined}
-                            onSelect={(date) => date && setNewDiscount({...newDiscount, start_date: format(date, 'yyyy-MM-dd')})}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>End Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {newDiscount.end_date ? format(parseISO(newDiscount.end_date), 'PPP') : <span>Pick a date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={newDiscount.end_date ? parseISO(newDiscount.end_date) : undefined}
-                            onSelect={(date) => date && setNewDiscount({...newDiscount, end_date: format(date, 'yyyy-MM-dd')})}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="new-active"
-                      checked={newDiscount.active || false}
-                      onCheckedChange={(checked) => setNewDiscount({...newDiscount, active: checked})}
-                    />
-                    <Label htmlFor="new-active">Active</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="new-role-based"
-                      checked={newDiscount.is_role_based || false}
-                      onCheckedChange={(checked) => setNewDiscount({...newDiscount, is_role_based: checked})}
-                    />
-                    <Label htmlFor="new-role-based">Role-based discount (for admins, co-designers, co-curators)</Label>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button onClick={handleCreateDiscount}>Create Discount</Button>
-                </CardFooter>
-              </Card>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {discounts.map((discount) => (
@@ -568,6 +396,12 @@ const Discounts = () => {
           </div>
         </div>
       </div>
+      
+      <CreateDiscountSheet 
+        open={isNewDiscountSheetOpen}
+        onOpenChange={setIsNewDiscountSheetOpen}
+        onSuccess={fetchDiscounts}
+      />
     </div>
   );
 };
