@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect, useMemo } from "react";
 import { InvoiceTable } from "@/components/invoices/InvoiceTable";
@@ -195,6 +194,36 @@ const Invoices = () => {
     }
   };
 
+  // Render action buttons for the page title
+  const renderActionButtons = () => {
+    if (!isAdmin) return null;
+
+    return (
+      <>
+        <Button
+          onClick={() => setIsImportDialogOpen(true)}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <Upload className="h-4 w-4" />
+          Import Invoice
+        </Button>
+        
+        <Button
+          onClick={handleExportCSV}
+          variant="outline"
+          size="sm"
+          disabled={isExporting || filteredInvoices.length === 0}
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {isExporting ? 'Exporting...' : 'Export CSV'}
+        </Button>
+      </>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
@@ -210,7 +239,10 @@ const Invoices = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <PageTitle title={isAdmin ? 'All Invoices (Admin View)' : 'My Invoices'} />
+      <PageTitle 
+        title="Invoices" 
+        actions={renderActionButtons()} 
+      />
       <div className={`py-4 ${isMobile ? 'px-0' : 'px-4'} flex-grow`}>
         <div className={`container ${isMobile ? 'mx-0 max-w-none' : 'mx-auto'}`}>
           <div className={`bg-white ${isMobile ? 'mobile-full-width' : 'rounded-lg shadow-lg'} p-4 md:p-8`}>
@@ -223,31 +255,6 @@ const Invoices = () => {
                   isAdmin={isAdmin}
                   roomTypes={roomTypes}
                 />
-              )}
-              
-              {isAdmin && (
-                <div className="flex gap-2 mt-4 md:mt-0">
-                  <Button
-                    onClick={() => setIsImportDialogOpen(true)}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Import Invoice
-                  </Button>
-                  
-                  <Button
-                    onClick={handleExportCSV}
-                    variant="outline"
-                    size="sm"
-                    disabled={isExporting || filteredInvoices.length === 0}
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    {isExporting ? 'Exporting...' : 'Export CSV'}
-                  </Button>
-                </div>
               )}
             </div>
             
