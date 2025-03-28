@@ -18,6 +18,7 @@ import Reports from "./pages/Reports";
 import Book from "./pages/Book";
 import Teams from "./pages/Teams";
 import UserManagement from "./pages/UserManagement";
+import Events from "./pages/Events";
 import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
@@ -244,6 +245,14 @@ const App = () => {
                   element={
                     <ProtectedRoute adminOnly={true}>
                       <Discounts />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/events"
+                  element={
+                    <ProtectedRoute>
+                      <Events />
                     </ProtectedRoute>
                   }
                 />
