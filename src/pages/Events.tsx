@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Base Event interface without profiles
 interface Event {
   id: string;
   title: string;
@@ -37,10 +38,11 @@ interface Event {
   created_at: string;
 }
 
+// Event with profiles (for join results)
 interface EventWithProfile extends Event {
-  profiles: {
+  profiles?: {
     username: string | null;
-  };
+  } | null;
 }
 
 const Events = () => {
@@ -64,7 +66,7 @@ const Events = () => {
         throw error;
       }
 
-      return data as EventWithProfile[];
+      return data as unknown as EventWithProfile[];
     }
   });
 
