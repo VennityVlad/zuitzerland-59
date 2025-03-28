@@ -37,6 +37,12 @@ interface Event {
   created_at: string;
 }
 
+interface EventWithProfile extends Event {
+  profiles: {
+    username: string | null;
+  };
+}
+
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
@@ -58,7 +64,7 @@ const Events = () => {
         throw error;
       }
 
-      return data as (Event & { profiles: { username: string | null } })[];
+      return data as EventWithProfile[];
     }
   });
 
