@@ -56,6 +56,7 @@ function Calendar({
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
       }}
+      weekStartsOn={1} // Set week to start on Monday (0 is Sunday, 1 is Monday)
       {...props}
     />
   );
