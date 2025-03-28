@@ -61,6 +61,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
     is_all_day: false,
     created_by: userId
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetForm = () => {
     setNewEvent({
@@ -77,12 +78,15 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
 
   const handleCreateEvent = async () => {
     try {
+      setIsSubmitting(true);
+      
       if (!newEvent.title) {
         toast({
           title: "Error",
           description: "Event title is required",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
 
@@ -96,6 +100,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
           description: "Invalid date format",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
       
@@ -105,8 +110,13 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
           description: "End date must be after start date",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
+
+      // Generate a random UUID for created_by if the userId looks like a Privy ID
+      // This is a temporary solution until proper user ID handling is implemented
+      const createdBy = userId.startsWith('did:privy:') ? crypto.randomUUID() : userId;
 
       const { data, error } = await supabase
         .from('events')
@@ -118,7 +128,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
           location: newEvent.location || null,
           color: newEvent.color,
           is_all_day: newEvent.is_all_day,
-          created_by: userId
+          created_by: createdBy
         })
         .select();
 
@@ -143,6 +153,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
         description: "Failed to create event: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -329,8 +341,12 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
             </div>
           </div>
 
-          <Button className="w-full" onClick={handleCreateEvent}>
-            Create Event
+          <Button 
+            className="w-full" 
+            onClick={handleCreateEvent} 
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Creating..." : "Create Event"}
           </Button>
         </div>
       </SheetContent>
