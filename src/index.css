@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -61,6 +60,16 @@
 
 .bottom-nav-item-inactive {
   @apply text-gray-500;
+}
+
+/* Ensure the popover appears above the bottom nav */
+[data-radix-popper-content-wrapper] {
+  @apply z-[60] !important;
+}
+
+/* Style for the More menu popover on mobile */
+.more-menu-popover {
+  @apply mt-2 bg-white rounded-lg shadow-lg border border-gray-200;
 }
 
 .date-picker {
