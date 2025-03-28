@@ -36,7 +36,15 @@ const BottomNav = () => {
     }
   }, [user?.id]);
 
-  const navItems = [
+  // Define a common type for navigation items
+  type NavItem = {
+    name: string;
+    icon: typeof Calendar;
+    path: string;
+    showAlways: boolean;
+  };
+
+  const navItems: NavItem[] = [
     {
       name: "Book",
       icon: CalendarDays,
@@ -57,18 +65,18 @@ const BottomNav = () => {
     },
   ];
 
-  const adminItems = [
+  const adminItems: NavItem[] = [
     {
       name: "Invoices",
       icon: FileText,
       path: "/invoices",
-      adminOnly: true,
+      showAlways: false, // Changed from adminOnly to showAlways: false
     },
     {
       name: "Reports",
       icon: BarChart,
       path: "/reports",
-      adminOnly: true,
+      showAlways: false, // Changed from adminOnly to showAlways: false
     },
   ];
 
