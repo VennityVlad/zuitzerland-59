@@ -11,6 +11,7 @@ const SignIn = () => {
   const { login, authenticated, ready, user } = usePrivy();
   const { toast } = useToast();
   const [isSettingUpProfile, setIsSettingUpProfile] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const setupComplete = useRef(false);
   const navigate = useNavigate();
 
@@ -20,6 +21,7 @@ const SignIn = () => {
     }
 
     setIsSettingUpProfile(true);
+    setAuthError(null);
 
     try {
       console.log('Privy user authenticated:', {
@@ -97,6 +99,7 @@ const SignIn = () => {
 
     } catch (error) {
       console.error('Error in auth setup:', error);
+      setAuthError("There was an error setting up your profile. Please try again.");
       toast({
         title: "Authentication Error",
         description: "There was an error setting up your profile. Please try again.",
@@ -120,6 +123,22 @@ const SignIn = () => {
       navigate("/");
     }
   }, [authenticated, isSettingUpProfile, navigate]);
+
+  const handleLogin = () => {
+    setAuthError(null);
+    console.log('Login button clicked');
+    try {
+      login();
+    } catch (error) {
+      console.error('Login error:', error);
+      setAuthError("Login failed. Please try again.");
+      toast({
+        title: "Login Error",
+        description: "Login failed. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!ready) {
     return (
@@ -163,11 +182,14 @@ const SignIn = () => {
             Please sign in to access the booking form
           </p>
           
+          {authError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm">
+              {authError}
+            </div>
+          )}
+          
           <Button 
-            onClick={() => {
-              console.log('Login button clicked');
-              login();
-            }}
+            onClick={handleLogin}
             className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
           >
             <LogIn className="mr-2" />
