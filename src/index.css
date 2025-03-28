@@ -92,11 +92,20 @@
   text-align: left;
 }
 
+/* Card styles */
+.event-card {
+  @apply transition-all duration-200 hover:shadow-md;
+}
+
+.event-card-color-indicator {
+  @apply h-2 w-full absolute top-0 left-0 right-0;
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .container {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
     max-width: 100% !important;
     width: 100% !important;
   }
@@ -116,7 +125,21 @@
 
   /* Content padding for bottom navigation */
   .mobile-bottom-nav-padding {
-    @apply pb-16;
+    @apply pb-20; /* Increased padding to ensure content isn't hidden behind nav */
+  }
+  
+  /* Card grid optimizations for mobile */
+  .card-grid {
+    @apply grid-cols-1 gap-3;
+  }
+  
+  /* Bottom navigation spacing */
+  .bottom-nav-grid {
+    @apply grid-cols-5 gap-0;
+  }
+  
+  .bottom-nav-item {
+    @apply px-1;
   }
 }
 
@@ -133,4 +156,3 @@
 .btn-light {
   @apply border-2 border-[#1A1F2C] bg-white text-[#1A1F2C] hover:bg-gray-50 rounded-full;
 }
-
