@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Calendar } from "@/components/ui/calendar";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfMonth, isSameDay, isWithinInterval } from "date-fns";
+import { format, startOfMonth, isSameDay, isWithinInterval, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +28,8 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2025, 4)); // May 2025
   const { toast } = useToast();
 
-  const { data: events, isLoading } = useQuery({
+  // Fetch calendar events
+  const { data: events, isLoading: isLoadingEvents } = useQuery({
     queryKey: ["calendar-events", format(currentMonth, "yyyy-MM")],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -133,31 +134,42 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
     return renderDay(date, modifiers);
   };
 
+  // Format the date range for an event
+  const formatDateRange = (startDate: string, endDate: string) => {
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+    
+    if (isSameDay(start, end)) {
+      return format(start, "MMM d, yyyy");
+    }
+    
+    return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
       <h4 className="text-lg font-semibold text-gray-900 mb-4">Program Calendar</h4>
       
-      <div className="flex flex-wrap gap-2 mb-4">
-        {isLoading ? (
+      <div className="flex flex-col gap-2 mb-4">
+        {isLoadingEvents ? (
           <div className="animate-pulse w-full h-8 bg-gray-200 rounded"></div>
+        ) : events && events.length > 0 ? (
+          events.map(event => (
+            <Badge 
+              key={event.id} 
+              variant="outline" 
+              className="justify-start" 
+              style={{ 
+                backgroundColor: `${event.color}20`, // Adding transparency
+                color: event.color,
+                borderColor: event.color
+              }}
+            >
+              {event.title} ({formatDateRange(event.start_date, event.end_date)})
+            </Badge>
+          ))
         ) : (
-          <>
-            <Badge variant="outline" className="bg-[#E5DEFF] text-[#6941C6] border-[#9b87f5]">
-              Intro Days
-            </Badge>
-            <Badge variant="outline" className="bg-[#D3E4FD] text-[#0E7090] border-[#0EA5E9]">
-              Swiss Governance & New Societies Days
-            </Badge>
-            <Badge variant="outline" className="bg-[#F2FCE2] text-[#3F6212] border-[#8B5CF6]">
-              Cypherpunk & Solarpunk Days
-            </Badge>
-            <Badge variant="outline" className="bg-[#FEC6A1] text-[#9A3412] border-[#F97316]">
-              Build Week
-            </Badge>
-            <Badge variant="outline" className="bg-[#FFDEE2] text-[#A5183D] border-[#D946EF]">
-              Zuitzerland Summit 2025
-            </Badge>
-          </>
+          <div className="text-sm text-gray-500">No events scheduled</div>
         )}
       </div>
 
