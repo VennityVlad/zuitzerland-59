@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -173,10 +174,6 @@ const App = () => {
     );
   }
 
-  const origin = typeof window !== 'undefined' 
-    ? window.location.origin 
-    : '';
-
   return (
     <QueryClientProvider client={queryClient}>
       <PrivyProvider
@@ -190,13 +187,7 @@ const App = () => {
           },
           embeddedWallets: {
             createOnLogin: 'users-without-wallets'
-          },
-          additionalAllowedOrigins: [
-            'https://zuitzerland.lovable.dev',
-            'https://preview--zuitzerland.lovable.app',
-            origin,
-            'https://8f877de4-355e-4755-81f8-2de8d51eec8d.lovableproject.com'
-          ]
+          }
         }}
       >
         <SupabaseAuthProvider>
