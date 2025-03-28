@@ -172,7 +172,7 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
           selected: { backgroundColor: 'var(--primary)' },
           today: { backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }
         }}
-        selected={onSelectDate ? undefined : []}
+        selected={onSelectDate ? undefined : undefined}
         onSelect={onSelectDate}
         components={{
           DayContent: CustomDayContent
