@@ -32,43 +32,20 @@ Deno.serve(async (req) => {
     );
 
     // Verify and decode the JWT
-    let decoded;
-    try {
-      decoded = jose.decodeJwt(jwt);
-      if (!decoded) {
-        throw new Error('Invalid JWT');
-      }
-    } catch (error) {
-      console.error('JWT decode error:', error);
-      throw new Error('Failed to decode JWT: ' + error.message);
+    const decoded = jose.decodeJwt(jwt);
+    
+    if (!decoded) {
+      throw new Error('Invalid JWT');
     }
 
     console.log('Decoded JWT:', decoded);
-
-    // Check if profile exists
-    const { data: existingProfile, error: fetchError } = await supabaseClient
-      .from('profiles')
-      .select('id')
-      .eq('privy_id', userId)
-      .single();
-
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
-      console.error('Error checking profile:', fetchError);
-      throw fetchError;
-    }
-
-    if (!existingProfile) {
-      console.log('Profile not found for privy_id:', userId);
-      throw new Error('Profile not found');
-    }
 
     // Update the profile with JWT claims
     const { data: profile, error: updateError } = await supabaseClient
       .from('profiles')
       .update({
         jwt_claims: decoded,
-        jwt_token: jwt,
-        updated_at: new Date().toISOString()
+        jwt_token: jwt
       })
       .eq('privy_id', userId)
       .select()
@@ -95,10 +72,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack
-      }),
+      JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
