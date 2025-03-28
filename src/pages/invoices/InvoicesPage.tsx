@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -99,6 +100,7 @@ const InvoicesPage = () => {
               <InvoiceMassActions 
                 invoices={filteredInvoices} 
                 onComplete={refetchInvoices}
+                profileInvitationStatus={profileInvitationStatus}
               />
             )}
             

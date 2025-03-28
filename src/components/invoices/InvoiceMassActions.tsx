@@ -10,9 +10,14 @@ import { format, parseISO } from "date-fns";
 interface InvoiceMassActionsProps {
   invoices: Invoice[];
   onComplete?: () => void;
+  profileInvitationStatus?: Record<string, boolean>;
 }
 
-export const InvoiceMassActions = ({ invoices, onComplete }: InvoiceMassActionsProps) => {
+export const InvoiceMassActions = ({ 
+  invoices, 
+  onComplete,
+  profileInvitationStatus = {}
+}: InvoiceMassActionsProps) => {
   const { toast } = useToast();
   const [isRemindersLoading, setIsRemindersLoading] = useState(false);
   const [isGuildInvitesLoading, setIsGuildInvitesLoading] = useState(false);
@@ -22,12 +27,14 @@ export const InvoiceMassActions = ({ invoices, onComplete }: InvoiceMassActionsP
     (invoice) => invoice.status !== 'paid' && invoice.status !== 'cancelled'
   );
   
-  // Filter invoices for guild invites (only paid with profile_id)
+  // Filter invoices for guild invites (only paid with profile_id and not already invited)
   const guildInviteEligibleInvoices = invoices.filter(
     (invoice) => 
       invoice.status === 'paid' && 
       invoice.profile_id && 
-      !invoice.profile_id.includes("00000000")
+      !invoice.profile_id.includes("00000000") &&
+      // Filter out profiles that are already invited
+      !(invoice.profile_id && profileInvitationStatus[invoice.profile_id])
   );
 
   const formatDateWithYear = (dateString: string) => {
