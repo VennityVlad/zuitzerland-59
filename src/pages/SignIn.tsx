@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
@@ -29,7 +28,6 @@ const SignIn = () => {
         email: user.email.address
       });
 
-      // Check for existing profile by email
       console.log('Checking for existing profile by email...');
       const { data: existingProfiles, error: profileCheckError } = await supabase
         .from('profiles')
@@ -44,13 +42,10 @@ const SignIn = () => {
       console.log('Existing profiles found:', existingProfiles);
 
       if (existingProfiles && existingProfiles.length > 0) {
-        // Use the first profile found with this email
         const existingProfile = existingProfiles[0];
         console.log('Found existing profile:', existingProfile);
 
-        // Only update if privy_id is different
         if (existingProfile.privy_id !== user.id.toString()) {
-          // Update profile with new Privy ID
           const updateData = {
             privy_id: user.id.toString(),
             email: user.email.address
@@ -72,8 +67,6 @@ const SignIn = () => {
           console.log('Profile already up to date');
         }
       } else {
-        // Create new profile if no existing profile found
-        console.log('No existing profile found, creating new profile...');
         const newProfileId = crypto.randomUUID();
         const { error: createError } = await supabase
           .from('profiles')
@@ -81,7 +74,7 @@ const SignIn = () => {
             id: newProfileId,
             privy_id: user.id.toString(),
             email: user.email.address,
-            username: null // This will trigger the generate_username() function
+            username: null
           });
 
         if (createError) {
@@ -94,9 +87,7 @@ const SignIn = () => {
       console.log('Auth setup completed successfully');
       setupComplete.current = true;
       
-      // Use React Router's navigate instead of window.location
       navigate("/");
-
     } catch (error) {
       console.error('Error in auth setup:', error);
       toast({
@@ -116,7 +107,6 @@ const SignIn = () => {
     }
   }, [authenticated, user, setupAuth, isSettingUpProfile]);
 
-  // If already authenticated and setup is complete, redirect immediately
   useEffect(() => {
     if (authenticated && setupComplete.current && !isSettingUpProfile) {
       navigate("/");
@@ -149,14 +139,12 @@ const SignIn = () => {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-white to-secondary/30 flex flex-col items-center justify-center overflow-hidden py-12">
-      {/* Background pattern - visible on larger screens */}
       <div className="absolute inset-0 z-0 opacity-10 hidden md:block">
         <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-hotel-gold/30 blur-3xl"></div>
         <div className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-hotel-navy/20 blur-3xl"></div>
       </div>
       
       <div className="container max-w-4xl mx-auto px-4 z-10 relative">
-        {/* Logo container with enhanced sizing and spacing */}
         <div className="flex justify-center mb-10">
           <img 
             src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
@@ -166,16 +154,11 @@ const SignIn = () => {
         </div>
         
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-md mx-auto transform transition-all hover:scale-[1.01] duration-300">
-          {/* Top decorative bar */}
           <div className="h-2 bg-gradient-to-r from-hotel-navy to-hotel-gold"></div>
           
           <div className="p-8 md:p-10">
-            <h1 className="text-2xl md:text-3xl font-semibold text-hotel-navy mb-6 text-center">
-              Welcome to Zuitzerland
-            </h1>
-            
-            <p className="text-gray-600 mb-8 text-center">
-              Your exclusive portal to Alpine luxury
+            <p className="text-gray-600 mb-8 text-center text-lg md:text-xl font-trap">
+              Your exclusive portal to Zuitzerland 2025
             </p>
             
             <Button 
@@ -183,21 +166,19 @@ const SignIn = () => {
                 console.log('Login button clicked');
                 login();
               }}
-              className={`w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90 shadow-md hover:shadow-lg transform transition-all duration-200 ${isMobile ? 'text-lg' : ''}`}
+              className={`w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90 shadow-md hover:shadow-lg transform transition-all duration-200 font-trap ${isMobile ? 'text-lg' : ''}`}
             >
               <LogIn className="mr-2" />
               Sign In
             </Button>
 
-            {/* Optional decorative elements */}
-            <div className="mt-8 text-center text-xs text-gray-400">
+            <div className="mt-8 text-center text-xs text-gray-400 font-trap">
               <p>Premium hospitality experiences await</p>
             </div>
           </div>
         </div>
 
-        {/* Footer attribution - remove if not needed */}
-        <div className="mt-12 text-center text-xs text-gray-500">
+        <div className="mt-12 text-center text-xs text-gray-500 font-trap">
           <p>© {new Date().getFullYear()} Zuitzerland. All rights reserved.</p>
         </div>
       </div>

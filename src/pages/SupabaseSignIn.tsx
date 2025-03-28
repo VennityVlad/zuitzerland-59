@@ -63,49 +63,45 @@ const SupabaseSignIn = () => {
           <div className="h-2 bg-gradient-to-r from-hotel-navy to-hotel-gold"></div>
           
           <div className="p-8 md:p-10">
-            <h1 className="text-2xl md:text-3xl font-semibold text-hotel-navy mb-6 text-center">
-              Welcome to Zuitzerland
-            </h1>
-            
-            <p className="text-gray-600 mb-8 text-center">
-              Please sign {isSignUp ? 'up' : 'in'} to access the booking form
+            <p className="text-gray-600 mb-8 text-center text-lg md:text-xl font-trap">
+              Your exclusive portal to Zuitzerland 2025
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="font-trap">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="bg-gray-50 border-gray-200 focus:border-hotel-navy focus:ring-hotel-navy/20"
+                  className="bg-gray-50 border-gray-200 focus:border-hotel-navy focus:ring-hotel-navy/20 font-trap"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="font-trap">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-gray-50 border-gray-200 focus:border-hotel-navy focus:ring-hotel-navy/20"
+                  className="bg-gray-50 border-gray-200 focus:border-hotel-navy focus:ring-hotel-navy/20 font-trap"
                 />
               </div>
 
               <Button 
                 type="submit"
-                className={`w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90 shadow-md hover:shadow-lg transform transition-all duration-200 ${isMobile ? 'text-lg' : ''}`}
+                className={`w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90 shadow-md hover:shadow-lg transform transition-all duration-200 font-trap ${isMobile ? 'text-lg' : ''}`}
                 disabled={isLoading}
               >
                 <LogIn className="mr-2" />
                 {isLoading ? "Processing..." : isSignUp ? "Sign Up" : "Sign In"}
               </Button>
 
-              <p className="text-center text-sm text-gray-600">
+              <p className="text-center text-sm text-gray-600 font-trap">
                 {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
                 <button
                   type="button"
@@ -119,8 +115,8 @@ const SupabaseSignIn = () => {
           </div>
         </div>
 
-        {/* Footer attribution - remove if not needed */}
-        <div className="mt-12 text-center text-xs text-gray-500">
+        {/* Footer attribution */}
+        <div className="mt-12 text-center text-xs text-gray-500 font-trap">
           <p>© {new Date().getFullYear()} Zuitzerland. All rights reserved.</p>
         </div>
       </div>
