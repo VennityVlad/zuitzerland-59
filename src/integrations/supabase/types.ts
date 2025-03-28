@@ -9,6 +9,102 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      applications: {
+        Row: {
+          applicant_name: string | null
+          application_id: string | null
+          application_status:
+            | Database["public"]["Enums"]["application_status"]
+            | null
+          approver: string[] | null
+          created_at: string | null
+          date_of_white_list_approval: string | null
+          email: string | null
+          financial_assistance: string[] | null
+          first_name: string | null
+          id: string
+          invoice_link: string | null
+          last_modified: string | null
+          notes: string | null
+          overall: string[] | null
+          phone_number: string | null
+          reminders_sent: number | null
+          role: Database["public"]["Enums"]["application_role"] | null
+          room_preference: string[] | null
+          scholar_status: Database["public"]["Enums"]["scholar_status"] | null
+          staying: string[] | null
+          submission_date: string | null
+          telegram_followup:
+            | Database["public"]["Enums"]["telegram_followup_status"]
+            | null
+          tg_socials: string | null
+          visa_needed: string | null
+          white_list: Database["public"]["Enums"]["white_list_status"] | null
+        }
+        Insert: {
+          applicant_name?: string | null
+          application_id?: string | null
+          application_status?:
+            | Database["public"]["Enums"]["application_status"]
+            | null
+          approver?: string[] | null
+          created_at?: string | null
+          date_of_white_list_approval?: string | null
+          email?: string | null
+          financial_assistance?: string[] | null
+          first_name?: string | null
+          id?: string
+          invoice_link?: string | null
+          last_modified?: string | null
+          notes?: string | null
+          overall?: string[] | null
+          phone_number?: string | null
+          reminders_sent?: number | null
+          role?: Database["public"]["Enums"]["application_role"] | null
+          room_preference?: string[] | null
+          scholar_status?: Database["public"]["Enums"]["scholar_status"] | null
+          staying?: string[] | null
+          submission_date?: string | null
+          telegram_followup?:
+            | Database["public"]["Enums"]["telegram_followup_status"]
+            | null
+          tg_socials?: string | null
+          visa_needed?: string | null
+          white_list?: Database["public"]["Enums"]["white_list_status"] | null
+        }
+        Update: {
+          applicant_name?: string | null
+          application_id?: string | null
+          application_status?:
+            | Database["public"]["Enums"]["application_status"]
+            | null
+          approver?: string[] | null
+          created_at?: string | null
+          date_of_white_list_approval?: string | null
+          email?: string | null
+          financial_assistance?: string[] | null
+          first_name?: string | null
+          id?: string
+          invoice_link?: string | null
+          last_modified?: string | null
+          notes?: string | null
+          overall?: string[] | null
+          phone_number?: string | null
+          reminders_sent?: number | null
+          role?: Database["public"]["Enums"]["application_role"] | null
+          room_preference?: string[] | null
+          scholar_status?: Database["public"]["Enums"]["scholar_status"] | null
+          staying?: string[] | null
+          submission_date?: string | null
+          telegram_followup?:
+            | Database["public"]["Enums"]["telegram_followup_status"]
+            | null
+          tg_socials?: string | null
+          visa_needed?: string | null
+          white_list?: Database["public"]["Enums"]["white_list_status"] | null
+        }
+        Relationships: []
+      }
       discounts: {
         Row: {
           active: boolean
@@ -425,6 +521,33 @@ export type Database = {
         }
         Returns: number
       }
+      sync_application_from_airtable: {
+        Args: {
+          p_application_id: string
+          p_applicant_name: string
+          p_email: string
+          p_phone_number: string
+          p_submission_date: string
+          p_application_status: string
+          p_notes: string
+          p_approver: string[]
+          p_room_preference: string[]
+          p_financial_assistance: string[]
+          p_overall: string[]
+          p_staying: string[]
+          p_first_name: string
+          p_white_list: string
+          p_role: string
+          p_invoice_link: string
+          p_date_of_white_list_approval: string
+          p_reminders_sent: number
+          p_visa_needed: string
+          p_telegram_followup: string
+          p_tg_socials: string
+          p_scholar_status: string
+        }
+        Returns: string
+      }
       update_auth_token: {
         Args: {
           profile_id: string
@@ -435,6 +558,25 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "co-designer" | "co-curator"
+      application_role:
+        | "co-curator"
+        | "co-designer"
+        | "possible co-curator"
+        | "possible sponsor contact"
+        | "Attendee"
+        | "possible scholarship"
+        | "Partner / Plus One of Participant"
+        | "Full Scholarship"
+        | "Partial Scholarship"
+        | "Possible volunteer"
+      application_status:
+        | "Pending"
+        | "Reviewed"
+        | "Approved"
+        | "Paid"
+        | "Rejected"
+        | "Wait"
+        | "borderline"
       invoice_status: "pending" | "paid" | "overdue"
       profile_role: "admin" | "co-designer" | "co-curator"
       room_type:
@@ -444,6 +586,15 @@ export type Database = {
         | "apartment_3_4br_twin_single"
         | "apartment_2br_twin_single"
         | "apartment_2br_triple"
+      scholar_status:
+        | "Scholarship requested / Pending approval"
+        | "Probably accept"
+        | "Partial scholarship approved"
+        | "Full scholarship approved"
+        | "None"
+        | "Scholarship to be Rejected"
+      telegram_followup_status: "Done" | "Not coming" | "Scholar"
+      white_list_status: "yes" | "no"
     }
     CompositeTypes: {
       [_ in never]: never

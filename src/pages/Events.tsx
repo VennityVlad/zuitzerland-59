@@ -2,15 +2,26 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarDays, Plus } from "lucide-react";
+import { CalendarDays, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
+import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageTitle } from "@/components/PageTitle";
 import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Event {
   id: string;
@@ -27,7 +38,10 @@ interface Event {
 
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { user } = usePrivy();
+  const { toast } = useToast();
 
   const { data: events, isLoading, refetch } = useQuery({
     queryKey: ["events"],
@@ -48,6 +62,43 @@ const Events = () => {
 
   const handleCreateEventSuccess = () => {
     refetch();
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!eventToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", eventToDelete.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Event deleted",
+        description: "The event has been successfully deleted.",
+      });
+      
+      refetch();
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the event. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setEventToDelete(null);
+    }
+  };
+
+  const openDeleteDialog = (event: Event) => {
+    setEventToDelete(event);
   };
 
   return (
@@ -87,6 +138,7 @@ const Events = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -136,6 +188,17 @@ const Events = () => {
                         {isPast ? "Past" : "Upcoming"}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openDeleteDialog(event)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -150,6 +213,27 @@ const Events = () => {
         onSuccess={handleCreateEventSuccess}
         userId={user?.id || ""}
       />
+
+      <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete event?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the event "{eventToDelete?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEvent}
+              disabled={isDeleting}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
