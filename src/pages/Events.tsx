@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { CalendarDays, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,8 @@ const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { user } = usePrivy();
+  const { user: privyUser } = usePrivy();
+  const { user: supabaseUser } = useSupabaseAuth();
   const { toast } = useToast();
 
   const { data: events, isLoading, refetch } = useQuery({
@@ -48,7 +50,7 @@ const Events = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("*")
+        .select("*, profiles:created_by(username)")
         .order("start_date", { ascending: true });
 
       if (error) {
@@ -56,7 +58,7 @@ const Events = () => {
         throw error;
       }
 
-      return data as Event[];
+      return data as (Event & { profiles: { username: string | null } })[];
     }
   });
 
@@ -101,6 +103,9 @@ const Events = () => {
     setEventToDelete(event);
   };
 
+  // Determine which user ID to use
+  const userId = privyUser?.id || supabaseUser?.id || "";
+
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
@@ -137,6 +142,7 @@ const Events = () => {
                 <TableHead>Event</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead>Created By</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
@@ -183,6 +189,7 @@ const Events = () => {
                       )}
                     </TableCell>
                     <TableCell>{event.location || "—"}</TableCell>
+                    <TableCell>{event.profiles?.username || "Anonymous"}</TableCell>
                     <TableCell>
                       <Badge variant={isPast ? "outline" : "default"}>
                         {isPast ? "Past" : "Upcoming"}
@@ -211,7 +218,7 @@ const Events = () => {
         open={createEventOpen}
         onOpenChange={setCreateEventOpen}
         onSuccess={handleCreateEventSuccess}
-        userId={user?.id || ""}
+        userId={userId}
       />
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
