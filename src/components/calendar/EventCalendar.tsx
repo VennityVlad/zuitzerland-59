@@ -7,6 +7,7 @@ import { format, startOfMonth, isSameDay, isWithinInterval } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { DayContent } from "react-day-picker";
 
 interface Event {
   id: string;
@@ -69,8 +70,8 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
   };
 
   // Custom renderer for calendar days
-  const renderDay = (day: Date, selectedDays: Date[], modifiers: any) => {
-    const dayEvents = getDayEvents(day);
+  const renderDay = (date: Date, modifiers: Record<string, boolean>) => {
+    const dayEvents = getDayEvents(date);
     const hasEvents = dayEvents.length > 0;
     
     return (
@@ -81,7 +82,7 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
               modifiers.selected ? "bg-primary text-primary-foreground" : 
               modifiers.today ? "bg-accent text-accent-foreground" : ""
             }`}>
-              <span>{format(day, "d")}</span>
+              <span>{format(date, "d")}</span>
               {hasEvents && (
                 <div className="absolute -bottom-1 flex gap-0.5 justify-center">
                   {dayEvents.slice(0, 3).map((event, i) => (
@@ -121,6 +122,17 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
     );
   };
 
+  // Custom DayContent component that works with react-day-picker
+  const CustomDayContent = (props: { date: Date; displayMonth: Date }) => {
+    const { date } = props;
+    const modifiers = {
+      selected: false,
+      today: isSameDay(date, new Date())
+    };
+    
+    return renderDay(date, modifiers);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
       <h4 className="text-lg font-semibold text-gray-900 mb-4">Program Calendar</h4>
@@ -150,7 +162,7 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
       </div>
 
       <Calendar 
-        mode="default"
+        mode="single"
         defaultMonth={new Date(2025, 4)} // May 2025
         onMonthChange={handleMonthChange}
         disabled={(date) => 
@@ -160,14 +172,10 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
           selected: { backgroundColor: 'var(--primary)' },
           today: { backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }
         }}
-        selected={[]}
-        onSelect={(date) => {
-          if (date && onSelectDate) {
-            onSelectDate(date);
-          }
-        }}
+        selected={onSelectDate ? undefined : []}
+        onSelect={onSelectDate}
         components={{
-          Day: ({ day, selected, disabled, ...props }) => renderDay(day, selected, props)
+          DayContent: CustomDayContent
         }}
         className="pointer-events-auto"
       />

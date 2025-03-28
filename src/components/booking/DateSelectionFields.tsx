@@ -1,4 +1,3 @@
-
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +30,33 @@ const DateSelectionFields = ({
     handleInputChange({
       target: { name: "checkout", value: endDate }
     } as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleCalendarSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    
+    if (!formData.checkin) {
+      // Set as check-in date if none is set
+      handleInputChange({
+        target: { name: "checkin", value: formattedDate }
+      } as React.ChangeEvent<HTMLInputElement>);
+    } else if (!formData.checkout && formattedDate > formData.checkin) {
+      // Set as check-out date if check-in is already set and selected date is after check-in
+      handleInputChange({
+        target: { name: "checkout", value: formattedDate }
+      } as React.ChangeEvent<HTMLInputElement>);
+    } else {
+      // Otherwise, reset and set as new check-in date
+      handleInputChange({
+        target: { name: "checkin", value: formattedDate }
+      } as React.ChangeEvent<HTMLInputElement>);
+      
+      handleInputChange({
+        target: { name: "checkout", value: "" }
+      } as React.ChangeEvent<HTMLInputElement>);
+    }
   };
 
   const { data: roomTypeDetails } = useQuery({
@@ -76,8 +102,8 @@ const DateSelectionFields = ({
 
   return (
     <div className="space-y-6">
-      {/* Event Calendar */}
-      <EventCalendar />
+      {/* Event Calendar with date selection capability */}
+      <EventCalendar onSelectDate={handleCalendarSelect} />
 
       <DateRangeSelector onDateRangeChange={handleDateRangeChange} />
       
