@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
@@ -99,6 +100,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
         }
         
         if (data) {
+          console.log("Found user profile:", data);
           setUserProfile(data);
           setNewEvent(prev => ({ ...prev, created_by: data.id }));
         } else {
@@ -179,6 +181,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
         return;
       }
 
+      console.log("Creating event with profile ID:", userProfile.id);
+      
       const { data, error } = await supabase
         .from('events')
         .insert({

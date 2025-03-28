@@ -180,6 +180,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "events_created_by_fkey1"
             columns: ["created_by"]
             isOneToOne: false
