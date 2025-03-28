@@ -6,7 +6,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const SignIn = () => {
   const { login, authenticated, ready, user } = usePrivy();
@@ -14,7 +13,6 @@ const SignIn = () => {
   const [isSettingUpProfile, setIsSettingUpProfile] = useState(false);
   const setupComplete = useRef(false);
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   const setupAuth = useCallback(async () => {
     if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {
@@ -148,57 +146,33 @@ const SignIn = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-white to-secondary/30 flex flex-col items-center justify-center overflow-hidden py-12">
-      {/* Background pattern - visible on larger screens */}
-      <div className="absolute inset-0 z-0 opacity-10 hidden md:block">
-        <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-hotel-gold/30 blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-hotel-navy/20 blur-3xl"></div>
-      </div>
-      
-      <div className="container max-w-4xl mx-auto px-4 z-10 relative">
-        {/* Logo container with enhanced sizing and spacing */}
-        <div className="flex justify-center mb-10">
-          <img 
-            src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
-            alt="Switzerland Logo"
-            className="w-full max-w-xs md:max-w-sm"
-          />
-        </div>
+    <div className="min-h-screen bg-secondary/30 py-12">
+      <div className="container max-w-4xl mx-auto px-4">
+        <img 
+          src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
+          alt="Switzerland Logo"
+          className="logo"
+        />
         
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-md mx-auto transform transition-all hover:scale-[1.01] duration-300">
-          {/* Top decorative bar */}
-          <div className="h-2 bg-gradient-to-r from-hotel-navy to-hotel-gold"></div>
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">
+          <h1 className="text-2xl font-semibold text-hotel-navy mb-6 text-center">
+            Welcome to the Zuitzerland Portal
+          </h1>
           
-          <div className="p-8 md:p-10">
-            <h1 className="text-2xl md:text-3xl font-semibold text-hotel-navy mb-6 text-center">
-              Welcome to Zuitzerland
-            </h1>
-            
-            <p className="text-gray-600 mb-8 text-center">
-              Your exclusive portal to Alpine luxury
-            </p>
-            
-            <Button 
-              onClick={() => {
-                console.log('Login button clicked');
-                login();
-              }}
-              className={`w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90 shadow-md hover:shadow-lg transform transition-all duration-200 ${isMobile ? 'text-lg' : ''}`}
-            >
-              <LogIn className="mr-2" />
-              Sign In
-            </Button>
-
-            {/* Optional decorative elements */}
-            <div className="mt-8 text-center text-xs text-gray-400">
-              <p>Premium hospitality experiences await</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer attribution - remove if not needed */}
-        <div className="mt-12 text-center text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} Zuitzerland. All rights reserved.</p>
+          <p className="text-gray-600 mb-8 text-center">
+            Please sign in to access the booking form
+          </p>
+          
+          <Button 
+            onClick={() => {
+              console.log('Login button clicked');
+              login();
+            }}
+            className="w-full py-6 bg-hotel-navy hover:bg-hotel-navy/90"
+          >
+            <LogIn className="mr-2" />
+            Sign In
+          </Button>
         </div>
       </div>
     </div>

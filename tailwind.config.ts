@@ -70,7 +70,6 @@ export default {
       },
       fontFamily: {
         montserrat: ["Montserrat", "sans-serif"],
-        trap: ["Trap", "sans-serif"],
       },
     },
   },
