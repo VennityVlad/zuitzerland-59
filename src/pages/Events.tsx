@@ -56,9 +56,10 @@ const Events = () => {
   const { data: events, isLoading, refetch } = useQuery({
     queryKey: ["events"],
     queryFn: async () => {
+      // Be specific about which foreign key to use
       const { data, error } = await supabase
         .from("events")
-        .select("*, profiles:created_by(username)")
+        .select("*, profiles:profiles!events_created_by_fkey(username)")
         .order("start_date", { ascending: true });
 
       if (error) {
