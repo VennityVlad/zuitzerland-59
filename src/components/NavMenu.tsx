@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,8 +22,7 @@ import {
   BarChart,
   Users,
   UserPlus,
-  Building,
-  Calendar
+  Building
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,11 +81,6 @@ const NavMenu = () => {
       label: "Book",
       icon: <CalendarDays className="h-5 w-5" />,
       path: "/book",
-    },
-    {
-      label: "Events",
-      icon: <Calendar className="h-5 w-5" />,
-      path: "/events",
     }
   ];
 
