@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -50,11 +49,38 @@ const Events = () => {
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { user: privyUser } = usePrivy();
-  const { user: supabaseUser, roles } = useSupabaseAuth();
+  const { user: supabaseUser } = useSupabaseAuth();
   const { toast } = useToast();
   
-  // Check if user is an admin
-  const isAdmin = roles.admin;
+  // Fetch user profile to check if admin
+  const { data: userProfile, isLoading: profileLoading } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      if (!privyUser?.id && !supabaseUser?.id) return null;
+
+      const searchId = privyUser?.id || supabaseUser?.id;
+      let query = supabase.from("profiles").select("*");
+      
+      if (privyUser?.id) {
+        query = query.eq("privy_id", searchId);
+      } else if (supabaseUser?.id) {
+        query = query.eq("auth_user_id", searchId);
+      }
+      
+      const { data, error } = await query.maybeSingle();
+      
+      if (error) {
+        console.error("Error fetching profile:", error);
+        throw error;
+      }
+      
+      return data;
+    },
+    enabled: !!(privyUser?.id || supabaseUser?.id)
+  });
+  
+  // Check if user is an admin based on profile role
+  const isAdmin = userProfile?.role === 'admin';
 
   const { data: events, isLoading, refetch } = useQuery({
     queryKey: ["events"],
@@ -187,7 +213,7 @@ const Events = () => {
         )}
       </div>
 
-      {isLoading ? (
+      {isLoading || profileLoading ? (
         <div className="flex justify-center py-8">
           <div className="animate-pulse">Loading events...</div>
         </div>
