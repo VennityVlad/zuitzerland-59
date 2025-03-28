@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
@@ -70,23 +69,29 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
   // Fetch the user's profile ID when the component mounts or userId changes
   useEffect(() => {
     const fetchUserProfile = async () => {
-      if (!user) return;
+      if (!user && !userId) return;
       
       try {
         setIsLoadingProfile(true);
         
-        let query = supabase.from('profiles');
+        let { data, error } = { data: null, error: null };
         
         // If using Privy, query by privy_id
         if (userId.startsWith('did:privy:')) {
-          query = query.eq('privy_id', userId);
+          ({ data, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .filter('privy_id', 'eq', userId)
+            .single());
         } 
         // If using Supabase auth, query by auth_user_id
-        else if (user.id) {
-          query = query.eq('auth_user_id', user.id);
+        else if (user?.id) {
+          ({ data, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .filter('auth_user_id', 'eq', user.id)
+            .single());
         }
-        
-        const { data, error } = await query.select('id').single();
         
         if (error) {
           console.error("Error fetching user profile:", error);
