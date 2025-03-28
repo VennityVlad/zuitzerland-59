@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarDays, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -50,8 +50,11 @@ const Events = () => {
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { user: privyUser } = usePrivy();
-  const { user: supabaseUser } = useSupabaseAuth();
+  const { user: supabaseUser, roles } = useSupabaseAuth();
   const { toast } = useToast();
+  
+  // Check if user is an admin
+  const isAdmin = roles.admin;
 
   const { data: events, isLoading, refetch } = useQuery({
     queryKey: ["events"],
@@ -111,6 +114,60 @@ const Events = () => {
   const openDeleteDialog = (event: Event) => {
     setEventToDelete(event);
   };
+  
+  // Function to generate iCalendar format
+  const generateICalEvent = (event: Event) => {
+    const startDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
+    
+    // Format dates to iCal format: YYYYMMDDTHHMMSSZ
+    const formatICalDate = (date: Date) => {
+      return date.toISOString().replace(/-|:|\.\d+/g, '').substring(0, 15) + 'Z';
+    };
+    
+    const icalStart = formatICalDate(startDate);
+    const icalEnd = formatICalDate(endDate);
+    
+    // Build iCal content
+    const icalContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Zuitzerland//Calendar App//EN',
+      'BEGIN:VEVENT',
+      `UID:${event.id}@zuitzerland.app`,
+      `DTSTAMP:${formatICalDate(new Date())}`,
+      `DTSTART:${icalStart}`,
+      `DTEND:${icalEnd}`,
+      `SUMMARY:${event.title}`,
+      event.description ? `DESCRIPTION:${event.description}` : '',
+      event.location ? `LOCATION:${event.location}` : '',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].filter(Boolean).join('\r\n');
+    
+    return icalContent;
+  };
+  
+  // Function to add event to calendar
+  const addToCalendar = (event: Event) => {
+    const icalContent = generateICalEvent(event);
+    
+    // Create a Blob with the iCal content
+    const blob = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
+    
+    // Create a link to download the file
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${event.title.replace(/\s+/g, '-')}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Calendar Event Created",
+      description: "The calendar file has been downloaded. Open it to add to your calendar app.",
+    });
+  };
 
   // Determine which user ID to use
   const userId = privyUser?.id || supabaseUser?.id || "";
@@ -123,9 +180,11 @@ const Events = () => {
           description="View and manage upcoming events" 
           icon={<CalendarDays className="h-8 w-8" />} 
         />
-        <Button onClick={() => setCreateEventOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Create Event
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setCreateEventOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Create Event
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -137,11 +196,13 @@ const Events = () => {
           <CalendarDays className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 text-lg font-medium">No events found</h3>
           <p className="mt-2 text-sm text-gray-500">
-            Get started by creating a new event.
+            {isAdmin ? "Get started by creating a new event." : "Check back later for upcoming events."}
           </p>
-          <Button className="mt-4" onClick={() => setCreateEventOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Create Event
-          </Button>
+          {isAdmin && (
+            <Button className="mt-4" onClick={() => setCreateEventOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Create Event
+            </Button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-md shadow">
@@ -153,7 +214,7 @@ const Events = () => {
                 <TableHead>Location</TableHead>
                 <TableHead>Created By</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,15 +266,31 @@ const Events = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openDeleteDialog(event)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => addToCalendar(event)}
+                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                          title="Add to calendar"
+                        >
+                          <CalendarPlus className="h-4 w-4" />
+                          <span className="sr-only">Add to calendar</span>
+                        </Button>
+                        
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openDeleteDialog(event)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            title="Delete event"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
