@@ -126,7 +126,7 @@
 
 /* Event card styles */
 .event-card {
-  @apply w-full border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-duration-200;
+  @apply w-full border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition duration-200;
 }
 
 /* Mobile optimizations */
