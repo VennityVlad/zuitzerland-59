@@ -1,7 +1,8 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, Clock, User } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, Clock, User, Edit, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/PageTitle";
 import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Base Event interface without profiles
 interface Event {
@@ -49,6 +52,7 @@ const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("upcoming");
   const { user: privyUser } = usePrivy();
   const { user: supabaseUser } = useSupabaseAuth();
   const { toast } = useToast();
@@ -141,6 +145,15 @@ const Events = () => {
   const openDeleteDialog = (event: Event) => {
     setEventToDelete(event);
   };
+
+  const handleEditEvent = (event: Event) => {
+    // This would be implemented when we have an edit form
+    toast({
+      title: "Edit Event",
+      description: `Editing event: ${event.title}`,
+    });
+    // Placeholder for future edit functionality
+  };
   
   // Function to generate iCalendar format
   const generateICalEvent = (event: Event) => {
@@ -192,20 +205,35 @@ const Events = () => {
     });
   };
 
-  // Format date range for display
-  const formatDateRange = (startDate: Date, endDate: Date, isAllDay: boolean) => {
-    const isSameDay = startDate.toDateString() === endDate.toDateString();
+  // Format time for display
+  const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean) => {
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
     
-    if (isSameDay) {
-      return isAllDay 
-        ? format(startDate, "MMM d, yyyy") + " (All day)"
-        : `${format(startDate, "MMM d, yyyy")} · ${format(startDate, "h:mm a")} - ${format(endDate, "h:mm a")}`;
-    } else {
-      return isAllDay
-        ? `${format(startDate, "MMM d, yyyy")} - ${format(endDate, "MMM d, yyyy")} (All day)`
-        : `${format(startDate, "MMM d, yyyy")} - ${format(endDate, "MMM d, yyyy")}`;
+    if (isAllDay) {
+      return "All day";
     }
+    
+    return `${format(start, "h:mm a")} ${end ? `- ${format(end, "h:mm a")}` : ""}`;
   };
+
+  // Format date for the sidebar display
+  const formatDateForSidebar = (date: Date) => {
+    return (
+      <div className="flex flex-col items-center">
+        <div className="text-lg font-semibold">{format(date, "MMM d")}</div>
+        <div className="text-sm text-gray-500">{format(date, "EEEE")}</div>
+      </div>
+    );
+  };
+
+  // Filter events by upcoming or past
+  const currentDate = new Date();
+  const upcomingEvents = events?.filter(event => new Date(event.end_date) >= currentDate) || [];
+  const pastEvents = events?.filter(event => new Date(event.end_date) < currentDate) || [];
+  
+  // Display events based on active tab
+  const displayEvents = activeTab === "upcoming" ? upcomingEvents : pastEvents;
 
   // Determine which user ID to use
   const userId = privyUser?.id || supabaseUser?.id || "";
@@ -225,90 +253,22 @@ const Events = () => {
         )}
       </div>
 
-      {isLoading || profileLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-pulse">Loading events...</div>
+      <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
+        <div className="flex justify-end mb-4">
+          <TabsList className="grid w-[200px] grid-cols-2">
+            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+            <TabsTrigger value="past">Past</TabsTrigger>
+          </TabsList>
         </div>
-      ) : !events || events.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
-          <CalendarDays className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-medium">No events found</h3>
-          <p className="mt-2 text-sm text-gray-500">
-            {isAdmin ? "Get started by creating a new event." : "Check back later for upcoming events."}
-          </p>
-          {isAdmin && (
-            <Button className="mt-4" onClick={() => setCreateEventOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Create Event
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {events.map((event) => {
-            const startDate = new Date(event.start_date);
-            const endDate = new Date(event.end_date);
-            const isPast = endDate < new Date();
-            
-            return (
-              <Card key={event.id} className="overflow-hidden">
-                <div className="h-2" style={{ backgroundColor: event.color }}></div>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-xl font-semibold leading-tight">{event.title}</CardTitle>
-                    <Badge variant={isPast ? "outline" : "default"}>
-                      {isPast ? "Past" : "Upcoming"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 pb-2">
-                  {event.description && (
-                    <p className="text-sm text-gray-600">{event.description}</p>
-                  )}
-                  <div className="flex items-start space-x-2">
-                    <Clock className="h-4 w-4 text-gray-500 mt-0.5" />
-                    <span className="text-sm">
-                      {formatDateRange(startDate, endDate, event.is_all_day)}
-                    </span>
-                  </div>
-                  {event.location && (
-                    <div className="flex items-start space-x-2">
-                      <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                      <span className="text-sm">{event.location}</span>
-                    </div>
-                  )}
-                  <div className="flex items-start space-x-2">
-                    <User className="h-4 w-4 text-gray-500 mt-0.5" />
-                    <span className="text-sm">{event.profiles?.username || "Anonymous"}</span>
-                  </div>
-                </CardContent>
-                <CardFooter className="border-t pt-3 flex justify-between">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => addToCalendar(event)}
-                    className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                  >
-                    <CalendarPlus className="h-4 w-4 mr-2" />
-                    Add to Calendar
-                  </Button>
-                  
-                  {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openDeleteDialog(event)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+
+        <TabsContent value="upcoming" className="space-y-4">
+          {renderEventsList(upcomingEvents, isLoading, profileLoading, isAdmin, openDeleteDialog, handleEditEvent, addToCalendar, formatDateForSidebar, formatEventTime)}
+        </TabsContent>
+
+        <TabsContent value="past" className="space-y-4">
+          {renderEventsList(pastEvents, isLoading, profileLoading, isAdmin, openDeleteDialog, handleEditEvent, addToCalendar, formatDateForSidebar, formatEventTime)}
+        </TabsContent>
+      </Tabs>
 
       <CreateEventSheet
         open={createEventOpen}
@@ -337,6 +297,170 @@ const Events = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+};
+
+// Helper function to render the events list
+const renderEventsList = (
+  events: EventWithProfile[], 
+  isLoading: boolean, 
+  profileLoading: boolean,
+  isAdmin: boolean,
+  openDeleteDialog: (event: Event) => void,
+  handleEditEvent: (event: Event) => void,
+  addToCalendar: (event: Event) => void,
+  formatDateForSidebar: (date: Date) => JSX.Element,
+  formatEventTime: (startDate: string, endDate: string, isAllDay: boolean) => string
+) => {
+  if (isLoading || profileLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-pulse">Loading events...</div>
+      </div>
+    );
+  }
+
+  if (!events || events.length === 0) {
+    return (
+      <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
+        <CalendarDays className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-4 text-lg font-medium">No events found</h3>
+        <p className="mt-2 text-sm text-gray-500">
+          {isAdmin ? "Get started by creating a new event." : "Check back later for upcoming events."}
+        </p>
+        {isAdmin && (
+          <Button className="mt-4" onClick={() => {}}>
+            <Plus className="mr-2 h-4 w-4" /> Create Event
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // Group events by date for the timeline view
+  const eventsByDate = events.reduce((acc, event) => {
+    const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
+    if (!acc[dateKey]) {
+      acc[dateKey] = [];
+    }
+    acc[dateKey].push(event);
+    return acc;
+  }, {} as Record<string, EventWithProfile[]>);
+
+  return (
+    <div className="space-y-8">
+      {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
+        const date = new Date(dateKey);
+        return (
+          <div key={dateKey} className="relative">
+            <div className="flex">
+              {/* Date sidebar */}
+              <div className="mr-4 w-20 flex-shrink-0 flex flex-col items-center">
+                {formatDateForSidebar(date)}
+                <div className="h-full w-0.5 bg-gray-200 mt-2 rounded-full"></div>
+              </div>
+              
+              {/* Events for this date */}
+              <div className="flex-1 space-y-4">
+                {dateEvents.map((event) => (
+                  <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
+                    <div className="h-1" style={{ backgroundColor: event.color }}></div>
+                    <CardContent className="p-0">
+                      <div className="flex flex-col md:flex-row w-full">
+                        {/* Event details */}
+                        <div className="flex-1 p-4">
+                          {/* Time and badges */}
+                          <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                            <Badge className="w-fit" variant="outline" style={{ 
+                              backgroundColor: `${event.color}20`, 
+                              color: event.color,
+                              borderColor: event.color
+                            }}>
+                              {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
+                            </Badge>
+                            
+                            {event.is_all_day && (
+                              <Badge variant="outline" className="w-fit">All day</Badge>
+                            )}
+                          </div>
+                          
+                          {/* Title */}
+                          <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                          
+                          {/* Description */}
+                          {event.description && (
+                            <p className="text-sm text-gray-600 mb-4">{event.description}</p>
+                          )}
+                          
+                          {/* Meta info */}
+                          <div className="space-y-2 text-sm">
+                            {event.location && (
+                              <div className="flex items-center">
+                                <MapPin className="h-4 w-4 text-gray-500 mr-2" />
+                                <span>{event.location}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center">
+                              <User className="h-4 w-4 text-gray-500 mr-2" />
+                              <span>Hosted by {event.profiles?.username || "Anonymous"}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 mt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addToCalendar(event)}
+                              className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                            >
+                              <CalendarPlus className="h-4 w-4 mr-2" />
+                              Add to Calendar
+                            </Button>
+                            
+                            {isAdmin && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditEvent(event)}
+                                  className="text-amber-500 border-amber-500 hover:bg-amber-50"
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </Button>
+                                
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog(event)}
+                                  className="text-red-500 border-red-500 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Event image or placeholder */}
+                        <div className="w-full md:w-1/3 lg:w-1/4 h-40 md:h-auto bg-gray-100 flex items-center justify-center">
+                          <div className="text-gray-400 italic p-4 text-center">
+                            Event image
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
