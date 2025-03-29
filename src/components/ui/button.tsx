@@ -10,15 +10,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[#1A1F2C] text-white hover:bg-[#1A1F2C]/90",
+        default: "bg-gradient-border text-white hover:opacity-90",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border-2 border-[#1A1F2C] bg-white text-[#1A1F2C] hover:bg-accent hover:text-accent-foreground",
+          "relative rounded-full p-[2px] bg-gradient-border",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-purple underline-offset-4 hover:underline",
       },
       size: {
         default: "h-12 px-6 py-3",
@@ -43,6 +43,20 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+    
+    // For outline buttons, we need to add a span inside to create the gradient border effect
+    if (variant === "outline") {
+      return (
+        <span className={cn(buttonVariants({ variant, size, className }))}>
+          <Comp
+            className="flex h-full w-full items-center justify-center rounded-full bg-white px-6 py-3 text-purple transition-all focus:outline-none"
+            ref={ref}
+            {...props}
+          />
+        </span>
+      )
+    }
+    
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}

@@ -38,6 +38,19 @@
   }
 }
 
+/* Gradient border styles */
+.gradient-border {
+  @apply relative rounded-3xl p-[2px] bg-gradient-border;
+}
+
+.gradient-border > * {
+  @apply bg-white rounded-[calc(1.5rem-2px)] h-full w-full;
+}
+
+.gradient-card {
+  @apply gradient-border shadow-sm;
+}
+
 /* Bottom navigation styles */
 .bottom-nav {
   @apply fixed bottom-0 left-0 right-0 bg-white border-t z-40 h-16 transition-transform duration-300;
@@ -56,7 +69,7 @@
 }
 
 .bottom-nav-item-active {
-  @apply text-primary;
+  @apply text-purple;
 }
 
 .bottom-nav-item-inactive {
@@ -127,6 +140,22 @@
 /* Event card styles */
 .event-card {
   @apply w-full border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition duration-200;
+}
+
+/* Custom button styles for gradient borders */
+.btn-gradient {
+  @apply relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-colors;
+  background: linear-gradient(90deg, #5138ED 0%, #9b87f5 100%);
+  color: white;
+}
+
+.btn-gradient-outline {
+  @apply relative rounded-full p-[2px] bg-gradient-border;
+}
+
+.btn-gradient-outline > span {
+  @apply flex h-full w-full items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-medium transition-all focus:outline-none;
+  color: #5138ED;
 }
 
 /* Mobile optimizations */

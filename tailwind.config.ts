@@ -62,14 +62,25 @@ export default {
           light: "#FFFFFF",
           border: "#1A1F2C",
         },
+        purple: {
+          light: "#9b87f5",
+          DEFAULT: "#5138ED",
+          dark: "#3525A4",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "1rem",
+        "2xl": "1.5rem",
+        "3xl": "2rem",
       },
       fontFamily: {
         montserrat: ["Montserrat", "sans-serif"],
+      },
+      backgroundImage: {
+        "gradient-border": "linear-gradient(90deg, #5138ED 0%, #9b87f5 100%)",
       },
     },
   },
