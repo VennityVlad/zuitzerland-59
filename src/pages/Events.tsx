@@ -421,7 +421,7 @@ const renderEventsList = (
                       {/* Date Range */}
                       <div className="flex items-center text-sm text-gray-600 mb-3">
                         <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                        <span>{formatDateRange(event.start_date, event.end_date, event.is_allDay)}</span>
+                        <span>{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
                       </div>
                       
                       {/* Description */}
