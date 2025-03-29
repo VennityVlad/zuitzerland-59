@@ -2,7 +2,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,6 +12,9 @@ const BottomNav = () => {
   const navigate = useNavigate();
   const { user, logout } = usePrivy();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollTimeoutRef = useRef<number | null>(null);
   
   useEffect(() => {
     const fetchProfile = async () => {
@@ -36,6 +39,50 @@ const BottomNav = () => {
       fetchProfile();
     }
   }, [user?.id]);
+
+  // Handle scroll behavior
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Clear any existing timeout to prevent rapid firing
+      if (scrollTimeoutRef.current) {
+        window.clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Don't respond to tiny scroll amounts (helps with iOS bounce)
+      if (Math.abs(currentScrollY - lastScrollY.current) < 10) {
+        return;
+      }
+      
+      // Determine if we should show/hide the nav
+      if (currentScrollY > lastScrollY.current) {
+        // Scrolling down - hide nav
+        setIsVisible(false);
+      } else {
+        // Scrolling up - show nav
+        setIsVisible(true);
+      }
+      
+      // Update the last scroll position
+      lastScrollY.current = currentScrollY;
+      
+      // Set a timeout before allowing another scroll event to trigger
+      // This helps with inertial scrolling and bounce effects
+      scrollTimeoutRef.current = window.setTimeout(() => {
+        scrollTimeoutRef.current = null;
+      }, 100);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollTimeoutRef.current) {
+        window.clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Define a common type for navigation items
   type NavItem = {
@@ -79,6 +126,30 @@ const BottomNav = () => {
       path: "/reports",
       showAlways: false,
     },
+    {
+      name: "Teams",
+      icon: Building, 
+      path: "/teams",
+      showAlways: false,
+    },
+    {
+      name: "Users",
+      icon: Users,
+      path: "/user-management",
+      showAlways: false,
+    },
+    {
+      name: "Room Types",
+      icon: Layers,
+      path: "/room-types",
+      showAlways: false,
+    },
+    {
+      name: "Discounts",
+      icon: Percent,
+      path: "/discounts",
+      showAlways: false,
+    },
   ];
 
   // Handle navigation
@@ -98,11 +169,14 @@ const BottomNav = () => {
   // For admin users, add the first admin item to main nav and rest to more menu
   if (isAdmin) {
     mainNavItems.push(adminItems[0]);
-    moreItems.push(adminItems[1]);
+    moreItems.push(...adminItems.slice(1));
   }
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-white border-t border-gray-200">
+    <div className={cn(
+      "fixed bottom-0 left-0 z-50 w-full h-16 bg-white border-t border-gray-200 transition-transform duration-300",
+      isVisible ? "translate-y-0" : "translate-y-full"
+    )}>
       <div className="grid h-full grid-cols-4">
         {/* Display the main nav items */}
         {mainNavItems.slice(0, 3).map((item) => (
@@ -152,9 +226,9 @@ const BottomNav = () => {
                 <span className="text-xs text-gray-500">More</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-48 p-2">
+            <PopoverContent className="w-48 p-2 z-[100]">
               <div className="flex flex-col space-y-1">
-                {/* Display additional admin items */}
+                {/* Display all additional admin items */}
                 {moreItems.map((item) => (
                   <button
                     key={item.name}
