@@ -373,7 +373,7 @@ const renderEventsList = (
     );
   }
 
-  // Group events by date for the timeline view
+  // Group events by date for the timeline view, using the START date
   const eventsByDate = events.reduce((acc, event) => {
     const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
     if (!acc[dateKey]) {
@@ -386,7 +386,8 @@ const renderEventsList = (
   return (
     <div className="space-y-8">
       {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
-        const date = new Date(dateKey);
+        // Use the first event's start date for the sidebar display
+        const date = new Date(dateEvents[0].start_date);
         return (
           <div key={dateKey} className="relative">
             <div className="flex">
