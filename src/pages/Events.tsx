@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, Clock, User, Edit, Calendar } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -403,17 +403,11 @@ const renderEventsList = (
                   <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
                     <div className="h-1" style={{ backgroundColor: event.color }}></div>
                     <CardContent className="p-4">
-                      {/* Time badge */}
+                      {/* Time badge - MODIFIED HERE to eliminate duplicate "All day" label */}
                       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
                         <Badge className="w-fit" variant="outline">
                           {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
                         </Badge>
-                        
-                        {event.is_all_day && (
-                          <Badge variant="outline" className="w-fit">
-                            All day
-                          </Badge>
-                        )}
                       </div>
                       
                       {/* Title */}
