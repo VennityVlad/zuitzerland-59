@@ -1,9 +1,8 @@
-
 import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Users, Download } from "lucide-react";
+import { ExternalLink, Mail, Users, Download, CalendarDays } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface InvoiceCardProps {
@@ -34,6 +33,17 @@ export const InvoiceCard = ({
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return 'Never';
     return format(parseISO(dateString), 'MMM d, yyyy h:mm a');
+  };
+  
+  const formatDateRange = (checkin: string, checkout: string) => {
+    const startDate = parseISO(checkin);
+    const endDate = parseISO(checkout);
+    
+    if (format(startDate, "MMM yyyy") === format(endDate, "MMM yyyy")) {
+      return `${format(startDate, "MMM d")} - ${format(endDate, "d, yyyy")}`;
+    }
+    
+    return `${formatDate(checkin)} - ${formatDate(checkout)}`;
   };
 
   const getStatusStyle = (status: string) => {
@@ -88,7 +98,10 @@ export const InvoiceCard = ({
           </div>
           <div>
             <p className="text-gray-500">Stay Period</p>
-            <p>{format(parseISO(invoice.checkin), 'MMM d')} - {formatDate(invoice.checkout)}</p>
+            <div className="flex items-center">
+              <CalendarDays className="h-3 w-3 mr-1 text-gray-500" />
+              <p>{formatDateRange(invoice.checkin, invoice.checkout)}</p>
+            </div>
           </div>
           {onSendReminder && (
             <div>
