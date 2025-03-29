@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, Clock, User, Edit } from "lucide-react";
+import { format, parseISO, isSameDay } from "date-fns";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, Clock, User, Edit, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -224,6 +223,18 @@ const Events = () => {
     );
   };
 
+  // Function to format date range for display
+  const formatDateRange = (startDate: string, endDate: string, isAllDay: boolean) => {
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+    
+    if (isSameDay(start, end)) {
+      return `${format(start, "MMM d, yyyy")}`;
+    }
+    
+    return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+  };
+
   // Filter events by upcoming or past
   const currentDate = new Date();
   const upcomingEvents = events?.filter(event => new Date(event.end_date) >= currentDate) || [];
@@ -262,11 +273,33 @@ const Events = () => {
         </div>
 
         <TabsContent value="upcoming" className="space-y-4">
-          {renderEventsList(upcomingEvents, isLoading, profileLoading, isAdmin, openDeleteDialog, handleEditEvent, addToCalendar, formatDateForSidebar, formatEventTime)}
+          {renderEventsList(
+            upcomingEvents, 
+            isLoading, 
+            profileLoading, 
+            isAdmin, 
+            openDeleteDialog, 
+            handleEditEvent, 
+            addToCalendar, 
+            formatDateForSidebar, 
+            formatEventTime,
+            formatDateRange
+          )}
         </TabsContent>
 
         <TabsContent value="past" className="space-y-4">
-          {renderEventsList(pastEvents, isLoading, profileLoading, isAdmin, openDeleteDialog, handleEditEvent, addToCalendar, formatDateForSidebar, formatEventTime)}
+          {renderEventsList(
+            pastEvents, 
+            isLoading, 
+            profileLoading, 
+            isAdmin, 
+            openDeleteDialog, 
+            handleEditEvent, 
+            addToCalendar, 
+            formatDateForSidebar, 
+            formatEventTime,
+            formatDateRange
+          )}
         </TabsContent>
       </Tabs>
 
@@ -312,7 +345,8 @@ const renderEventsList = (
   handleEditEvent: (event: Event) => void,
   addToCalendar: (event: Event) => void,
   formatDateForSidebar: (date: Date) => JSX.Element,
-  formatEventTime: (startDate: string, endDate: string, isAllDay: boolean) => string
+  formatEventTime: (startDate: string, endDate: string, isAllDay: boolean) => string,
+  formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string
 ) => {
   if (isLoading || profileLoading) {
     return (
@@ -368,15 +402,27 @@ const renderEventsList = (
                   <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
                     <div className="h-1" style={{ backgroundColor: event.color }}></div>
                     <CardContent className="p-4">
-                      {/* Time badge - removed the duplicate all day badge */}
+                      {/* Time badge */}
                       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
                         <Badge className="w-fit" variant="outline">
                           {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
                         </Badge>
+                        
+                        {event.is_all_day && (
+                          <Badge variant="outline" className="w-fit">
+                            All day
+                          </Badge>
+                        )}
                       </div>
                       
                       {/* Title */}
                       <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                      
+                      {/* Date Range */}
+                      <div className="flex items-center text-sm text-gray-600 mb-3">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                        <span>{formatDateRange(event.start_date, event.end_date, event.is_allDay)}</span>
+                      </div>
                       
                       {/* Description */}
                       {event.description && (
