@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
@@ -223,30 +224,6 @@ const Events = () => {
     );
   };
 
-  // Format date range for display (May 1-3, 2023)
-  const formatDateRange = (startDate: string, endDate: string) => {
-    const start = parseISO(startDate);
-    const end = parseISO(endDate);
-    
-    // If same date, don't show range
-    if (format(start, "yyyy-MM-dd") === format(end, "yyyy-MM-dd")) {
-      return format(start, "MMMM d, yyyy");
-    }
-    
-    // If same month and year
-    if (format(start, "yyyy-MM") === format(end, "yyyy-MM")) {
-      return `${format(start, "MMMM d")}-${format(end, "d, yyyy")}`;
-    }
-    
-    // If same year but different months
-    if (format(start, "yyyy") === format(end, "yyyy")) {
-      return `${format(start, "MMMM d")} - ${format(end, "MMMM d, yyyy")}`;
-    }
-    
-    // Different years
-    return `${format(start, "MMMM d, yyyy")} - ${format(end, "MMMM d, yyyy")}`;
-  };
-
   // Filter events by upcoming or past
   const currentDate = new Date();
   const upcomingEvents = events?.filter(event => new Date(event.end_date) >= currentDate) || [];
@@ -388,19 +365,13 @@ const renderEventsList = (
               {/* Events for this date */}
               <div className="flex-1 space-y-4">
                 {dateEvents.map((event) => (
-                  <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition duration-200">
+                  <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
                     <div className="h-1" style={{ backgroundColor: event.color }}></div>
                     <CardContent className="p-4">
-                      {/* Time badge */}
-                      <div className="flex flex-wrap md:items-center gap-2 mb-2">
+                      {/* Time badge - removed the duplicate all day badge */}
+                      <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
                         <Badge className="w-fit" variant="outline">
                           {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
-                        </Badge>
-
-                        {/* Date range badge */}
-                        <Badge className="w-fit" variant="secondary">
-                          <CalendarDays className="h-3 w-3 mr-1" />
-                          {formatDateRange(event.start_date, event.end_date)}
                         </Badge>
                       </div>
                       
@@ -420,12 +391,6 @@ const renderEventsList = (
                             <span>{event.location}</span>
                           </div>
                         )}
-                        
-                        {/* Time display with icon */}
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 text-gray-500 mr-2" />
-                          <span>{formatEventTime(event.start_date, event.end_date, event.is_all_day)}</span>
-                        </div>
                         
                         <div className="flex items-center">
                           <User className="h-4 w-4 text-gray-500 mr-2" />
