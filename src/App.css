@@ -4,7 +4,6 @@
   margin: 0;
   padding: 0;
   text-align: left;
-  background-color: white;
 }
 
 .logo {
@@ -14,10 +13,10 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em rgba(81, 56, 237, 0.6));
+  filter: drop-shadow(0 0 2em #646cffaa);
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em rgba(81, 56, 237, 0.6));
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
 @keyframes logo-spin {
@@ -37,27 +36,8 @@
 
 .card {
   padding: 2em;
-  border-radius: 1.5rem;
-  overflow: hidden;
 }
 
 .read-the-docs {
   color: #888;
-}
-
-/* Global gradient border card style */
-.gradient-card-container {
-  position: relative;
-  border-radius: 1.5rem;
-  padding: 2px;
-  background: linear-gradient(90deg, #5138ED 0%, #9b87f5 100%);
-  overflow: hidden;
-}
-
-.gradient-card-content {
-  background-color: white;
-  border-radius: calc(1.5rem - 2px);
-  height: 100%;
-  width: 100%;
-  padding: 1rem;
 }
