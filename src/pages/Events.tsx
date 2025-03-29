@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, Clock, User, Edit, ExternalLink } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, Clock, User, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -51,6 +51,7 @@ interface EventWithProfile extends Event {
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("upcoming");
   const { user: privyUser } = usePrivy();
@@ -147,12 +148,8 @@ const Events = () => {
   };
 
   const handleEditEvent = (event: Event) => {
-    // This would be implemented when we have an edit form
-    toast({
-      title: "Edit Event",
-      description: `Editing event: ${event.title}`,
-    });
-    // Placeholder for future edit functionality
+    setEventToEdit(event);
+    setCreateEventOpen(true);
   };
   
   // Function to generate iCalendar format
@@ -247,7 +244,10 @@ const Events = () => {
           icon={<CalendarDays className="h-8 w-8" />} 
         />
         {isAdmin && (
-          <Button onClick={() => setCreateEventOpen(true)}>
+          <Button onClick={() => {
+            setEventToEdit(null);
+            setCreateEventOpen(true);
+          }}>
             <Plus className="mr-2 h-4 w-4" /> Create Event
           </Button>
         )}
@@ -275,6 +275,7 @@ const Events = () => {
         onOpenChange={setCreateEventOpen}
         onSuccess={handleCreateEventSuccess}
         userId={userId}
+        event={eventToEdit}
       />
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
@@ -366,92 +367,72 @@ const renderEventsList = (
                 {dateEvents.map((event) => (
                   <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
                     <div className="h-1" style={{ backgroundColor: event.color }}></div>
-                    <CardContent className="p-0">
-                      <div className="flex flex-col md:flex-row w-full">
-                        {/* Event details */}
-                        <div className="flex-1 p-4">
-                          {/* Time and badges */}
-                          <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                            <Badge className="w-fit" variant="outline" style={{ 
-                              backgroundColor: `${event.color}20`, 
-                              color: event.color,
-                              borderColor: event.color
-                            }}>
-                              {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
-                            </Badge>
-                            
-                            {event.is_all_day && (
-                              <Badge variant="outline" className="w-fit">All day</Badge>
-                            )}
+                    <CardContent className="p-4">
+                      {/* Time badge - removed the duplicate all day badge */}
+                      <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                        <Badge className="w-fit" variant="outline">
+                          {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
+                        </Badge>
+                      </div>
+                      
+                      {/* Title */}
+                      <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                      
+                      {/* Description */}
+                      {event.description && (
+                        <p className="text-sm text-gray-600 mb-4">{event.description}</p>
+                      )}
+                      
+                      {/* Meta info */}
+                      <div className="space-y-2 text-sm">
+                        {event.location && (
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 text-gray-500 mr-2" />
+                            <span>{event.location}</span>
                           </div>
-                          
-                          {/* Title */}
-                          <h3 className="text-xl font-bold mb-2">{event.title}</h3>
-                          
-                          {/* Description */}
-                          {event.description && (
-                            <p className="text-sm text-gray-600 mb-4">{event.description}</p>
-                          )}
-                          
-                          {/* Meta info */}
-                          <div className="space-y-2 text-sm">
-                            {event.location && (
-                              <div className="flex items-center">
-                                <MapPin className="h-4 w-4 text-gray-500 mr-2" />
-                                <span>{event.location}</span>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center">
-                              <User className="h-4 w-4 text-gray-500 mr-2" />
-                              <span>Hosted by {event.profiles?.username || "Anonymous"}</span>
-                            </div>
-                          </div>
-                          
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-2 mt-4">
+                        )}
+                        
+                        <div className="flex items-center">
+                          <User className="h-4 w-4 text-gray-500 mr-2" />
+                          <span>Hosted by {event.profiles?.username || "Anonymous"}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addToCalendar(event)}
+                          className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                        >
+                          <CalendarPlus className="h-4 w-4 mr-2" />
+                          Add to Calendar
+                        </Button>
+                        
+                        {isAdmin && (
+                          <>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => addToCalendar(event)}
-                              className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                              onClick={() => handleEditEvent(event)}
+                              className="text-amber-500 border-amber-500 hover:bg-amber-50"
                             >
-                              <CalendarPlus className="h-4 w-4 mr-2" />
-                              Add to Calendar
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
                             </Button>
                             
-                            {isAdmin && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditEvent(event)}
-                                  className="text-amber-500 border-amber-500 hover:bg-amber-50"
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
-                                </Button>
-                                
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(event)}
-                                  className="text-red-500 border-red-500 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Event image or placeholder */}
-                        <div className="w-full md:w-1/3 lg:w-1/4 h-40 md:h-auto bg-gray-100 flex items-center justify-center">
-                          <div className="text-gray-400 italic p-4 text-center">
-                            Event image
-                          </div>
-                        </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteDialog(event)}
+                              className="text-red-500 border-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

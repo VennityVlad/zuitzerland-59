@@ -26,6 +26,19 @@ interface CreateEventSheetProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   userId: string;
+  event?: Event | null; // Added event prop for editing
+}
+
+interface Event {
+  id: string;
+  title: string;
+  description: string | null;
+  start_date: string;
+  end_date: string;
+  location: string | null;
+  color: string;
+  is_all_day: boolean;
+  created_by: string;
 }
 
 interface NewEvent {
@@ -50,7 +63,7 @@ const colorOptions = [
   { label: "Pink", value: "#d53f8c" },
 ];
 
-export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: CreateEventSheetProps) {
+export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event }: CreateEventSheetProps) {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
   const [userProfile, setUserProfile] = useState<{ id: string } | null>(null);
@@ -66,6 +79,26 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
     created_by: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditMode = !!event; // Check if we're in edit mode
+
+  // Set form data when editing an event
+  useEffect(() => {
+    if (event) {
+      setNewEvent({
+        title: event.title,
+        description: event.description || "",
+        start_date: event.start_date,
+        end_date: event.end_date,
+        location: event.location || "",
+        color: event.color,
+        is_all_day: event.is_all_day,
+        created_by: event.created_by
+      });
+    } else {
+      // Reset form when not editing
+      resetForm();
+    }
+  }, [event]);
 
   // Fetch the user's profile ID when the component mounts or userId changes
   useEffect(() => {
@@ -102,7 +135,11 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
         if (data) {
           console.log("Found user profile:", data);
           setUserProfile(data);
-          setNewEvent(prev => ({ ...prev, created_by: data.id }));
+          
+          // Only set created_by if we're not in edit mode
+          if (!isEditMode) {
+            setNewEvent(prev => ({ ...prev, created_by: data.id }));
+          }
         } else {
           toast({
             title: "Error",
@@ -118,7 +155,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
     };
     
     fetchUserProfile();
-  }, [user, userId, toast]);
+  }, [user, userId, toast, isEditMode]);
 
   const resetForm = () => {
     setNewEvent({
@@ -133,7 +170,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
     });
   };
 
-  const handleCreateEvent = async () => {
+  const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       
@@ -147,7 +184,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
         return;
       }
 
-      if (!userProfile?.id) {
+      if (!userProfile?.id && !isEditMode) {
         toast({
           title: "Error",
           description: "User profile not found. Please complete your profile setup.",
@@ -181,41 +218,70 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
         return;
       }
 
-      console.log("Creating event with profile ID:", userProfile.id);
-      
-      const { data, error } = await supabase
-        .from('events')
-        .insert({
-          title: newEvent.title,
-          description: newEvent.description || null,
-          start_date: newEvent.start_date,
-          end_date: newEvent.end_date,
-          location: newEvent.location || null,
-          color: newEvent.color,
-          is_all_day: newEvent.is_all_day,
-          created_by: userProfile.id
-        })
-        .select();
+      // Create or update the event
+      if (isEditMode) {
+        console.log("Updating event:", event.id);
+        const { data, error } = await supabase
+          .from('events')
+          .update({
+            title: newEvent.title,
+            description: newEvent.description || null,
+            start_date: newEvent.start_date,
+            end_date: newEvent.end_date,
+            location: newEvent.location || null,
+            color: newEvent.color,
+            is_all_day: newEvent.is_all_day,
+            // Don't update created_by when editing
+          })
+          .eq('id', event.id)
+          .select();
 
-      if (error) {
-        console.error("Supabase insert error:", error);
-        throw error;
+        if (error) {
+          console.error("Supabase update error:", error);
+          throw error;
+        }
+
+        toast({
+          title: "Success",
+          description: "Event updated successfully",
+        });
+      } else {
+        console.log("Creating event with profile ID:", userProfile?.id);
+        
+        const { data, error } = await supabase
+          .from('events')
+          .insert({
+            title: newEvent.title,
+            description: newEvent.description || null,
+            start_date: newEvent.start_date,
+            end_date: newEvent.end_date,
+            location: newEvent.location || null,
+            color: newEvent.color,
+            is_all_day: newEvent.is_all_day,
+            created_by: userProfile?.id
+          })
+          .select();
+
+        if (error) {
+          console.error("Supabase insert error:", error);
+          throw error;
+        }
+
+        toast({
+          title: "Success",
+          description: "Event created successfully",
+        });
       }
-
-      toast({
-        title: "Success",
-        description: "Event created successfully",
-      });
       
       // Reset form and close sheet
       resetForm();
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('Error saving event:', error);
       toast({
         title: "Error",
-        description: "Failed to create event: " + (error instanceof Error ? error.message : "Unknown error"),
+        description: "Failed to save event: " + (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
     } finally {
@@ -260,9 +326,9 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md md:max-w-lg">
         <SheetHeader className="mb-6">
-          <SheetTitle>Create New Event</SheetTitle>
+          <SheetTitle>{isEditMode ? "Edit Event" : "Create New Event"}</SheetTitle>
           <SheetDescription>
-            Fill in the details to create a new event
+            {isEditMode ? "Update the details of this event" : "Fill in the details to create a new event"}
           </SheetDescription>
         </SheetHeader>
 
@@ -270,7 +336,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
           <div className="flex justify-center py-8">
             <div className="animate-pulse">Loading user profile...</div>
           </div>
-        ) : !userProfile ? (
+        ) : !userProfile && !isEditMode ? (
           <div className="text-center py-8">
             <p className="text-red-500">
               User profile not found. Please complete your profile setup before creating events.
@@ -419,10 +485,10 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId }: Crea
 
             <Button 
               className="w-full" 
-              onClick={handleCreateEvent} 
-              disabled={isSubmitting || !userProfile}
+              onClick={handleSubmit} 
+              disabled={isSubmitting || (!userProfile && !isEditMode)}
             >
-              {isSubmitting ? "Creating..." : "Create Event"}
+              {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
             </Button>
           </div>
         )}

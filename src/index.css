@@ -124,6 +124,11 @@
   @apply sticky top-4 z-10 bg-white py-2 font-medium;
 }
 
+/* Event card styles */
+.event-card {
+  @apply w-full border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-duration-200;
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .container {
