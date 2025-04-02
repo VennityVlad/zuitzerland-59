@@ -17,7 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface RoomSelectionFieldsProps {
   formData: BookingFormData;
-  onRoomTypeChange: (value: string) => void;
+  handleInputChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRoomTypeChange?: (value: string) => void;
 }
 
 const RoomInfo = () => {
@@ -77,6 +78,7 @@ const getRoomTypes = async () => {
 
 const RoomSelectionFields = ({
   formData,
+  handleInputChange,
   onRoomTypeChange,
 }: RoomSelectionFieldsProps) => {
   const { data: roomTypes, isLoading: isRoomTypesLoading } = useQuery({
@@ -84,6 +86,18 @@ const RoomSelectionFields = ({
     queryFn: getRoomTypes,
     staleTime: Infinity
   });
+
+  // Handler function that works with both prop patterns
+  const handleRoomTypeChange = (value: string) => {
+    if (onRoomTypeChange) {
+      onRoomTypeChange(value);
+    } else if (handleInputChange) {
+      // Create a synthetic event object to work with handleInputChange
+      handleInputChange({
+        target: { name: "roomType", value }
+      } as React.ChangeEvent<HTMLInputElement>);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -104,7 +118,7 @@ const RoomSelectionFields = ({
       <Select
         name="roomType"
         value={formData.roomType}
-        onValueChange={onRoomTypeChange}
+        onValueChange={handleRoomTypeChange}
       >
         <SelectTrigger className="w-full py-5">
           <SelectValue placeholder={isRoomTypesLoading ? "Loading room types..." : "Select a room type"} />
