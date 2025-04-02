@@ -81,41 +81,44 @@ serve(async (req) => {
             status = 'overdue';
           }
 
-          // Check if we need to update the status or payment date
+          // Track what needs to be updated
+          let statusUpdateNeeded = status !== invoice.status;
+          let paidAtUpdateNeeded = false;
           let paidAt = invoice.paid_at;
-          let updateNeeded = status !== invoice.status;
           
-          // Check for paymentDate in paymentMetadata
+          // Check for paymentDate in paymentMetadata - this is independent of status updates
           if (data.paymentMetadata && data.paymentMetadata.paymentDate) {
             const paymentDate = data.paymentMetadata.paymentDate;
             
             // Only update if the payment date is different or missing
             if (!paidAt || new Date(paidAt).toISOString() !== new Date(paymentDate).toISOString()) {
               paidAt = paymentDate;
-              updateNeeded = true;
+              paidAtUpdateNeeded = true;
               console.log(`Found payment date in metadata for invoice ${invoice.id}, date: ${paidAt}`);
             }
           }
-          // If no paymentMetadata but status is changing to paid or is already paid but missing paid_at,
+          // If no paymentMetadata but status is paid and we're missing paid_at,
           // fall back to checking the declareReceivedPayment event
-          else if ((status === 'paid' && (invoice.status !== 'paid' || !invoice.paid_at)) && 
-              data.events && Array.isArray(data.events)) {
-            
+          else if (status === 'paid' && !paidAt && data.events && Array.isArray(data.events)) {
             const paymentEvent = data.events.find((event: any) => event.name === "declareReceivedPayment");
             
             if (paymentEvent && paymentEvent.date) {
               paidAt = paymentEvent.date;
-              updateNeeded = true;
+              paidAtUpdateNeeded = true;
               console.log(`Found payment event for invoice ${invoice.id}, date: ${paidAt}`);
             }
           }
 
-          // Only update if something changed
-          if (updateNeeded) {
-            const updateData: { status: string; paid_at?: string | null } = { status };
+          // Only update if something changed (either status or paid_at)
+          if (statusUpdateNeeded || paidAtUpdateNeeded) {
+            const updateData: { status?: string; paid_at?: string | null } = {};
             
-            // Only include paid_at in the update if it's different or if status is changing to paid
-            if (status === 'paid') {
+            // Only include fields that need updating
+            if (statusUpdateNeeded) {
+              updateData.status = status;
+            }
+            
+            if (paidAtUpdateNeeded) {
               updateData.paid_at = paidAt;
             }
             
@@ -129,8 +132,15 @@ serve(async (req) => {
               return null;
             }
 
-            console.log(`Successfully updated invoice ${invoice.id} to status: ${status}, paid_at: ${paidAt || 'null'}`);
-            return { id: invoice.id, status, paid_at: paidAt };
+            console.log(`Successfully updated invoice ${invoice.id}:`, 
+              statusUpdateNeeded ? `status: ${status}` : '', 
+              paidAtUpdateNeeded ? `paid_at: ${paidAt || 'null'}` : '');
+              
+            return { 
+              id: invoice.id, 
+              ...(statusUpdateNeeded ? { status } : {}),
+              ...(paidAtUpdateNeeded ? { paid_at: paidAt } : {})
+            };
           } else {
             console.log(`No update needed for invoice ${invoice.id}, status and payment date unchanged`);
             return null;
