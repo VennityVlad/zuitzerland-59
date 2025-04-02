@@ -1,16 +1,10 @@
+import React from "react";
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import PaymentTypeSelector from "./PaymentTypeSelector";
 import type { BookingFormData } from "@/types/booking";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { HelpCircle, X } from "lucide-react";
-import { format, differenceInDays, parse } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { usePrivy } from "@privy-io/react-auth";
 
+// Need to add children prop to interface
 interface BookingDetailsPanelProps {
   formData: BookingFormData;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -20,75 +14,11 @@ interface BookingDetailsPanelProps {
   discountAmount: number;
   isRoleBasedDiscount: boolean;
   discountName: string | null;
-  discountPercentage?: number;
-  discountMonth?: string | null;
+  discountPercentage: number;
+  discountMonth: string | null;
   customPrice?: number;
+  children?: React.ReactNode; // Add this to support custom content
 }
-
-const VAT_RATE = 0.038; // 3.8% VAT rate for all customers
-const STRIPE_FEE_RATE = 0.03; // 3% Stripe fee for credit card payments
-
-const PriceBreakdown = ({ checkin, checkout, roomType }: { checkin: string; checkout: string; roomType: string }) => {
-  const { data: priceInfo } = useQuery({
-    queryKey: ['priceInfo', checkin, checkout, roomType],
-    queryFn: async () => {
-      if (!checkin || !checkout || !roomType) return null;
-      
-      const startDate = parse(checkin, 'yyyy-MM-dd', new Date());
-      const endDate = parse(checkout, 'yyyy-MM-dd', new Date());
-      const days = differenceInDays(endDate, startDate);
-      
-      const { data, error } = await supabase
-        .from('prices')
-        .select('*')
-        .eq('room_type', roomType)
-        .lte('duration', days)
-        .order('duration', { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
-      if (!data || data.length === 0) return null;
-
-      return {
-        durationRate: data[0],
-        totalDays: days
-      };
-    },
-    enabled: Boolean(checkin && checkout && roomType)
-  });
-
-  if (!priceInfo) return <div>No pricing information available</div>;
-
-  const { durationRate, totalDays } = priceInfo;
-  const totalPrice = durationRate.price * totalDays;
-
-  const roomTypeDisplayNames: { [key: string]: string } = {
-    'hotel_room_queen': 'Hotel Room - Queen Bed',
-    'apartment_3br_couples': '3 Bedroom Apartment - Couples Room',
-    'apartment_3_4br_queen': '3-4 Bedroom Apartment - Queen Bed Room',
-    'apartment_3_4br_twin': '3-4 Bedroom Apartment - Twin Bed Room',
-    'apartment_2br_twin': '2 Bedroom Apartment - Twin Bed Room',
-    'apartment_2br_triple': '2 Bedroom Apartment - Triple Bed Room'
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <h4 className="font-semibold">Price Calculation</h4>
-        <div className="text-sm space-y-1">
-          <p>Room Type: {roomTypeDisplayNames[roomType]}</p>
-          <p>Length of Stay: {totalDays} days</p>
-          <p>Applicable Rate: CHF {durationRate.price} per day</p>
-          <p>Rate Duration Tier: {durationRate.duration} days or more</p>
-          <div className="mt-4 pt-2 border-t">
-            <p className="font-medium">Calculation:</p>
-            <p>CHF {durationRate.price} × {totalDays} days = CHF {totalPrice}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const BookingDetailsPanel = ({
   formData,
@@ -99,162 +29,81 @@ const BookingDetailsPanel = ({
   discountAmount,
   isRoleBasedDiscount,
   discountName,
-  discountPercentage = 0,
-  discountMonth = null,
+  discountPercentage,
+  discountMonth,
   customPrice,
+  children
 }: BookingDetailsPanelProps) => {
-  const [usdPrice, setUsdPrice] = useState<number | null>(null);
-  const [usdChfRate, setUsdChfRate] = useState<number | null>(null);
-
-  const effectiveBasePrice = customPrice !== undefined ? customPrice : formData.price;
+  const basePrice = formData.price ? formData.price.toFixed(2) : '0.00';
+  const stripeFee = formData.paymentType === 'fiat' ? (formData.price * 0.03).toFixed(2) : '0.00';
+  const subtotal = formData.price ? (formData.price + (formData.paymentType === 'fiat' ? formData.price * 0.03 : 0)) : 0;
+  const vat = (subtotal * 0.038).toFixed(2);
+  const total = customPrice ? customPrice + parseFloat(vat) : subtotal + parseFloat(vat);
   
-  const priceAfterDiscount = effectiveBasePrice - discountAmount;
-  
-  const stripeFee = formData.paymentType === "fiat" ? priceAfterDiscount * STRIPE_FEE_RATE : 0;
-  
-  const subtotalBeforeVAT = priceAfterDiscount + stripeFee;
-  
-  const taxAmount = subtotalBeforeVAT * VAT_RATE;
-  
-  const totalAmount = subtotalBeforeVAT + taxAmount;
-
-  useEffect(() => {
-    const fetchExchangeRate = async () => {
-      try {
-        const response = await fetch(
-          `https://api.currencylayer.com/live?access_key=6ca43ac4cfb297bbbf5846450c3bfffc&format=1`
-        );
-        const data = await response.json();
-        if (data.success && data.quotes) {
-          const rate = data.quotes.USDCHF;
-          if (rate) {
-            setUsdChfRate(rate);
-            const convertedPrice = totalAmount / rate;
-            setUsdPrice(convertedPrice);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching exchange rate:", error);
-      }
-    };
-
-    if (totalAmount > 0 && usdChfRate === null) {
-      fetchExchangeRate();
-    } else if (totalAmount > 0 && usdChfRate !== null) {
-      const convertedPrice = totalAmount / usdChfRate;
-      setUsdPrice(convertedPrice);
-    }
-  }, [totalAmount, usdChfRate]);
-
+  // Make sure you add the children at the end of the returned JSX component
   return (
-    <div className="p-6 bg-secondary/20 rounded-xl space-y-6">
-      <div className="pb-4 border-b border-gray-200">
-        <h3 className="text-xl font-semibold text-gray-900 mb-1">Booking Details</h3>
-        <p className="text-sm text-gray-500">Select your stay dates and room preference</p>
-      </div>
+    <div className="bg-gray-50 p-6 rounded-lg space-y-6">
+      <h3 className="text-xl font-semibold mb-4">Booking Details</h3>
+
+      <DateSelectionFields
+        formData={formData}
+        handleInputChange={handleInputChange}
+        minDate={minDate}
+        maxDate={maxDate}
+      />
+
+      <RoomSelectionFields
+        formData={formData}
+        handleInputChange={handleInputChange}
+      />
+
+      <PaymentTypeSelector
+        value={formData.paymentType}
+        onChange={handlePaymentTypeChange}
+      />
       
-      <div className="grid grid-cols-1 gap-6">
-        <div className="space-y-4">
-          <DateSelectionFields
-            formData={formData}
-            handleInputChange={handleInputChange}
-            minDate={minDate}
-            maxDate={maxDate}
-          />
-        </div>
-        
-        <div className="space-y-4">
-          <RoomSelectionFields
-            formData={formData}
-            onRoomTypeChange={(value) =>
-              handleInputChange({
-                target: { name: "roomType", value },
-              } as React.ChangeEvent<HTMLInputElement>)
-            }
-          />
-        </div>
+      {/* Custom children content - for the custom price field */}
+      {children}
 
-        <div className="space-y-4">
-          <PaymentTypeSelector
-            value={formData.paymentType}
-            onChange={handlePaymentTypeChange}
-          />
-        </div>
-
-        <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
-          <div className="flex justify-between items-center text-gray-600">
-            <span className="flex items-center gap-2">
-              Base Price
-              {formData.checkin && formData.checkout && formData.roomType && !customPrice && (
-                <Popover>
-                  <PopoverTrigger>
-                    <HelpCircle className="h-4 w-4 text-gray-500 hover:text-gray-700 cursor-help" />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-4" align="start">
-                    <PriceBreakdown
-                      checkin={formData.checkin}
-                      checkout={formData.checkout}
-                      roomType={formData.roomType}
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
-              {customPrice !== undefined && (
-                <span className="ml-1 text-xs text-orange-500">(Custom price)</span>
-              )}
-            </span>
-            <span>CHF {effectiveBasePrice.toFixed(2)}</span>
+      <div className="border-t border-gray-200 mt-4 pt-4">
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Base Price:</span>
+            <span className="font-medium">{basePrice} CHF</span>
           </div>
           
           {discountAmount > 0 && (
-            <div className="flex justify-between items-center text-green-600">
-              <span>
-                {discountName || (isRoleBasedDiscount ? 'Co-designer Discount' : 'Special Discount')}
-                {discountPercentage > 0 && ` (${discountPercentage}%)`}
-                {discountMonth && ` (${discountMonth})`}
+            <div className="flex justify-between">
+              <span className="text-gray-600">
+                {discountName || `Discount (${discountPercentage}%)`}:
               </span>
-              <span>- CHF {discountAmount.toFixed(2)}</span>
-            </div>
-          )}
-
-          {discountAmount > 0 && (
-            <div className="flex justify-between items-center text-gray-600">
-              <span>Price after discount</span>
-              <span>CHF {priceAfterDiscount.toFixed(2)}</span>
+              <span className="font-medium text-red-500">-{discountAmount.toFixed(2)} CHF</span>
             </div>
           )}
           
-          {formData.paymentType === "fiat" && (
-            <div className="flex justify-between items-center text-gray-600">
-              <span>Credit Card Processing Fee (3%)</span>
-              <span>CHF {stripeFee.toFixed(2)}</span>
-            </div>
-          )}
-
-          {formData.paymentType === "fiat" && (
-            <div className="flex justify-between items-center text-gray-600">
-              <span>Subtotal before VAT</span>
-              <span>CHF {subtotalBeforeVAT.toFixed(2)}</span>
+          {formData.paymentType === 'fiat' && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Processing Fee (3%):</span>
+              <span className="font-medium">{stripeFee} CHF</span>
             </div>
           )}
           
-          <div className="flex justify-between items-center text-gray-600">
-            <span>VAT (3.8%)</span>
-            <span>CHF {taxAmount.toFixed(2)}</span>
-          </div>
-
-          <div className="flex justify-between items-center text-lg font-semibold mt-2 pt-2 border-t border-gray-200">
-            <span>Total Price</span>
-            <span>CHF {totalAmount.toFixed(2)}</span>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Subtotal:</span>
+            <span className="font-medium">{subtotal.toFixed(2)} CHF</span>
           </div>
           
-          {usdPrice && (
-            <div className="flex justify-between items-center text-sm text-gray-500 mt-1">
-              <span>Approx USD</span>
-              <span>${usdPrice.toFixed(2)}</span>
-            </div>
-          )}
-          <p className="text-sm text-gray-500">Includes all applicable taxes and fees</p>
+          <div className="flex justify-between">
+            <span className="text-gray-600">VAT (3.8%):</span>
+            <span className="font-medium">{vat} CHF</span>
+          </div>
+          
+          <div className="flex justify-between mt-2 pt-2 border-t border-gray-200">
+            <span className="text-gray-800 font-semibold">Total:</span>
+            <span className="font-bold text-lg text-primary">
+              {customPrice ? customPrice.toFixed(2) : total.toFixed(2)} CHF
+            </span>
+          </div>
         </div>
       </div>
     </div>

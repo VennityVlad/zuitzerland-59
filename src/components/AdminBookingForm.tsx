@@ -1,8 +1,6 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { useBookingForm } from "@/hooks/useBookingForm";
 import BookingDetailsPanel from "./booking/BookingDetailsPanel";
@@ -15,6 +13,7 @@ import { differenceInDays, parse } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
+import PersonalInfoFields from "./booking/PersonalInfoFields";
 import {
   Select,
   SelectContent,
@@ -210,7 +209,6 @@ const AdminBookingForm = () => {
             </Alert>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="userSelect">User</Label>
               <Select
                 value={selectedProfile?.id || ""}
                 onValueChange={handleProfileSelect}
@@ -251,26 +249,15 @@ const AdminBookingForm = () => {
             <div className="flex flex-col lg:flex-row gap-8">
               <div className="flex-1 space-y-6">
                 <div className="pb-6 border-b border-gray-200">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-1">Custom Price (Optional)</h3>
-                  <p className="text-sm text-gray-500">Override the automatically calculated price</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-1">Contact Information</h3>
+                  <p className="text-sm text-gray-500">All fields are required for the booking</p>
                 </div>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="customPrice">Custom Price (CHF)</Label>
-                    <Input
-                      id="customPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={customPrice}
-                      onChange={(e) => setCustomPrice(e.target.value)}
-                      placeholder={`Default: ${formData.price?.toFixed(2) || '0.00'} CHF`}
-                      className="py-5"
-                    />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Leave empty to use the calculated price based on dates and room type
-                    </p>
-                  </div>
+                  <PersonalInfoFields
+                    formData={formData}
+                    handleInputChange={handleInputChange}
+                    onCountryChange={handleCountryChange}
+                  />
                 </div>
               </div>
 
@@ -287,7 +274,27 @@ const AdminBookingForm = () => {
                   discountPercentage={discountPercentage}
                   discountMonth={discountMonth}
                   customPrice={customPrice ? parseFloat(customPrice) : undefined}
-                />
+                >
+                  {/* Custom price field moved inside BookingDetailsPanel */}
+                  <div className="space-y-2 mt-4">
+                    <label htmlFor="customPrice" className="text-sm font-medium text-gray-700">
+                      Custom Price (CHF)
+                    </label>
+                    <input
+                      id="customPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={customPrice}
+                      onChange={(e) => setCustomPrice(e.target.value)}
+                      placeholder={`Default: ${formData.price?.toFixed(2) || '0.00'} CHF`}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm py-5"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Leave empty to use the calculated price
+                    </p>
+                  </div>
+                </BookingDetailsPanel>
               </div>
             </div>
           </div>
