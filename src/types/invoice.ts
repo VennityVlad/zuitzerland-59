@@ -17,4 +17,5 @@ export interface Invoice {
   reminder_count?: number;
   profile_id?: string;
   imported?: boolean;
+  paid_at?: string | null;
 }

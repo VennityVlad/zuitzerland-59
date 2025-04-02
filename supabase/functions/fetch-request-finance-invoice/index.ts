@@ -65,11 +65,37 @@ serve(async (req) => {
       );
     }
 
+    // Get detailed invoice information including events history
+    const detailUrl = `https://api.request.finance/invoices/${targetInvoice.id}`;
+    const detailResponse = await fetch(detailUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': requestFinanceApiKey,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!detailResponse.ok) {
+      const errorText = await detailResponse.text();
+      console.error('Request Finance API error when fetching details:', errorText);
+      // Fall back to the less detailed invoice data
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          invoice: targetInvoice,
+          invoiceLinks: targetInvoice.invoiceLinks || {}
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const detailedInvoice = await detailResponse.json();
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        invoice: targetInvoice,
-        invoiceLinks: targetInvoice.invoiceLinks || {}
+        invoice: detailedInvoice,
+        invoiceLinks: detailedInvoice.invoiceLinks || targetInvoice.invoiceLinks || {}
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

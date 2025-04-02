@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
@@ -327,6 +326,23 @@ serve(async (req) => {
     try {
       console.log('Storing invoice data in Supabase with profile_id:', profileId);
       
+      // Check if we have events data to extract creation and payment dates
+      let createdAt = new Date().toISOString();
+      let paidAt = null;
+      
+      if (onChainInvoice.events && Array.isArray(onChainInvoice.events)) {
+        const createEvent = onChainInvoice.events.find((event) => event.name === "create");
+        const paymentEvent = onChainInvoice.events.find((event) => event.name === "declareReceivedPayment");
+        
+        if (createEvent && createEvent.date) {
+          createdAt = createEvent.date;
+        }
+        
+        if (paymentEvent && paymentEvent.date) {
+          paidAt = paymentEvent.date;
+        }
+      }
+      
       // Insert data into the database - create a detailed object
       const invoiceInsertData = {
         request_invoice_id: onChainInvoice.id,
@@ -351,6 +367,8 @@ serve(async (req) => {
             finalPrice
           }
         },
+        created_at: createdAt,
+        paid_at: paidAt,
         payment_type: paymentType,
         privy_id: privyId,
         profile_id: profileId

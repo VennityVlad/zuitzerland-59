@@ -40,6 +40,8 @@ interface ImportPreviewData {
   invoice_uid: string;
   request_invoice_id: string;
   payment_type: string;
+  created_at?: string;
+  paid_at?: string | null;
 }
 
 export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInvoiceDialogProps) {
@@ -118,13 +120,36 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         roomType = invoice.invoiceItems[0].name || "Standard";
       }
       
-      // Calculate total price
+      // Calculate total price with discounts and taxes
       let totalPrice = 0;
       if (invoice.invoiceItems && invoice.invoiceItems.length > 0) {
         totalPrice = invoice.invoiceItems.reduce((sum: number, item: any) => {
+          // Get base price (unit price / 100 as it's in cents)
           const unitPrice = parseInt(item.unitPrice || "0", 10) / 100;
           const quantity = item.quantity || 1;
-          return sum + (unitPrice * quantity);
+          const itemBaseTotal = unitPrice * quantity;
+          
+          // Apply discount if present
+          const discountPercentage = item.discount?.type === 'percentage' ? 
+            parseFloat(item.discount.amount || "0") : 0;
+          const discountAmount = item.discount?.type === 'fixed' ? 
+            parseFloat(item.discount.amount || "0") / 100 : 0;
+          
+          const afterDiscount = discountPercentage > 0 ? 
+            itemBaseTotal * (1 - discountPercentage / 100) :
+            itemBaseTotal - discountAmount;
+          
+          // Apply tax if present
+          const taxPercentage = item.tax?.type === 'percentage' ? 
+            parseFloat(item.tax.amount || "0") : 0;
+          const taxAmount = item.tax?.type === 'fixed' ? 
+            parseFloat(item.tax.amount || "0") / 100 : 0;
+          
+          const afterTax = taxPercentage > 0 ? 
+            afterDiscount * (1 + taxPercentage / 100) :
+            afterDiscount + taxAmount;
+            
+          return sum + afterTax;
         }, 0);
       }
 
@@ -133,6 +158,23 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
       if (invoice.paymentOptions && invoice.paymentOptions.length > 0) {
         const hasStripe = invoice.paymentOptions.some((option: any) => option.type === "stripe");
         paymentType = hasStripe ? "fiat" : "crypto";
+      }
+      
+      // Extract creation and payment dates from events
+      let createdAt = null;
+      let paidAt = null;
+      
+      if (invoice.events && Array.isArray(invoice.events)) {
+        const createEvent = invoice.events.find((event: any) => event.name === "create");
+        const paymentEvent = invoice.events.find((event: any) => event.name === "declareReceivedPayment");
+        
+        if (createEvent && createEvent.date) {
+          createdAt = createEvent.date;
+        }
+        
+        if (paymentEvent && paymentEvent.date) {
+          paidAt = paymentEvent.date;
+        }
       }
 
       // Prepare preview data
@@ -149,7 +191,9 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         status: invoice.status || "pending",
         invoice_uid: invoice.invoiceNumber || "",
         request_invoice_id: invoice.id || "",
-        payment_type: paymentType
+        payment_type: paymentType,
+        created_at: createdAt,
+        paid_at: paidAt
       };
 
       setPreviewData(preview);
@@ -225,7 +269,9 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
           invoice_uid: previewData.invoice_uid,
           request_invoice_id: previewData.request_invoice_id,
           payment_type: previewData.payment_type,
-          imported: true // Set the imported flag to true
+          created_at: previewData.created_at || new Date().toISOString(),
+          paid_at: previewData.paid_at,
+          imported: true
         })
         .select()
         .single();
@@ -367,6 +413,16 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
                       
                       <div className="text-sm font-medium">Due Date:</div>
                       <div className="text-sm">{formatDate(previewData.due_date)}</div>
+                      
+                      <div className="text-sm font-medium">Created Date:</div>
+                      <div className="text-sm">{previewData.created_at ? formatDate(previewData.created_at) : "N/A"}</div>
+                      
+                      {previewData.paid_at && (
+                        <>
+                          <div className="text-sm font-medium">Paid Date:</div>
+                          <div className="text-sm">{formatDate(previewData.paid_at)}</div>
+                        </>
+                      )}
                       
                       <div className="text-sm font-medium">Check-in:</div>
                       <div className="text-sm">{checkinDate ? format(checkinDate, "MMM d, yyyy") : "Not specified"}</div>

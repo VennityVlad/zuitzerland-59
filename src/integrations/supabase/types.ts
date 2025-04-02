@@ -210,6 +210,7 @@ export type Database = {
           invoice_uid: string
           last_name: string
           last_reminder_sent: string | null
+          paid_at: string | null
           payment_link: string
           payment_type: string
           price: number
@@ -234,6 +235,7 @@ export type Database = {
           invoice_uid: string
           last_name: string
           last_reminder_sent?: string | null
+          paid_at?: string | null
           payment_link: string
           payment_type: string
           price: number
@@ -258,6 +260,7 @@ export type Database = {
           invoice_uid?: string
           last_name?: string
           last_reminder_sent?: string | null
+          paid_at?: string | null
           payment_link?: string
           payment_type?: string
           price?: number
