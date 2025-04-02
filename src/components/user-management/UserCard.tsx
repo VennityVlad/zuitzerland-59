@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { MoreHorizontal, Mail, Edit, Trash, UserCheck, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -31,7 +30,7 @@ type Profile = {
   id: string;
   username: string;
   email: string | null;
-  role: "admin" | "co-designer" | "co-curator" | null;
+  role: "admin" | "co-designer" | "co-curator" | "attendee" | null;
   avatar_url: string | null;
   full_name: string | null;
 };
@@ -63,6 +62,8 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
         return 'bg-blue-500 hover:bg-blue-600';
       case 'co-curator':
         return 'bg-green-500 hover:bg-green-600';
+      case 'attendee':
+        return 'bg-purple-500 hover:bg-purple-600';
       default:
         return 'bg-gray-500 hover:bg-gray-600';
     }

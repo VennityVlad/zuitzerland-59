@@ -33,6 +33,7 @@ const UserFilters = ({ selectedRole, onRoleChange, onClearFilters }: UserFilters
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="co-designer">Co-Designer</SelectItem>
               <SelectItem value="co-curator">Co-Curator</SelectItem>
+              <SelectItem value="attendee">Attendee</SelectItem>
             </SelectContent>
           </Select>
         </div>

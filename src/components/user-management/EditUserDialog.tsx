@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +32,7 @@ type Profile = {
   id: string;
   username: string;
   email: string | null;
-  role: "admin" | "co-designer" | "co-curator" | null;
+  role: "admin" | "co-designer" | "co-curator" | "attendee" | null;
   avatar_url: string | null;
   full_name: string | null;
 };
@@ -49,7 +48,7 @@ type FormValues = {
   username: string;
   email: string;
   full_name: string;
-  role: "admin" | "co-designer" | "co-curator" | null;
+  role: "admin" | "co-designer" | "co-curator" | "attendee" | null;
 };
 
 const EditUserDialog = ({ open, onOpenChange, profile, onUserUpdated }: EditUserDialogProps) => {
@@ -172,6 +171,7 @@ const EditUserDialog = ({ open, onOpenChange, profile, onUserUpdated }: EditUser
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="co-designer">Co-Designer</SelectItem>
                       <SelectItem value="co-curator">Co-Curator</SelectItem>
+                      <SelectItem value="attendee">Attendee</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

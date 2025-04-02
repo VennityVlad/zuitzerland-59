@@ -19,7 +19,7 @@ type Profile = {
   id: string;
   username: string;
   email: string;
-  role: "admin" | "co-designer" | "co-curator" | null;
+  role: "admin" | "co-designer" | "co-curator" | "attendee" | null;
   avatar_url: string | null;
   full_name: string | null;
 };
