@@ -39,8 +39,8 @@ serve(async (req) => {
       }
     ];
 
-    // Format role for display - handle the unassigned case properly
-    const formattedRole = role === "unassigned" ? "No specific role" : role.replace('-', ' ');
+    // Format role for display - handle the attendee role properly
+    const formattedRole = role === "attendee" ? "Attendee" : role.replace('-', ' ');
 
     // Prepare the data for Mailchimp Mandrill API with merge variables
     const mailchimpData = {

@@ -39,7 +39,7 @@ type InviteUserDialogProps = {
 type FormValues = {
   name: string;
   email: string;
-  role: "admin" | "co-designer" | "co-curator" | "unassigned" | "";
+  role: "admin" | "co-designer" | "co-curator" | "attendee" | "";
 };
 
 const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialogProps) => {
@@ -80,7 +80,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
         .insert({
           id: uuidv4(),
           email: data.email,
-          role: data.role === "unassigned" ? null : data.role || null,
+          role: data.role || "attendee", // Set to "attendee" as default role
           full_name: data.name,
           username: `user_${Math.floor(Math.random() * 10000)}`
         });
@@ -108,7 +108,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
         body: {
           name: data.name,
           email: data.email,
-          role: data.role || "unassigned"
+          role: data.role || "attendee"
         }
       });
 
@@ -193,7 +193,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      <SelectItem value="attendee">Attendee</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="co-designer">Co-Designer</SelectItem>
                       <SelectItem value="co-curator">Co-Curator</SelectItem>

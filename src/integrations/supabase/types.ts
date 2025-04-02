@@ -596,7 +596,7 @@ export type Database = {
         | "Wait"
         | "borderline"
       invoice_status: "pending" | "paid" | "overdue"
-      profile_role: "admin" | "co-designer" | "co-curator"
+      profile_role: "admin" | "co-designer" | "co-curator" | "attendee"
       room_type:
         | "hotel_room_queen"
         | "apartment_3br_couple"
