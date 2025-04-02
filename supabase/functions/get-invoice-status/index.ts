@@ -35,7 +35,7 @@ serve(async (req) => {
     // Get all invoices that need status update
     const { data: invoices, error: dbError } = await supabase
       .from('invoices')
-      .select('id, request_invoice_id');
+      .select('id, request_invoice_id, status, paid_at');
       
     if (dbError) {
       console.error('Error fetching invoices:', dbError);
@@ -81,19 +81,49 @@ serve(async (req) => {
             status = 'overdue';
           }
 
-          // Update invoice status in database
-          const { error: updateError } = await supabase
-            .from('invoices')
-            .update({ status })
-            .eq('id', invoice.id);
-
-          if (updateError) {
-            console.error(`Failed to update invoice ${invoice.id}:`, updateError);
-            return null;
+          // Check if we need to update the paid_at field
+          let paidAt = invoice.paid_at;
+          let updateNeeded = status !== invoice.status;
+          
+          // If status is changing to paid or is already paid but missing paid_at,
+          // check for the declareReceivedPayment event
+          if ((status === 'paid' && (invoice.status !== 'paid' || !invoice.paid_at)) && 
+              data.events && Array.isArray(data.events)) {
+            
+            const paymentEvent = data.events.find((event: any) => event.name === "declareReceivedPayment");
+            
+            if (paymentEvent && paymentEvent.date) {
+              paidAt = paymentEvent.date;
+              updateNeeded = true;
+              console.log(`Found payment event for invoice ${invoice.id}, date: ${paidAt}`);
+            }
           }
 
-          console.log(`Successfully updated invoice ${invoice.id} to status: ${status}`);
-          return { id: invoice.id, status };
+          // Only update if something changed
+          if (updateNeeded) {
+            const updateData: { status: string; paid_at?: string | null } = { status };
+            
+            // Only include paid_at in the update if it's different or if status is changing to paid
+            if (status === 'paid') {
+              updateData.paid_at = paidAt;
+            }
+            
+            const { error: updateError } = await supabase
+              .from('invoices')
+              .update(updateData)
+              .eq('id', invoice.id);
+
+            if (updateError) {
+              console.error(`Failed to update invoice ${invoice.id}:`, updateError);
+              return null;
+            }
+
+            console.log(`Successfully updated invoice ${invoice.id} to status: ${status}`);
+            return { id: invoice.id, status, paid_at: paidAt };
+          } else {
+            console.log(`No update needed for invoice ${invoice.id}, status unchanged`);
+            return null;
+          }
         } catch (error) {
           console.error(`Error processing invoice ${invoice.request_invoice_id}:`, error);
           return null;

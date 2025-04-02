@@ -62,18 +62,23 @@ export const useInvoices = (userId: string | undefined, isAdmin: boolean) => {
       // Only update invoice statuses if we have invoices to update
       if (data && data.length > 0) {
         // Update invoice statuses in the background
-        const { error: statusError } = await supabase.functions.invoke('get-invoice-status');
+        const { data: statusUpdateData, error: statusError } = await supabase.functions.invoke('get-invoice-status');
         
         if (statusError) {
           console.error('Error updating invoice statuses:', statusError);
         } else {
-          // Fetch updated data only if status update was successful
-          const { data: updatedData, error: fetchError } = await query;
+          console.log('Status update result:', statusUpdateData);
           
-          if (fetchError) {
-            console.error('Error fetching updated invoices:', fetchError);
-          } else {
-            setInvoices(updatedData || []);
+          // If we have updated invoices, refresh the data
+          if (statusUpdateData?.updated && statusUpdateData.updated.length > 0) {
+            // Fetch updated data only if status update was successful
+            const { data: updatedData, error: fetchError } = await query;
+            
+            if (fetchError) {
+              console.error('Error fetching updated invoices:', fetchError);
+            } else {
+              setInvoices(updatedData || []);
+            }
           }
         }
       }
