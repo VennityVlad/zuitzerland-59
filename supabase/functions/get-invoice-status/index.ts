@@ -81,13 +81,24 @@ serve(async (req) => {
             status = 'overdue';
           }
 
-          // Check if we need to update the paid_at field
+          // Check if we need to update the status or payment date
           let paidAt = invoice.paid_at;
           let updateNeeded = status !== invoice.status;
           
-          // If status is changing to paid or is already paid but missing paid_at,
-          // check for the declareReceivedPayment event
-          if ((status === 'paid' && (invoice.status !== 'paid' || !invoice.paid_at)) && 
+          // Check for paymentDate in paymentMetadata
+          if (data.paymentMetadata && data.paymentMetadata.paymentDate) {
+            const paymentDate = data.paymentMetadata.paymentDate;
+            
+            // Only update if the payment date is different or missing
+            if (!paidAt || new Date(paidAt).toISOString() !== new Date(paymentDate).toISOString()) {
+              paidAt = paymentDate;
+              updateNeeded = true;
+              console.log(`Found payment date in metadata for invoice ${invoice.id}, date: ${paidAt}`);
+            }
+          }
+          // If no paymentMetadata but status is changing to paid or is already paid but missing paid_at,
+          // fall back to checking the declareReceivedPayment event
+          else if ((status === 'paid' && (invoice.status !== 'paid' || !invoice.paid_at)) && 
               data.events && Array.isArray(data.events)) {
             
             const paymentEvent = data.events.find((event: any) => event.name === "declareReceivedPayment");
@@ -118,10 +129,10 @@ serve(async (req) => {
               return null;
             }
 
-            console.log(`Successfully updated invoice ${invoice.id} to status: ${status}`);
+            console.log(`Successfully updated invoice ${invoice.id} to status: ${status}, paid_at: ${paidAt || 'null'}`);
             return { id: invoice.id, status, paid_at: paidAt };
           } else {
-            console.log(`No update needed for invoice ${invoice.id}, status unchanged`);
+            console.log(`No update needed for invoice ${invoice.id}, status and payment date unchanged`);
             return null;
           }
         } catch (error) {

@@ -1,3 +1,4 @@
+
 import { Invoice } from "@/types/invoice";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
@@ -149,6 +150,18 @@ export function UserInvoiceView({ invoice }: UserInvoiceViewProps) {
                           Payment overdue
                         </p>
                       )}
+                    </div>
+                  </div>
+                )}
+                
+                {isPaid && invoice.paid_at && (
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <h3 className="font-medium">Payment Date</h3>
+                      <p className="text-gray-700">
+                        {formatDate(invoice.paid_at)}
+                      </p>
                     </div>
                   </div>
                 )}

@@ -3,7 +3,7 @@ import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Users, Download } from "lucide-react";
+import { ExternalLink, Mail, Users, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface InvoiceCardProps {
@@ -90,7 +90,15 @@ export const InvoiceCard = ({
             <p className="text-gray-500">Stay Period</p>
             <p>{format(parseISO(invoice.checkin), 'MMM d')} - {formatDate(invoice.checkout)}</p>
           </div>
-          {onSendReminder && (
+          {invoice.status === 'paid' && invoice.paid_at && (
+            <div>
+              <p className="text-gray-500 flex items-center gap-1">
+                <Calendar className="h-3 w-3" /> Payment Date
+              </p>
+              <p>{formatDate(invoice.paid_at)}</p>
+            </div>
+          )}
+          {onSendReminder && invoice.status !== 'paid' && (
             <div>
               <p className="text-gray-500">Last Reminder</p>
               <p className="text-xs">
