@@ -1,4 +1,3 @@
-
 import { Invoice } from "@/types/invoice";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";

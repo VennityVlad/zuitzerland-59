@@ -121,16 +121,12 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         totalPrice = invoice.invoiceItems.reduce((sum: number, item: any) => {
           const unitPrice = parseInt(item.unitPrice || "0", 10) / 100;
           const quantity = item.quantity || 1;
-          const itemBaseTotal = unitPrice * quantity;
+          let itemBaseTotal = unitPrice * quantity;
           
-          const discountPercentage = item.discount?.type === 'percentage' ? 
-            parseFloat(item.discount.amount || "0") : 0;
-          const discountAmount = item.discount?.type === 'fixed' ? 
-            parseFloat(item.discount.amount || "0") / 100 : 0;
-          
-          const afterDiscount = discountPercentage > 0 ? 
-            itemBaseTotal * (1 - discountPercentage / 100) :
-            itemBaseTotal - discountAmount;
+          if (item.discount) {
+            const discountAmount = parseInt(item.discount, 10) / 100;
+            itemBaseTotal = itemBaseTotal - discountAmount;
+          }
           
           const taxPercentage = item.tax?.type === 'percentage' ? 
             parseFloat(item.tax.amount || "0") : 0;
@@ -138,8 +134,8 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
             parseFloat(item.tax.amount || "0") / 100 : 0;
           
           const afterTax = taxPercentage > 0 ? 
-            afterDiscount * (1 + taxPercentage / 100) :
-            afterDiscount + taxAmount;
+            itemBaseTotal * (1 + taxPercentage / 100) :
+            itemBaseTotal + taxAmount;
             
           return sum + afterTax;
         }, 0);

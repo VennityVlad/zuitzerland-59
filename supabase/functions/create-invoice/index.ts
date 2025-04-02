@@ -174,7 +174,8 @@ serve(async (req) => {
       ? [{
           ...invoiceData.invoiceItems[0],
           name: "Zuitzerland reservation",
-          unitPrice: `${Math.round(priceWithStripeFee)}00` // Send price with Stripe fee but before VAT
+          unitPrice: `${Math.round(priceWithStripeFee)}00`, // Send price with Stripe fee but before VAT
+          discount: undefined
         }]
       : [{
           currency: "CHF",
