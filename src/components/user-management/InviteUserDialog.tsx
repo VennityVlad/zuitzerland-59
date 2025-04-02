@@ -39,7 +39,7 @@ type InviteUserDialogProps = {
 type FormValues = {
   name: string;
   email: string;
-  role: "admin" | "co-designer" | "co-curator";
+  role: "admin" | "co-designer" | "co-curator" | "";
 };
 
 const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialogProps) => {
@@ -50,7 +50,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
     defaultValues: {
       name: "",
       email: "",
-      role: "co-curator",
+      role: "",
     },
   });
 
@@ -80,7 +80,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
         .insert({
           id: uuidv4(),
           email: data.email,
-          role: data.role,
+          role: data.role || null,
           full_name: data.name,
           username: `user_${Math.floor(Math.random() * 10000)}`
         });
@@ -108,7 +108,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
         body: {
           name: data.name,
           email: data.email,
-          role: data.role
+          role: data.role || "unassigned"
         }
       });
 
@@ -189,10 +189,11 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
+                        <SelectValue placeholder="Select a role (optional)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="">Unassigned</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="co-designer">Co-Designer</SelectItem>
                       <SelectItem value="co-curator">Co-Curator</SelectItem>

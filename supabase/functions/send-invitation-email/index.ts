@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { name, email, role } = await req.json() as InvitationEmailRequest;
+    const { name, email, role }: InvitationEmailRequest = await req.json() as InvitationEmailRequest;
 
     if (!name || !email) {
       throw new Error('Missing required fields: name and email are required');
@@ -39,6 +39,9 @@ serve(async (req) => {
       }
     ];
 
+    // Format role for display - handle the unassigned case properly
+    const formattedRole = role === "unassigned" ? "No specific role" : role.replace('-', ' ');
+
     // Prepare the data for Mailchimp Mandrill API with merge variables
     const mailchimpData = {
       key: apiKey,
@@ -61,7 +64,7 @@ serve(async (req) => {
           },
           {
             name: "ROLE",
-            content: role.replace('-', ' ') // Format role for display (e.g., "co-curator" to "co curator")
+            content: formattedRole // Use formatted role
           },
           {
             name: "LOGIN_URL",
