@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +55,6 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
   const [checkinDate, setCheckinDate] = useState<Date | undefined>(undefined);
   const [checkoutDate, setCheckoutDate] = useState<Date | undefined>(undefined);
 
-  // Fetch profiles for dropdown
   useEffect(() => {
     const fetchProfiles = async () => {
       try {
@@ -108,28 +106,23 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
 
       setInvoiceData(response.data.invoice);
       
-      // Create preview data from the fetched invoice
       const invoice = response.data.invoice;
       const buyerInfo = invoice.buyerInfo || {};
       const paymentTerms = invoice.paymentTerms || {};
       const invoiceLinks = response.data.invoiceLinks || {};
       
-      // Extract room type from invoice items if available
       let roomType = "Standard";
       if (invoice.invoiceItems && invoice.invoiceItems.length > 0) {
         roomType = invoice.invoiceItems[0].name || "Standard";
       }
       
-      // Calculate total price with discounts and taxes
       let totalPrice = 0;
       if (invoice.invoiceItems && invoice.invoiceItems.length > 0) {
         totalPrice = invoice.invoiceItems.reduce((sum: number, item: any) => {
-          // Get base price (unit price / 100 as it's in cents)
           const unitPrice = parseInt(item.unitPrice || "0", 10) / 100;
           const quantity = item.quantity || 1;
           const itemBaseTotal = unitPrice * quantity;
           
-          // Apply discount if present
           const discountPercentage = item.discount?.type === 'percentage' ? 
             parseFloat(item.discount.amount || "0") : 0;
           const discountAmount = item.discount?.type === 'fixed' ? 
@@ -139,7 +132,6 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
             itemBaseTotal * (1 - discountPercentage / 100) :
             itemBaseTotal - discountAmount;
           
-          // Apply tax if present
           const taxPercentage = item.tax?.type === 'percentage' ? 
             parseFloat(item.tax.amount || "0") : 0;
           const taxAmount = item.tax?.type === 'fixed' ? 
@@ -153,31 +145,23 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         }, 0);
       }
 
-      // Determine payment type based on invoice payment options
       let paymentType = "crypto";
       if (invoice.paymentOptions && invoice.paymentOptions.length > 0) {
         const hasStripe = invoice.paymentOptions.some((option: any) => option.type === "stripe");
         paymentType = hasStripe ? "fiat" : "crypto";
       }
       
-      // Extract creation and payment dates from events
-      let createdAt = null;
+      let createdAt = invoice.creationDate || null;
       let paidAt = null;
       
       if (invoice.events && Array.isArray(invoice.events)) {
-        const createEvent = invoice.events.find((event: any) => event.name === "create");
         const paymentEvent = invoice.events.find((event: any) => event.name === "declareReceivedPayment");
-        
-        if (createEvent && createEvent.date) {
-          createdAt = createEvent.date;
-        }
         
         if (paymentEvent && paymentEvent.date) {
           paidAt = paymentEvent.date;
         }
       }
 
-      // Prepare preview data
       const preview: ImportPreviewData = {
         room_type: roomType,
         price: totalPrice,
@@ -238,7 +222,6 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
 
     setIsImporting(true);
     try {
-      // Format dates for database storage
       let checkinStr = null;
       let checkoutStr = null;
       
@@ -250,7 +233,6 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
         checkoutStr = formatInTimeZone(checkoutDate, 'UTC', 'yyyy-MM-dd');
       }
 
-      // Create invoice record
       const { data, error } = await supabase
         .from('invoices')
         .insert({

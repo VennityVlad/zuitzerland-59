@@ -326,17 +326,13 @@ serve(async (req) => {
     try {
       console.log('Storing invoice data in Supabase with profile_id:', profileId);
       
-      // Check if we have events data to extract creation and payment dates
-      let createdAt = new Date().toISOString();
+      // Use creationDate from invoice object as created_at instead of event date
+      // We'll still use payment event for paid_at
+      let createdAt = onChainInvoice.creationDate || new Date().toISOString();
       let paidAt = null;
       
       if (onChainInvoice.events && Array.isArray(onChainInvoice.events)) {
-        const createEvent = onChainInvoice.events.find((event) => event.name === "create");
         const paymentEvent = onChainInvoice.events.find((event) => event.name === "declareReceivedPayment");
-        
-        if (createEvent && createEvent.date) {
-          createdAt = createEvent.date;
-        }
         
         if (paymentEvent && paymentEvent.date) {
           paidAt = paymentEvent.date;
