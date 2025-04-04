@@ -318,7 +318,7 @@ const AddAssignmentDialog = ({ open, onOpenChange, onSubmit }: AddAssignmentDial
               <Label>Check-in Date *</Label>
               <DatePicker
                 date={startDate}
-                setDate={setStartDate}
+                onDateChange={setStartDate}
                 className={errors.startDate ? "border-destructive" : ""}
               />
               {errors.startDate && (
@@ -330,7 +330,7 @@ const AddAssignmentDialog = ({ open, onOpenChange, onSubmit }: AddAssignmentDial
               <Label>Check-out Date *</Label>
               <DatePicker
                 date={endDate}
-                setDate={setEndDate}
+                onDateChange={setEndDate}
                 className={errors.endDate ? "border-destructive" : ""}
               />
               {errors.endDate && (

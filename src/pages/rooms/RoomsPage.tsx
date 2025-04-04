@@ -340,7 +340,7 @@ const RoomsPage = () => {
           open={editRoomDialogOpen}
           onOpenChange={setEditRoomDialogOpen}
           onSubmit={(data) => handleEditRoom(selectedRoom.id, data)}
-          room={selectedRoom}
+          apartment={selectedRoom}
         />
       )}
     </div>

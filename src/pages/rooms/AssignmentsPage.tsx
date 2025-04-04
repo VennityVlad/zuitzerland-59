@@ -16,7 +16,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import AssignmentCard from "@/components/rooms/AssignmentCard";
 import AddAssignmentDialog from "@/components/rooms/AddAssignmentDialog";
-import { DateRange } from "@/components/ui/calendar";
+
+type DateRangeType = {
+  from: Date | undefined;
+  to: Date | undefined;
+};
 
 type Assignment = {
   id: string;
@@ -49,7 +53,7 @@ const AssignmentsPage = () => {
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterDate, setFilterDate] = useState<DateRange | undefined>();
+  const [filterDate, setFilterDate] = useState<DateRangeType | undefined>();
   const [filterRoom, setFilterRoom] = useState<string>("all");
   const [rooms, setRooms] = useState<{id: string, name: string}[]>([]);
   const { toast } = useToast();
