@@ -713,6 +713,10 @@ export type Database = {
         }
         Returns: number
       }
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       sync_application_from_airtable: {
         Args: {
           p_application_id: string

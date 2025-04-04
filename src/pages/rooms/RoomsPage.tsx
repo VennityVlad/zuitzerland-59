@@ -8,8 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import RoomSkeleton from "@/components/rooms/RoomSkeleton";
 import RoomDetailView from "@/components/rooms/RoomDetailView";
-import AddRoomDialog from "@/components/rooms/AddRoomDialog";
-import EditRoomDialog from "@/components/rooms/EditRoomDialog";
+import { CreateApartmentSheet } from "@/components/rooms/CreateApartmentSheet";
 
 type Apartment = {
   id: string;
@@ -41,8 +40,8 @@ const RoomsPage = () => {
   const [rooms, setRooms] = useState<Apartment[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Apartment | null>(null);
   const [loading, setLoading] = useState(true);
-  const [addRoomDialogOpen, setAddRoomDialogOpen] = useState(false);
-  const [editRoomDialogOpen, setEditRoomDialogOpen] = useState(false);
+  const [addApartmentSheetOpen, setAddApartmentSheetOpen] = useState(false);
+  const [editApartmentSheetOpen, setEditApartmentSheetOpen] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -64,81 +63,15 @@ const RoomsPage = () => {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error fetching rooms",
+        title: "Error fetching apartments",
         description: error.message,
       });
       setLoading(false);
     }
   };
   
-  const handleAddRoom = async (newRoom: Omit<Apartment, 'id'>) => {
-    try {
-      const { error } = await supabase
-        .from('apartments')
-        .insert({
-          name: newRoom.name,
-          building: newRoom.building,
-          floor: newRoom.floor,
-          description: newRoom.description,
-          max_occupancy: newRoom.max_occupancy,
-        });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Room added",
-        description: `${newRoom.name} has been added successfully.`,
-      });
-      
-      fetchRooms();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error adding room",
-        description: error.message,
-      });
-    }
-  };
-  
-  const handleEditRoom = async (id: string, updatedRoom: Partial<Apartment>) => {
-    try {
-      const { error } = await supabase
-        .from('apartments')
-        .update({
-          name: updatedRoom.name,
-          building: updatedRoom.building,
-          floor: updatedRoom.floor,
-          description: updatedRoom.description,
-          max_occupancy: updatedRoom.max_occupancy,
-        })
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Room updated",
-        description: `${updatedRoom.name} has been updated successfully.`,
-      });
-      
-      fetchRooms();
-      
-      if (selectedRoom && selectedRoom.id === id) {
-        setSelectedRoom({
-          ...selectedRoom,
-          ...updatedRoom,
-        });
-      }
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error updating room",
-        description: error.message,
-      });
-    }
-  };
-  
   const handleDeleteRoom = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete ${name}? This will also delete all bedrooms and beds within this room.`)) {
+    if (!confirm(`Are you sure you want to delete ${name}? This will also delete all bedrooms and beds within this apartment.`)) {
       return;
     }
     
@@ -151,7 +84,7 @@ const RoomsPage = () => {
       if (error) throw error;
       
       toast({
-        title: "Room deleted",
+        title: "Apartment deleted",
         description: `${name} has been deleted.`,
       });
       
@@ -163,7 +96,7 @@ const RoomsPage = () => {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error deleting room",
+        title: "Error deleting apartment",
         description: error.message,
       });
     }
@@ -207,7 +140,7 @@ const RoomsPage = () => {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error fetching room details",
+        title: "Error fetching apartment details",
         description: error.message,
       });
     }
@@ -217,7 +150,7 @@ const RoomsPage = () => {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Rooms</h2>
+          <h2 className="text-2xl font-bold">Apartments</h2>
           <Skeleton className="h-9 w-32" />
         </div>
         
@@ -235,20 +168,20 @@ const RoomsPage = () => {
       {!selectedRoom ? (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Rooms</h2>
-            <Button onClick={() => setAddRoomDialogOpen(true)}>
+            <h2 className="text-2xl font-bold">Apartments</h2>
+            <Button onClick={() => setAddApartmentSheetOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Room
+              Add Apartment
             </Button>
           </div>
           
           {rooms.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground mb-4">No rooms found. Click "Add Room" to create your first room.</p>
-                <Button onClick={() => setAddRoomDialogOpen(true)}>
+                <p className="text-muted-foreground mb-4">No apartments found. Click "Add Apartment" to create your first apartment.</p>
+                <Button onClick={() => setAddApartmentSheetOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Room
+                  Add Apartment
                 </Button>
               </CardContent>
             </Card>
@@ -279,7 +212,7 @@ const RoomsPage = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedRoom(room);
-                            setEditRoomDialogOpen(true);
+                            setEditApartmentSheetOpen(true);
                           }}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
@@ -319,7 +252,7 @@ const RoomsPage = () => {
               </svg>
               Back
             </Button>
-            <h2 className="text-2xl font-bold">Room Details</h2>
+            <h2 className="text-2xl font-bold">Apartment Details</h2>
           </div>
           
           <RoomDetailView 
@@ -329,18 +262,21 @@ const RoomsPage = () => {
         </div>
       )}
       
-      <AddRoomDialog 
-        open={addRoomDialogOpen}
-        onOpenChange={setAddRoomDialogOpen}
-        onSubmit={handleAddRoom}
+      {/* Create Apartment Sheet */}
+      <CreateApartmentSheet 
+        open={addApartmentSheetOpen}
+        onOpenChange={setAddApartmentSheetOpen}
+        onSubmit={fetchRooms}
       />
       
+      {/* Edit Apartment Sheet */}
       {selectedRoom && (
-        <EditRoomDialog 
-          open={editRoomDialogOpen}
-          onOpenChange={setEditRoomDialogOpen}
-          onSubmit={(data) => handleEditRoom(selectedRoom.id, data)}
+        <CreateApartmentSheet 
+          open={editApartmentSheetOpen}
+          onOpenChange={setEditApartmentSheetOpen}
+          onSubmit={fetchRooms}
           apartment={selectedRoom}
+          isEditing={true}
         />
       )}
     </div>

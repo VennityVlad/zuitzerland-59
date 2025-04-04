@@ -14,7 +14,7 @@ const RoomManagement = () => {
       
       <Tabs defaultValue="rooms" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full md:w-[400px] grid-cols-2">
-          <TabsTrigger value="rooms">Rooms</TabsTrigger>
+          <TabsTrigger value="rooms">Apartments</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
         </TabsList>
         
