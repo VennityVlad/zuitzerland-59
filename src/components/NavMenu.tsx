@@ -151,6 +151,7 @@ const NavMenu = () => {
     menuItems.push({
       label: "Room Management",
       icon: <BedDouble className="h-5 w-5" />,
+      path: "/room-management", // Added the missing path property
       id: "room-management",
       hasSubmenu: true,
       submenuItems: [
