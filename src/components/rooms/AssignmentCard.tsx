@@ -13,7 +13,7 @@ type Assignment = {
   bed_id: string | null;
   start_date: string;
   end_date: string;
-  notes: string | null;
+  notes: string | null; // Ensure this is required, not optional
   apartment: {
     name: string;
   } | null;

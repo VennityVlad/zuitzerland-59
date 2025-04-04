@@ -31,7 +31,7 @@ type Assignment = {
   bed_id: string | null;
   start_date: string;
   end_date: string;
-  notes?: string | null;
+  notes: string | null;
   profile: {
     full_name: string | null;
     avatar_url: string | null;
@@ -195,6 +195,7 @@ const AssignmentGrid = ({
           bed_id,
           start_date,
           end_date,
+          notes,
           profile:profiles(
             full_name, 
             avatar_url, 
