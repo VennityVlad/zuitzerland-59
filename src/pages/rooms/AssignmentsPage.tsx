@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Calendar, Grid } from "lucide-react";
+import { User, Calendar, LayoutGrid } from "lucide-react";
 import AssignmentGrid from "@/components/rooms/AssignmentGrid";
 import RoomAssignments from "@/components/rooms/RoomAssignments";
 
@@ -18,7 +18,7 @@ const AssignmentsPage = () => {
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "list" | "grid")} className="w-[250px]">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="grid">
-              <Grid className="h-4 w-4 mr-2" />
+              <LayoutGrid className="h-4 w-4 mr-2" />
               Grid
             </TabsTrigger>
             <TabsTrigger value="list">

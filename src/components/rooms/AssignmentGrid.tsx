@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { User, Calendar, GripHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Profile = {
   id: string;
@@ -72,7 +73,7 @@ const AssignmentGrid = ({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showProfiles, setShowProfiles] = useState(false);
+  const [showProfiles, setShowProfiles] = useState(true); // Changed to true by default
   const [draggedProfile, setDraggedProfile] = useState<Profile | null>(null);
   const { toast } = useToast();
 
@@ -85,19 +86,27 @@ const AssignmentGrid = ({
   }, [startDate, daysToShow]);
 
   useEffect(() => {
+    console.log("Fetching data for AssignmentGrid");
     fetchData();
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      console.log("Starting to fetch data...");
+      
       // Fetch apartments with bedrooms and beds
       const { data: apartmentsData, error: apartmentsError } = await supabase
         .from('apartments')
         .select('id, name')
         .order('name');
       
-      if (apartmentsError) throw apartmentsError;
+      if (apartmentsError) {
+        console.error("Error fetching apartments:", apartmentsError);
+        throw apartmentsError;
+      }
+      
+      console.log("Apartments fetched:", apartmentsData?.length || 0);
 
       const fullApartments: Apartment[] = [];
 
@@ -108,7 +117,12 @@ const AssignmentGrid = ({
           .eq('apartment_id', apartment.id)
           .order('name');
         
-        if (bedroomsError) throw bedroomsError;
+        if (bedroomsError) {
+          console.error("Error fetching bedrooms:", bedroomsError);
+          throw bedroomsError;
+        }
+        
+        console.log(`Bedrooms for apartment ${apartment.name}:`, bedroomsData?.length || 0);
 
         const bedrooms: Bedroom[] = [];
 
@@ -119,7 +133,12 @@ const AssignmentGrid = ({
             .eq('bedroom_id', bedroom.id)
             .order('name');
           
-          if (bedsError) throw bedsError;
+          if (bedsError) {
+            console.error("Error fetching beds:", bedsError);
+            throw bedsError;
+          }
+          
+          console.log(`Beds for bedroom ${bedroom.name}:`, bedsData?.length || 0);
 
           bedrooms.push({
             ...bedroom,
@@ -134,6 +153,7 @@ const AssignmentGrid = ({
       }
 
       setApartments(fullApartments);
+      console.log("Full apartments data:", fullApartments);
 
       // Fetch profiles with teams
       const { data: profilesData, error: profilesError } = await supabase
@@ -146,8 +166,12 @@ const AssignmentGrid = ({
         `)
         .order('full_name');
       
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
       
+      console.log("Profiles fetched:", profilesData?.length || 0);
       setProfiles(profilesData || []);
 
       // Fetch assignments
@@ -169,11 +193,16 @@ const AssignmentGrid = ({
           )
         `);
       
-      if (assignmentsError) throw assignmentsError;
+      if (assignmentsError) {
+        console.error("Error fetching assignments:", assignmentsError);
+        throw assignmentsError;
+      }
       
+      console.log("Assignments fetched:", assignmentsData?.length || 0);
       setAssignments(assignmentsData || []);
       setLoading(false);
     } catch (error: any) {
+      console.error("Error in fetchData:", error);
       toast({
         variant: "destructive",
         title: "Error fetching data",
@@ -185,6 +214,8 @@ const AssignmentGrid = ({
 
   const createAssignment = async (profileId: string, apartmentId: string, bedroomId: string, bedId: string, startDate: Date, endDate: Date) => {
     try {
+      console.log("Creating assignment with:", { profileId, apartmentId, bedroomId, bedId, startDate, endDate });
+      
       // Check if this bed is already assigned for the given dates
       const conflictingAssignments = assignments.filter(a => 
         a.bed_id === bedId &&
@@ -216,8 +247,12 @@ const AssignmentGrid = ({
         })
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating assignment:", error);
+        throw error;
+      }
       
+      console.log("Assignment created:", data);
       toast({
         title: "Assignment created",
         description: "The assignment has been created successfully.",
@@ -226,6 +261,7 @@ const AssignmentGrid = ({
       // Reload assignments
       fetchData();
     } catch (error: any) {
+      console.error("Error in createAssignment:", error);
       toast({
         variant: "destructive",
         title: "Error creating assignment",
@@ -236,6 +272,7 @@ const AssignmentGrid = ({
 
   const updateAssignment = async (id: string, newStartDate: Date, newEndDate: Date) => {
     try {
+      console.log("Updating assignment:", { id, newStartDate, newEndDate });
       const { error } = await supabase
         .from('room_assignments')
         .update({
@@ -244,7 +281,10 @@ const AssignmentGrid = ({
         })
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating assignment:", error);
+        throw error;
+      }
       
       toast({
         title: "Assignment updated",
@@ -254,6 +294,7 @@ const AssignmentGrid = ({
       // Reload assignments
       fetchData();
     } catch (error: any) {
+      console.error("Error in updateAssignment:", error);
       toast({
         variant: "destructive",
         title: "Error updating assignment",
@@ -268,12 +309,16 @@ const AssignmentGrid = ({
     }
     
     try {
+      console.log("Deleting assignment:", id);
       const { error } = await supabase
         .from('room_assignments')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting assignment:", error);
+        throw error;
+      }
       
       toast({
         title: "Assignment deleted",
@@ -283,6 +328,7 @@ const AssignmentGrid = ({
       // Reload assignments
       fetchData();
     } catch (error: any) {
+      console.error("Error in deleteAssignment:", error);
       toast({
         variant: "destructive",
         title: "Error deleting assignment",
@@ -292,12 +338,15 @@ const AssignmentGrid = ({
   };
 
   const handleDragStart = (profile: Profile) => {
+    console.log("Drag started for profile:", profile.full_name);
     setDraggedProfile(profile);
   };
 
   const handleDrop = (e: React.DragEvent, apartmentId: string, bedroomId: string, bedId: string, date: Date) => {
     e.preventDefault();
     if (!draggedProfile) return;
+    
+    console.log("Drop event:", { apartmentId, bedroomId, bedId, date, profile: draggedProfile.full_name });
     
     // Default to a 7-day stay
     const endDate = addDays(date, 6);
@@ -343,11 +392,66 @@ const AssignmentGrid = ({
     return grouped;
   }, [profiles]);
 
+  const hasBeds = useMemo(() => {
+    return apartments.some(apt => apt.bedrooms.some(br => br.beds.length > 0));
+  }, [apartments]);
+
   if (loading) {
     return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Room Assignment Grid</h2>
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <div className="flex">
+          <Skeleton className="w-[250px] h-[500px] mr-4" />
+          <div className="flex-1">
+            <Skeleton className="h-[500px] w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasBeds && apartments.length === 0) {
+    return (
       <Card>
-        <CardContent className="p-6">
-          <div className="animate-pulse">Loading assignment grid...</div>
+        <CardContent className="p-6 text-center">
+          <h3 className="font-medium text-lg mb-2">No apartments found</h3>
+          <p className="text-muted-foreground mb-4">
+            You need to create apartments, bedrooms, and beds before you can assign people to them.
+          </p>
+          <Button 
+            onClick={() => {
+              // Should navigate to Apartments tab or show apartment creation modal
+              const roomsTab = document.querySelector('[value="rooms"]') as HTMLButtonElement;
+              if (roomsTab) roomsTab.click();
+            }}
+          >
+            Create Apartments
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!hasBeds && apartments.length > 0) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <h3 className="font-medium text-lg mb-2">No beds found</h3>
+          <p className="text-muted-foreground mb-4">
+            You have apartments, but you need to add bedrooms and beds to them before you can assign people.
+          </p>
+          <Button 
+            onClick={() => {
+              // Should navigate to Apartments tab
+              const roomsTab = document.querySelector('[value="rooms"]') as HTMLButtonElement;
+              if (roomsTab) roomsTab.click();
+            }}
+          >
+            Manage Apartments
+          </Button>
         </CardContent>
       </Card>
     );
