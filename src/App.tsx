@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,6 +10,7 @@ import SignIn from "./pages/SignIn";
 import SupabaseSignIn from "./pages/SupabaseSignIn";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import HousingPreferences from "./pages/HousingPreferences";
 import Invoices from "./pages/Invoices";
 import Discounts from "./pages/Discounts";
 import RoomTypes from "./pages/RoomTypes";
@@ -223,6 +223,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/housing-preferences"
+                  element={
+                    <ProtectedRoute>
+                      <HousingPreferences />
                     </ProtectedRoute>
                   }
                 />

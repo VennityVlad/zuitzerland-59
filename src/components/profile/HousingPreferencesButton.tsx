@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Home } from "lucide-react";
 import HousingPreferencesPanel from "./HousingPreferencesPanel";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type HousingPreferencesButtonProps = {
   profileId: string;
@@ -15,6 +15,7 @@ type HousingPreferencesButtonProps = {
 const HousingPreferencesButton = ({ profileId, userEmail, userName }: HousingPreferencesButtonProps) => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Auto-open the panel if directed via URL parameter
   useEffect(() => {
@@ -24,10 +25,15 @@ const HousingPreferencesButton = ({ profileId, userEmail, userName }: HousingPre
     }
   }, [location.search]);
 
+  const handleButtonClick = () => {
+    // Navigate to the dedicated page instead of opening the panel
+    navigate('/housing-preferences');
+  };
+
   return (
     <>
       <Button 
-        onClick={() => setOpen(true)}
+        onClick={handleButtonClick}
         variant="outline"
         className="flex items-center gap-2"
       >

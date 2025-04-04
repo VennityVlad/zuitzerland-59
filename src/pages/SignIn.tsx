@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
@@ -97,7 +98,7 @@ const SignIn = () => {
       const redirectToPrefs = searchParams.has('housingPreferences');
       
       if (redirectToPrefs) {
-        navigate("/profile?openHousingPreferences=true");
+        navigate("/housing-preferences");
       } else {
         // Default redirect
         navigate("/");
@@ -129,7 +130,7 @@ const SignIn = () => {
       const redirectToPrefs = searchParams.has('housingPreferences');
       
       if (redirectToPrefs) {
-        navigate("/profile?openHousingPreferences=true");
+        navigate("/housing-preferences");
       } else {
         navigate("/");
       }
