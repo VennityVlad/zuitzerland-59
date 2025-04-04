@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +20,7 @@ import Teams from "./pages/Teams";
 import UserManagement from "./pages/UserManagement";
 import Events from "./pages/Events";
 import RoomManagement from "./pages/RoomManagement";
+import RoomAssignmentsPage from "./pages/rooms/RoomAssignmentsPage";
 import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
@@ -285,6 +287,14 @@ const App = () => {
                   element={
                     <ProtectedRoute adminOnly={true}>
                       <RoomManagement />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-assignments"
+                  element={
+                    <ProtectedRoute adminOnly={true}>
+                      <RoomAssignmentsPage />
                     </ProtectedRoute>
                   }
                 />

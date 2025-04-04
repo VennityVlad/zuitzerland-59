@@ -1,15 +1,12 @@
 
 import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageTitle } from "@/components/PageTitle";
 import RoomsPage from "./rooms/RoomsPage";
-import AssignmentsPage from "./rooms/AssignmentsPage";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 const RoomManagement = () => {
-  const [activeTab, setActiveTab] = useState("rooms");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -60,22 +57,8 @@ const RoomManagement = () => {
 
   return (
     <div className="container py-6 space-y-6">
-      <PageTitle title="Room Management" />
-      
-      <Tabs defaultValue="rooms" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full md:w-[400px] grid-cols-2">
-          <TabsTrigger value="rooms">Apartments</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="rooms" className="mt-6">
-          <RoomsPage />
-        </TabsContent>
-        
-        <TabsContent value="assignments" className="mt-6">
-          <AssignmentsPage />
-        </TabsContent>
-      </Tabs>
+      <PageTitle title="Apartment Management" />
+      <RoomsPage />
     </div>
   );
 };

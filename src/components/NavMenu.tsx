@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,8 @@ import {
   UserPlus,
   Building,
   Calendar,
-  BedDouble
+  BedDouble,
+  Grid3X3 
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,9 +113,15 @@ const NavMenu = () => {
     });
     
     menuItems.push({
-      label: "Room Management",
+      label: "Apartments",
       icon: <BedDouble className="h-5 w-5" />,
       path: "/room-management",
+    });
+    
+    menuItems.push({
+      label: "Room Assignments",
+      icon: <Grid3X3 className="h-5 w-5" />,
+      path: "/room-assignments",
     });
   }
 
