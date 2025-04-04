@@ -1,13 +1,12 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { format, addDays, startOfMonth, eachDayOfInterval, differenceInDays } from "date-fns";
+import { format, addDays, startOfMonth, eachDayOfInterval, differenceInDays, isSameDay } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { User, Calendar, GripHorizontal } from "lucide-react";
+import { User, Calendar, GripHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -73,8 +72,9 @@ const AssignmentGrid = ({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showProfiles, setShowProfiles] = useState(true); // Changed to true by default
+  const [showProfiles, setShowProfiles] = useState(true);
   const [draggedProfile, setDraggedProfile] = useState<Profile | null>(null);
+  const [resizingAssignment, setResizingAssignment] = useState<{id: string, direction: 'left' | 'right'} | null>(null);
   const { toast } = useToast();
 
   // Generate dates for the columns
@@ -375,13 +375,61 @@ const AssignmentGrid = ({
     );
   };
 
+  const handleResizeStart = (e: React.MouseEvent, assignmentId: string, direction: 'left' | 'right') => {
+    e.stopPropagation();
+    setResizingAssignment({ id: assignmentId, direction });
+  };
+
+  const handleResizeMove = (e: MouseEvent, date: Date) => {
+    e.preventDefault();
+    if (!resizingAssignment) return;
+
+    const assignment = assignments.find(a => a.id === resizingAssignment.id);
+    if (!assignment) return;
+
+    const currentStartDate = new Date(assignment.start_date);
+    const currentEndDate = new Date(assignment.end_date);
+
+    if (resizingAssignment.direction === 'left') {
+      // Don't allow start date to go beyond end date
+      if (date > currentEndDate) return;
+      updateAssignment(assignment.id, date, currentEndDate);
+    } else {
+      // Don't allow end date to go before start date
+      if (date < currentStartDate) return;
+      updateAssignment(assignment.id, currentStartDate, date);
+    }
+
+    setResizingAssignment(null);
+  };
+
+  useEffect(() => {
+    if (!resizingAssignment) return;
+
+    const handleMouseUp = () => {
+      setResizingAssignment(null);
+    };
+
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingAssignment]);
+
+  // Filter out profiles that already have room assignments
+  const availableProfiles = useMemo(() => {
+    return profiles.filter(profile => 
+      !assignments.some(assignment => assignment.profile_id === profile.id)
+    );
+  }, [profiles, assignments]);
+
   // Group profiles by team
   const profilesByTeam = useMemo(() => {
     const grouped: Record<string, Profile[]> = {
       'no-team': []
     };
     
-    profiles.forEach(profile => {
+    availableProfiles.forEach(profile => {
       const teamId = profile.team?.id || 'no-team';
       if (!grouped[teamId]) {
         grouped[teamId] = [];
@@ -390,7 +438,7 @@ const AssignmentGrid = ({
     });
     
     return grouped;
-  }, [profiles]);
+  }, [availableProfiles]);
 
   const hasBeds = useMemo(() => {
     return apartments.some(apt => apt.bedrooms.some(br => br.beds.length > 0));
@@ -474,7 +522,13 @@ const AssignmentGrid = ({
         {/* Profiles sidebar */}
         {showProfiles && (
           <div className="w-[250px] border-r p-4 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-            <h3 className="font-medium text-lg">Available Profiles</h3>
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium text-lg">Available Profiles</h3>
+              <span className="text-xs text-muted-foreground">
+                {availableProfiles.length} available
+              </span>
+            </div>
+            
             {Object.entries(profilesByTeam).map(([teamId, teamProfiles]) => {
               const team = teamId !== 'no-team' 
                 ? teamProfiles[0]?.team 
@@ -514,6 +568,12 @@ const AssignmentGrid = ({
                 </div>
               );
             })}
+
+            {availableProfiles.length === 0 && (
+              <div className="text-center text-muted-foreground py-4">
+                No available profiles. All profiles have assignments.
+              </div>
+            )}
           </div>
         )}
 
@@ -561,7 +621,8 @@ const AssignmentGrid = ({
                         
                         {dates.map((date, dateIndex) => {
                           const assignment = getAssignmentForCell(bed.id, date);
-                          const isAssignmentStart = assignment && format(new Date(assignment.start_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+                          const isAssignmentStart = assignment && isSameDay(new Date(assignment.start_date), date);
+                          const isAssignmentEnd = assignment && isSameDay(new Date(assignment.end_date), date);
                           const daysLength = assignment ? differenceInDays(new Date(assignment.end_date), new Date(assignment.start_date)) + 1 : 0;
                           
                           // Render assignment cell only at start date
@@ -575,26 +636,34 @@ const AssignmentGrid = ({
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div 
-                                        className="absolute top-0 left-0 right-0 bottom-0 m-1 p-1 bg-primary/10 border border-primary/30 rounded-md flex items-center justify-between cursor-pointer"
-                                        onClick={() => {
-                                          if (confirm("What would you like to do with this assignment?\nOK: Delete\nCancel: Nothing")) {
-                                            deleteAssignment(assignment.id);
-                                          }
-                                        }}
-                                      >
-                                        <div className="flex items-center gap-1 overflow-hidden">
-                                          <Avatar className="h-5 w-5 flex-shrink-0">
+                                      <div className="absolute top-0 left-0 right-0 bottom-0 m-1 bg-primary/10 border border-primary/30 rounded-md flex items-center justify-between cursor-pointer">
+                                        {/* Left handle for adjusting start date */}
+                                        <div 
+                                          className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize hover:bg-primary/20"
+                                          onMouseDown={(e) => handleResizeStart(e, assignment.id, 'left')}
+                                        >
+                                          <ChevronLeft className="h-3 w-3 text-primary" />
+                                        </div>
+                                        
+                                        <div className="flex-1 px-6 py-1 truncate flex items-center">
+                                          <Avatar className="h-5 w-5 mr-1 flex-shrink-0">
                                             <AvatarImage src={assignment.profile.avatar_url || undefined} />
                                             <AvatarFallback className="text-[10px]">
                                               {assignment.profile.full_name?.charAt(0) || '?'}
                                             </AvatarFallback>
                                           </Avatar>
-                                          <span className="text-xs truncate">
+                                          <span className="text-xs truncate text-center flex-1">
                                             {assignment.profile.full_name}
                                           </span>
                                         </div>
-                                        <GripHorizontal className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                        
+                                        {/* Right handle for adjusting end date */}
+                                        <div 
+                                          className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize hover:bg-primary/20"
+                                          onMouseDown={(e) => handleResizeStart(e, assignment.id, 'right')}
+                                        >
+                                          <ChevronRight className="h-3 w-3 text-primary" />
+                                        </div>
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent>
@@ -602,6 +671,7 @@ const AssignmentGrid = ({
                                         <p><strong>{assignment.profile.full_name}</strong></p>
                                         <p>From: {format(new Date(assignment.start_date), 'PP')}</p>
                                         <p>To: {format(new Date(assignment.end_date), 'PP')}</p>
+                                        <p className="text-xs text-muted-foreground">Drag edges to resize dates</p>
                                         <p className="text-xs text-muted-foreground">Click to delete</p>
                                       </div>
                                     </TooltipContent>
