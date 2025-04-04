@@ -444,6 +444,7 @@ export type Database = {
           description: string | null
           email: string | null
           full_name: string | null
+          housing_preferences: Json | null
           id: string
           is_guild_invited: boolean | null
           privy_id: string | null
@@ -461,6 +462,7 @@ export type Database = {
           description?: string | null
           email?: string | null
           full_name?: string | null
+          housing_preferences?: Json | null
           id: string
           is_guild_invited?: boolean | null
           privy_id?: string | null
@@ -478,6 +480,7 @@ export type Database = {
           description?: string | null
           email?: string | null
           full_name?: string | null
+          housing_preferences?: Json | null
           id?: string
           is_guild_invited?: boolean | null
           privy_id?: string | null

@@ -1,66 +1,42 @@
 
-import * as React from "react";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import * as React from "react"
+import { format } from "date-fns"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
-export interface DatePickerProps {
-  date: Date | undefined;
-  onDateChange: (date: Date | undefined) => void;
-  label?: string;
-  placeholder?: string;
-  className?: string;
-  disabled?: boolean;
-  fromDate?: Date;
-  toDate?: Date;
+interface DatePickerProps {
+  date?: Date
+  onDateChange: (date?: Date) => void
+  disabled?: boolean
 }
 
-export function DatePicker({
-  date,
-  onDateChange,
-  label = "Pick a date",
-  placeholder = "Select date",
-  className,
-  disabled = false,
-  fromDate,
-  toDate,
-}: DatePickerProps) {
+export function DatePicker({ date, onDateChange, disabled = false }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant={"outline"}
           className={cn(
             "w-full justify-start text-left font-normal",
-            !date && "text-muted-foreground",
-            className
+            !date && "text-muted-foreground"
           )}
           disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{placeholder}</span>}
+          {date ? format(date, "PPP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"
           selected={date}
           onSelect={onDateChange}
           initialFocus
-          disabled={(date) => {
-            if (fromDate && date < fromDate) return true;
-            if (toDate && date > toDate) return true;
-            return false;
-          }}
         />
       </PopoverContent>
     </Popover>
-  );
+  )
 }

@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, Users } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { TeamBadge } from "@/components/TeamBadge";
+import HousingPreferencesButton from "@/components/profile/HousingPreferencesButton";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
@@ -272,6 +273,13 @@ const Profile = () => {
                     <TeamBadge team={team} />
                   </div>
                 )}
+              </div>
+              <div className="ml-auto flex items-center">
+                <HousingPreferencesButton 
+                  profileId={profileData?.id} 
+                  userEmail={profileData?.email}
+                  userName={profileData?.username} 
+                />
               </div>
             </div>
 
