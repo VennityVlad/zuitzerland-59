@@ -17,6 +17,7 @@ const HousingPreferences = () => {
   useEffect(() => {
     // If not authenticated, redirect to sign in with a parameter
     if (ready && !authenticated) {
+      console.log("HousingPreferences: Not authenticated, redirecting to sign in");
       navigate("/signin?housingPreferences=true");
       return;
     }
@@ -26,6 +27,7 @@ const HousingPreferences = () => {
 
       try {
         setIsLoading(true);
+        console.log("HousingPreferences: Fetching profile for user", user.id);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -38,7 +40,10 @@ const HousingPreferences = () => {
         }
 
         if (data) {
+          console.log("HousingPreferences: Profile found", data);
           setProfileData(data);
+        } else {
+          console.log("HousingPreferences: No profile found");
         }
       } catch (error: any) {
         console.error('Error:', error);
@@ -55,10 +60,11 @@ const HousingPreferences = () => {
     if (authenticated && user?.id) {
       fetchProfile();
     }
-  }, [ready, authenticated, user?.id, navigate]);
+  }, [ready, authenticated, user?.id, navigate, toast]);
 
   // Handle successful form submission
   const handleSuccess = () => {
+    console.log("HousingPreferences: Form submitted successfully");
     toast({
       title: "Success",
       description: "Housing preferences saved successfully",

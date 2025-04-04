@@ -5,7 +5,7 @@ import { LogIn } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 
 const SignIn = () => {
   const { login, authenticated, ready, user } = usePrivy();
@@ -14,6 +14,8 @@ const SignIn = () => {
   const setupComplete = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const redirectToHousingPreferences = searchParams.has('housingPreferences');
 
   const setupAuth = useCallback(async () => {
     if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {
@@ -93,14 +95,11 @@ const SignIn = () => {
       console.log('Auth setup completed successfully');
       setupComplete.current = true;
       
-      // Check if we should redirect to housing preferences
-      const searchParams = new URLSearchParams(location.search);
-      const redirectToPrefs = searchParams.has('housingPreferences');
-      
-      if (redirectToPrefs) {
+      // Handle redirects based on URL params
+      console.log('Redirecting. Housing preferences param:', redirectToHousingPreferences);
+      if (redirectToHousingPreferences) {
         navigate("/housing-preferences");
       } else {
-        // Default redirect
         navigate("/");
       }
 
@@ -114,7 +113,7 @@ const SignIn = () => {
     } finally {
       setIsSettingUpProfile(false);
     }
-  }, [user, isSettingUpProfile, toast, navigate, location.search]);
+  }, [user, isSettingUpProfile, toast, navigate, redirectToHousingPreferences]);
 
   useEffect(() => {
     if (authenticated && user && !isSettingUpProfile && !setupComplete.current) {
@@ -126,16 +125,15 @@ const SignIn = () => {
   // If already authenticated and setup is complete, redirect immediately
   useEffect(() => {
     if (authenticated && setupComplete.current && !isSettingUpProfile) {
-      const searchParams = new URLSearchParams(location.search);
-      const redirectToPrefs = searchParams.has('housingPreferences');
-      
-      if (redirectToPrefs) {
+      if (redirectToHousingPreferences) {
+        console.log('Already authenticated, redirecting to housing preferences');
         navigate("/housing-preferences");
       } else {
+        console.log('Already authenticated, redirecting to home');
         navigate("/");
       }
     }
-  }, [authenticated, isSettingUpProfile, navigate, location.search]);
+  }, [authenticated, isSettingUpProfile, navigate, redirectToHousingPreferences]);
 
   if (!ready) {
     return (
