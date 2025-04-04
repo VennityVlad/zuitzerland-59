@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -11,9 +11,11 @@ export const useBookingSettings = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['bookingSettings'],
     queryFn: async () => {
+      // Using the more generic approach with string parameters
+      // to avoid TypeScript errors with the generated types
       const { data, error } = await supabase
         .from('settings')
-        .select('value')
+        .select('*')
         .eq('key', 'booking_block')
         .single();
 
