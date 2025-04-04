@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      apartments: {
+        Row: {
+          building: string | null
+          created_at: string
+          description: string | null
+          floor: string | null
+          id: string
+          max_occupancy: number | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          building?: string | null
+          created_at?: string
+          description?: string | null
+          floor?: string | null
+          id?: string
+          max_occupancy?: number | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          building?: string | null
+          created_at?: string
+          description?: string | null
+          floor?: string | null
+          id?: string
+          max_occupancy?: number | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       applications: {
         Row: {
           applicant_name: string | null
@@ -104,6 +137,79 @@ export type Database = {
           white_list?: Database["public"]["Enums"]["white_list_status"] | null
         }
         Relationships: []
+      }
+      bedrooms: {
+        Row: {
+          apartment_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          apartment_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          apartment_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bedrooms_apartment_id_fkey"
+            columns: ["apartment_id"]
+            isOneToOne: false
+            referencedRelation: "apartments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beds: {
+        Row: {
+          bed_type: string
+          bedroom_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bed_type: string
+          bedroom_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bed_type?: string
+          bedroom_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beds_bedroom_id_fkey"
+            columns: ["bedroom_id"]
+            isOneToOne: false
+            referencedRelation: "bedrooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discounts: {
         Row: {
@@ -387,6 +493,74 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_assignments: {
+        Row: {
+          apartment_id: string | null
+          bed_id: string | null
+          bedroom_id: string | null
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          profile_id: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          apartment_id?: string | null
+          bed_id?: string | null
+          bedroom_id?: string | null
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          profile_id: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          apartment_id?: string | null
+          bed_id?: string | null
+          bedroom_id?: string | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          profile_id?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_assignments_apartment_id_fkey"
+            columns: ["apartment_id"]
+            isOneToOne: false
+            referencedRelation: "apartments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_assignments_bed_id_fkey"
+            columns: ["bed_id"]
+            isOneToOne: false
+            referencedRelation: "beds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_assignments_bedroom_id_fkey"
+            columns: ["bedroom_id"]
+            isOneToOne: false
+            referencedRelation: "bedrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_assignments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
