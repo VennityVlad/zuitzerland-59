@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Calendar, LayoutGrid } from "lucide-react";
+import { Grid3X3, Calendar, LayoutGrid } from "lucide-react";
 import AssignmentGrid from "@/components/rooms/AssignmentGrid";
 import RoomAssignments from "@/components/rooms/RoomAssignments";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,7 +22,7 @@ const RoomAssignmentsPage = () => {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        console.log("Auth session:", session ? "Authenticated" : "Not authenticated");
+        console.log("Room Assignments - Auth status:", session ? "Authenticated" : "Not authenticated");
         setIsAuthenticated(!!session);
         setLoading(false);
       } catch (error) {
@@ -43,7 +43,7 @@ const RoomAssignmentsPage = () => {
   // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (isAuthenticated === false && !loading) {
-      console.log("Redirecting to sign in page");
+      console.log("Room Assignments - Redirecting to sign in page");
       toast({
         title: "Authentication Required",
         description: "Please sign in to view room assignments.",
@@ -55,7 +55,7 @@ const RoomAssignmentsPage = () => {
   if (loading) {
     return (
       <div className="container py-6 space-y-6">
-        <PageTitle title="Room Assignments" />
+        <PageTitle title="Room Assignments" icon={<Grid3X3 className="h-5 w-5" />} />
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Room Assignments</h2>
@@ -77,7 +77,7 @@ const RoomAssignmentsPage = () => {
 
   return (
     <div className="container py-6 space-y-6">
-      <PageTitle title="Room Assignments" />
+      <PageTitle title="Room Assignments" icon={<Grid3X3 className="h-5 w-5" />} />
       
       <div className="space-y-6">
         <div className="flex justify-between items-center">

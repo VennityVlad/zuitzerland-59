@@ -41,6 +41,7 @@ const NavMenu = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   
   useEffect(() => {
     if (isMobile) {
@@ -80,6 +81,26 @@ const NavMenu = () => {
     }
   }, [user?.id]);
 
+  const toggleSubmenu = (id: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(id) 
+        ? prev.filter(item => item !== id) 
+        : [...prev, id]
+    );
+  };
+
+  const isSubmenuExpanded = (id: string) => {
+    return expandedMenus.includes(id);
+  };
+
+  const isCurrentPath = (path: string) => {
+    return location.pathname === path;
+  };
+
+  const isInSubmenu = (paths: string[]) => {
+    return paths.some(path => location.pathname === path);
+  };
+
   const menuItems = [
     {
       label: "Book",
@@ -113,15 +134,27 @@ const NavMenu = () => {
     });
     
     menuItems.push({
-      label: "Apartments",
+      label: "Room Management",
       icon: <BedDouble className="h-5 w-5" />,
-      path: "/room-management",
-    });
-    
-    menuItems.push({
-      label: "Room Assignments",
-      icon: <Grid3X3 className="h-5 w-5" />,
-      path: "/room-assignments",
+      id: "room-management",
+      hasSubmenu: true,
+      submenuItems: [
+        {
+          label: "Apartments",
+          icon: <Building className="h-4 w-4" />,
+          path: "/room-management",
+        },
+        {
+          label: "Room Assignments",
+          icon: <Grid3X3 className="h-4 w-4" />,
+          path: "/room-assignments",
+        },
+        {
+          label: "Room Types",
+          icon: <Layers className="h-4 w-4" />,
+          path: "/room-types",
+        }
+      ]
     });
   }
 
@@ -135,11 +168,6 @@ const NavMenu = () => {
       label: "Discounts",
       icon: <Percent className="h-5 w-5" />,
       path: "/discounts",
-    },
-    {
-      label: "Room Types",
-      icon: <Layers className="h-5 w-5" />,
-      path: "/room-types",
     }
   ];
 
@@ -147,26 +175,68 @@ const NavMenu = () => {
     menuItems.push(...adminItems);
   }
 
-  const NavItem = ({ item }: { item: { label: string; icon: JSX.Element; path: string } }) => {
-    const isActive = location.pathname === item.path;
+  const NavItem = ({ item }: { item: any }) => {
+    const isActive = item.hasSubmenu 
+      ? isInSubmenu(item.submenuItems.map((subItem: any) => subItem.path))
+      : isCurrentPath(item.path);
     
     return (
-      <Button
-        variant="ghost"
-        size="lg"
-        className={cn(
-          "w-full justify-start gap-3 px-3 py-6 text-base font-medium transition-colors",
-          isActive 
-            ? "bg-primary/10 text-primary" 
-            : "text-gray-600 hover:bg-primary/5 hover:text-primary"
+      <>
+        <Button
+          variant="ghost"
+          size="lg"
+          className={cn(
+            "w-full justify-start gap-3 px-3 py-6 text-base font-medium transition-colors",
+            isActive 
+              ? "bg-primary/10 text-primary" 
+              : "text-gray-600 hover:bg-primary/5 hover:text-primary"
+          )}
+          onClick={() => {
+            if (item.hasSubmenu) {
+              toggleSubmenu(item.id);
+            } else {
+              navigate(item.path);
+            }
+          }}
+        >
+          {item.icon}
+          <span className={cn("flex-1 text-left", !sidebarOpen && "hidden")}>
+            {item.label}
+          </span>
+          {item.hasSubmenu && sidebarOpen && (
+            <ChevronDown 
+              className={cn(
+                "h-4 w-4 transition-transform",
+                isSubmenuExpanded(item.id) && "rotate-180"
+              )} 
+            />
+          )}
+        </Button>
+        
+        {item.hasSubmenu && isSubmenuExpanded(item.id) && sidebarOpen && (
+          <div className="pl-4 mt-1">
+            {item.submenuItems.map((subItem: any, index: number) => (
+              <Button
+                key={index}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "w-full justify-start gap-2 mb-1 text-sm font-medium",
+                  isCurrentPath(subItem.path)
+                    ? "bg-primary/5 text-primary"
+                    : "text-gray-500 hover:bg-primary/5 hover:text-primary"
+                )}
+                onClick={() => navigate(subItem.path)}
+              >
+                {subItem.icon}
+                <span>
+                  {subItem.label}
+                </span>
+              </Button>
+            ))}
+          </div>
         )}
-        onClick={() => navigate(item.path)}
-      >
-        {item.icon}
-        <span className={cn("flex-1 text-left", !sidebarOpen && "hidden")}>
-          {item.label}
-        </span>
-      </Button>
+      </>
     );
   };
 
@@ -201,8 +271,8 @@ const NavMenu = () => {
         </div>
 
         <div className="flex flex-col p-3 space-y-1">
-          {menuItems.map((item) => (
-            <NavItem key={item.path} item={item} />
+          {menuItems.map((item, index) => (
+            <NavItem key={item.path || index} item={item} />
           ))}
         </div>
 
@@ -241,3 +311,4 @@ const NavMenu = () => {
 };
 
 export default NavMenu;
+

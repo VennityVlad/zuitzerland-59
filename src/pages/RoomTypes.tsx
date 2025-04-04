@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DatabaseRoomType } from "@/types/booking";
 import { PageTitle } from "@/components/PageTitle";
+import { Layers } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface RoomType {
   id: string;
@@ -25,8 +27,10 @@ interface RoomType {
 
 const RoomTypes = () => {
   const { user } = usePrivy();
+  const navigate = useNavigate();
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<RoomType>>({});
@@ -42,38 +46,54 @@ const RoomTypes = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user?.id) return;
-
+    const checkAuth = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Room Types - Auth status:", session ? "Authenticated" : "Not authenticated");
+        setIsAuthenticated(!!session);
+        
+        if (!session) {
+          setIsLoading(false);
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('role')
-          .eq('privy_id', user.id)
+          .eq('privy_id', user?.id)
           .maybeSingle();
 
         if (error) throw error;
         
         setIsAdmin(data?.role === 'admin');
+        setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
+        console.error('Error checking authentication/role:', error);
+        setIsAuthenticated(false);
+        setIsAdmin(false);
         setIsLoading(false);
       }
     };
 
-    if (user?.id) {
-      fetchProfile();
-    } else {
-      setIsLoading(false);
-    }
+    checkAuth();
   }, [user?.id]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAuthenticated === false && !isLoading) {
+      console.log("Room Types - Redirecting to sign in");
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to access room types management.",
+      });
+      navigate("/signin");
+    }
+  }, [isAuthenticated, isLoading, navigate, toast]);
+
+  useEffect(() => {
+    if (isAdmin && isAuthenticated) {
       fetchRoomTypes();
     }
-  }, [isAdmin]);
+  }, [isAdmin, isAuthenticated]);
 
   const fetchRoomTypes = async () => {
     try {
@@ -277,7 +297,7 @@ const RoomTypes = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <PageTitle title="Room Types" />
+        <PageTitle title="Room Types" icon={<Layers className="h-5 w-5" />} />
         <div className="py-8 px-4 flex-grow">
           <div className="container mx-auto">
             <div className="animate-pulse">Loading...</div>
@@ -287,10 +307,14 @@ const RoomTypes = () => {
     );
   }
 
+  if (!isAuthenticated) {
+    return null;
+  }
+
   if (!isAdmin) {
     return (
       <div className="flex flex-col h-full">
-        <PageTitle title="Room Types" />
+        <PageTitle title="Room Types" icon={<Layers className="h-5 w-5" />} />
         <div className="py-8 px-4 flex-grow">
           <div className="container mx-auto">
             <div className="text-center">
@@ -305,7 +329,7 @@ const RoomTypes = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <PageTitle title="Room Type Management" />
+      <PageTitle title="Room Type Management" icon={<Layers className="h-5 w-5" />} />
       <div className="py-8 px-4 flex-grow">
         <div className="container mx-auto">
           <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">

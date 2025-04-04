@@ -5,6 +5,7 @@ import RoomsPage from "./rooms/RoomsPage";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Building } from "lucide-react";
 
 const RoomManagement = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -16,7 +17,7 @@ const RoomManagement = () => {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        console.log("Room Management - Auth status:", session ? "Authenticated" : "Not authenticated");
+        console.log("Apartment Management - Auth status:", session ? "Authenticated" : "Not authenticated");
         setIsAuthenticated(!!session);
         setLoading(false);
       } catch (error) {
@@ -32,10 +33,10 @@ const RoomManagement = () => {
   // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (isAuthenticated === false && !loading) {
-      console.log("Room Management - Redirecting to sign in");
+      console.log("Apartment Management - Redirecting to sign in");
       toast({
         title: "Authentication Required",
-        description: "Please sign in to access room management.",
+        description: "Please sign in to access apartment management.",
       });
       navigate("/signin");
     }
@@ -44,7 +45,7 @@ const RoomManagement = () => {
   if (loading) {
     return (
       <div className="container py-6 space-y-6">
-        <PageTitle title="Room Management" />
+        <PageTitle title="Apartment Management" icon={<Building className="h-5 w-5" />} />
         <div className="h-10 w-[400px] bg-muted animate-pulse rounded-md"></div>
         <div className="h-[300px] bg-muted/30 animate-pulse rounded-md"></div>
       </div>
@@ -57,7 +58,7 @@ const RoomManagement = () => {
 
   return (
     <div className="container py-6 space-y-6">
-      <PageTitle title="Apartment Management" />
+      <PageTitle title="Apartment Management" icon={<Building className="h-5 w-5" />} />
       <RoomsPage />
     </div>
   );
