@@ -35,6 +35,7 @@ type Assignment = {
   profile: {
     full_name: string | null;
     avatar_url: string | null;
+    email: string | null;
     team_id: string | null;
     team?: {
       id: string;
@@ -198,7 +199,8 @@ const AssignmentGrid = ({
           notes,
           profile:profiles(
             full_name, 
-            avatar_url, 
+            avatar_url,
+            email,
             team_id,
             team:teams(id, name, logo_url)
           )
