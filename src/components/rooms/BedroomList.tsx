@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash, BedDouble, Door } from "lucide-react";
+import { Plus, Trash, BedDouble, Home } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 type Bedroom = {
@@ -45,7 +45,7 @@ const BedroomList = ({ bedrooms, onAddBed, onDeleteBedroom, onDeleteBed }: Bedro
           <div className="flex items-center justify-between pr-2">
             <AccordionTrigger className="py-3 px-4 hover:no-underline">
               <div className="flex items-center gap-2 text-left">
-                <Door className="h-4 w-4 text-primary" />
+                <Home className="h-4 w-4 text-primary" />
                 <span className="font-medium">{bedroom.name}</span>
                 <span className="text-sm text-muted-foreground ml-2">
                   ({bedroom.beds?.length || 0} beds)

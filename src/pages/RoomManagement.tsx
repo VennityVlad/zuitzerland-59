@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PageTitle from "@/components/PageTitle";
+import { PageTitle } from "@/components/PageTitle";
 import RoomsPage from "./rooms/RoomsPage";
 import AssignmentsPage from "./rooms/AssignmentsPage";
 

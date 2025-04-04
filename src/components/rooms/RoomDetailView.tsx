@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, BedDouble, Door, User, Calendar } from "lucide-react";
+import { Plus, BedDouble, Home, User, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import AddBedroomDialog from "./AddBedroomDialog";
 import AddBedDialog from "./AddBedDialog";
@@ -202,7 +201,7 @@ const RoomDetailView = ({ apartment, onUpdate }: RoomDetailViewProps) => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Door className="h-5 w-5 text-primary" />
+                <Home className="h-5 w-5 text-primary" />
                 Bedrooms
               </h3>
               <Button size="sm" onClick={() => setAddBedroomDialogOpen(true)}>

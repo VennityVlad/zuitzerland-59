@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Door } from "lucide-react";
+import { Home } from "lucide-react";
 
 type AddBedroomDialogProps = {
   open: boolean;
@@ -38,7 +38,7 @@ const AddBedroomDialog = ({ open, onOpenChange, onSubmit }: AddBedroomDialogProp
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Door className="h-5 w-5" />
+            <Home className="h-5 w-5" />
             Add New Bedroom
           </DialogTitle>
         </DialogHeader>

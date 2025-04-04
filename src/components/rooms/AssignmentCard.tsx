@@ -2,7 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Calendar, User, BedDouble, Door, Building } from "lucide-react";
+import { Calendar, User, BedDouble, Home, Building } from "lucide-react";
 
 type Assignment = {
   id: string;
@@ -90,7 +90,7 @@ const AssignmentCard = ({ assignment, onDelete }: AssignmentCardProps) => {
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Bedroom</p>
               <div className="flex items-center gap-1">
-                <Door className="h-3 w-3 text-muted-foreground" />
+                <Home className="h-3 w-3 text-muted-foreground" />
                 <span>{assignment.bedroom?.name || "Not assigned"}</span>
               </div>
             </div>
