@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -319,7 +318,6 @@ const AddAssignmentDialog = ({ open, onOpenChange, onSubmit }: AddAssignmentDial
               <DatePicker
                 date={startDate}
                 onDateChange={setStartDate}
-                className={errors.startDate ? "border-destructive" : ""}
               />
               {errors.startDate && (
                 <p className="text-sm text-destructive">{errors.startDate}</p>
@@ -331,7 +329,6 @@ const AddAssignmentDialog = ({ open, onOpenChange, onSubmit }: AddAssignmentDial
               <DatePicker
                 date={endDate}
                 onDateChange={setEndDate}
-                className={errors.endDate ? "border-destructive" : ""}
               />
               {errors.endDate && (
                 <p className="text-sm text-destructive">{errors.endDate}</p>

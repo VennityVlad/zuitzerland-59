@@ -120,7 +120,9 @@ const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: H
         if (data && data.housing_preferences) {
           setPreferences({
             ...preferences,
-            ...data.housing_preferences
+            // Fixed: Instead of spreading data.housing_preferences which might not be an object type,
+            // we use type assertion and handle each property individually
+            ...(data.housing_preferences as HousingPreference)
           });
         }
       } catch (error: any) {
