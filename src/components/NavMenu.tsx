@@ -34,6 +34,20 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import BottomNav from "./BottomNav";
 
+// Define a type for menu items to ensure correct properties
+type MenuItem = {
+  label: string;
+  icon: React.ReactNode;
+  path: string;
+  id?: string;
+  hasSubmenu?: boolean;
+  submenuItems?: {
+    label: string;
+    icon: React.ReactNode;
+    path: string;
+  }[];
+};
+
 const NavMenu = () => {
   const { logout, user } = usePrivy();
   const navigate = useNavigate();
@@ -101,7 +115,8 @@ const NavMenu = () => {
     return paths.some(path => location.pathname === path);
   };
 
-  const menuItems = [
+  // Define menu items with the correct type
+  const menuItems: MenuItem[] = [
     {
       label: "Book",
       icon: <CalendarDays className="h-5 w-5" />,
@@ -158,7 +173,7 @@ const NavMenu = () => {
     });
   }
 
-  const adminItems = [
+  const adminItems: MenuItem[] = [
     {
       label: "Reports",
       icon: <BarChart className="h-5 w-5" />,
@@ -311,4 +326,3 @@ const NavMenu = () => {
 };
 
 export default NavMenu;
-
