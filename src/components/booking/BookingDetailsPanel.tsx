@@ -1,3 +1,4 @@
+
 import React from "react";
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
@@ -17,7 +18,8 @@ interface BookingDetailsPanelProps {
   discountPercentage: number;
   discountMonth: string | null;
   customPrice?: number;
-  children?: React.ReactNode; // Add this to support custom content
+  children?: React.ReactNode;
+  bookingBlockEnabled?: boolean;
 }
 
 const BookingDetailsPanel = ({
@@ -32,7 +34,8 @@ const BookingDetailsPanel = ({
   discountPercentage,
   discountMonth,
   customPrice,
-  children
+  children,
+  bookingBlockEnabled = true
 }: BookingDetailsPanelProps) => {
   const basePrice = formData.price ? formData.price.toFixed(2) : '0.00';
   const stripeFee = formData.paymentType === 'fiat' ? (formData.price * 0.03).toFixed(2) : '0.00';
@@ -40,7 +43,6 @@ const BookingDetailsPanel = ({
   const vat = (subtotal * 0.038).toFixed(2);
   const total = customPrice ? customPrice + parseFloat(vat) : subtotal + parseFloat(vat);
   
-  // Make sure you add the children at the end of the returned JSX component
   return (
     <div className="bg-gray-50 p-6 rounded-lg space-y-6">
       <h3 className="text-xl font-semibold mb-4">Booking Details</h3>

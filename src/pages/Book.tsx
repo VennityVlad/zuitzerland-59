@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import BookingForm from "@/components/BookingForm";
 import AdminBookingForm from "@/components/AdminBookingForm";
@@ -9,11 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Invoice } from "@/types/invoice";
 import { UserInvoiceView } from "@/components/booking/UserInvoiceView";
+import { useBookingSettings } from "@/hooks/useBookingSettings";
 
 const Book = () => {
   const isMobile = useIsMobile();
   const { user } = usePrivy();
   const [isAdmin, setIsAdmin] = useState(false);
+  const { settings: bookingSettings } = useBookingSettings();
   
   // Check if user is admin
   useEffect(() => {
@@ -85,7 +86,7 @@ const Book = () => {
           ) : userInvoice ? (
             <UserInvoiceView invoice={userInvoice} />
           ) : (
-            <BookingForm />
+            <BookingForm bookingBlockEnabled={bookingSettings.blockEnabled} />
           )}
         </div>
       </div>

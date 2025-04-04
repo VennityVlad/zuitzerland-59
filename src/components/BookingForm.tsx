@@ -1,4 +1,3 @@
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useBookingForm } from "@/hooks/useBookingForm";
@@ -16,7 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 
-const BookingForm = () => {
+interface BookingFormProps {
+  bookingBlockEnabled?: boolean;
+}
+
+const BookingForm = ({ bookingBlockEnabled = true }: BookingFormProps) => {
   const { toast } = useToast();
   const {
     formData,
@@ -41,7 +44,7 @@ const BookingForm = () => {
   const [contactFieldsComplete, setContactFieldsComplete] = useState(false);
 
   const minDate = "2025-05-01";
-  const maxDate = "2025-05-25";
+  const maxDate = "2025-05-26";
 
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', formData.roomType],
@@ -60,7 +63,6 @@ const BookingForm = () => {
     enabled: Boolean(formData.roomType)
   });
 
-  // Check if contact fields are all filled out
   useEffect(() => {
     const requiredContactFields = [
       'firstName', 
@@ -160,6 +162,7 @@ const BookingForm = () => {
         discountName={discountName}
         discountPercentage={discountPercentage}
         discountMonth={discountMonth}
+        bookingBlockEnabled={bookingBlockEnabled}
       />
     </div>
   );
