@@ -9,6 +9,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { User, Calendar, GripHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import EditAssignmentPanel from "./EditAssignmentPanel";
 
 type Profile = {
   id: string;
@@ -29,6 +31,7 @@ type Assignment = {
   bed_id: string | null;
   start_date: string;
   end_date: string;
+  notes?: string | null;
   profile: {
     full_name: string | null;
     avatar_url: string | null;
@@ -76,8 +79,18 @@ const AssignmentGrid = ({
   const [draggedProfile, setDraggedProfile] = useState<Profile | null>(null);
   const [resizingAssignment, setResizingAssignment] = useState<{id: string, direction: 'left' | 'right'} | null>(null);
   const { toast } = useToast();
+  
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [newAssignmentData, setNewAssignmentData] = useState<{
+    profileId?: string;
+    apartmentId?: string;
+    bedroomId?: string;
+    bedId?: string;
+    startDate?: Date;
+    endDate?: Date;
+  } | null>(null);
 
-  // Generate dates for the columns
   const dates = useMemo(() => {
     return eachDayOfInterval({
       start: startDate,
@@ -95,7 +108,6 @@ const AssignmentGrid = ({
     try {
       console.log("Starting to fetch data...");
       
-      // Fetch apartments with bedrooms and beds
       const { data: apartmentsData, error: apartmentsError } = await supabase
         .from('apartments')
         .select('id, name')
@@ -155,7 +167,6 @@ const AssignmentGrid = ({
       setApartments(fullApartments);
       console.log("Full apartments data:", fullApartments);
 
-      // Fetch profiles with teams
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -174,7 +185,6 @@ const AssignmentGrid = ({
       console.log("Profiles fetched:", profilesData?.length || 0);
       setProfiles(profilesData || []);
 
-      // Fetch assignments
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('room_assignments')
         .select(`
@@ -213,61 +223,15 @@ const AssignmentGrid = ({
   };
 
   const createAssignment = async (profileId: string, apartmentId: string, bedroomId: string, bedId: string, startDate: Date, endDate: Date) => {
-    try {
-      console.log("Creating assignment with:", { profileId, apartmentId, bedroomId, bedId, startDate, endDate });
-      
-      // Check if this bed is already assigned for the given dates
-      const conflictingAssignments = assignments.filter(a => 
-        a.bed_id === bedId &&
-        (
-          (new Date(a.start_date) <= endDate && new Date(a.end_date) >= startDate) ||
-          (new Date(a.start_date) <= startDate && new Date(a.end_date) >= startDate) ||
-          (new Date(a.start_date) <= endDate && new Date(a.end_date) >= endDate)
-        )
-      );
-
-      if (conflictingAssignments.length > 0) {
-        toast({
-          variant: "destructive",
-          title: "Conflict detected",
-          description: "This bed is already assigned during the selected period.",
-        });
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('room_assignments')
-        .insert({
-          profile_id: profileId,
-          apartment_id: apartmentId,
-          bedroom_id: bedroomId,
-          bed_id: bedId,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0],
-        })
-        .select();
-      
-      if (error) {
-        console.error("Error creating assignment:", error);
-        throw error;
-      }
-      
-      console.log("Assignment created:", data);
-      toast({
-        title: "Assignment created",
-        description: "The assignment has been created successfully.",
-      });
-      
-      // Reload assignments
-      fetchData();
-    } catch (error: any) {
-      console.error("Error in createAssignment:", error);
-      toast({
-        variant: "destructive",
-        title: "Error creating assignment",
-        description: error.message,
-      });
-    }
+    setNewAssignmentData({
+      profileId,
+      apartmentId,
+      bedroomId,
+      bedId,
+      startDate,
+      endDate: addDays(startDate, 6)
+    });
+    setIsEditPanelOpen(true);
   };
 
   const updateAssignment = async (id: string, newStartDate: Date, newEndDate: Date) => {
@@ -291,7 +255,6 @@ const AssignmentGrid = ({
         description: "The assignment has been updated successfully.",
       });
       
-      // Reload assignments
       fetchData();
     } catch (error: any) {
       console.error("Error in updateAssignment:", error);
@@ -325,7 +288,6 @@ const AssignmentGrid = ({
         description: "The assignment has been deleted successfully.",
       });
       
-      // Reload assignments
       fetchData();
     } catch (error: any) {
       console.error("Error in deleteAssignment:", error);
@@ -348,16 +310,13 @@ const AssignmentGrid = ({
     
     console.log("Drop event:", { apartmentId, bedroomId, bedId, date, profile: draggedProfile.full_name });
     
-    // Default to a 7-day stay
-    const endDate = addDays(date, 6);
-    
     createAssignment(
       draggedProfile.id,
       apartmentId,
       bedroomId,
       bedId,
       date,
-      endDate
+      addDays(date, 6)
     );
     
     setDraggedProfile(null);
@@ -373,6 +332,11 @@ const AssignmentGrid = ({
       new Date(assignment.start_date) <= date && 
       new Date(assignment.end_date) >= date
     );
+  };
+
+  const handleAssignmentClick = (assignment: Assignment) => {
+    setSelectedAssignment(assignment);
+    setIsEditPanelOpen(true);
   };
 
   const handleResizeStart = (e: React.MouseEvent, assignmentId: string, direction: 'left' | 'right') => {
@@ -391,11 +355,9 @@ const AssignmentGrid = ({
     const currentEndDate = new Date(assignment.end_date);
 
     if (resizingAssignment.direction === 'left') {
-      // Don't allow start date to go beyond end date
       if (date > currentEndDate) return;
       updateAssignment(assignment.id, date, currentEndDate);
     } else {
-      // Don't allow end date to go before start date
       if (date < currentStartDate) return;
       updateAssignment(assignment.id, currentStartDate, date);
     }
@@ -416,14 +378,12 @@ const AssignmentGrid = ({
     };
   }, [resizingAssignment]);
 
-  // Filter out profiles that already have room assignments
   const availableProfiles = useMemo(() => {
     return profiles.filter(profile => 
       !assignments.some(assignment => assignment.profile_id === profile.id)
     );
   }, [profiles, assignments]);
 
-  // Group profiles by team
   const profilesByTeam = useMemo(() => {
     const grouped: Record<string, Profile[]> = {
       'no-team': []
@@ -443,6 +403,13 @@ const AssignmentGrid = ({
   const hasBeds = useMemo(() => {
     return apartments.some(apt => apt.bedrooms.some(br => br.beds.length > 0));
   }, [apartments]);
+
+  const handleEditPanelClose = () => {
+    setIsEditPanelOpen(false);
+    setSelectedAssignment(null);
+    setNewAssignmentData(null);
+    fetchData();
+  };
 
   if (loading) {
     return (
@@ -471,7 +438,6 @@ const AssignmentGrid = ({
           </p>
           <Button 
             onClick={() => {
-              // Should navigate to Apartments tab or show apartment creation modal
               const roomsTab = document.querySelector('[value="rooms"]') as HTMLButtonElement;
               if (roomsTab) roomsTab.click();
             }}
@@ -493,7 +459,6 @@ const AssignmentGrid = ({
           </p>
           <Button 
             onClick={() => {
-              // Should navigate to Apartments tab
               const roomsTab = document.querySelector('[value="rooms"]') as HTMLButtonElement;
               if (roomsTab) roomsTab.click();
             }}
@@ -519,7 +484,6 @@ const AssignmentGrid = ({
       </div>
 
       <div className="flex">
-        {/* Profiles sidebar */}
         {showProfiles && (
           <div className="w-[250px] border-r p-4 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
             <div className="flex justify-between items-center">
@@ -577,7 +541,6 @@ const AssignmentGrid = ({
           </div>
         )}
 
-        {/* Grid view */}
         <div className="flex-1 overflow-x-auto">
           <div className="min-w-[1200px]">
             <div className="grid grid-cols-[200px,150px,150px,repeat(30,40px)] border-b">
@@ -600,10 +563,8 @@ const AssignmentGrid = ({
               <div key={apartment.id}>
                 {apartment.bedrooms.flatMap((bedroom) => 
                   bedroom.beds.map((bed, bedIndex) => {
-                    // Only show apartment name for the first bed of the first bedroom
                     const isFirstBedOfFirstBedroom = 
                       bedroom === apartment.bedrooms[0] && bedIndex === 0;
-                    // Only show bedroom name for the first bed of each bedroom
                     const isFirstBedOfBedroom = bedIndex === 0;
                     
                     return (
@@ -625,7 +586,6 @@ const AssignmentGrid = ({
                           const isAssignmentEnd = assignment && isSameDay(new Date(assignment.end_date), date);
                           const daysLength = assignment ? differenceInDays(new Date(assignment.end_date), new Date(assignment.start_date)) + 1 : 0;
                           
-                          // Render assignment cell only at start date
                           if (assignment && isAssignmentStart) {
                             return (
                               <div 
@@ -636,10 +596,12 @@ const AssignmentGrid = ({
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div className="absolute top-0 left-0 right-0 bottom-0 m-1 bg-primary/10 border border-primary/30 rounded-md flex items-center justify-between cursor-pointer">
-                                        {/* Left handle for adjusting start date */}
+                                      <div 
+                                        className="absolute top-0 left-0 right-0 bottom-0 m-1 bg-primary/20 border border-primary/30 rounded-md flex items-center justify-between cursor-pointer"
+                                        onClick={() => handleAssignmentClick(assignment)}
+                                      >
                                         <div 
-                                          className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize hover:bg-primary/20"
+                                          className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize hover:bg-primary/30"
                                           onMouseDown={(e) => handleResizeStart(e, assignment.id, 'left')}
                                         >
                                           <ChevronLeft className="h-3 w-3 text-primary" />
@@ -657,9 +619,8 @@ const AssignmentGrid = ({
                                           </span>
                                         </div>
                                         
-                                        {/* Right handle for adjusting end date */}
                                         <div 
-                                          className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize hover:bg-primary/20"
+                                          className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize hover:bg-primary/30"
                                           onMouseDown={(e) => handleResizeStart(e, assignment.id, 'right')}
                                         >
                                           <ChevronRight className="h-3 w-3 text-primary" />
@@ -672,7 +633,7 @@ const AssignmentGrid = ({
                                         <p>From: {format(new Date(assignment.start_date), 'PP')}</p>
                                         <p>To: {format(new Date(assignment.end_date), 'PP')}</p>
                                         <p className="text-xs text-muted-foreground">Drag edges to resize dates</p>
-                                        <p className="text-xs text-muted-foreground">Click to delete</p>
+                                        <p className="text-xs text-muted-foreground">Click to edit</p>
                                       </div>
                                     </TooltipContent>
                                   </Tooltip>
@@ -681,12 +642,10 @@ const AssignmentGrid = ({
                             );
                           }
                           
-                          // Skip cells that are part of a multi-day assignment but not the start
                           if (assignment && !isAssignmentStart) {
                             return <div key={dateIndex} />;
                           }
                           
-                          // Empty cell where we can drop profiles
                           return (
                             <div 
                               key={dateIndex}
@@ -705,6 +664,16 @@ const AssignmentGrid = ({
           </div>
         </div>
       </div>
+
+      <Sheet open={isEditPanelOpen} onOpenChange={setIsEditPanelOpen}>
+        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <EditAssignmentPanel 
+            assignment={selectedAssignment} 
+            initialData={newAssignmentData}
+            onClose={handleEditPanelClose}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

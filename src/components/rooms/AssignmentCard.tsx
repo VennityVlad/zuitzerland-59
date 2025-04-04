@@ -1,8 +1,9 @@
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Calendar, User, BedDouble, Home, Building } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { CalendarDays, Building, BedDouble, Trash2, Edit } from "lucide-react";
 
 type Assignment = {
   id: string;
@@ -31,91 +32,81 @@ type Assignment = {
 
 type AssignmentCardProps = {
   assignment: Assignment;
+  onEdit: () => void;
   onDelete: () => void;
 };
 
-const AssignmentCard = ({ assignment, onDelete }: AssignmentCardProps) => {
+const AssignmentCard = ({ assignment, onEdit, onDelete }: AssignmentCardProps) => {
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="grid grid-cols-[1fr_auto] border-b">
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <User className="h-4 w-4 text-primary" />
-              <h3 className="font-medium">
-                {assignment.profile.full_name || assignment.profile.email || "Unnamed user"}
-              </h3>
-            </div>
-            
-            {assignment.profile.email && (
-              <p className="text-sm text-muted-foreground mb-2">{assignment.profile.email}</p>
-            )}
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Check-in</p>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                  <span>{format(new Date(assignment.start_date), 'MMM d, yyyy')}</span>
-                </div>
-              </div>
-              
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Check-out</p>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                  <span>{format(new Date(assignment.end_date), 'MMM d, yyyy')}</span>
-                </div>
-              </div>
+    <Card className="overflow-hidden border-l-4 border-l-primary/70 hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Avatar>
+              <AvatarFallback>
+                {assignment.profile.full_name?.charAt(0) || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h4 className="font-semibold text-lg">
+                {assignment.profile.full_name || "Unnamed"}
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                {assignment.profile.email || "No email"}
+              </p>
             </div>
           </div>
           
-          <div className="flex items-center p-4">
-            <Button variant="ghost" size="sm" onClick={onDelete}>
-              Delete
+          <div className="flex space-x-2">
+            <Button size="sm" variant="outline" onClick={onEdit}>
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" onClick={onDelete}>
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Delete</span>
             </Button>
           </div>
         </div>
         
-        <div className="p-4 bg-muted/30">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Room</p>
-              <div className="flex items-center gap-1">
-                <Building className="h-3 w-3 text-muted-foreground" />
-                <span>{assignment.apartment?.name || "Not assigned"}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Bedroom</p>
-              <div className="flex items-center gap-1">
-                <Home className="h-3 w-3 text-muted-foreground" />
-                <span>{assignment.bedroom?.name || "Not assigned"}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Bed</p>
-              <div className="flex items-center gap-1">
-                <BedDouble className="h-3 w-3 text-muted-foreground" />
-                <span>{assignment.bed?.name || "Not assigned"}</span>
-                {assignment.bed?.bed_type && (
-                  <span className="text-xs px-1 py-0.5 bg-primary/10 text-primary rounded ml-1">
-                    {assignment.bed.bed_type}
-                  </span>
-                )}
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div className="flex items-center gap-2">
+            <Building className="h-4 w-4 text-primary" />
+            <div className="text-sm">
+              <p className="font-medium">Apartment</p>
+              <p>{assignment.apartment?.name || "Not assigned"}</p>
             </div>
           </div>
           
-          {assignment.notes && (
-            <div className="mt-3">
-              <p className="text-xs text-muted-foreground">Notes</p>
-              <p className="text-sm">{assignment.notes}</p>
+          <div className="flex items-center gap-2">
+            <BedDouble className="h-4 w-4 text-primary" />
+            <div className="text-sm">
+              <p className="font-medium">Room & Bed</p>
+              <p>
+                {assignment.bedroom?.name 
+                  ? `${assignment.bedroom.name} (${assignment.bed?.name || 'No bed'})` 
+                  : "Not assigned"}
+              </p>
             </div>
-          )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <div className="text-sm">
+              <p className="font-medium">Stay Period</p>
+              <p>
+                {format(new Date(assignment.start_date), 'PP')} - {format(new Date(assignment.end_date), 'PP')}
+              </p>
+            </div>
+          </div>
         </div>
+        
+        {assignment.notes && (
+          <div className="mt-3 pt-3 border-t">
+            <p className="text-sm font-medium">Notes</p>
+            <p className="text-sm text-muted-foreground mt-1">{assignment.notes}</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

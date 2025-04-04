@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,7 +6,9 @@ import { Plus, User, Building, Home, BedDouble } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import AssignmentCard from "./AssignmentCard";
+import EditAssignmentPanel from "./EditAssignmentPanel";
 
 type Assignment = {
   id: string;
@@ -39,6 +42,8 @@ type RoomAssignmentsProps = {
 const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -79,6 +84,16 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
     }
   };
 
+  const handleEditAssignment = (assignment: Assignment) => {
+    setSelectedAssignment(assignment);
+    setIsEditPanelOpen(true);
+  };
+
+  const handleAddAssignment = () => {
+    setSelectedAssignment(null);
+    setIsEditPanelOpen(true);
+  };
+
   const handleDeleteAssignment = async (id: string) => {
     if (!confirm("Are you sure you want to delete this assignment?")) {
       return;
@@ -105,6 +120,12 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         description: error.message,
       });
     }
+  };
+
+  const handleEditPanelClose = () => {
+    setIsEditPanelOpen(false);
+    setSelectedAssignment(null);
+    fetchAssignments();
   };
 
   if (loading) {
@@ -140,7 +161,7 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         </div>
         
         <Button 
-          onClick={() => {/* TODO: Open add assignment dialog */}}
+          onClick={handleAddAssignment}
           disabled={!!apartmentId} // Disable when viewing specific apartment
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -163,11 +184,22 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
             <AssignmentCard 
               key={assignment.id} 
               assignment={assignment}
+              onEdit={() => handleEditAssignment(assignment)}
               onDelete={() => handleDeleteAssignment(assignment.id)}
             />
           ))}
         </div>
       )}
+
+      {/* Slide-out panel for creating/editing assignments */}
+      <Sheet open={isEditPanelOpen} onOpenChange={setIsEditPanelOpen}>
+        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <EditAssignmentPanel 
+            assignment={selectedAssignment} 
+            onClose={handleEditPanelClose}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
