@@ -99,13 +99,16 @@ const RoomAssignmentsPage = () => {
 
         <Card>
           <CardContent className="p-4">
-            <TabsContent value="grid" className="mt-0">
-              <AssignmentGrid />
-            </TabsContent>
-            
-            <TabsContent value="list" className="mt-0">
-              <RoomAssignments />
-            </TabsContent>
+            {/* Make sure TabsContent is inside the Tabs component */}
+            <Tabs value={viewMode}>
+              <TabsContent value="grid" className="mt-0">
+                <AssignmentGrid />
+              </TabsContent>
+              
+              <TabsContent value="list" className="mt-0">
+                <RoomAssignments />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
