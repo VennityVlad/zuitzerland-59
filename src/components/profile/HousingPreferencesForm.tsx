@@ -12,8 +12,6 @@ import { Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type HousingPreference = {
-  name: string;
-  email: string;
   preferredRoommates: string;
   gender: string;
   sameGenderPreference: string;
@@ -37,8 +35,7 @@ type HousingPreferencesFormProps = {
 const genderOptions = [
   "Male", 
   "Female", 
-  "Non-binary", 
-  "Prefer not to say"
+  "Non-binary"
 ];
 
 const yesNoOptions = [
@@ -84,8 +81,6 @@ const socialPreferencesOptions = [
 
 const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: HousingPreferencesFormProps) => {
   const [preferences, setPreferences] = useState<HousingPreference>({
-    name: userName || "",
-    email: userEmail || "",
     preferredRoommates: "",
     gender: "",
     sameGenderPreference: "",
@@ -118,11 +113,19 @@ const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: H
         if (error) throw error;
         
         if (data && data.housing_preferences) {
+          // Only update the necessary fields from the stored preferences
+          const storedPrefs = data.housing_preferences as HousingPreference;
           setPreferences({
-            ...preferences,
-            // Fixed: Instead of spreading data.housing_preferences which might not be an object type,
-            // we use type assertion and handle each property individually
-            ...(data.housing_preferences as HousingPreference)
+            preferredRoommates: storedPrefs.preferredRoommates || "",
+            gender: storedPrefs.gender || "",
+            sameGenderPreference: storedPrefs.sameGenderPreference || "",
+            sleepingHabitsImportance: storedPrefs.sleepingHabitsImportance || 3,
+            sleepingHabits: storedPrefs.sleepingHabits || [],
+            livingHabitsImportance: storedPrefs.livingHabitsImportance || 3,
+            livingHabits: storedPrefs.livingHabits || [],
+            socialPreferencesImportance: storedPrefs.socialPreferencesImportance || 3,
+            socialPreferences: storedPrefs.socialPreferences || [],
+            additionalNotes: storedPrefs.additionalNotes || ""
           });
         }
       } catch (error: any) {
@@ -138,7 +141,7 @@ const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: H
     };
     
     fetchExistingPreferences();
-  }, [profileId]);
+  }, [profileId, toast]);
 
   const handleInputChange = (field: keyof HousingPreference, value: any) => {
     setPreferences(prev => ({
@@ -176,11 +179,11 @@ const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: H
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!preferences.name || !preferences.email || !preferences.gender) {
+    if (!preferences.gender) {
       toast({
         variant: "destructive",
         title: "Required fields missing",
-        description: "Please fill in all required fields: Name, Email, and Gender."
+        description: "Please select your gender."
       });
       return;
     }
@@ -188,10 +191,17 @@ const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: H
     setIsSubmitting(true);
     
     try {
+      // Create the complete preferences object including name and email from props
+      const completePreferences = {
+        ...preferences,
+        name: userName || "",
+        email: userEmail || ""
+      };
+      
       const { error } = await supabase
         .from('profiles')
         .update({
-          housing_preferences: preferences
+          housing_preferences: completePreferences
         })
         .eq('id', profileId);
       
@@ -220,35 +230,6 @@ const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: H
   return (
     <form onSubmit={handleSubmit} className="space-y-6 py-4">
       <div className="space-y-8">
-        {/* Name */}
-        <div className="space-y-2">
-          <Label htmlFor="name" className="text-base font-medium after:content-['*'] after:text-red-500 after:ml-1">
-            Name
-          </Label>
-          <Input 
-            id="name" 
-            value={preferences.name} 
-            onChange={(e) => handleInputChange('name', e.target.value)}
-            disabled={loading}
-            required
-          />
-        </div>
-        
-        {/* Email */}
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-base font-medium after:content-['*'] after:text-red-500 after:ml-1">
-            Email (must be the same email you've used for application and acceptance)
-          </Label>
-          <Input 
-            id="email" 
-            type="email" 
-            value={preferences.email} 
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            disabled={loading}
-            required
-          />
-        </div>
-        
         {/* Preferred roommates */}
         <div className="space-y-2">
           <Label htmlFor="preferredRoommates" className="text-base font-medium">
@@ -271,7 +252,7 @@ const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: H
           <RadioGroup 
             value={preferences.gender} 
             onValueChange={(value) => handleInputChange('gender', value)}
-            className="grid grid-cols-2 gap-2"
+            className="grid grid-cols-3 gap-2"
             required
           >
             {genderOptions.map((option) => (
@@ -477,7 +458,7 @@ const HousingPreferencesForm = ({ profileId, userEmail, userName, onSuccess }: H
       
       <Button 
         type="submit"
-        disabled={loading || isSubmitting || !preferences.name || !preferences.email || !preferences.gender}
+        disabled={loading || isSubmitting || !preferences.gender}
         className="w-full"
       >
         <Save className="h-4 w-4 mr-2" />
