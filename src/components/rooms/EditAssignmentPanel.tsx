@@ -159,7 +159,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
 
   const fetchProfiles = async () => {
     try {
-      // Only fetch profiles that don't already have an assignment if creating new
+      // Use a corrected query approach to filter profiles
       let query = supabase
         .from('profiles')
         .select('id, full_name, email')
@@ -171,11 +171,12 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
           .from('room_assignments')
           .select('profile_id');
         
-        if (!assignedError && assignedProfiles) {
+        if (!assignedError && assignedProfiles && assignedProfiles.length > 0) {
+          // Create an array of profile IDs that are already assigned
           const assignedIds = assignedProfiles.map(ap => ap.profile_id);
-          if (assignedIds.length > 0) {
-            query = query.not('id', 'in', assignedIds);
-          }
+          
+          // Use proper filter syntax - .not() operator followed by .in()
+          query = query.not('id', 'in', assignedIds);
         }
       }
       
