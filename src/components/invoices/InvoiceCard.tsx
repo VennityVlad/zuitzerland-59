@@ -3,14 +3,8 @@ import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Users, Calendar, ChevronDown } from "lucide-react";
+import { ExternalLink, Mail, Users, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface InvoiceCardProps {
   invoice: Invoice;
@@ -119,33 +113,32 @@ export const InvoiceCard = ({
       </CardContent>
 
       <CardFooter className="flex gap-2 justify-end">
-        {invoice.status !== 'paid' && invoice.status !== 'cancelled' && onSendReminder && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+        {onSendReminder && (
+          <>
+            {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
               <Button
+                onClick={() => onSendReminder(invoice, 'payment')}
                 variant="outline"
                 size="sm"
                 disabled={isLoading}
                 className="flex items-center gap-2"
               >
-                Email Reminders <ChevronDown className="h-4 w-4" />
+                Send Invoice Reminder <Mail className="h-4 w-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem 
-                onClick={() => onSendReminder(invoice, 'payment')}
-                disabled={isLoading}
-              >
-                Invoice Payment
-              </DropdownMenuItem>
-              <DropdownMenuItem 
+            )}
+            
+            {invoice.status === 'paid' && (
+              <Button
                 onClick={() => onSendReminder(invoice, 'housing')}
+                variant="outline"
+                size="sm"
                 disabled={isLoading}
+                className="flex items-center gap-2"
               >
-                Housing Preferences
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                Send Housing Preferences Reminder <Mail className="h-4 w-4" />
+              </Button>
+            )}
+          </>
         )}
         
         {showGuildInviteButton && (

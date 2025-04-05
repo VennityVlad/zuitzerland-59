@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -8,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Users, ChevronDown } from "lucide-react";
+import { ExternalLink, Mail, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Invoice } from "@/types/invoice";
 import { useState } from "react";
@@ -16,12 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { InvoiceCard } from "./InvoiceCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface InvoiceTableProps {
   invoices: Invoice[];
@@ -247,32 +240,27 @@ export const InvoiceTable = ({
                       </Button>
                       
                       {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={loadingInvoiceId === invoice.id}
-                              className="flex items-center gap-2"
-                            >
-                              Email Reminders <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => handleSendReminder(invoice, 'payment')}
-                              disabled={loadingInvoiceId === invoice.id}
-                            >
-                              Invoice Payment
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleSendReminder(invoice, 'housing')}
-                              disabled={loadingInvoiceId === invoice.id}
-                            >
-                              Housing Preferences
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button
+                          onClick={() => handleSendReminder(invoice, 'payment')}
+                          variant="outline"
+                          size="sm"
+                          disabled={loadingInvoiceId === invoice.id}
+                          className="flex items-center gap-2"
+                        >
+                          Send Invoice Reminder <Mail className="h-4 w-4" />
+                        </Button>
+                      )}
+                      
+                      {invoice.status === 'paid' && (
+                        <Button
+                          onClick={() => handleSendReminder(invoice, 'housing')}
+                          variant="outline"
+                          size="sm"
+                          disabled={loadingInvoiceId === invoice.id}
+                          className="flex items-center gap-2"
+                        >
+                          Send Housing Preferences Reminder <Mail className="h-4 w-4" />
+                        </Button>
                       )}
                       
                       {invoice.status === 'paid' && invoice.profile_id && (
