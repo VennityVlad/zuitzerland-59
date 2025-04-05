@@ -55,9 +55,16 @@ const BottomNav = () => {
         return;
       }
       
-      // Determine if we should show/hide the nav
-      if (currentScrollY > lastScrollY.current) {
-        // Scrolling down - hide nav
+      // Ignore bounce scroll at the top of the page
+      if (currentScrollY <= 0) {
+        setIsVisible(true);
+        lastScrollY.current = 0;
+        return;
+      }
+      
+      // Determine if we should show/hide the nav - only hide when scrolling down significantly
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+        // Scrolling down - hide nav, but only when we're not at the top
         setIsVisible(false);
       } else {
         // Scrolling up - show nav
@@ -65,7 +72,7 @@ const BottomNav = () => {
       }
       
       // Update the last scroll position
-      lastScrollY.current = currentScrollY;
+      lastScrollY.current = currentScrollY > 0 ? currentScrollY : 0;
       
       // Set a timeout before allowing another scroll event to trigger
       // This helps with inertial scrolling and bounce effects
