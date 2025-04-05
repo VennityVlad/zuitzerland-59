@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import Index from "./pages/Index";
@@ -28,8 +28,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./components/ui/use-toast";
 import { useIsMobile } from "./hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
+import { usePageTracking } from "./hooks/usePageTracking";
 
 const queryClient = new QueryClient();
+
+const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
+  usePageTracking();
+  return <>{children}</>;
+};
 
 const ProtectedRoute = ({ 
   children, 
@@ -198,116 +204,118 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <Routes>
-                <Route path="/supabase-signin" element={<SupabaseSignIn />} />
-                
-                <Route path="/signin" element={<SignIn />} />
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <Index />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/book"
-                  element={
-                    <ProtectedRoute>
-                      <Book />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/housing-preferences"
-                  element={
-                    <ProtectedRoute>
-                      <HousingPreferences />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/invoices"
-                  element={
-                    <ProtectedRoute adminOnly={true}>
-                      <Invoices />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/reports"
-                  element={
-                    <ProtectedRoute adminOnly={true}>
-                      <Reports />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/discounts"
-                  element={
-                    <ProtectedRoute adminOnly={true}>
-                      <Discounts />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/events"
-                  element={
-                    <ProtectedRoute>
-                      <Events />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-types"
-                  element={
-                    <ProtectedRoute adminOnly={true}>
-                      <RoomTypes />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/teams"
-                  element={
-                    <ProtectedRoute adminOnly={true}>
-                      <Teams />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/user-management"
-                  element={
-                    <ProtectedRoute adminOnly={true}>
-                      <UserManagement />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-management"
-                  element={
-                    <ProtectedRoute adminOnly={true}>
-                      <RoomManagement />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/room-assignments"
-                  element={
-                    <ProtectedRoute adminOnly={true}>
-                      <RoomAssignmentsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<Navigate to="/signin" replace />} />
-              </Routes>
+              <PageTrackingWrapper>
+                <Routes>
+                  <Route path="/supabase-signin" element={<SupabaseSignIn />} />
+                  
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <Index />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/book"
+                    element={
+                      <ProtectedRoute>
+                        <Book />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/housing-preferences"
+                    element={
+                      <ProtectedRoute>
+                        <HousingPreferences />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/invoices"
+                    element={
+                      <ProtectedRoute adminOnly={true}>
+                        <Invoices />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/reports"
+                    element={
+                      <ProtectedRoute adminOnly={true}>
+                        <Reports />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/discounts"
+                    element={
+                      <ProtectedRoute adminOnly={true}>
+                        <Discounts />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/events"
+                    element={
+                      <ProtectedRoute>
+                        <Events />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/room-types"
+                    element={
+                      <ProtectedRoute adminOnly={true}>
+                        <RoomTypes />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teams"
+                    element={
+                      <ProtectedRoute adminOnly={true}>
+                        <Teams />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/user-management"
+                    element={
+                      <ProtectedRoute adminOnly={true}>
+                        <UserManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/room-management"
+                    element={
+                      <ProtectedRoute adminOnly={true}>
+                        <RoomManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/room-assignments"
+                    element={
+                      <ProtectedRoute adminOnly={true}>
+                        <RoomAssignmentsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="*" element={<Navigate to="/signin" replace />} />
+                </Routes>
+              </PageTrackingWrapper>
             </BrowserRouter>
           </TooltipProvider>
         </SupabaseAuthProvider>

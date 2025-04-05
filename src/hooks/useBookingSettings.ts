@@ -24,8 +24,24 @@ export const useBookingSettings = () => {
         return { blockEnabled: true }; // Default to enabled if there's an error
       }
 
+      // Safely parse the value field which could be a JSON object or string
+      let enabled = true; // Default value
+      try {
+        // Check if data.value is a string that needs parsing
+        if (typeof data.value === 'string') {
+          const parsed = JSON.parse(data.value);
+          enabled = parsed.enabled ?? true;
+        } 
+        // Check if data.value is already an object
+        else if (data.value && typeof data.value === 'object') {
+          enabled = data.value.enabled ?? true;
+        }
+      } catch (e) {
+        console.error('Error parsing booking settings:', e);
+      }
+
       return { 
-        blockEnabled: data?.value?.enabled ?? true 
+        blockEnabled: enabled
       };
     }
   });
