@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Users } from "lucide-react";
+import { ExternalLink, Mail, Users, ChevronDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Invoice } from "@/types/invoice";
 import { useState } from "react";
@@ -16,6 +16,12 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { InvoiceCard } from "./InvoiceCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface InvoiceTableProps {
   invoices: Invoice[];
@@ -62,9 +68,13 @@ export const InvoiceTable = ({
     }
   };
 
-  const handleSendReminder = async (invoice: Invoice) => {
+  const handleSendReminder = async (invoice: Invoice, reminderType: 'payment' | 'housing' = 'payment') => {
     try {
       setLoadingInvoiceId(invoice.id);
+      
+      const emailSubject = reminderType === 'payment' 
+        ? "Reminder to Pay Your Zuitzerland Invoice"
+        : "Complete Your Housing Preferences for Zuitzerland";
       
       const response = await supabase.functions.invoke('send-email-reminder', {
         body: {
@@ -74,7 +84,8 @@ export const InvoiceTable = ({
           lastName: invoice.last_name,
           invoiceAmount: invoice.price,
           dueDate: formatDateWithYear(invoice.due_date),
-          paymentLink: invoice.payment_link
+          paymentLink: invoice.payment_link,
+          reminderType: reminderType
         }
       });
 
@@ -84,7 +95,7 @@ export const InvoiceTable = ({
 
       toast({
         title: "Reminder Sent",
-        description: `Payment reminder sent to ${invoice.email}`,
+        description: `${reminderType === 'payment' ? 'Payment' : 'Housing preferences'} reminder sent to ${invoice.email}`,
       });
     } catch (error) {
       console.error('Error sending reminder:', error);
@@ -236,15 +247,32 @@ export const InvoiceTable = ({
                       </Button>
                       
                       {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
-                        <Button
-                          onClick={() => handleSendReminder(invoice)}
-                          variant="outline"
-                          size="sm"
-                          disabled={loadingInvoiceId === invoice.id}
-                          className="flex items-center gap-2"
-                        >
-                          {loadingInvoiceId === invoice.id ? 'Sending...' : 'Reminder'} <Mail className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={loadingInvoiceId === invoice.id}
+                              className="flex items-center gap-2"
+                            >
+                              Email Reminders <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => handleSendReminder(invoice, 'payment')}
+                              disabled={loadingInvoiceId === invoice.id}
+                            >
+                              Invoice Payment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleSendReminder(invoice, 'housing')}
+                              disabled={loadingInvoiceId === invoice.id}
+                            >
+                              Housing Preferences
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                       
                       {invoice.status === 'paid' && invoice.profile_id && (

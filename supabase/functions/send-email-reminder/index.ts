@@ -11,6 +11,7 @@ interface EmailReminderRequest {
   dueDate: string;
   paymentLink: string;
   isNewBooking?: boolean; // Added to differentiate between new bookings and reminders
+  reminderType?: 'payment' | 'housing'; // Added to differentiate between payment and housing reminders
 }
 
 serve(async (req) => {
@@ -20,7 +21,7 @@ serve(async (req) => {
   }
 
   try {
-    const { invoiceId, email, firstName, lastName, invoiceAmount, dueDate, paymentLink, isNewBooking } = 
+    const { invoiceId, email, firstName, lastName, invoiceAmount, dueDate, paymentLink, isNewBooking, reminderType = 'payment' } = 
       await req.json() as EmailReminderRequest;
 
     if (!invoiceId || !email) {
@@ -52,15 +53,25 @@ serve(async (req) => {
       }
     ];
 
-    // Determine the subject based on whether this is a new booking or reminder
-    const subject = isNewBooking 
-      ? "Your Zuitzerland Booking Confirmation" 
-      : "Reminder to Pay Your Zuitzerland Invoice";
+    // Determine the subject based on the type of email being sent
+    let subject, templateName;
+    
+    if (isNewBooking) {
+      subject = "Your Zuitzerland Booking Confirmation";
+      templateName = "lock-it-in";
+    } else if (reminderType === 'housing') {
+      subject = "Complete Your Housing Preferences for Zuitzerland";
+      templateName = "housing-preferences";
+    } else {
+      // Default to payment reminder
+      subject = "Reminder to Pay Your Zuitzerland Invoice";
+      templateName = "lock-it-in";
+    }
 
     // Prepare the data for Mailchimp API with the specified structure
     const mailchimpData = {
       key: apiKey,
-      template_name: "lock-it-in", // Using the requested template
+      template_name: templateName,
       template_content: [], // For transactional emails, this is often empty
       message: {
         to: recipients,
@@ -84,7 +95,12 @@ serve(async (req) => {
       }
     };
 
-    const emailType = isNewBooking ? "booking confirmation" : "reminder";
+    const emailType = isNewBooking 
+      ? "booking confirmation" 
+      : reminderType === 'housing'
+        ? "housing preferences reminder"
+        : "payment reminder";
+    
     console.log(`Sending ${emailType} email to:`, email);
     
     // Call Mailchimp Transactional API (Mandrill)
@@ -140,7 +156,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: isNewBooking ? "Booking confirmation email sent successfully" : "Email reminder sent successfully" 
+        message: `${emailType} email sent successfully`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

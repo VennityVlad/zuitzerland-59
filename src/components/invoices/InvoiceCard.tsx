@@ -3,13 +3,19 @@ import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Users, Calendar } from "lucide-react";
+import { ExternalLink, Mail, Users, Calendar, ChevronDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface InvoiceCardProps {
   invoice: Invoice;
   onPaymentClick: (paymentLink: string) => void;
-  onSendReminder?: (invoice: Invoice) => void;
+  onSendReminder?: (invoice: Invoice, reminderType: 'payment' | 'housing') => void;
   onSendGuildInvite?: (invoice: Invoice, profileId: string) => void;
   isLoading?: boolean;
   isGuildInviteLoading?: boolean;
@@ -114,15 +120,32 @@ export const InvoiceCard = ({
 
       <CardFooter className="flex gap-2 justify-end">
         {invoice.status !== 'paid' && invoice.status !== 'cancelled' && onSendReminder && (
-          <Button
-            onClick={() => onSendReminder(invoice)}
-            variant="outline"
-            size="sm"
-            disabled={isLoading}
-            className="flex items-center gap-2"
-          >
-            {isLoading ? 'Sending...' : 'Reminder'} <Mail className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isLoading}
+                className="flex items-center gap-2"
+              >
+                Email Reminders <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={() => onSendReminder(invoice, 'payment')}
+                disabled={isLoading}
+              >
+                Invoice Payment
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onSendReminder(invoice, 'housing')}
+                disabled={isLoading}
+              >
+                Housing Preferences
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         
         {showGuildInviteButton && (
