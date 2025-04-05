@@ -34,7 +34,15 @@ export const useBookingSettings = () => {
         } 
         // Check if data.value is already an object
         else if (data.value && typeof data.value === 'object') {
-          enabled = data.value.enabled ?? true;
+          // Check if it's an array (which doesn't have .enabled property)
+          if (Array.isArray(data.value)) {
+            enabled = true; // Default for array case
+          } else {
+            // It's an object, but we need to check if it has 'enabled' property
+            // Use type assertion to tell TypeScript this is a record with string keys
+            const valueObj = data.value as Record<string, any>;
+            enabled = valueObj.enabled ?? true;
+          }
         }
       } catch (e) {
         console.error('Error parsing booking settings:', e);
