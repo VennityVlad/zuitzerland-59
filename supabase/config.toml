@@ -1,26 +1,32 @@
 
-[auth]
-enable_signup = true
+project_id = "cluqnvnxjexrhhgddoxu"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
 
 [functions]
-[functions.create-invoice]
-verify_jwt = false
-
-[functions.create-profile-from-airtable]
-verify_jwt = false
-
-[functions.get-secret]
+[functions.import-apartments]
 verify_jwt = true
 
-[functions.send-email-reminder]
+[functions.import-check]
 verify_jwt = true
-
-[functions.add-to-privy-allowlist]
-verify_jwt = false
-
-[functions.fetch-request-finance-invoice]
-verify_jwt = true
-
-[functions.send-guild-invitation]
-verify_jwt = true
-

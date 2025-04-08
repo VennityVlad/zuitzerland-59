@@ -1,327 +1,73 @@
+import "./App.css";
+import { useEffect } from "react";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { PrivyProvider } from "@privy-io/react-auth";
-import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
-import Index from "./pages/Index";
-import SignIn from "./pages/SignIn";
-import SupabaseSignIn from "./pages/SupabaseSignIn";
-import NotFound from "./pages/NotFound";
-import Profile from "./pages/Profile";
-import HousingPreferences from "./pages/HousingPreferences";
-import Invoices from "./pages/Invoices";
-import Discounts from "./pages/Discounts";
-import RoomTypes from "./pages/RoomTypes";
-import Reports from "./pages/Reports";
-import Book from "./pages/Book";
-import Teams from "./pages/Teams";
-import UserManagement from "./pages/UserManagement";
-import Events from "./pages/Events";
-import RoomManagement from "./pages/RoomManagement";
-import RoomAssignmentsPage from "./pages/rooms/RoomAssignmentsPage";
-import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "./components/ui/use-toast";
-import { useIsMobile } from "./hooks/use-mobile";
-import { useNavigate } from "react-router-dom";
+
+// Regular pages
+import Index from "./pages/Index";
+import Book from "./pages/Book";
+import SignIn from "./pages/SignIn";
+import Profile from "./pages/Profile";
+import Invoices from "./pages/Invoices";
+import NotFound from "./pages/NotFound";
+import Reports from "./pages/Reports";
+import RoomTypes from "./pages/RoomTypes";
+import RoomManagement from "./pages/RoomManagement";
+import ImportApartments from "./pages/ImportApartments";
+import UserManagement from "./pages/UserManagement";
+import Teams from "./pages/Teams";
+import RoomAssignmentsPage from "./pages/rooms/RoomAssignmentsPage";
+import Events from "./pages/Events";
+import Discounts from "./pages/Discounts";
+import HousingPreferences from "./pages/HousingPreferences";
+import SupabaseSignIn from "./pages/SupabaseSignIn";
+
+import NavMenu from "./components/NavMenu";
+import BottomNav from "./components/BottomNav";
 import { usePageTracking } from "./hooks/usePageTracking";
 
-const queryClient = new QueryClient();
-
-const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
+function App() {
   usePageTracking();
-  return <>{children}</>;
-};
-
-const ProtectedRoute = ({ 
-  children, 
-  adminOnly = false 
-}: { 
-  children: React.ReactNode;
-  adminOnly?: boolean;
-}) => {
-  const { authenticated, ready } = usePrivy();
-  const isMobile = useIsMobile();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = usePrivy();
+  const location = useLocation();
   const navigate = useNavigate();
-  
+  const { ready, authenticated } = usePrivy();
+
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user?.id) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('privy_id', user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-        
-        setIsAdmin(data?.role === 'admin');
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (user?.id) {
-      checkAdminStatus();
-    } else {
-      setIsLoading(false);
+    if (ready && !authenticated && location.pathname !== "/signin") {
+      console.log("App - Not authenticated");
+      navigate("/signin");
     }
-  }, [user?.id]);
-
-  if (!ready || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-  
-  if (!authenticated) {
-    return <Navigate to="/signin" replace />;
-  }
-
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/book" replace />;
-  }
+  }, [ready, authenticated, location, navigate]);
 
   return (
-    <div className={`flex min-h-screen ${isMobile ? 'bg-white' : 'bg-secondary/30'}`}>
+    <>
       <NavMenu />
-      <div className="flex-1 relative">
-        {children}
-      </div>
-    </div>
+
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/book" element={<Book />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/invoices/*" element={<Invoices />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/room-management" element={<RoomManagement />} />
+        <Route path="/apartments/import" element={<ImportApartments />} />
+        <Route path="/user-management" element={<UserManagement />} />
+        <Route path="/teams" element={<Teams />} />
+        <Route path="/room-types" element={<RoomTypes />} />
+        <Route path="/room-assignments" element={<RoomAssignmentsPage />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/discounts" element={<Discounts />} />
+        <Route path="/housing-preferences" element={<HousingPreferences />} />
+        <Route path="/supabase-signin" element={<SupabaseSignIn />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+
+      <BottomNav />
+      <Toaster />
+    </>
   );
-};
-
-const App = () => {
-  const [privyAppId, setPrivyAppId] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const fetchPrivyAppId = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('get-secret', {
-          body: { secretName: 'PRIVY_APP_ID' }
-        });
-
-        if (error) {
-          console.error('Error fetching Privy App ID:', error);
-          setError('Failed to fetch authentication configuration');
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to fetch authentication configuration"
-          });
-          return;
-        }
-
-        if (!data?.secret) {
-          setError('Authentication configuration is missing');
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Authentication configuration is missing"
-          });
-          return;
-        }
-
-        setPrivyAppId(data.secret);
-      } catch (error) {
-        console.error('Error in fetchPrivyAppId:', error);
-        setError('Failed to initialize authentication');
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to initialize authentication"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPrivyAppId();
-  }, [toast]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error || !privyAppId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-red-600">{error || 'Authentication configuration is missing'}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <PrivyProvider
-        appId={privyAppId}
-        config={{
-          loginMethods: ['email'],
-          appearance: {
-            theme: 'light',
-            accentColor: '#1a365d',
-            logo: '/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png',
-          },
-          embeddedWallets: {
-            createOnLogin: 'users-without-wallets'
-          }
-        }}
-      >
-        <SupabaseAuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <PageTrackingWrapper>
-                <Routes>
-                  <Route path="/supabase-signin" element={<SupabaseSignIn />} />
-                  
-                  <Route path="/signin" element={<SignIn />} />
-                  <Route
-                    path="/"
-                    element={
-                      <ProtectedRoute>
-                        <Index />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/book"
-                    element={
-                      <ProtectedRoute>
-                        <Book />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/housing-preferences"
-                    element={
-                      <ProtectedRoute>
-                        <HousingPreferences />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/invoices"
-                    element={
-                      <ProtectedRoute adminOnly={true}>
-                        <Invoices />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/reports"
-                    element={
-                      <ProtectedRoute adminOnly={true}>
-                        <Reports />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/discounts"
-                    element={
-                      <ProtectedRoute adminOnly={true}>
-                        <Discounts />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/events"
-                    element={
-                      <ProtectedRoute>
-                        <Events />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/room-types"
-                    element={
-                      <ProtectedRoute adminOnly={true}>
-                        <RoomTypes />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/teams"
-                    element={
-                      <ProtectedRoute adminOnly={true}>
-                        <Teams />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/user-management"
-                    element={
-                      <ProtectedRoute adminOnly={true}>
-                        <UserManagement />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/room-management"
-                    element={
-                      <ProtectedRoute adminOnly={true}>
-                        <RoomManagement />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/room-assignments"
-                    element={
-                      <ProtectedRoute adminOnly={true}>
-                        <RoomAssignmentsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path="*" element={<Navigate to="/signin" replace />} />
-                </Routes>
-              </PageTrackingWrapper>
-            </BrowserRouter>
-          </TooltipProvider>
-        </SupabaseAuthProvider>
-      </PrivyProvider>
-    </QueryClientProvider>
-  );
-};
+}
 
 export default App;
