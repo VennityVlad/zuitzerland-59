@@ -341,7 +341,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)]">
           {/* Profile Selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -449,7 +449,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             </Select>
           </div>
           
-          {/* Date Range Selection - Fixed layout */}
+          {/* Date Range Selection */}
           <div className="space-y-2">
             <Label>Date Range</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -524,23 +524,10 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             />
           </div>
           
-          {/* Action Buttons - Fixed alignment */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-4">
-            <div>
-              {assignment && (
-                <Button
-                  variant="destructive"
-                  onClick={deleteAssignment}
-                  disabled={saving}
-                  className="w-full sm:w-auto"
-                >
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Delete Assignment
-                </Button>
-              )}
-            </div>
-            
-            <div className="flex flex-col-reverse sm:flex-row gap-2">
+          {/* Action Buttons - Updated layout with Delete button in a separate row */}
+          <div className="flex flex-col space-y-4">
+            {/* Cancel/Update buttons */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
               <Button 
                 variant="outline" 
                 onClick={onClose} 
@@ -558,6 +545,21 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
                 {assignment ? "Update" : "Create"} Assignment
               </Button>
             </div>
+            
+            {/* Delete button in a separate row */}
+            {assignment && (
+              <div className="border-t pt-4">
+                <Button
+                  variant="destructive"
+                  onClick={deleteAssignment}
+                  disabled={saving}
+                  className="w-full sm:w-auto"
+                >
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Delete Assignment
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isSameDay, parseISO } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
@@ -10,7 +9,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import EditAssignmentPanel from "./EditAssignmentPanel";
 import { ChevronLeft, ChevronRight, Trash2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 
 type Profile = {
   id: string;
@@ -65,7 +63,21 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [resizingAssignment, setResizingAssignment] = useState<{id: string, direction: 'left' | 'right'} | null>(null);
+  const [resizingState, setResizingState] = useState<{
+    id: string | null;
+    direction: 'left' | 'right' | null;
+    active: boolean;
+    initialMouseX: number | null;
+    initialStartDate: Date | null;
+    initialEndDate: Date | null;
+  }>({
+    id: null,
+    direction: null,
+    active: false,
+    initialMouseX: null,
+    initialStartDate: null,
+    initialEndDate: null
+  });
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [newAssignmentData, setNewAssignmentData] = useState<{
@@ -79,9 +91,8 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
   
   const { toast } = useToast();
 
-  // Generate array of dates for the week
   const dates = useMemo(() => {
-    const weekStart = startOfWeek(startDate, { weekStartsOn: 1 }); // Week starts on Monday
+    const weekStart = startOfWeek(startDate, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(startDate, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: weekStart, end: weekEnd });
   }, [startDate]);
@@ -89,6 +100,18 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (resizingState.active) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingState.active]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -177,10 +200,8 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       
       console.log("Assignments fetched:", assignmentsData?.length || 0);
       
-      // Process the assignments to add team color
       const processedAssignments = assignmentsData?.map(assignment => {
         if (assignment.profile && assignment.profile.team) {
-          // Generate a consistent color based on team ID
           const color = generateTeamColor(assignment.profile.team.id);
           return {
             ...assignment,
@@ -209,57 +230,49 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
     }
   };
 
-  // Function to generate a consistent color based on team ID
   const generateTeamColor = (teamId: string): string => {
-    // Simple hash function to generate a consistent color
     let hash = 0;
     for (let i = 0; i < teamId.length; i++) {
       hash = teamId.charCodeAt(i) + ((hash << 5) - hash);
     }
     
-    // Convert to hex color
     const colors = [
-      '#4F46E5', // indigo-600
-      '#EC4899', // pink-600
-      '#10B981', // emerald-600
-      '#F59E0B', // amber-500
-      '#3B82F6', // blue-500
-      '#8B5CF6', // violet-500
-      '#EF4444', // red-500
-      '#14B8A6', // teal-500
-      '#F97316', // orange-500
-      '#6366F1', // indigo-500
+      '#4F46E5',
+      '#EC4899',
+      '#10B981',
+      '#F59E0B',
+      '#3B82F6',
+      '#8B5CF6',
+      '#EF4444',
+      '#14B8A6',
+      '#F97316',
+      '#6366F1',
     ];
     
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // Get housing preference details for tooltips
   const getHousingPreferenceDetails = (profile: Profile): React.ReactNode => {
     if (!profile.housing_preferences) {
       return <p className="text-xs italic">No housing preferences set</p>;
     }
     
-    // Map of preference keys to display names
     const preferenceLabels: Record<string, string> = {
       sleepSchedule: "Sleep Schedule",
       noisePreference: "Noise Preference",
       cleanliness: "Cleanliness",
       personality: "Personality Type",
-      // Add more as needed
     };
     
-    // Format values for display
     const formatValue = (key: string, value: any): string => {
       if (Array.isArray(value)) {
         return value.join(", ");
       }
-      // Format camelCase or snake_case to Title Case
       if (typeof value === "string") {
         return value
-          .replace(/([A-Z])/g, ' $1') // camelCase to space separated
-          .replace(/_/g, ' ') // snake_case to space separated
-          .replace(/^\w/, c => c.toUpperCase()); // capitalize first letter
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/_/g, ' ')
+          .replace(/^\w/, c => c.toUpperCase());
       }
       return String(value);
     };
@@ -269,8 +282,8 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
         {Object.entries(profile.housing_preferences).map(([key, value]) => {
           if (!value) return null;
           const label = preferenceLabels[key] || key
-            .replace(/([A-Z])/g, ' $1') // camelCase to space separated
-            .replace(/^\w/, c => c.toUpperCase()); // capitalize first letter
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^\w/, c => c.toUpperCase());
           
           return (
             <div key={key}>
@@ -370,7 +383,6 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       const profile = JSON.parse(profileData);
       console.log("Drop event:", { apartmentId, bedroomId, bedId, date, profile });
       
-      // Create a one-week assignment by default
       createAssignment(
         profile.id,
         apartmentId,
@@ -403,32 +415,118 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
 
   const handleResizeStart = (e: React.MouseEvent, assignmentId: string, direction: 'left' | 'right') => {
     e.stopPropagation();
-    setResizingAssignment({ id: assignmentId, direction });
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleResizeMove = (e: React.MouseEvent, date: Date) => {
     e.preventDefault();
-    if (!resizingAssignment) return;
-
-    const assignment = assignments.find(a => a.id === resizingAssignment.id);
+    
+    const assignment = assignments.find(a => a.id === assignmentId);
     if (!assignment) return;
 
-    const currentStartDate = parseISO(assignment.start_date);
-    const currentEndDate = parseISO(assignment.end_date);
-
-    if (resizingAssignment.direction === 'left') {
-      if (date > currentEndDate) return;
-      updateAssignment(assignment.id, date, currentEndDate);
-    } else {
-      if (date < currentStartDate) return;
-      updateAssignment(assignment.id, currentStartDate, date);
-    }
+    setResizingState({
+      id: assignmentId,
+      direction,
+      active: true,
+      initialMouseX: e.clientX,
+      initialStartDate: parseISO(assignment.start_date),
+      initialEndDate: parseISO(assignment.end_date)
+    });
   };
 
-  const handleMouseUp = () => {
-    setResizingAssignment(null);
-    document.removeEventListener('mouseup', handleMouseUp);
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!resizingState.active || !resizingState.initialMouseX || 
+        !resizingState.initialStartDate || !resizingState.initialEndDate || 
+        !resizingState.id || !resizingState.direction) {
+      return;
+    }
+
+    e.preventDefault();
+    
+    const dayWidth = 100;
+    const deltaX = e.clientX - resizingState.initialMouseX;
+    const dayDelta = Math.round(deltaX / dayWidth);
+    
+    if (dayDelta === 0) return;
+
+    const assignment = assignments.find(a => a.id === resizingState.id);
+    if (!assignment) return;
+    
+    let newStartDate = resizingState.initialStartDate;
+    let newEndDate = resizingState.initialEndDate;
+    
+    if (resizingState.direction === 'left') {
+      newStartDate = addDays(resizingState.initialStartDate, dayDelta);
+      if (newStartDate >= newEndDate) {
+        newStartDate = addDays(newEndDate, -1);
+      }
+    } else {
+      newEndDate = addDays(resizingState.initialEndDate, dayDelta);
+      if (newEndDate <= newStartDate) {
+        newEndDate = addDays(newStartDate, 1);
+      }
+    }
+    
+    const updatedAssignments = assignments.map(a => {
+      if (a.id === resizingState.id) {
+        return {
+          ...a,
+          start_date: newStartDate.toISOString().split('T')[0],
+          end_date: newEndDate.toISOString().split('T')[0]
+        };
+      }
+      return a;
+    });
+    
+    setAssignments(updatedAssignments);
+  };
+
+  const handleMouseUp = async () => {
+    if (!resizingState.active || !resizingState.id) {
+      setResizingState({
+        id: null,
+        direction: null,
+        active: false,
+        initialMouseX: null,
+        initialStartDate: null,
+        initialEndDate: null
+      });
+      return;
+    }
+    
+    const updatedAssignment = assignments.find(a => a.id === resizingState.id);
+    if (updatedAssignment) {
+      try {
+        const { error } = await supabase
+          .from('room_assignments')
+          .update({
+            start_date: updatedAssignment.start_date,
+            end_date: updatedAssignment.end_date
+          })
+          .eq('id', resizingState.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Assignment updated",
+          description: "The assignment dates have been updated.",
+        });
+      } catch (error: any) {
+        console.error("Error updating assignment:", error);
+        toast({
+          variant: "destructive",
+          title: "Error updating assignment",
+          description: error.message,
+        });
+        
+        fetchData();
+      }
+    }
+    
+    setResizingState({
+      id: null,
+      direction: null,
+      active: false,
+      initialMouseX: null,
+      initialStartDate: null,
+      initialEndDate: null
+    });
   };
 
   const handleEditPanelClose = () => {
@@ -540,7 +638,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                           className="relative"
                           style={{ 
                             gridColumn: `span ${displayDays}`,
-                            backgroundColor: `${teamColor}10` // Very light version of team color
+                            backgroundColor: `${teamColor}10`
                           }}
                         >
                           <TooltipProvider>
@@ -652,7 +750,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       </div>
 
       <Sheet open={isEditPanelOpen} onOpenChange={setIsEditPanelOpen}>
-        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+        <SheetContent className="w-full sm:w-[540px] overflow-y-auto">
           <EditAssignmentPanel 
             assignment={selectedAssignment} 
             initialData={newAssignmentData}
