@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -14,7 +13,7 @@ import { ImportInvoiceDialog } from "@/components/invoices/ImportInvoiceDialog";
 import { InvoiceMassActions } from "@/components/invoices/InvoiceMassActions";
 import { useInvoiceFilters } from "./hooks/useInvoiceFilters";
 import { useFilteredInvoices } from "./hooks/useFilteredInvoices";
-import { useAdminStatus } from "./hooks/useAdminStatus";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useProfileInvitationStatus } from "./hooks/useProfileInvitationStatus";
 import { useInvoiceExport } from "./hooks/useInvoiceExport";
 import { InvoiceFilterPanel } from "./components/InvoiceFilterPanel";
@@ -25,7 +24,6 @@ const InvoicesPage = () => {
   const isMobile = useIsMobile();
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
-  // Custom hooks
   const { isAdmin, isLoading: isAdminLoading } = useAdminStatus(user?.id);
   const { invoices, isLoading: invoicesLoading, refetchInvoices } = useInvoices(user?.id, isAdmin);
   const { filters, handleFilterChange, clearFilters } = useInvoiceFilters();
@@ -37,7 +35,6 @@ const InvoicesPage = () => {
     window.open(paymentLink, '_blank');
   };
 
-  // Render action buttons for the page title
   const renderActionButtons = () => {
     if (!isAdmin) return null;
 
@@ -135,7 +132,6 @@ const InvoicesPage = () => {
   );
 };
 
-// Helper component for empty invoice state
 const EmptyInvoiceState = ({ hasFilters, onClearFilters }: { hasFilters: boolean, onClearFilters: () => void }) => {
   if (hasFilters) {
     return (

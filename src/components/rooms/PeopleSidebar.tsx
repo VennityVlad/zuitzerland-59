@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -54,16 +53,33 @@ const PeopleSidebar = () => {
           avatar_url, 
           email,
           team_id,
-          team:teams(id, name, color, logo_url)
+          team:teams(id, name, logo_url)
         `)
         .order('full_name');
       
       if (error) throw error;
-      setProfiles(data || []);
+      
+      // Assign default color for teams since the column doesn't exist in DB
+      const profilesWithTeamColors = data?.map(profile => {
+        if (profile.team) {
+          // Generate a consistent color based on team ID
+          const color = generateTeamColor(profile.team.id);
+          return {
+            ...profile,
+            team: {
+              ...profile.team,
+              color: color
+            }
+          };
+        }
+        return profile;
+      }) as Profile[];
+      
+      setProfiles(profilesWithTeamColors || []);
       
       // Initially expand all teams
       const teamsExpanded: Record<string, boolean> = {};
-      data?.forEach(profile => {
+      profilesWithTeamColors?.forEach(profile => {
         if (profile.team_id) {
           teamsExpanded[profile.team_id] = true;
         }
@@ -79,6 +95,31 @@ const PeopleSidebar = () => {
       });
       setLoading(false);
     }
+  };
+
+  // Function to generate a consistent color based on team ID
+  const generateTeamColor = (teamId: string): string => {
+    // Simple hash function to generate a consistent color
+    let hash = 0;
+    for (let i = 0; i < teamId.length; i++) {
+      hash = teamId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Convert to hex color
+    const colors = [
+      '#4F46E5', // indigo-600
+      '#EC4899', // pink-600
+      '#10B981', // emerald-600
+      '#F59E0B', // amber-500
+      '#3B82F6', // blue-500
+      '#8B5CF6', // violet-500
+      '#EF4444', // red-500
+      '#14B8A6', // teal-500
+      '#F97316', // orange-500
+      '#6366F1', // indigo-500
+    ];
+    
+    return colors[Math.abs(hash) % colors.length];
   };
 
   const teams = useMemo(() => {
@@ -201,7 +242,7 @@ const PeopleSidebar = () => {
               onClick={() => toggleTeam(team.id)}
             >
               <div className="flex items-center gap-2">
-                <TeamBadge team={team} size="sm" />
+                <TeamBadge team={team} />
                 <span className="font-medium">{team.name}</span>
               </div>
               <div className="flex items-center gap-1">

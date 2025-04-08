@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isSameDay, parseISO } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
@@ -16,6 +15,8 @@ type Profile = {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
+  email: string | null;
+  team_id: string | null;
   team: {
     id: string;
     name: string;
@@ -33,18 +34,7 @@ type Assignment = {
   start_date: string;
   end_date: string;
   notes: string | null;
-  profile: {
-    full_name: string | null;
-    avatar_url: string | null;
-    email: string | null;
-    team_id: string | null;
-    team: {
-      id: string;
-      name: string;
-      color: string;
-      logo_url: string | null;
-    } | null;
-  };
+  profile: Profile;
 };
 
 type Apartment = {
@@ -173,7 +163,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
             avatar_url,
             email,
             team_id,
-            team:teams(id, name, color, logo_url)
+            team:teams(id, name, logo_url)
           )
         `);
       
@@ -183,7 +173,27 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       }
       
       console.log("Assignments fetched:", assignmentsData?.length || 0);
-      setAssignments(assignmentsData || []);
+      
+      // Process the assignments to add team color
+      const processedAssignments = assignmentsData?.map(assignment => {
+        if (assignment.profile && assignment.profile.team) {
+          // Generate a consistent color based on team ID
+          const color = generateTeamColor(assignment.profile.team.id);
+          return {
+            ...assignment,
+            profile: {
+              ...assignment.profile,
+              team: {
+                ...assignment.profile.team,
+                color: color
+              }
+            }
+          };
+        }
+        return assignment;
+      }) as Assignment[];
+      
+      setAssignments(processedAssignments || []);
       setLoading(false);
     } catch (error: any) {
       console.error("Error in fetchData:", error);
@@ -194,6 +204,31 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       });
       setLoading(false);
     }
+  };
+
+  // Function to generate a consistent color based on team ID
+  const generateTeamColor = (teamId: string): string => {
+    // Simple hash function to generate a consistent color
+    let hash = 0;
+    for (let i = 0; i < teamId.length; i++) {
+      hash = teamId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Convert to hex color
+    const colors = [
+      '#4F46E5', // indigo-600
+      '#EC4899', // pink-600
+      '#10B981', // emerald-600
+      '#F59E0B', // amber-500
+      '#3B82F6', // blue-500
+      '#8B5CF6', // violet-500
+      '#EF4444', // red-500
+      '#14B8A6', // teal-500
+      '#F97316', // orange-500
+      '#6366F1', // indigo-500
+    ];
+    
+    return colors[Math.abs(hash) % colors.length];
   };
 
   const createAssignment = (profileId: string, apartmentId: string, bedroomId: string, bedId: string, startDate: Date, endDate: Date) => {
