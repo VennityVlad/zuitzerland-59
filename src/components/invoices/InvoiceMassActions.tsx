@@ -19,12 +19,18 @@ export const InvoiceMassActions = ({
   profileInvitationStatus = {}
 }: InvoiceMassActionsProps) => {
   const { toast } = useToast();
-  const [isRemindersLoading, setIsRemindersLoading] = useState(false);
+  const [isPaymentRemindersLoading, setIsPaymentRemindersLoading] = useState(false);
+  const [isHousingRemindersLoading, setIsHousingRemindersLoading] = useState(false);
   const [isGuildInvitesLoading, setIsGuildInvitesLoading] = useState(false);
   
-  // Filter invoices for reminders (only pending/overdue)
-  const reminderEligibleInvoices = invoices.filter(
+  // Filter invoices for payment reminders (only pending/overdue)
+  const paymentReminderEligibleInvoices = invoices.filter(
     (invoice) => invoice.status !== 'paid' && invoice.status !== 'cancelled'
+  );
+  
+  // Filter invoices for housing preferences reminders (only paid)
+  const housingReminderEligibleInvoices = invoices.filter(
+    (invoice) => invoice.status === 'paid'
   );
   
   // Filter invoices for guild invites (only paid with profile_id and not already invited)
@@ -41,22 +47,22 @@ export const InvoiceMassActions = ({
     return format(parseISO(dateString), 'MMM d, yyyy');
   };
 
-  const handleSendMassReminders = async () => {
-    if (reminderEligibleInvoices.length === 0) {
+  const handleSendMassPaymentReminders = async () => {
+    if (paymentReminderEligibleInvoices.length === 0) {
       toast({
         title: "No Eligible Invoices",
-        description: "There are no pending or overdue invoices to send reminders to.",
+        description: "There are no pending or overdue invoices to send payment reminders to.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      setIsRemindersLoading(true);
+      setIsPaymentRemindersLoading(true);
       let successCount = 0;
       let errorCount = 0;
 
-      for (const invoice of reminderEligibleInvoices) {
+      for (const invoice of paymentReminderEligibleInvoices) {
         try {
           const response = await supabase.functions.invoke('send-email-reminder', {
             body: {
@@ -66,46 +72,116 @@ export const InvoiceMassActions = ({
               lastName: invoice.last_name,
               invoiceAmount: invoice.price,
               dueDate: formatDateWithYear(invoice.due_date),
-              paymentLink: invoice.payment_link
+              paymentLink: invoice.payment_link,
+              reminderType: 'payment'
             }
           });
 
           if (response.error) {
-            console.error(`Error sending reminder for invoice ${invoice.id}:`, response.error);
+            console.error(`Error sending payment reminder for invoice ${invoice.id}:`, response.error);
             errorCount++;
           } else {
             successCount++;
           }
         } catch (error) {
-          console.error(`Exception sending reminder for invoice ${invoice.id}:`, error);
+          console.error(`Exception sending payment reminder for invoice ${invoice.id}:`, error);
           errorCount++;
         }
       }
 
       if (successCount > 0) {
         toast({
-          title: "Reminders Sent",
-          description: `Successfully sent ${successCount} reminders${errorCount > 0 ? ` (${errorCount} failed)` : ''}.`,
+          title: "Payment Reminders Sent",
+          description: `Successfully sent ${successCount} payment reminders${errorCount > 0 ? ` (${errorCount} failed)` : ''}.`,
           variant: successCount > 0 ? "default" : "destructive",
         });
       } else {
         toast({
-          title: "Failed to Send Reminders",
-          description: "No reminders were sent successfully.",
+          title: "Failed to Send Payment Reminders",
+          description: "No payment reminders were sent successfully.",
           variant: "destructive",
         });
       }
 
       if (onComplete) onComplete();
     } catch (error) {
-      console.error('Error sending mass reminders:', error);
+      console.error('Error sending mass payment reminders:', error);
       toast({
-        title: "Failed to Send Reminders",
+        title: "Failed to Send Payment Reminders",
         description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
     } finally {
-      setIsRemindersLoading(false);
+      setIsPaymentRemindersLoading(false);
+    }
+  };
+
+  const handleSendMassHousingReminders = async () => {
+    if (housingReminderEligibleInvoices.length === 0) {
+      toast({
+        title: "No Eligible Invoices",
+        description: "There are no paid invoices to send housing preference reminders to.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsHousingRemindersLoading(true);
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const invoice of housingReminderEligibleInvoices) {
+        try {
+          const response = await supabase.functions.invoke('send-email-reminder', {
+            body: {
+              invoiceId: invoice.id,
+              email: invoice.email,
+              firstName: invoice.first_name,
+              lastName: invoice.last_name,
+              invoiceAmount: invoice.price,
+              dueDate: formatDateWithYear(invoice.due_date),
+              paymentLink: invoice.payment_link,
+              reminderType: 'housing'
+            }
+          });
+
+          if (response.error) {
+            console.error(`Error sending housing reminder for invoice ${invoice.id}:`, response.error);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (error) {
+          console.error(`Exception sending housing reminder for invoice ${invoice.id}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "Housing Preferences Reminders Sent",
+          description: `Successfully sent ${successCount} housing reminders${errorCount > 0 ? ` (${errorCount} failed)` : ''}.`,
+          variant: successCount > 0 ? "default" : "destructive",
+        });
+      } else {
+        toast({
+          title: "Failed to Send Housing Reminders",
+          description: "No housing preference reminders were sent successfully.",
+          variant: "destructive",
+        });
+      }
+
+      if (onComplete) onComplete();
+    } catch (error) {
+      console.error('Error sending mass housing reminders:', error);
+      toast({
+        title: "Failed to Send Housing Reminders",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsHousingRemindersLoading(false);
     }
   };
 
@@ -180,12 +256,21 @@ export const InvoiceMassActions = ({
   return (
     <div className="flex flex-wrap gap-2 mb-4">
       <Button
-        onClick={handleSendMassReminders}
+        onClick={handleSendMassPaymentReminders}
         variant="secondary"
-        disabled={isRemindersLoading || reminderEligibleInvoices.length === 0}
+        disabled={isPaymentRemindersLoading || paymentReminderEligibleInvoices.length === 0}
         className="flex items-center gap-2"
       >
-        {isRemindersLoading ? 'Sending...' : `Send Reminders (${reminderEligibleInvoices.length})`} <Mail className="h-4 w-4" />
+        {isPaymentRemindersLoading ? 'Sending...' : `Send Invoice Payment Reminders (${paymentReminderEligibleInvoices.length})`} <Mail className="h-4 w-4" />
+      </Button>
+      
+      <Button
+        onClick={handleSendMassHousingReminders}
+        variant="secondary"
+        disabled={isHousingRemindersLoading || housingReminderEligibleInvoices.length === 0}
+        className="flex items-center gap-2"
+      >
+        {isHousingRemindersLoading ? 'Sending...' : `Send Housing Preferences Reminders (${housingReminderEligibleInvoices.length})`} <Mail className="h-4 w-4" />
       </Button>
       
       <Button
