@@ -449,61 +449,66 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             </Select>
           </div>
           
-          {/* Date Range Selection */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Start Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>End Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    disabled={(date) => (
-                      startDate ? date < startDate : false
-                    )}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+          {/* Date Range Selection - Fixed layout */}
+          <div className="space-y-2">
+            <Label>Date Range</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Start Date</p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left truncate"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                      {startDate ? (
+                        <span className="truncate">{format(startDate, "MMMM d, yyyy")}</span>
+                      ) : (
+                        <span>Select start date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">End Date</p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left truncate"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                      {endDate ? (
+                        <span className="truncate">{format(endDate, "MMMM d, yyyy")}</span>
+                      ) : (
+                        <span>Select end date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      disabled={(date) => (
+                        startDate ? date < startDate : false
+                      )}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
           
@@ -519,14 +524,15 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             />
           </div>
           
-          {/* Action Buttons */}
-          <div className="flex justify-between">
+          {/* Action Buttons - Fixed alignment */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-4">
             <div>
               {assignment && (
                 <Button
                   variant="destructive"
                   onClick={deleteAssignment}
                   disabled={saving}
+                  className="w-full sm:w-auto"
                 >
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Delete Assignment
@@ -534,11 +540,20 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
               )}
             </div>
             
-            <div className="space-x-2">
-              <Button variant="outline" onClick={onClose} disabled={saving}>
+            <div className="flex flex-col-reverse sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                onClick={onClose} 
+                disabled={saving}
+                className="w-full sm:w-auto"
+              >
                 Cancel
               </Button>
-              <Button onClick={saveAssignment} disabled={saving}>
+              <Button 
+                onClick={saveAssignment} 
+                disabled={saving}
+                className="w-full sm:w-auto"
+              >
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {assignment ? "Update" : "Create"} Assignment
               </Button>
