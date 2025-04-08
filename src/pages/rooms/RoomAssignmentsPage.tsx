@@ -13,8 +13,9 @@ import AssignmentGridCalendar from "@/components/rooms/AssignmentGridCalendar";
 import PeopleSidebar from "@/components/rooms/PeopleSidebar";
 
 const RoomAssignmentsPage = () => {
+  // Set default start date to May 1, 2025
+  const [currentWeek, setCurrentWeek] = useState(new Date(2025, 4, 1));
   const [loading, setLoading] = useState(true);
-  const [currentWeek, setCurrentWeek] = useState(new Date());
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, authenticated, ready } = usePrivy();
@@ -86,7 +87,7 @@ const RoomAssignmentsPage = () => {
           <h2 className="text-2xl font-bold">Room Assignments</h2>
           
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="icon" onClick={() => setCurrentWeek(new Date())}>
+            <Button variant="outline" size="icon" onClick={() => setCurrentWeek(new Date(2025, 4, 1))}>
               <Calendar className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="icon" onClick={() => navigateWeek("prev")}>

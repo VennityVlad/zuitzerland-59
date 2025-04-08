@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useMemo } from "react";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isSameDay, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isSameDay, parseISO, parse } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -408,9 +409,13 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
     );
   };
 
-  const handleAssignmentClick = (assignment: Assignment) => {
-    setSelectedAssignment(assignment);
-    setIsEditPanelOpen(true);
+  const handleAssignmentClick = (assignment: Assignment, e: React.MouseEvent) => {
+    // Only open edit panel if this isn't during a resize operation
+    if (!resizingState.active) {
+      setSelectedAssignment(assignment);
+      setIsEditPanelOpen(true);
+    }
+    e.stopPropagation();
   };
 
   const handleResizeStart = (e: React.MouseEvent, assignmentId: string, direction: 'left' | 'right') => {
@@ -519,6 +524,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       }
     }
     
+    // Important: Don't open edit panel after resizing
     setResizingState({
       id: null,
       direction: null,
@@ -636,10 +642,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                         <div 
                           key={dateIndex}
                           className="relative"
-                          style={{ 
-                            gridColumn: `span ${displayDays}`,
-                            backgroundColor: `${teamColor}10`
-                          }}
+                          style={{ gridColumn: `span ${displayDays}` }}
                         >
                           <TooltipProvider>
                             <Tooltip>
@@ -647,7 +650,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                                 <div 
                                   className="absolute top-0 left-0 right-0 bottom-0 m-1 border rounded-md flex items-center justify-between cursor-pointer"
                                   style={{ borderColor: teamColor, backgroundColor: `${teamColor}30` }}
-                                  onClick={() => handleAssignmentClick(assignment)}
+                                  onClick={(e) => handleAssignmentClick(assignment, e)}
                                 >
                                   <div 
                                     className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
