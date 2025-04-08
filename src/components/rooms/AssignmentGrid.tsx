@@ -197,6 +197,7 @@ const AssignmentGrid = ({
             full_name, 
             avatar_url,
             email,
+            team_id,
             team:teams(id, name, logo_url)
           `)
           .in('id', paidProfileIds)
@@ -266,12 +267,20 @@ const AssignmentGrid = ({
               }
             }
           };
+        } else if (assignment.profile) {
+          return {
+            ...assignment,
+            profile: {
+              ...assignment.profile,
+              team: null
+            }
+          };
         }
         return assignment;
       });
       
       console.log("Assignments fetched:", assignmentsWithTeamColors?.length || 0);
-      setAssignments(assignmentsWithTeamColors || []);
+      setAssignments(assignmentsWithTeamColors as Assignment[] || []);
       setLoading(false);
     } catch (error: any) {
       console.error("Error in fetchData:", error);
