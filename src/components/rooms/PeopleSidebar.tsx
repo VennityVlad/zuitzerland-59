@@ -49,6 +49,31 @@ const PeopleSidebar = () => {
 
   const fetchProfiles = async () => {
     try {
+      setLoading(true);
+      
+      // First, get profiles that have paid invoices
+      const { data: profilesWithPaidInvoices, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('profile_id')
+        .eq('status', 'paid')
+        .not('profile_id', 'is', null);
+      
+      if (invoiceError) {
+        throw invoiceError;
+      }
+      
+      // Extract profile IDs from paid invoices
+      const paidProfileIds = profilesWithPaidInvoices
+        .map(invoice => invoice.profile_id)
+        .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+      
+      if (paidProfileIds.length === 0) {
+        setProfiles([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch profiles that have paid invoices
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -60,6 +85,7 @@ const PeopleSidebar = () => {
           housing_preferences,
           team:teams(id, name, logo_url)
         `)
+        .in('id', paidProfileIds)
         .order('full_name');
       
       if (error) throw error;
@@ -334,6 +360,9 @@ const PeopleSidebar = () => {
                         </Avatar>
                         <div className="text-xs font-medium text-center truncate w-full" title={profile.full_name || undefined}>
                           {profile.full_name || "Unnamed"}
+                        </div>
+                        <div className="text-xs text-muted-foreground text-center truncate w-full" title={profile.email || undefined}>
+                          {profile.email || "No email"}
                         </div>
                       </div>
                     </div>

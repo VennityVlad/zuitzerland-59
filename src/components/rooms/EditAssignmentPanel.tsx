@@ -1,58 +1,30 @@
 
 import { useState, useEffect } from "react";
-import { format, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, User, Building, BedDouble, Save } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-
-type Profile = {
-  id: string;
-  full_name: string | null;
-  email: string | null;
-};
-
-type Apartment = {
-  id: string;
-  name: string;
-  bedrooms: {
-    id: string;
-    name: string;
-    beds: {
-      id: string;
-      name: string;
-      bed_type: string;
-    }[];
-  }[];
-};
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Assignment = {
   id: string;
   profile_id: string;
-  apartment_id: string | null;
+  apartment_id: string;
   bedroom_id: string | null;
   bed_id: string | null;
   start_date: string;
   end_date: string;
   notes: string | null;
-  apartment?: {
-    name: string;
-  } | null;
-  bedroom?: {
-    name: string;
-  } | null;
-  bed?: {
-    name: string;
-    bed_type: string;
-  } | null;
-  profile?: {
+  profile: {
     full_name: string | null;
+    avatar_url: string | null;
     email: string | null;
   };
 };
@@ -71,440 +43,510 @@ type EditAssignmentPanelProps = {
 };
 
 const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmentPanelProps) => {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [apartments, setApartments] = useState<Apartment[]>([]);
-  const [bedrooms, setBedrooms] = useState<Apartment["bedrooms"][0][]>([]);
-  const [beds, setBeds] = useState<Apartment["bedrooms"][0]["beds"]>([]);
-
-  const [profileId, setProfileId] = useState<string>("");
-  const [apartmentId, setApartmentId] = useState<string>("");
-  const [bedroomId, setBedroomId] = useState<string>("");
-  const [bedId, setBedId] = useState<string>("");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [notes, setNotes] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [apartments, setApartments] = useState<any[]>([]);
+  const [bedrooms, setBedrooms] = useState<any[]>([]);
+  const [beds, setBeds] = useState<any[]>([]);
+  
+  const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>(
+    assignment?.profile_id || initialData?.profileId
+  );
+  const [selectedApartmentId, setSelectedApartmentId] = useState<string | undefined>(
+    assignment?.apartment_id || initialData?.apartmentId
+  );
+  const [selectedBedroomId, setSelectedBedroomId] = useState<string | undefined>(
+    assignment?.bedroom_id || initialData?.bedroomId
+  );
+  const [selectedBedId, setSelectedBedId] = useState<string | undefined>(
+    assignment?.bed_id || initialData?.bedId
+  );
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    assignment ? new Date(assignment.start_date) : initialData?.startDate
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    assignment ? new Date(assignment.end_date) : initialData?.endDate
+  );
+  const [notes, setNotes] = useState<string>(assignment?.notes || '');
+  
   const { toast } = useToast();
-  const isEditMode = !!assignment;
-
-  const title = isEditMode ? "Edit Room Assignment" : "Create Room Assignment";
-  const description = isEditMode 
-    ? "Make changes to the existing room assignment." 
-    : "Create a new room assignment for a profile.";
-
+  
+  console.log("Initial assignment data:", { assignment, initialData });
+  
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      await Promise.all([
-        fetchProfiles(),
-        fetchApartments()
-      ]);
-      setLoading(false);
-    };
-
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    // For edit mode, set the initial values from the assignment
+    fetchFormData();
+    
+    // Set initial form state when assignment or initialData changes
     if (assignment) {
-      setProfileId(assignment.profile_id);
-      if (assignment.apartment_id) setApartmentId(assignment.apartment_id);
-      if (assignment.bedroom_id) setBedroomId(assignment.bedroom_id);
-      if (assignment.bed_id) setBedId(assignment.bed_id);
+      setSelectedProfileId(assignment.profile_id);
+      setSelectedApartmentId(assignment.apartment_id);
+      setSelectedBedroomId(assignment.bedroom_id || undefined);
+      setSelectedBedId(assignment.bed_id || undefined);
       setStartDate(new Date(assignment.start_date));
       setEndDate(new Date(assignment.end_date));
-      setNotes(assignment.notes || "");
-    } 
-    // For create mode with initialData
-    else if (initialData) {
-      if (initialData.profileId) setProfileId(initialData.profileId);
-      if (initialData.apartmentId) setApartmentId(initialData.apartmentId);
-      if (initialData.bedroomId) setBedroomId(initialData.bedroomId);
-      if (initialData.bedId) setBedId(initialData.bedId);
-      if (initialData.startDate) setStartDate(initialData.startDate);
-      if (initialData.endDate) setEndDate(initialData.endDate);
+      setNotes(assignment.notes || '');
+    } else if (initialData) {
+      setSelectedProfileId(initialData.profileId);
+      setSelectedApartmentId(initialData.apartmentId);
+      setSelectedBedroomId(initialData.bedroomId);
+      setSelectedBedId(initialData.bedId);
+      setStartDate(initialData.startDate);
+      setEndDate(initialData.endDate);
     }
   }, [assignment, initialData]);
-
-  useEffect(() => {
-    if (apartmentId) {
-      const selectedApartment = apartments.find(apt => apt.id === apartmentId);
-      setBedrooms(selectedApartment?.bedrooms || []);
-      if (!selectedApartment?.bedrooms.some(br => br.id === bedroomId)) {
-        setBedroomId("");
-        setBedId("");
-      }
-    } else {
-      setBedrooms([]);
-      setBedroomId("");
-      setBedId("");
-    }
-  }, [apartmentId, apartments, bedroomId]);
-
-  useEffect(() => {
-    if (bedroomId) {
-      const selectedBedroom = bedrooms.find(br => br.id === bedroomId);
-      setBeds(selectedBedroom?.beds || []);
-      if (!selectedBedroom?.beds.some(bed => bed.id === bedId)) {
-        setBedId("");
-      }
-    } else {
-      setBeds([]);
-      setBedId("");
-    }
-  }, [bedroomId, bedrooms, bedId]);
-
-  const fetchProfiles = async () => {
+  
+  const fetchFormData = async () => {
+    setLoading(true);
     try {
-      // Use a corrected query approach to filter profiles
-      let query = supabase
+      // Fetch profiles with paid invoices first
+      const { data: profilesWithPaidInvoices, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('profile_id')
+        .eq('status', 'paid')
+        .not('profile_id', 'is', null);
+      
+      if (invoiceError) throw invoiceError;
+      
+      const paidProfileIds = profilesWithPaidInvoices
+        .map(invoice => invoice.profile_id)
+        .filter(Boolean)
+        .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+      
+      let profilesQuery = supabase
         .from('profiles')
-        .select('id, full_name, email')
+        .select('id, full_name, avatar_url, email')
         .order('full_name');
       
-      if (!isEditMode) {
-        // Get all profile IDs that already have assignments
-        const { data: assignedProfiles, error: assignedError } = await supabase
-          .from('room_assignments')
-          .select('profile_id');
-        
-        if (!assignedError && assignedProfiles && assignedProfiles.length > 0) {
-          // Create an array of profile IDs that are already assigned
-          const assignedIds = assignedProfiles.map(ap => ap.profile_id);
-          
-          // Use proper filter syntax - .not() operator followed by .in()
-          query = query.not('id', 'in', assignedIds);
-        }
+      // If we have a specific profile ID from the assignment, include it regardless
+      if (selectedProfileId && !paidProfileIds.includes(selectedProfileId)) {
+        paidProfileIds.push(selectedProfileId);
       }
       
-      const { data, error } = await query;
+      // Only fetch profiles with paid invoices
+      if (paidProfileIds.length > 0) {
+        profilesQuery = profilesQuery.in('id', paidProfileIds);
+      }
       
-      if (error) throw error;
+      const { data: profilesData, error: profilesError } = await profilesQuery;
       
-      setProfiles(data || []);
+      if (profilesError) throw profilesError;
+      
+      const { data: apartmentsData, error: apartmentsError } = await supabase
+        .from('apartments')
+        .select('id, name')
+        .order('name');
+      
+      if (apartmentsError) throw apartmentsError;
+
+      setProfiles(profilesData || []);
+      setApartments(apartmentsData || []);
+      
+      if (selectedApartmentId) {
+        await fetchBedroomsByApartment(selectedApartmentId);
+      }
+      
+      if (selectedBedroomId) {
+        await fetchBedsByBedroom(selectedBedroomId);
+      }
+      
+      setLoading(false);
     } catch (error: any) {
-      console.error("Error fetching profiles:", error);
       toast({
         variant: "destructive",
-        title: "Error fetching profiles",
+        title: "Error fetching data",
         description: error.message,
       });
+      setLoading(false);
     }
   };
-
-  const fetchApartments = async () => {
+  
+  const fetchBedroomsByApartment = async (apartmentId: string) => {
     try {
+      console.log("Fetching bedrooms for apartment:", apartmentId);
       const { data, error } = await supabase
-        .from('apartments')
-        .select(`
-          id, 
-          name,
-          bedrooms:bedrooms (
-            id, 
-            name,
-            beds:beds (
-              id, 
-              name,
-              bed_type
-            )
-          )
-        `)
+        .from('bedrooms')
+        .select('id, name')
+        .eq('apartment_id', apartmentId)
         .order('name');
       
       if (error) throw error;
       
-      setApartments(data || []);
+      console.log("Bedrooms fetched:", data);
+      setBedrooms(data || []);
     } catch (error: any) {
-      console.error("Error fetching apartments:", error);
       toast({
         variant: "destructive",
-        title: "Error fetching apartments",
+        title: "Error fetching bedrooms",
         description: error.message,
       });
     }
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
+  
+  const fetchBedsByBedroom = async (bedroomId: string) => {
+    try {
+      console.log("Fetching beds for bedroom:", bedroomId);
+      const { data, error } = await supabase
+        .from('beds')
+        .select('id, name, bed_type')
+        .eq('bedroom_id', bedroomId)
+        .order('name');
+      
+      if (error) throw error;
+      
+      console.log("Beds fetched:", data);
+      setBeds(data || []);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error fetching beds",
+        description: error.message,
+      });
+    }
+  };
+  
+  const handleApartmentChange = async (apartmentId: string) => {
+    setSelectedApartmentId(apartmentId);
+    setSelectedBedroomId(undefined);
+    setSelectedBedId(undefined);
+    setBedrooms([]);
+    setBeds([]);
+    await fetchBedroomsByApartment(apartmentId);
+  };
+  
+  const handleBedroomChange = async (bedroomId: string) => {
+    setSelectedBedroomId(bedroomId);
+    setSelectedBedId(undefined);
+    setBeds([]);
+    await fetchBedsByBedroom(bedroomId);
+  };
+  
+  const saveAssignment = async () => {
+    if (!selectedProfileId || !selectedApartmentId || !selectedBedroomId || !selectedBedId || !startDate || !endDate) {
+      toast({
+        variant: "destructive",
+        title: "Missing information",
+        description: "Please fill out all required fields.",
+      });
       return;
     }
     
-    setIsSubmitting(true);
-    
+    setSaving(true);
     try {
-      if (isEditMode) {
+      // Format dates for database
+      const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+      
+      const assignmentData = {
+        profile_id: selectedProfileId,
+        apartment_id: selectedApartmentId,
+        bedroom_id: selectedBedroomId,
+        bed_id: selectedBedId,
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
+        notes: notes || null
+      };
+      
+      console.log("Saving assignment:", assignmentData);
+      
+      if (assignment) {
         // Update existing assignment
         const { error } = await supabase
           .from('room_assignments')
-          .update({
-            profile_id: profileId,
-            apartment_id: apartmentId,
-            bedroom_id: bedroomId || null,
-            bed_id: bedId || null,
-            start_date: startDate?.toISOString().split('T')[0],
-            end_date: endDate?.toISOString().split('T')[0],
-            notes: notes || null,
-          })
-          .eq('id', assignment?.id);
+          .update(assignmentData)
+          .eq('id', assignment.id);
         
         if (error) throw error;
         
         toast({
           title: "Assignment updated",
-          description: "The room assignment has been updated successfully.",
+          description: "The assignment has been updated successfully.",
         });
       } else {
         // Create new assignment
         const { error } = await supabase
           .from('room_assignments')
-          .insert({
-            profile_id: profileId,
-            apartment_id: apartmentId,
-            bedroom_id: bedroomId || null,
-            bed_id: bedId || null,
-            start_date: startDate?.toISOString().split('T')[0],
-            end_date: endDate?.toISOString().split('T')[0],
-            notes: notes || null,
-          });
+          .insert([assignmentData]);
         
         if (error) throw error;
         
         toast({
           title: "Assignment created",
-          description: "The room assignment has been created successfully.",
+          description: "The assignment has been created successfully.",
         });
       }
       
+      setSaving(false);
       onClose();
     } catch (error: any) {
-      console.error("Error saving assignment:", error);
       toast({
         variant: "destructive",
-        title: `Error ${isEditMode ? 'updating' : 'creating'} assignment`,
+        title: "Error saving assignment",
         description: error.message,
       });
-    } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
   };
-
-  const validateForm = () => {
-    if (!profileId) {
-      toast({
-        variant: "destructive",
-        title: "Missing profile",
-        description: "Please select a profile for this assignment.",
-      });
-      return false;
-    }
+  
+  const deleteAssignment = async () => {
+    if (!assignment) return;
+    if (!confirm("Are you sure you want to delete this assignment?")) return;
     
-    if (!apartmentId) {
-      toast({
-        variant: "destructive",
-        title: "Missing apartment",
-        description: "Please select an apartment for this assignment.",
-      });
-      return false;
-    }
-    
-    if (!startDate || !endDate) {
-      toast({
-        variant: "destructive",
-        title: "Missing dates",
-        description: "Please select both start and end dates for this assignment.",
-      });
-      return false;
-    }
-    
-    if (endDate < startDate) {
-      toast({
-        variant: "destructive",
-        title: "Invalid dates",
-        description: "End date must be after start date.",
-      });
-      return false;
-    }
-    
-    return true;
-  };
-
-  return (
-    <>
-      <SheetHeader className="pb-4">
-        <SheetTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          {title}
-        </SheetTitle>
-        <SheetDescription>{description}</SheetDescription>
-      </SheetHeader>
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('room_assignments')
+        .delete()
+        .eq('id', assignment.id);
       
-      <form onSubmit={handleSubmit} className="space-y-6 py-4">
-        <ScrollArea className="h-[calc(100vh-240px)] pr-4">
-          <div className="space-y-6">
-            {/* Profile selection */}
-            <div className="space-y-2">
-              <Label htmlFor="profile-select" className="flex items-center gap-1">
-                <User className="h-4 w-4" />
-                Profile
-              </Label>
-              <Select 
-                value={profileId}
-                onValueChange={setProfileId}
-                disabled={isEditMode || loading}
-              >
-                <SelectTrigger id="profile-select">
-                  <SelectValue placeholder="Select a profile" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profiles.map(profile => (
+      if (error) throw error;
+      
+      toast({
+        title: "Assignment deleted",
+        description: "The assignment has been deleted successfully.",
+      });
+      
+      setSaving(false);
+      onClose();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting assignment",
+        description: error.message,
+      });
+      setSaving(false);
+    }
+  };
+  
+  // Find the selected profile
+  const selectedProfile = profiles.find(profile => profile.id === selectedProfileId);
+  // Find apartment and bedroom details for display
+  const selectedApartment = apartments.find(apt => apt.id === selectedApartmentId);
+  const selectedBedroom = bedrooms.find(bedroom => bedroom.id === selectedBedroomId);
+  const selectedBed = beds.find(bed => bed.id === selectedBedId);
+  
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-bold">
+          {assignment ? "Edit Assignment" : "Create Assignment"}
+        </h2>
+        <p className="text-muted-foreground">
+          {assignment ? "Modify the room assignment details" : "Assign a person to a room"}
+        </p>
+      </div>
+      
+      {loading ? (
+        <div className="flex justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Profile Selection */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="profile">Person</Label>
+              {selectedProfile && (
+                <div className="flex items-center gap-2 bg-muted px-2 py-1 rounded">
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={selectedProfile.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs">
+                      {selectedProfile.full_name?.charAt(0) || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{selectedProfile.full_name}</span>
+                  <span className="text-xs text-muted-foreground">{selectedProfile.email}</span>
+                </div>
+              )}
+            </div>
+            <Select
+              value={selectedProfileId}
+              onValueChange={setSelectedProfileId}
+              disabled={!!assignment || profiles.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a person" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.length === 0 ? (
+                  <div className="p-2 text-center text-sm text-muted-foreground">
+                    No profiles with paid invoices available
+                  </div>
+                ) : (
+                  profiles.map(profile => (
                     <SelectItem key={profile.id} value={profile.id}>
-                      {profile.full_name || profile.email || "Unnamed profile"}
+                      <div className="flex items-center gap-2">
+                        <span>{profile.full_name}</span>
+                        <span className="text-xs text-muted-foreground">({profile.email})</span>
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Apartment selection */}
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Apartment Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="apartment">Apartment</Label>
+            <Select
+              value={selectedApartmentId}
+              onValueChange={handleApartmentChange}
+              disabled={apartments.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select an apartment" />
+              </SelectTrigger>
+              <SelectContent>
+                {apartments.map(apartment => (
+                  <SelectItem key={apartment.id} value={apartment.id}>
+                    {apartment.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Bedroom Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="bedroom">Bedroom</Label>
+            <Select
+              value={selectedBedroomId}
+              onValueChange={handleBedroomChange}
+              disabled={bedrooms.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a bedroom" />
+              </SelectTrigger>
+              <SelectContent>
+                {bedrooms.map(bedroom => (
+                  <SelectItem key={bedroom.id} value={bedroom.id}>
+                    {bedroom.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Bed Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="bed">Bed</Label>
+            <Select
+              value={selectedBedId}
+              onValueChange={setSelectedBedId}
+              disabled={beds.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a bed" />
+              </SelectTrigger>
+              <SelectContent>
+                {beds.map(bed => (
+                  <SelectItem key={bed.id} value={bed.id}>
+                    {bed.name} ({bed.bed_type})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Date Range Selection */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="apartment-select" className="flex items-center gap-1">
-                <Building className="h-4 w-4" />
-                Apartment
-              </Label>
-              <Select 
-                value={apartmentId}
-                onValueChange={setApartmentId}
-                disabled={loading}
-              >
-                <SelectTrigger id="apartment-select">
-                  <SelectValue placeholder="Select an apartment" />
-                </SelectTrigger>
-                <SelectContent>
-                  {apartments.map(apartment => (
-                    <SelectItem key={apartment.id} value={apartment.id}>
-                      {apartment.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Start Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
-            {/* Bedroom selection */}
             <div className="space-y-2">
-              <Label htmlFor="bedroom-select" className="flex items-center gap-1">
-                <BedDouble className="h-4 w-4" />
-                Bedroom
-              </Label>
-              <Select 
-                value={bedroomId}
-                onValueChange={setBedroomId}
-                disabled={!apartmentId || bedrooms.length === 0 || loading}
-              >
-                <SelectTrigger id="bedroom-select">
-                  <SelectValue placeholder={bedrooms.length === 0 ? "No bedrooms available" : "Select a bedroom"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {bedrooms.map(bedroom => (
-                    <SelectItem key={bedroom.id} value={bedroom.id}>
-                      {bedroom.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Bed selection */}
-            <div className="space-y-2">
-              <Label htmlFor="bed-select" className="flex items-center gap-1">
-                <BedDouble className="h-4 w-4" />
-                Bed
-              </Label>
-              <Select 
-                value={bedId}
-                onValueChange={setBedId}
-                disabled={!bedroomId || beds.length === 0 || loading}
-              >
-                <SelectTrigger id="bed-select">
-                  <SelectValue placeholder={beds.length === 0 ? "No beds available" : "Select a bed"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {beds.map(bed => (
-                    <SelectItem key={bed.id} value={bed.id}>
-                      {bed.name} ({bed.bed_type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Date selections */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Start Date
-                </Label>
-                <DatePicker
-                  date={startDate}
-                  onDateChange={setStartDate}
-                  disabled={loading}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  End Date
-                </Label>
-                <DatePicker
-                  date={endDate}
-                  onDateChange={setEndDate}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-            
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="flex items-center gap-1">
-                Notes (optional)
-              </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any additional notes about this assignment"
-                disabled={loading}
-                rows={3}
-              />
+              <Label>End Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    disabled={(date) => (
+                      startDate ? date < startDate : false
+                    )}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
-        </ScrollArea>
-        
-        <SheetFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit"
-            disabled={loading || isSubmitting}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Saving..." : isEditMode ? "Update Assignment" : "Create Assignment"}
-          </Button>
-        </SheetFooter>
-      </form>
-    </>
+          
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              placeholder="Add any additional notes here..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex justify-between">
+            <div>
+              {assignment && (
+                <Button
+                  variant="destructive"
+                  onClick={deleteAssignment}
+                  disabled={saving}
+                >
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Delete Assignment
+                </Button>
+              )}
+            </div>
+            
+            <div className="space-x-2">
+              <Button variant="outline" onClick={onClose} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={saveAssignment} disabled={saving}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {assignment ? "Update" : "Create"} Assignment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

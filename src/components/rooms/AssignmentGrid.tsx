@@ -16,10 +16,12 @@ type Profile = {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
-  team: {
+  email: string | null;
+  team?: {
     id: string;
     name: string;
     logo_url: string | null;
+    color?: string;
   } | null;
 };
 
@@ -41,6 +43,7 @@ type Assignment = {
       id: string;
       name: string;
       logo_url: string | null;
+      color?: string;
     } | null;
   };
 };
@@ -168,23 +171,62 @@ const AssignmentGrid = ({
       setApartments(fullApartments);
       console.log("Full apartments data:", fullApartments);
 
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id, 
-          full_name, 
-          avatar_url,
-          team:teams(id, name, logo_url)
-        `)
-        .order('full_name');
+      const { data: profilesWithPaidInvoices, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('profile_id')
+        .eq('status', 'paid')
+        .not('profile_id', 'is', null);
       
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        throw profilesError;
+      if (invoiceError) {
+        console.error("Error fetching paid invoices:", invoiceError);
+        throw invoiceError;
       }
       
-      console.log("Profiles fetched:", profilesData?.length || 0);
-      setProfiles(profilesData || []);
+      const paidProfileIds = profilesWithPaidInvoices
+        .map(invoice => invoice.profile_id)
+        .filter(Boolean)
+        .filter((value, index, self) => self.indexOf(value) === index);
+      
+      let profilesData: any[] = [];
+      
+      if (paidProfileIds.length > 0) {
+        const { data, error: profilesError } = await supabase
+          .from('profiles')
+          .select(`
+            id, 
+            full_name, 
+            avatar_url,
+            email,
+            team:teams(id, name, logo_url)
+          `)
+          .in('id', paidProfileIds)
+          .order('full_name');
+        
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
+          throw profilesError;
+        }
+        
+        profilesData = data || [];
+      }
+      
+      console.log("Profiles fetched:", profilesData.length);
+      
+      const profilesWithTeamColors = profilesData.map(profile => {
+        if (profile.team) {
+          const color = generateTeamColor(profile.team.id);
+          return {
+            ...profile,
+            team: {
+              ...profile.team,
+              color
+            }
+          };
+        }
+        return profile;
+      });
+      
+      setProfiles(profilesWithTeamColors || []);
 
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('room_assignments')
@@ -211,8 +253,25 @@ const AssignmentGrid = ({
         throw assignmentsError;
       }
       
-      console.log("Assignments fetched:", assignmentsData?.length || 0);
-      setAssignments(assignmentsData || []);
+      const assignmentsWithTeamColors = assignmentsData?.map(assignment => {
+        if (assignment.profile && assignment.profile.team) {
+          const color = generateTeamColor(assignment.profile.team.id);
+          return {
+            ...assignment,
+            profile: {
+              ...assignment.profile,
+              team: {
+                ...assignment.profile.team,
+                color
+              }
+            }
+          };
+        }
+        return assignment;
+      });
+      
+      console.log("Assignments fetched:", assignmentsWithTeamColors?.length || 0);
+      setAssignments(assignmentsWithTeamColors || []);
       setLoading(false);
     } catch (error: any) {
       console.error("Error in fetchData:", error);
@@ -225,16 +284,59 @@ const AssignmentGrid = ({
     }
   };
 
+  const generateTeamColor = (teamId: string): string => {
+    let hash = 0;
+    for (let i = 0; i < teamId.length; i++) {
+      hash = teamId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    const colors = [
+      '#4F46E5',
+      '#EC4899',
+      '#10B981',
+      '#F59E0B',
+      '#3B82F6',
+      '#8B5CF6',
+      '#EF4444',
+      '#14B8A6',
+      '#F97316',
+      '#6366F1',
+    ];
+    
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   const createAssignment = async (profileId: string, apartmentId: string, bedroomId: string, bedId: string, startDate: Date, endDate: Date) => {
-    setNewAssignmentData({
-      profileId,
-      apartmentId,
-      bedroomId,
-      bedId,
-      startDate,
-      endDate: addDays(startDate, 6)
-    });
-    setIsEditPanelOpen(true);
+    console.log("Create assignment called with:", { profileId, apartmentId, bedroomId, bedId, startDate, endDate });
+    
+    try {
+      const apartment = apartments.find(a => a.id === apartmentId);
+      const bedroom = apartment?.bedrooms.find(b => b.id === bedroomId);
+      const bed = bedroom?.beds.find(b => b.id === bedId);
+      
+      const profile = profiles.find(p => p.id === profileId);
+      
+      if (!profile || !apartment || !bedroom || !bed) {
+        console.error("Failed to find all required entities:", { profile, apartment, bedroom, bed });
+      }
+      
+      setNewAssignmentData({
+        profileId,
+        apartmentId,
+        bedroomId,
+        bedId,
+        startDate,
+        endDate: addDays(startDate, 6)
+      });
+      setIsEditPanelOpen(true);
+    } catch (error) {
+      console.error("Error preparing assignment data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to prepare assignment data. Please try again."
+      });
+    }
   };
 
   const updateAssignment = async (id: string, newStartDate: Date, newEndDate: Date) => {
@@ -309,18 +411,55 @@ const AssignmentGrid = ({
 
   const handleDrop = (e: React.DragEvent, apartmentId: string, bedroomId: string, bedId: string, date: Date) => {
     e.preventDefault();
-    if (!draggedProfile) return;
     
-    console.log("Drop event:", { apartmentId, bedroomId, bedId, date, profile: draggedProfile.full_name });
-    
-    createAssignment(
-      draggedProfile.id,
-      apartmentId,
-      bedroomId,
-      bedId,
-      date,
-      addDays(date, 6)
-    );
+    try {
+      const profileJson = e.dataTransfer.getData("profile");
+      if (!profileJson) {
+        console.error("No profile data found in the drop event");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to get profile data from the drag event"
+        });
+        return;
+      }
+      
+      const profile = JSON.parse(profileJson);
+      if (!profile || !profile.id) {
+        console.error("Invalid profile data:", profile);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Invalid profile data"
+        });
+        return;
+      }
+      
+      console.log("Drop event:", { 
+        apartmentId, 
+        bedroomId, 
+        bedId, 
+        date, 
+        profile: profile.full_name,
+        profileId: profile.id 
+      });
+      
+      createAssignment(
+        profile.id,
+        apartmentId,
+        bedroomId,
+        bedId,
+        date,
+        addDays(date, 6)
+      );
+    } catch (error) {
+      console.error("Error handling drop event:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to process the drop action. Please try again."
+      });
+    }
     
     setDraggedProfile(null);
   };
@@ -518,15 +657,18 @@ const AssignmentGrid = ({
                         draggable
                         onDragStart={() => handleDragStart(profile)}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-center gap-1">
                           <Avatar className="h-6 w-6">
                             <AvatarImage src={profile.avatar_url || undefined} />
                             <AvatarFallback>
                               {profile.full_name?.charAt(0) || '?'}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm truncate">
+                          <span className="text-sm font-medium truncate w-full text-center">
                             {profile.full_name || "Unnamed"}
+                          </span>
+                          <span className="text-xs text-muted-foreground truncate w-full text-center">
+                            {profile.email || "No email"}
                           </span>
                         </div>
                       </div>
@@ -617,9 +759,10 @@ const AssignmentGrid = ({
                                               {assignment.profile.full_name?.charAt(0) || '?'}
                                             </AvatarFallback>
                                           </Avatar>
-                                          <span className="text-xs truncate text-center flex-1">
-                                            {assignment.profile.full_name}
-                                          </span>
+                                          <div className="truncate text-center flex-1 flex flex-col">
+                                            <span className="text-xs">{assignment.profile.full_name}</span>
+                                            <span className="text-[10px] text-muted-foreground">{assignment.profile.email}</span>
+                                          </div>
                                         </div>
                                         
                                         <div 
@@ -633,6 +776,7 @@ const AssignmentGrid = ({
                                     <TooltipContent>
                                       <div className="space-y-1">
                                         <p><strong>{assignment.profile.full_name}</strong></p>
+                                        <p className="text-xs text-muted-foreground">{assignment.profile.email}</p>
                                         <p>From: {format(new Date(assignment.start_date), 'PP')}</p>
                                         <p>To: {format(new Date(assignment.end_date), 'PP')}</p>
                                         <p className="text-xs text-muted-foreground">Drag edges to resize dates</p>
