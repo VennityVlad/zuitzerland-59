@@ -8,51 +8,45 @@ import AssignmentGrid from "@/components/rooms/AssignmentGrid";
 import RoomAssignments from "@/components/rooms/RoomAssignments";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { PageTitle } from "@/components/PageTitle";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 
 const RoomAssignmentsPage = () => {
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, authenticated, ready } = usePrivy();
+  const { isAdmin, isLoading: isAdminLoading } = useAdminStatus(user?.id);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log("Room Assignments - Auth status:", session ? "Authenticated" : "Not authenticated");
-        setIsAuthenticated(!!session);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error checking authentication:", error);
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: "Please try signing in again.",
-        });
-        setIsAuthenticated(false);
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, [toast]);
-
-  // Redirect to sign-in if not authenticated
-  useEffect(() => {
-    if (isAuthenticated === false && !loading) {
-      console.log("Room Assignments - Redirecting to sign in page");
+    if (ready && !authenticated && !loading) {
+      console.log("Room Assignments - Not authenticated");
       toast({
         title: "Authentication Required",
-        description: "Please sign in to view room assignments.",
+        description: "Please sign in to access room assignments.",
       });
       navigate("/signin");
     }
-  }, [isAuthenticated, loading, navigate, toast]);
+  }, [ready, authenticated, loading, navigate, toast]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!isAdminLoading && !isAdmin && authenticated) {
+      console.log("Room Assignments - Not admin");
+      toast({
+        title: "Access Restricted",
+        description: "Only administrators can access this page.",
+      });
+      navigate("/book");
+    }
+
+    if (!isAdminLoading && authenticated) {
+      setLoading(false);
+    }
+  }, [isAdmin, isAdminLoading, authenticated, navigate, toast]);
+
+  if (loading || !ready || isAdminLoading) {
     return (
       <div className="container py-6 space-y-6">
         <PageTitle title="Room Assignments" icon={<Grid3X3 className="h-5 w-5" />} />
@@ -71,7 +65,7 @@ const RoomAssignmentsPage = () => {
     );
   }
 
-  if (isAuthenticated === false) {
+  if (!authenticated || !isAdmin) {
     return null; // Will redirect in useEffect
   }
 
@@ -99,16 +93,13 @@ const RoomAssignmentsPage = () => {
 
         <Card>
           <CardContent className="p-4">
-            {/* Make sure TabsContent is inside the Tabs component */}
-            <Tabs value={viewMode}>
-              <TabsContent value="grid" className="mt-0">
-                <AssignmentGrid />
-              </TabsContent>
-              
-              <TabsContent value="list" className="mt-0">
-                <RoomAssignments />
-              </TabsContent>
-            </Tabs>
+            <TabsContent value="grid" className="mt-0">
+              <AssignmentGrid />
+            </TabsContent>
+            
+            <TabsContent value="list" className="mt-0">
+              <RoomAssignments />
+            </TabsContent>
           </CardContent>
         </Card>
       </div>

@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
-import { usePrivy } from "@privy-io/react-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +10,8 @@ import { DatabaseRoomType } from "@/types/booking";
 import { PageTitle } from "@/components/PageTitle";
 import { Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 
 interface RoomType {
   id: string;
@@ -26,11 +26,9 @@ interface RoomType {
 }
 
 const RoomTypes = () => {
-  const { user } = usePrivy();
+  const { user, authenticated, ready } = usePrivy();
   const navigate = useNavigate();
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<RoomType>>({});
@@ -44,56 +42,33 @@ const RoomTypes = () => {
   });
   const [showNewForm, setShowNewForm] = useState(false);
   const { toast } = useToast();
+  const { isAdmin, isLoading: isAdminLoading } = useAdminStatus(user?.id);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log("Room Types - Auth status:", session ? "Authenticated" : "Not authenticated");
-        setIsAuthenticated(!!session);
-        
-        if (!session) {
-          setIsLoading(false);
-          return;
-        }
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('privy_id', user?.id)
-          .maybeSingle();
-
-        if (error) throw error;
-        
-        setIsAdmin(data?.role === 'admin');
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error checking authentication/role:', error);
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (isAuthenticated === false && !isLoading) {
-      console.log("Room Types - Redirecting to sign in");
+    if (ready && !authenticated && !isLoading) {
+      console.log("Room Types - Not authenticated");
       toast({
         title: "Authentication Required",
         description: "Please sign in to access room types management.",
       });
       navigate("/signin");
     }
-  }, [isAuthenticated, isLoading, navigate, toast]);
+  }, [ready, authenticated, isLoading, navigate, toast]);
 
   useEffect(() => {
-    if (isAdmin && isAuthenticated) {
+    if (!isAdminLoading && !isAdmin && authenticated) {
+      console.log("Room Types - Not admin");
+      toast({
+        title: "Access Restricted",
+        description: "Only administrators can access this page.",
+      });
+      navigate("/book");
+    }
+
+    if (isAdmin && authenticated && !isAdminLoading) {
       fetchRoomTypes();
     }
-  }, [isAdmin, isAuthenticated]);
+  }, [isAdmin, authenticated, isAdminLoading]);
 
   const fetchRoomTypes = async () => {
     try {
@@ -294,7 +269,7 @@ const RoomTypes = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !ready || isAdminLoading) {
     return (
       <div className="flex flex-col h-full">
         <PageTitle title="Room Types" icon={<Layers className="h-5 w-5" />} />
@@ -307,24 +282,8 @@ const RoomTypes = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!authenticated || !isAdmin) {
     return null;
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-col h-full">
-        <PageTitle title="Room Types" icon={<Layers className="h-5 w-5" />} />
-        <div className="py-8 px-4 flex-grow">
-          <div className="container mx-auto">
-            <div className="text-center">
-              <h1 className="text-2xl font-semibold text-red-600">Access Denied</h1>
-              <p className="mt-2">You do not have permission to view this page.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
