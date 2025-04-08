@@ -110,7 +110,7 @@ const ImportApartments = () => {
               Import all apartments, bedrooms, and beds from the provided data.
             </p>
             
-            <Alert variant="warning" className="mb-4">
+            <Alert variant="default" className="mb-4">
               <AlertTitle>Warning</AlertTitle>
               <AlertDescription>
                 This will add new apartment records to your database. It's recommended to check 
