@@ -21,7 +21,7 @@ type Profile = {
     id: string;
     name: string;
     logo_url: string | null;
-    color?: string;
+    color: string;
   } | null;
 };
 
@@ -43,7 +43,7 @@ type Assignment = {
       id: string;
       name: string;
       logo_url: string | null;
-      color?: string;
+      color: string;
     } | null;
   };
 };
@@ -638,7 +638,7 @@ const AssignmentGrid = ({
             {Object.entries(profilesByTeam).map(([teamId, teamProfiles]) => {
               const team = teamId !== 'no-team' 
                 ? teamProfiles[0]?.team 
-                : { id: 'no-team', name: 'No Team', logo_url: null };
+                : { id: 'no-team', name: 'No Team', logo_url: null, color: '#94a3b8' };
               
               if (!team || teamProfiles.length === 0) return null;
               

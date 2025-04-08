@@ -17,7 +17,7 @@ type Assignment = {
   bed_id: string | null;
   start_date: string;
   end_date: string;
-  notes: string | null; // Ensure this is required, not optional
+  notes: string | null;
   apartment: {
     name: string;
   } | null;
@@ -31,6 +31,7 @@ type Assignment = {
   profile: {
     full_name: string | null;
     email: string | null;
+    avatar_url: string | null;
   };
 };
 
@@ -56,7 +57,7 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         .from('room_assignments')
         .select(`
           *,
-          profile:profiles(full_name, email),
+          profile:profiles(full_name, email, avatar_url),
           apartment:apartments(name),
           bedroom:bedrooms(name),
           bed:beds(name, bed_type)
@@ -161,7 +162,7 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         
         <Button 
           onClick={handleAddAssignment}
-          disabled={!!apartmentId} // Disable when viewing specific apartment
+          disabled={!!apartmentId}
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Assignment
@@ -190,7 +191,6 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         </div>
       )}
 
-      {/* Slide-out panel for creating/editing assignments */}
       <Sheet open={isEditPanelOpen} onOpenChange={setIsEditPanelOpen}>
         <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
           <EditAssignmentPanel 
