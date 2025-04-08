@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +9,7 @@ import { TeamBadge } from "@/components/TeamBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import HousingPreferencesFilter, { PreferenceFilters } from "./HousingPreferencesFilter";
 
 type Profile = {
   id: string;
@@ -15,6 +17,7 @@ type Profile = {
   avatar_url: string | null;
   email: string | null;
   team_id: string | null;
+  housing_preferences: Record<string, any> | null;
   team: {
     id: string;
     name: string;
@@ -37,6 +40,7 @@ const PeopleSidebar = () => {
   const [loading, setLoading] = useState(true);
   const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [preferenceFilters, setPreferenceFilters] = useState<PreferenceFilters>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -53,6 +57,7 @@ const PeopleSidebar = () => {
           avatar_url, 
           email,
           team_id,
+          housing_preferences,
           team:teams(id, name, logo_url)
         `)
         .order('full_name');
@@ -122,6 +127,33 @@ const PeopleSidebar = () => {
     return colors[Math.abs(hash) % colors.length];
   };
 
+  // Filter profiles by housing preferences
+  const filterProfilesByPreferences = (profilesArray: Profile[]): Profile[] => {
+    if (!preferenceFilters || Object.keys(preferenceFilters).length === 0) {
+      return profilesArray;
+    }
+
+    return profilesArray.filter(profile => {
+      if (!profile.housing_preferences) return false;
+      
+      // Check if profile matches all filter categories
+      return Object.entries(preferenceFilters).every(([category, selectedValues]) => {
+        const profileValue = profile.housing_preferences[category];
+        
+        // If the profile doesn't have this preference category, it doesn't match
+        if (!profileValue) return false;
+        
+        // Check if any of the selected values match the profile's value
+        // Handle both array and string values
+        if (Array.isArray(profileValue)) {
+          return selectedValues.some(value => profileValue.includes(value));
+        } else {
+          return selectedValues.includes(profileValue);
+        }
+      });
+    });
+  };
+
   const teams = useMemo(() => {
     const teamMap = new Map<string, Team>();
     // Initialize with "No Team"
@@ -158,23 +190,34 @@ const PeopleSidebar = () => {
   }, [profiles]);
 
   const filteredTeams = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return teams;
+    // First filter by search query
+    let searchFilteredTeams = teams;
+    
+    if (searchQuery.trim()) {
+      searchFilteredTeams = teams.map(team => {
+        const filteredProfiles = team.profiles.filter(profile =>
+          profile.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          profile.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        
+        return {
+          ...team,
+          profiles: filteredProfiles,
+          member_count: filteredProfiles.length
+        };
+      }).filter(team => team.member_count > 0);
     }
     
-    return teams.map(team => {
-      const filteredProfiles = team.profiles.filter(profile =>
-        profile.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        profile.email?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      
+    // Then filter by preferences
+    return searchFilteredTeams.map(team => {
+      const preferenceFilteredProfiles = filterProfilesByPreferences(team.profiles);
       return {
         ...team,
-        profiles: filteredProfiles,
-        member_count: filteredProfiles.length
+        profiles: preferenceFilteredProfiles,
+        member_count: preferenceFilteredProfiles.length
       };
     }).filter(team => team.member_count > 0);
-  }, [teams, searchQuery]);
+  }, [teams, searchQuery, preferenceFilters]);
 
   const toggleTeam = (teamId: string) => {
     setExpandedTeams(prev => ({
@@ -186,6 +229,17 @@ const PeopleSidebar = () => {
   const handleDragStart = (e: React.DragEvent, profile: Profile) => {
     e.dataTransfer.setData("profile", JSON.stringify(profile));
   };
+
+  const handleFilterChange = (filters: PreferenceFilters) => {
+    setPreferenceFilters(filters);
+  };
+
+  // Count total profiles
+  const totalVisibleProfiles = filteredTeams.reduce(
+    (sum, team) => sum + team.member_count, 0
+  );
+  
+  const totalProfiles = profiles.length;
 
   if (loading) {
     return (
@@ -219,18 +273,23 @@ const PeopleSidebar = () => {
           People
         </div>
         <div className="text-xs text-muted-foreground">
-          {profiles.length} total
+          {totalVisibleProfiles} of {totalProfiles}
         </div>
       </div>
       
-      <div className="relative">
-        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search people..."
-          className="pl-8"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search people..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <HousingPreferencesFilter onFilterChange={handleFilterChange} />
+        </div>
       </div>
       
       <div className="space-y-4 max-h-[500px] overflow-y-auto">
@@ -242,7 +301,7 @@ const PeopleSidebar = () => {
               onClick={() => toggleTeam(team.id)}
             >
               <div className="flex items-center gap-2">
-                <TeamBadge team={team} />
+                <TeamBadge team={team} size="sm" />
                 <span className="font-medium">{team.name}</span>
               </div>
               <div className="flex items-center gap-1">
@@ -287,7 +346,7 @@ const PeopleSidebar = () => {
         
         {filteredTeams.length === 0 && (
           <div className="text-center py-4 text-muted-foreground text-sm">
-            No people found matching "{searchQuery}"
+            No people found matching filters
           </div>
         )}
       </div>

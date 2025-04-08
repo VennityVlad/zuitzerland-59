@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isSameDay, parseISO } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
@@ -7,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import EditAssignmentPanel from "./EditAssignmentPanel";
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -17,6 +18,7 @@ type Profile = {
   avatar_url: string | null;
   email: string | null;
   team_id: string | null;
+  housing_preferences: Record<string, any> | null;
   team: {
     id: string;
     name: string;
@@ -163,6 +165,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
             avatar_url,
             email,
             team_id,
+            housing_preferences,
             team:teams(id, name, logo_url)
           )
         `);
@@ -229,6 +232,55 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
     ];
     
     return colors[Math.abs(hash) % colors.length];
+  };
+
+  // Get housing preference details for tooltips
+  const getHousingPreferenceDetails = (profile: Profile): React.ReactNode => {
+    if (!profile.housing_preferences) {
+      return <p className="text-xs italic">No housing preferences set</p>;
+    }
+    
+    // Map of preference keys to display names
+    const preferenceLabels: Record<string, string> = {
+      sleepSchedule: "Sleep Schedule",
+      noisePreference: "Noise Preference",
+      cleanliness: "Cleanliness",
+      personality: "Personality Type",
+      // Add more as needed
+    };
+    
+    // Format values for display
+    const formatValue = (key: string, value: any): string => {
+      if (Array.isArray(value)) {
+        return value.join(", ");
+      }
+      // Format camelCase or snake_case to Title Case
+      if (typeof value === "string") {
+        return value
+          .replace(/([A-Z])/g, ' $1') // camelCase to space separated
+          .replace(/_/g, ' ') // snake_case to space separated
+          .replace(/^\w/, c => c.toUpperCase()); // capitalize first letter
+      }
+      return String(value);
+    };
+    
+    return (
+      <div className="space-y-1">
+        {Object.entries(profile.housing_preferences).map(([key, value]) => {
+          if (!value) return null;
+          const label = preferenceLabels[key] || key
+            .replace(/([A-Z])/g, ' $1') // camelCase to space separated
+            .replace(/^\w/, c => c.toUpperCase()); // capitalize first letter
+          
+          return (
+            <div key={key}>
+              <span className="font-medium text-xs">{label}:</span>{" "}
+              <span className="text-xs">{formatValue(key, value)}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const createAssignment = (profileId: string, apartmentId: string, bedroomId: string, bedId: string, startDate: Date, endDate: Date) => {
@@ -411,6 +463,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
             if (roomsTab) roomsTab.click();
           }}
         >
+          <Home className="mr-2 h-4 w-4" />
           Create Apartments
         </Button>
       </div>
@@ -430,6 +483,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
             if (roomsTab) roomsTab.click();
           }}
         >
+          <Home className="mr-2 h-4 w-4" />
           Manage Apartments
         </Button>
       </div>
@@ -454,7 +508,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       <div className="max-h-[500px] overflow-y-auto">
         {apartments.map((apartment) => (
           <div key={apartment.id} className="mb-4">
-            <div className="text-lg font-semibold p-2 bg-muted/20 sticky top-0">
+            <div className="text-lg font-semibold p-2 bg-muted/20 sticky top-0 z-10">
               {apartment.name}
             </div>
             
@@ -527,11 +581,35 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <div className="space-y-1">
-                                  <p><strong>{assignment.profile.full_name}</strong></p>
-                                  <p>From: {format(parseISO(assignment.start_date), 'PP')}</p>
-                                  <p>To: {format(parseISO(assignment.end_date), 'PP')}</p>
-                                  <div className="flex justify-between items-center pt-1">
+                                <div className="space-y-2 max-w-[300px]">
+                                  <div className="space-y-1">
+                                    <p className="font-semibold">{assignment.profile.full_name}</p>
+                                    {assignment.profile.team && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-muted-foreground">Team:</span>
+                                        <TeamBadge team={assignment.profile.team} size="sm" />
+                                      </div>
+                                    )}
+                                    <div className="text-xs text-muted-foreground">
+                                      {format(parseISO(assignment.start_date), 'PP')} - {format(parseISO(assignment.end_date), 'PP')}
+                                    </div>
+                                  </div>
+                                  
+                                  {assignment.profile.housing_preferences && (
+                                    <div className="border-t pt-1">
+                                      <p className="text-xs font-medium mb-1">Housing Preferences:</p>
+                                      {getHousingPreferenceDetails(assignment.profile)}
+                                    </div>
+                                  )}
+                                  
+                                  {assignment.notes && (
+                                    <div className="border-t pt-1">
+                                      <p className="text-xs font-medium">Notes:</p>
+                                      <p className="text-xs">{assignment.notes}</p>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="flex justify-between items-center pt-1 border-t">
                                     <p className="text-xs text-muted-foreground">Drag edges to resize</p>
                                     <Button 
                                       variant="ghost" 
