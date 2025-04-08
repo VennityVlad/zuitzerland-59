@@ -2,19 +2,19 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Grid3X3, Calendar, LayoutGrid } from "lucide-react";
-import AssignmentGrid from "@/components/rooms/AssignmentGrid";
-import RoomAssignments from "@/components/rooms/RoomAssignments";
+import { Grid3X3, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { PageTitle } from "@/components/PageTitle";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { format, addWeeks, subWeeks } from "date-fns";
+import AssignmentGridCalendar from "@/components/rooms/AssignmentGridCalendar";
+import PeopleSidebar from "@/components/rooms/PeopleSidebar";
 
 const RoomAssignmentsPage = () => {
-  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
   const [loading, setLoading] = useState(true);
+  const [currentWeek, setCurrentWeek] = useState(new Date());
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, authenticated, ready } = usePrivy();
@@ -45,6 +45,14 @@ const RoomAssignmentsPage = () => {
       setLoading(false);
     }
   }, [isAdmin, isAdminLoading, authenticated, navigate, toast]);
+
+  const navigateWeek = (direction: "next" | "prev") => {
+    if (direction === "next") {
+      setCurrentWeek(addWeeks(currentWeek, 1));
+    } else {
+      setCurrentWeek(subWeeks(currentWeek, 1));
+    }
+  };
 
   if (loading || !ready || isAdminLoading) {
     return (
@@ -77,31 +85,33 @@ const RoomAssignmentsPage = () => {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Room Assignments</h2>
           
-          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "list" | "grid")} className="w-[250px]">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="grid">
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Grid
-              </TabsTrigger>
-              <TabsTrigger value="list">
-                <Calendar className="h-4 w-4 mr-2" />
-                List
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="icon" onClick={() => setCurrentWeek(new Date())}>
+              <Calendar className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => navigateWeek("prev")}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="px-4 py-2 font-medium">
+              {format(currentWeek, "MMMM d, yyyy")}
+            </div>
+            <Button variant="outline" size="icon" onClick={() => navigateWeek("next")}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        <Card>
-          <CardContent className="p-4">
-            <TabsContent value="grid" className="mt-0">
-              <AssignmentGrid />
-            </TabsContent>
-            
-            <TabsContent value="list" className="mt-0">
-              <RoomAssignments />
-            </TabsContent>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col lg:flex-row gap-4">
+          <PeopleSidebar />
+          
+          <div className="flex-1 overflow-x-auto">
+            <Card className="min-h-[600px]">
+              <CardContent className="p-4">
+                <AssignmentGridCalendar startDate={currentWeek} />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
