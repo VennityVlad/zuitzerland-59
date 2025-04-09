@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useMemo } from "react";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isSameDay, parseISO, parse, isAfter, isBefore, isWithinInterval } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isSameDay, parseISO, parse } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -409,6 +410,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
   };
 
   const handleAssignmentClick = (assignment: Assignment, e: React.MouseEvent) => {
+    // Only open edit panel if this isn't during a resize operation
     if (!resizingState.active) {
       setSelectedAssignment(assignment);
       setIsEditPanelOpen(true);
@@ -431,22 +433,6 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       initialStartDate: parseISO(assignment.start_date),
       initialEndDate: parseISO(assignment.end_date)
     });
-  };
-
-  const adjustDisplayDaysForAssignment = (assignment: Assignment, dateIndex: number, dates: Date[]) => {
-    const assignmentStart = parseISO(assignment.start_date);
-    const assignmentEnd = parseISO(assignment.end_date);
-    const totalDaysLength = differenceInDays(assignmentEnd, assignmentStart) + 1;
-    
-    const daysRemainingInView = dates.length - dateIndex;
-    
-    return Math.min(totalDaysLength, daysRemainingInView);
-  };
-
-  const isAssignmentContinuingBeyondView = (assignment: Assignment, dateIndex: number, dates: Date[]) => {
-    const assignmentEnd = parseISO(assignment.end_date);
-    const visibleEnd = dates[dates.length - 1];
-    return isAfter(assignmentEnd, visibleEnd);
   };
 
   const handleMouseMove = (e: MouseEvent) => {
@@ -538,6 +524,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       }
     }
     
+    // Important: Don't open edit panel after resizing
     setResizingState({
       id: null,
       direction: null,
@@ -645,11 +632,10 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                     const assignment = getAssignmentForCell(bed.id, date);
                     const isAssignmentStart = assignment && isSameDay(parseISO(assignment.start_date), date);
                     const isAssignmentEnd = assignment && isSameDay(parseISO(assignment.end_date), date);
-                    const continuesBeyondView = assignment && isAssignmentStart && 
-                      isAssignmentContinuingBeyondView(assignment, dateIndex, dates);
                     
                     if (assignment && isAssignmentStart) {
-                      const displayDays = adjustDisplayDaysForAssignment(assignment, dateIndex, dates);
+                      const daysLength = differenceInDays(parseISO(assignment.end_date), parseISO(assignment.start_date)) + 1;
+                      const displayDays = Math.min(daysLength, dates.length - dateIndex);
                       const teamColor = assignment.profile.team?.color || "#94a3b8";
                       
                       return (
@@ -686,21 +672,13 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                                     </span>
                                   </div>
                                   
-                                  {(!continuesBeyondView) ? (
-                                    <div 
-                                      className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
-                                      style={{ backgroundColor: `${teamColor}50` }}
-                                      onMouseDown={(e) => handleResizeStart(e, assignment.id, 'right')}
-                                    >
-                                      <ChevronRight className="h-3 w-3 text-white" />
-                                    </div>
-                                  ) : (
-                                    <div 
-                                      className="absolute right-0 top-0 bottom-0 w-2 flex items-center justify-center"
-                                      style={{ backgroundColor: `${teamColor}50` }}
-                                    >
-                                    </div>
-                                  )}
+                                  <div 
+                                    className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
+                                    style={{ backgroundColor: `${teamColor}50` }}
+                                    onMouseDown={(e) => handleResizeStart(e, assignment.id, 'right')}
+                                  >
+                                    <ChevronRight className="h-3 w-3 text-white" />
+                                  </div>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -715,7 +693,6 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                                     )}
                                     <div className="text-xs text-muted-foreground">
                                       {format(parseISO(assignment.start_date), 'PP')} - {format(parseISO(assignment.end_date), 'PP')}
-                                      {continuesBeyondView && " (continues beyond current view)"}
                                     </div>
                                   </div>
                                   
