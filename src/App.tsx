@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +22,7 @@ import RoomManagement from "./pages/RoomManagement";
 import RoomAssignmentsPage from "./pages/rooms/RoomAssignmentsPage";
 import Onboarding from "./pages/Onboarding";
 import NavMenu from "./components/NavMenu";
+import TransportationGuide from "./pages/TransportationGuide";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -241,6 +241,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <HousingPreferences />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/transportation-guide"
+                element={
+                  <ProtectedRoute>
+                    <TransportationGuide />
                   </ProtectedRoute>
                 }
               />

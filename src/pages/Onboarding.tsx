@@ -76,8 +76,9 @@ const taskDefinitions: OnboardingTaskDefinition[] = [
   {
     id: "5",
     title: "Read our Transportation Guide",
+    link: "/transportation-guide",
     subtasks: [
-      { id: "a", label: "Direct to #2 while locked" },
+      { id: "a", label: "Review transportation options to Laax" },
       { id: "b", label: "You can coordinate car pools in the Arrivals channel in the telegram hub!" },
     ],
   },
@@ -278,6 +279,10 @@ const Onboarding = () => {
     navigate("/housing-preferences");
   };
 
+  const handleTransportationGuideClick = () => {
+    navigate("/transportation-guide");
+  };
+
   if (isAdminLoading || isAdmin) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -359,6 +364,7 @@ const Onboarding = () => {
                   
                   const isPackingListTask = task.id === "10";
                   const isHousingPreferencesTask = task.id === "4";
+                  const isTransportationGuideTask = task.id === "5";
                   
                   return (
                     <OnboardingTask
@@ -373,9 +379,10 @@ const Onboarding = () => {
                       onTaskClick={
                         isPackingListTask ? handlePackingListClick : 
                         isHousingPreferencesTask ? handleHousingPreferencesClick : 
+                        isTransportationGuideTask ? handleTransportationGuideClick :
                         undefined
                       }
-                      isLink={isPackingListTask || isHousingPreferencesTask}
+                      isLink={isPackingListTask || isHousingPreferencesTask || isTransportationGuideTask}
                     />
                   );
                 })}
