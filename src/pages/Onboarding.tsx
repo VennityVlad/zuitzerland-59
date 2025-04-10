@@ -56,11 +56,8 @@ const taskDefinitions: OnboardingTaskDefinition[] = [
     id: "3",
     title: "Plan your May",
     subtasks: [
-      { id: "a", label: "Daily schedule breakdown:" },
       { id: "b", label: "Breakfast: 7.00-10.00" },
       { id: "c", label: "Core Content hours: 10.00-13.00" },
-      { id: "d", label: "We recommend leaving these hours open each day" },
-      { id: "e", label: "Generally, you can expect:" },
       { id: "f", label: "10am - intro session" },
       { id: "g", label: "11am - lecture or workshop" },
       { id: "h", label: "12pm - discussion" },
@@ -71,25 +68,19 @@ const taskDefinitions: OnboardingTaskDefinition[] = [
   },
   {
     id: "4",
-    title: "Fill out Arrival & Housing Preference Form",
+    title: "Fill out Housing Preference Form",
     link: "/housing-preferences",
   },
   {
     id: "5",
-    title: "Read our Transportation Guide",
-    link: "/transportation-guide",
+    title: "Read our Transportation Guide (coming soon)",
     subtasks: [
-      { id: "a", label: "Review transportation options to Laax" },
       { id: "b", label: "You can coordinate car pools in the Arrivals channel in the telegram hub!" },
     ],
   },
   {
     id: "6",
-    title: "Read our Privacy Policy",
-  },
-  {
-    id: "7",
-    title: "Read our Safety Policies",
+    title: "Read our Code of Conduct",
   },
   {
     id: "8",
@@ -295,10 +286,6 @@ const Onboarding = () => {
     navigate("/housing-preferences");
   };
 
-  const handleTransportationGuideClick = () => {
-    navigate("/transportation-guide");
-  };
-
   const handleDirectoryClick = () => {
     navigate("/directory");
   };
@@ -384,7 +371,6 @@ const Onboarding = () => {
                   
                   const isPackingListTask = task.id === "10";
                   const isHousingPreferencesTask = task.id === "4";
-                  const isTransportationGuideTask = task.id === "5";
                   const isDirectoryTask = task.id === "8";
                   
                   return (
@@ -400,11 +386,10 @@ const Onboarding = () => {
                       onTaskClick={
                         isPackingListTask ? handlePackingListClick : 
                         isHousingPreferencesTask ? handleHousingPreferencesClick : 
-                        isTransportationGuideTask ? handleTransportationGuideClick :
                         isDirectoryTask ? handleDirectoryClick :
                         undefined
                       }
-                      isLink={isPackingListTask || isHousingPreferencesTask || isTransportationGuideTask || isDirectoryTask}
+                      isLink={isPackingListTask || isHousingPreferencesTask || isDirectoryTask}
                     />
                   );
                 })}
