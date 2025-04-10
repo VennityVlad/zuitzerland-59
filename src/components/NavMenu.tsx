@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -118,7 +117,6 @@ const NavMenu = () => {
     return paths.some(path => location.pathname === path);
   };
 
-  // Menu items for non-admin users
   const regularMenuItems: MenuItem[] = [
     {
       label: "Book",
@@ -142,10 +140,9 @@ const NavMenu = () => {
     }
   ];
 
-  // Menu items for admin users
   const adminMenuItems: MenuItem[] = [
     {
-      label: "Booking Management",
+      label: "Bookings",
       icon: <BookOpen className="h-5 w-5" />,
       id: "booking-management",
       hasSubmenu: true,
@@ -196,7 +193,7 @@ const NavMenu = () => {
       path: "/events",
     },
     {
-      label: "Room Management",
+      label: "Housing",
       icon: <BedDouble className="h-5 w-5" />,
       id: "room-management",
       hasSubmenu: true,
@@ -225,7 +222,6 @@ const NavMenu = () => {
     }
   ];
 
-  // Choose which menu items to display based on user role
   const menuItems = isAdmin ? adminMenuItems : regularMenuItems;
 
   const NavItem = ({ item }: { item: MenuItem }) => {
