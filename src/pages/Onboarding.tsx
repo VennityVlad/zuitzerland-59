@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +11,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PackingList } from "@/components/onboarding/PackingList";
 import { List, Package } from "lucide-react";
+import { Json } from "@/integrations/supabase/types";
 
 interface TaskData {
   completed: boolean;
@@ -192,7 +192,7 @@ const Onboarding = () => {
       const { error } = await supabase
         .from('profiles')
         .update({ 
-          onboarding_progress: updatedProgress 
+          onboarding_progress: updatedProgress as unknown as Json
         })
         .eq('privy_id', user.id);
       
@@ -267,7 +267,7 @@ const Onboarding = () => {
       const { error } = await supabase
         .from('profiles')
         .update({ 
-          onboarding_progress: updatedProgress as any 
+          onboarding_progress: updatedProgress as unknown as Json 
         })
         .eq('privy_id', user.id);
       

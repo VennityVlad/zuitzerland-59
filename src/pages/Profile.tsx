@@ -15,6 +15,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { TeamBadge } from "@/components/TeamBadge";
 import HousingPreferencesButton from "@/components/profile/HousingPreferencesButton";
 import { Switch } from "@/components/ui/switch";
+import { Json } from "@/integrations/supabase/types";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
@@ -28,7 +29,7 @@ const Profile = () => {
   const { user } = usePrivy();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [profileData, setProfileData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<Record<string, any> | null>(null);
   const [uploading, setUploading] = useState(false);
   const [team, setTeam] = useState<any>(null);
 
@@ -155,7 +156,7 @@ const Profile = () => {
         .maybeSingle();
       
       if (onboardingData?.onboarding_progress) {
-        const updatedProgress = { ...onboardingData.onboarding_progress };
+        const updatedProgress = JSON.parse(JSON.stringify(onboardingData.onboarding_progress));
         
         updatedProgress.tasks["8"].completed = value;
         
@@ -174,12 +175,12 @@ const Profile = () => {
         await supabase
           .from('profiles')
           .update({ 
-            onboarding_progress: updatedProgress 
+            onboarding_progress: updatedProgress as unknown as Json 
           })
           .eq('privy_id', user.id);
       }
 
-      setProfileData(prev => ({ ...prev, opt_in_directory: value }));
+      setProfileData(prev => prev ? { ...prev, opt_in_directory: value } : null);
       form.setValue("opt_in_directory", value);
 
       toast({
@@ -275,7 +276,7 @@ const Profile = () => {
           .maybeSingle();
         
         if (onboardingData?.onboarding_progress) {
-          const updatedProgress = { ...onboardingData.onboarding_progress };
+          const updatedProgress = JSON.parse(JSON.stringify(onboardingData.onboarding_progress));
           
           updatedProgress.tasks["8"].completed = values.opt_in_directory;
           
@@ -290,7 +291,7 @@ const Profile = () => {
           await supabase
             .from('profiles')
             .update({ 
-              onboarding_progress: updatedProgress 
+              onboarding_progress: updatedProgress as unknown as Json 
             })
             .eq('privy_id', user.id);
         }
