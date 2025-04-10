@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -34,60 +35,66 @@ interface OnboardingTaskDefinition {
 const taskDefinitions: OnboardingTaskDefinition[] = [
   {
     id: "1",
-    title: "Fill out your profile data",
+    title: "Join Telegram hub via guild.xyz/zuitzerland",
     subtasks: [
-      { id: "a", label: "Upload a profile picture" },
-      { id: "b", label: "Set your username" },
+      { id: "a", label: "Introduce yourself" },
+      { id: "b", label: "Reach out to the team if you'd like to be added manually" },
     ],
   },
   {
     id: "2",
-    title: "Take the personality quiz",
+    title: "Join us for April 17th Virtual Townhall",
     subtasks: [
-      { id: "a", label: "Complete the 10-question quiz" },
+      { id: "a", label: "Location will be announced to confirmed attendees!" },
     ],
   },
   {
     id: "3",
-    title: "Fill out housing preferences",
+    title: "Plan your May",
     subtasks: [
-      { id: "a", label: "Complete the housing questionnaire" },
+      { id: "a", label: "Daily schedule breakdown:" },
+      { id: "b", label: "Breakfast: 7.00-10.00" },
+      { id: "c", label: "Core Content hours: 10.00-13.00" },
+      { id: "d", label: "We recommend leaving these hours open each day" },
+      { id: "e", label: "Self-Organized Lunch: 13.00-15.00" },
+      { id: "f", label: "Bottoms-Up Programming: 15.00-18.00" },
+      { id: "g", label: "Self-Organized Dinner: 18.00-20.00" },
     ],
   },
   {
     id: "4",
-    title: "Browse housing options",
+    title: "Fill out Arrival & Housing Preference Form",
   },
   {
     id: "5",
-    title: "Join the community",
+    title: "Read our Transportation Guide",
     subtasks: [
-      { id: "a", label: "Join the Discord server" },
-      { id: "b", label: "Introduce yourself in #introductions" },
+      { id: "a", label: "Direct to #2 while locked" },
+      { id: "b", label: "You can coordinate car pools in the Arrivals channel in the telegram hub!" },
     ],
   },
   {
     id: "6",
-    title: "Pay your deposit",
+    title: "Read our Privacy Policy",
   },
   {
     id: "7",
-    title: "Sign the rental agreement",
+    title: "Read our Safety Policies",
   },
   {
     id: "8",
-    title: "Submit your proof of income",
+    title: "Add yourself to our Voluntary Resident Directory",
   },
   {
     id: "9",
-    title: "Complete your arrival info",
+    title: "Bring 1 (or more!) of your favorite books to Zuitzerland!",
     subtasks: [
-      { id: "a", label: "Set your arrival date" },
+      { id: "a", label: "Add books you plan to bring to the Library Catalogue" },
     ],
   },
   {
     id: "10",
-    title: "Complete payment",
+    title: "Pack according to the Packing List!",
   },
 ];
 
@@ -119,7 +126,9 @@ const Onboarding = () => {
 
         // Use type assertion to tell TypeScript that data.onboarding_progress exists
         if (data && data.onboarding_progress) {
-          setProgress(data.onboarding_progress as OnboardingProgress);
+          // Fix the type assertion to properly handle the conversion
+          const progressData = data.onboarding_progress as unknown;
+          setProgress(progressData as OnboardingProgress);
         }
       } catch (error) {
         console.error('Error fetching onboarding progress:', error);
