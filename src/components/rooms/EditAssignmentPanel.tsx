@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -323,6 +324,11 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   const selectedApartment = apartments.find(apt => apt.id === selectedApartmentId);
   const selectedBedroom = bedrooms.find(bedroom => bedroom.id === selectedBedroomId);
   const selectedBed = beds.find(bed => bed.id === selectedBedId);
+
+  // Handle the button click event properly
+  const handleCancelClick = () => {
+    onClose(false);
+  };
   
   return (
     <div className="space-y-6">
@@ -529,7 +535,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
               <Button 
                 variant="outline" 
-                onClick={onClose} 
+                onClick={handleCancelClick} 
                 disabled={saving}
                 className="w-full sm:w-auto"
               >
