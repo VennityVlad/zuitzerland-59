@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -15,10 +14,12 @@ import { Upload, Users } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { TeamBadge } from "@/components/TeamBadge";
 import HousingPreferencesButton from "@/components/profile/HousingPreferencesButton";
+import { Switch } from "@/components/ui/switch";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
   description: z.string().max(500).optional(),
+  opt_in_directory: z.boolean().default(false),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -36,6 +37,7 @@ const Profile = () => {
     defaultValues: {
       username: "",
       description: "",
+      opt_in_directory: false,
     },
   });
 
@@ -61,6 +63,7 @@ const Profile = () => {
           form.reset({
             username: data.username || "",
             description: data.description || "",
+            opt_in_directory: data.opt_in_directory || false,
           });
         }
       } catch (error) {
@@ -157,6 +160,7 @@ const Profile = () => {
             email: user.email?.address || null,
             username: values.username,
             description: values.description,
+            opt_in_directory: values.opt_in_directory,
           })
           .select()
           .single();
@@ -175,6 +179,7 @@ const Profile = () => {
             username: values.username,
             description: values.description,
             email: user.email?.address || null,
+            opt_in_directory: values.opt_in_directory,
           })
           .eq('privy_id', user.id);
 
@@ -313,6 +318,29 @@ const Profile = () => {
                         />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="opt_in_directory"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Resident Directory
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Allow other residents to see your profile information in the directory
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />

@@ -92,7 +92,8 @@ const taskDefinitions: OnboardingTaskDefinition[] = [
   },
   {
     id: "8",
-    title: "Add yourself to our Voluntary Resident Directory",
+    title: "Opt In to Resident Directory",
+    link: "/directory",
   },
   {
     id: "9",
@@ -198,6 +199,15 @@ const Onboarding = () => {
         throw error;
       }
       
+      if (taskId === "8") {
+        await supabase
+          .from('profiles')
+          .update({
+            opt_in_directory: completed
+          })
+          .eq('privy_id', user.id);
+      }
+      
       toast({
         title: completed ? "Task completed!" : "Task marked as incomplete",
         description: completed ? "Your progress has been updated" : "Your task has been reset"
@@ -283,6 +293,10 @@ const Onboarding = () => {
     navigate("/transportation-guide");
   };
 
+  const handleDirectoryClick = () => {
+    navigate("/directory");
+  };
+
   if (isAdminLoading || isAdmin) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -365,6 +379,7 @@ const Onboarding = () => {
                   const isPackingListTask = task.id === "10";
                   const isHousingPreferencesTask = task.id === "4";
                   const isTransportationGuideTask = task.id === "5";
+                  const isDirectoryTask = task.id === "8";
                   
                   return (
                     <OnboardingTask
@@ -380,9 +395,10 @@ const Onboarding = () => {
                         isPackingListTask ? handlePackingListClick : 
                         isHousingPreferencesTask ? handleHousingPreferencesClick : 
                         isTransportationGuideTask ? handleTransportationGuideClick :
+                        isDirectoryTask ? handleDirectoryClick :
                         undefined
                       }
-                      isLink={isPackingListTask || isHousingPreferencesTask || isTransportationGuideTask}
+                      isLink={isPackingListTask || isHousingPreferencesTask || isTransportationGuideTask || isDirectoryTask}
                     />
                   );
                 })}

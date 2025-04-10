@@ -26,7 +26,8 @@ import {
   Calendar,
   BedDouble,
   Grid3X3,
-  CheckSquare
+  CheckSquare,
+  ContactRound
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,21 +120,28 @@ const NavMenu = () => {
       label: "Book",
       icon: <CalendarDays className="h-5 w-5" />,
       path: "/book",
-    },
-    {
-      label: "Events",
-      icon: <Calendar className="h-5 w-5" />,
-      path: "/events",
     }
   ];
 
   if (!isAdmin) {
-    menuItems.unshift({
+    menuItems.push({
       label: "Onboarding",
       icon: <CheckSquare className="h-5 w-5" />,
       path: "/onboarding",
     });
   }
+
+  menuItems.push({
+    label: "Events",
+    icon: <Calendar className="h-5 w-5" />,
+    path: "/events",
+  });
+
+  menuItems.push({
+    label: "Directory",
+    icon: <ContactRound className="h-5 w-5" />,
+    path: "/directory",
+  });
 
   if (isAdmin) {
     menuItems.push({

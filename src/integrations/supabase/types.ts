@@ -448,6 +448,7 @@ export type Database = {
           id: string
           is_guild_invited: boolean | null
           onboarding_progress: Json | null
+          opt_in_directory: boolean | null
           packing_list: Json | null
           privy_id: string | null
           role: Database["public"]["Enums"]["profile_role"] | null
@@ -468,6 +469,7 @@ export type Database = {
           id: string
           is_guild_invited?: boolean | null
           onboarding_progress?: Json | null
+          opt_in_directory?: boolean | null
           packing_list?: Json | null
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
@@ -488,6 +490,7 @@ export type Database = {
           id?: string
           is_guild_invited?: boolean | null
           onboarding_progress?: Json | null
+          opt_in_directory?: boolean | null
           packing_list?: Json | null
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null

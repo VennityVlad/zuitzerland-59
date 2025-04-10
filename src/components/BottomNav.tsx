@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal, CheckSquare } from "lucide-react";
+import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal, CheckSquare, ContactRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,7 +87,12 @@ const BottomNav = () => {
     showAlways: boolean;
   };
 
-  const navItems: NavItem[] = [];
+  const navItems: NavItem[] = [{
+    name: "Book",
+    icon: CalendarDays,
+    path: "/book",
+    showAlways: true,
+  }];
 
   if (!isAdmin) {
     navItems.push({
@@ -100,15 +105,15 @@ const BottomNav = () => {
 
   navItems.push(
     {
-      name: "Book",
-      icon: CalendarDays,
-      path: "/book",
-      showAlways: true,
-    },
-    {
       name: "Events",
       icon: Calendar,
       path: "/events",
+      showAlways: true,
+    },
+    {
+      name: "Directory",
+      icon: ContactRound,
+      path: "/directory",
       showAlways: true,
     },
     {

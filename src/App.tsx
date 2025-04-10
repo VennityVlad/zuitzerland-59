@@ -23,6 +23,7 @@ import RoomAssignmentsPage from "./pages/rooms/RoomAssignmentsPage";
 import Onboarding from "./pages/Onboarding";
 import NavMenu from "./components/NavMenu";
 import TransportationGuide from "./pages/TransportationGuide";
+import Directory from "./pages/Directory";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -249,6 +250,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <TransportationGuide />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/directory"
+                element={
+                  <ProtectedRoute>
+                    <Directory />
                   </ProtectedRoute>
                 }
               />
