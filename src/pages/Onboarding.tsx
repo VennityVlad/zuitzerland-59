@@ -9,6 +9,9 @@ import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PackingList } from "@/components/onboarding/PackingList";
+import { List, Package } from "lucide-react";
 
 interface TaskData {
   completed: boolean;
@@ -56,9 +59,13 @@ const taskDefinitions: OnboardingTaskDefinition[] = [
       { id: "b", label: "Breakfast: 7.00-10.00" },
       { id: "c", label: "Core Content hours: 10.00-13.00" },
       { id: "d", label: "We recommend leaving these hours open each day" },
-      { id: "e", label: "Self-Organized Lunch: 13.00-15.00" },
-      { id: "f", label: "Bottoms-Up Programming: 15.00-18.00" },
-      { id: "g", label: "Self-Organized Dinner: 18.00-20.00" },
+      { id: "e", label: "Generally, you can expect:" },
+      { id: "f", label: "10am - intro session" },
+      { id: "g", label: "11am - lecture or workshop" },
+      { id: "h", label: "12pm - discussion" },
+      { id: "i", label: "Self-Organized Lunch: 13.00-15.00" },
+      { id: "j", label: "Bottoms-Up Programming: 15.00-18.00" },
+      { id: "k", label: "Self-Organized Dinner: 18.00-20.00" },
     ],
   },
   {
@@ -95,6 +102,7 @@ const taskDefinitions: OnboardingTaskDefinition[] = [
   {
     id: "10",
     title: "Pack according to the Packing List!",
+    description: "View the packing list in the Packing List tab",
   },
 ];
 
@@ -106,6 +114,7 @@ const Onboarding = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
+  const [activeTab, setActiveTab] = useState("tasks");
 
   // Fetch onboarding progress from the user's profile
   useEffect(() => {
@@ -281,6 +290,11 @@ const Onboarding = () => {
       setIsSaving(false);
     }
   };
+  
+  // Handle navigation to the packing list tab
+  const handlePackingListClick = () => {
+    setActiveTab("packing-list");
+  };
 
   if (isAdminLoading || isAdmin) {
     return (
@@ -316,53 +330,85 @@ const Onboarding = () => {
       />
       <div className="py-8 px-4 flex-grow">
         <div className="container max-w-3xl mx-auto">
-          <Card>
-            <CardContent className="p-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="tasks" className="flex items-center gap-2">
+                <List className="h-4 w-4" />
+                Tasks
+              </TabsTrigger>
+              <TabsTrigger value="packing-list" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Packing List
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="tasks" className="space-y-6">
               {progress && (
-                <OnboardingProgress 
-                  completedCount={progress.totalCompleted} 
-                  totalCount={progress.totalTasks} 
-                />
+                <Card>
+                  <CardContent className="p-6">
+                    <OnboardingProgress 
+                      completedCount={progress.totalCompleted} 
+                      totalCount={progress.totalTasks} 
+                    />
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
-          
-          <div className="mt-8 space-y-2">
-            {taskDefinitions.map((task) => {
-              // Default to an incomplete task if we don't have progress data yet
-              const taskProgress = progress?.tasks[task.id] || {
-                completed: false,
-                subtasks: task.subtasks ? 
-                  Object.fromEntries(task.subtasks.map(s => [s.id, false])) : 
-                  undefined
-              };
               
-              const subtasks = task.subtasks?.map(subtask => ({
-                id: subtask.id,
-                label: subtask.label,
-                completed: taskProgress.subtasks ? 
-                  taskProgress.subtasks[subtask.id] || false : 
-                  false
-              }));
+              <div className="mt-4 space-y-2">
+                {taskDefinitions.map((task) => {
+                  // Default to an incomplete task if we don't have progress data yet
+                  const taskProgress = progress?.tasks[task.id] || {
+                    completed: false,
+                    subtasks: task.subtasks ? 
+                      Object.fromEntries(task.subtasks.map(s => [s.id, false])) : 
+                      undefined
+                  };
+                  
+                  const subtasks = task.subtasks?.map(subtask => ({
+                    id: subtask.id,
+                    label: subtask.label,
+                    completed: taskProgress.subtasks ? 
+                      taskProgress.subtasks[subtask.id] || false : 
+                      false
+                  }));
+                  
+                  // Special handling for the packing list task
+                  const isPackingListTask = task.id === "10";
+                  
+                  return (
+                    <OnboardingTask
+                      key={task.id}
+                      id={task.id}
+                      title={task.title}
+                      description={task.description}
+                      completed={taskProgress.completed}
+                      subtasks={subtasks}
+                      onComplete={updateTaskStatus}
+                      onSubtaskComplete={updateSubtaskStatus}
+                      onTaskClick={isPackingListTask ? handlePackingListClick : undefined}
+                      isLink={isPackingListTask}
+                    />
+                  );
+                })}
+              </div>
               
-              return (
-                <OnboardingTask
-                  key={task.id}
-                  id={task.id}
-                  title={task.title}
-                  description={task.description}
-                  completed={taskProgress.completed}
-                  subtasks={subtasks}
-                  onComplete={updateTaskStatus}
-                  onSubtaskComplete={updateSubtaskStatus}
-                />
-              );
-            })}
-          </div>
-          
-          <p className="text-sm text-gray-500 mt-8">
-            Complete all tasks to finish your onboarding. Need help? Contact support.
-          </p>
+              <p className="text-sm text-gray-500 mt-8">
+                Complete all tasks to finish your onboarding. Need help? Contact support.
+              </p>
+            </TabsContent>
+            
+            <TabsContent value="packing-list">
+              <Card>
+                <CardContent className="p-6">
+                  <PackingList />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

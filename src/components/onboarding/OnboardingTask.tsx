@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Check, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,8 @@ interface OnboardingTaskProps {
   subtasks?: OnboardingSubtask[];
   onComplete: (taskId: string, completed: boolean) => void;
   onSubtaskComplete: (taskId: string, subtaskId: string, completed: boolean) => void;
+  onTaskClick?: () => void; // Optional callback for when the task is clicked
+  isLink?: boolean; // Whether the task should act as a link
 }
 
 export const OnboardingTask = ({
@@ -28,6 +30,8 @@ export const OnboardingTask = ({
   subtasks = [],
   onComplete,
   onSubtaskComplete,
+  onTaskClick,
+  isLink = false,
 }: OnboardingTaskProps) => {
   const [expanded, setExpanded] = useState(false);
   
@@ -36,6 +40,11 @@ export const OnboardingTask = ({
   const toggleExpanded = () => {
     if (hasSubtasks) {
       setExpanded(!expanded);
+    }
+    
+    // If this task is a link and there's a click handler, call it
+    if (isLink && onTaskClick) {
+      onTaskClick();
     }
   };
 
@@ -52,7 +61,8 @@ export const OnboardingTask = ({
       <div 
         className={cn(
           "flex items-start p-4 rounded-lg border",
-          completed ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
+          completed ? "bg-green-50 border-green-200" : "bg-white border-gray-200",
+          isLink && "cursor-pointer hover:bg-gray-50"
         )}
       >
         <Button
@@ -67,20 +77,24 @@ export const OnboardingTask = ({
           {completed && <Check className="h-3 w-3" />}
         </Button>
         
-        <div className="flex-1">
+        <div 
+          className="flex-1"
+          onClick={toggleExpanded}
+        >
           <div 
             className={cn(
-              "flex items-center cursor-pointer",
-              hasSubtasks ? "cursor-pointer" : ""
+              "flex items-center",
+              (hasSubtasks || isLink) ? "cursor-pointer" : ""
             )}
-            onClick={toggleExpanded}
           >
             <div className="flex-1">
               <h3 className={cn(
                 "text-base font-medium",
-                completed && "line-through text-gray-500"
+                completed && "line-through text-gray-500",
+                isLink && "text-blue-600 hover:underline"
               )}>
                 {title}
+                {isLink && <ArrowRight className="inline-block ml-1 h-4 w-4" />}
               </h3>
               {description && (
                 <p className="text-sm text-gray-500 mt-1">{description}</p>
