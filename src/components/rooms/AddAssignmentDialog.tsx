@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { format } from "date-fns";
 
 type AddAssignmentDialogProps = {
   open: boolean;
@@ -177,6 +179,10 @@ const AddAssignmentDialog = ({ open, onOpenChange, onSubmit }: AddAssignmentDial
     }
     
     try {
+      // Format dates correctly for the database using local date string format YYYY-MM-DD
+      const formattedStartDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
+      const formattedEndDate = endDate ? format(endDate, 'yyyy-MM-dd') : '';
+      
       const { error } = await supabase
         .from('room_assignments')
         .insert({
@@ -184,8 +190,8 @@ const AddAssignmentDialog = ({ open, onOpenChange, onSubmit }: AddAssignmentDial
           apartment_id: roomId,
           bedroom_id: bedroomId || null,
           bed_id: bedId || null,
-          start_date: startDate?.toISOString().split('T')[0],
-          end_date: endDate?.toISOString().split('T')[0],
+          start_date: formattedStartDate,
+          end_date: formattedEndDate,
           notes: notes || null,
         });
       

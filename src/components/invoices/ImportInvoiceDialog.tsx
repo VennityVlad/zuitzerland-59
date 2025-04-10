@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,6 @@ import { format, parseISO } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
-import { formatInTimeZone } from "date-fns-tz";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 
 interface Profile {
@@ -222,11 +222,13 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
       let checkoutStr = null;
       
       if (checkinDate) {
-        checkinStr = formatInTimeZone(checkinDate, 'UTC', 'yyyy-MM-dd');
+        // Format dates using local date string format YYYY-MM-DD
+        checkinStr = format(checkinDate, 'yyyy-MM-dd');
       }
       
       if (checkoutDate) {
-        checkoutStr = formatInTimeZone(checkoutDate, 'UTC', 'yyyy-MM-dd');
+        // Format dates using local date string format YYYY-MM-DD
+        checkoutStr = format(checkoutDate, 'yyyy-MM-dd');
       }
 
       const { data, error } = await supabase

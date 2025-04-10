@@ -5,7 +5,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -233,7 +233,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
     
     setSaving(true);
     try {
-      // Format dates for database
+      // Format dates correctly for database using local date string format YYYY-MM-DD
       const formattedStartDate = format(startDate, 'yyyy-MM-dd');
       const formattedEndDate = format(endDate, 'yyyy-MM-dd');
       
