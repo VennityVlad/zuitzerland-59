@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isSameDay, parseISO, parse, isAfter, isBefore, isWithinInterval } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
@@ -9,6 +10,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import EditAssignmentPanel from "./EditAssignmentPanel";
 import { ChevronLeft, ChevronRight, Trash2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Profile = {
   id: string;
@@ -622,158 +624,170 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
         ))}
       </div>
 
-      <div className="max-h-[500px] overflow-y-auto">
-        {apartments.map((apartment) => (
-          <div key={apartment.id} className="mb-4">
-            <div className="text-lg font-semibold p-2 bg-muted/20 sticky top-0 z-10">
-              {apartment.name}
-            </div>
-            
-            {apartment.bedrooms.flatMap((bedroom) => 
-              bedroom.beds.map((bed) => (
-                <div key={bed.id} className="grid grid-cols-[200px,repeat(7,1fr)] border-b hover:bg-muted/10">
-                  <div className="p-2 border-r flex items-center">
-                    <div>
-                      <div className="font-medium">{bedroom.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        {bed.name} ({bed.bed_type})
+      <ScrollArea className="h-[500px]">
+        <div className="min-w-full">
+          {apartments.map((apartment) => (
+            <div key={apartment.id} className="mb-4">
+              <div className="text-lg font-semibold p-2 bg-muted/20 sticky top-0 z-10">
+                {apartment.name}
+              </div>
+              
+              {apartment.bedrooms.flatMap((bedroom) => 
+                bedroom.beds.map((bed) => (
+                  <div key={bed.id} className="grid grid-cols-[200px,repeat(7,minmax(150px,1fr))] border-b hover:bg-muted/10">
+                    <div className="p-2 border-r flex items-center">
+                      <div>
+                        <div className="font-medium">{bedroom.name}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          {bed.name} ({bed.bed_type})
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  {dates.map((date, dateIndex) => {
-                    const assignment = getAssignmentForCell(bed.id, date);
-                    const isAssignmentStart = assignment && isSameDay(parseISO(assignment.start_date), date);
-                    const isAssignmentEnd = assignment && isSameDay(parseISO(assignment.end_date), date);
-                    const continuesBeyondView = assignment && isAssignmentStart && 
-                      isAssignmentContinuingBeyondView(assignment, dateIndex, dates);
                     
-                    if (assignment && isAssignmentStart) {
-                      const displayDays = adjustDisplayDaysForAssignment(assignment, dateIndex, dates);
-                      const teamColor = assignment.profile.team?.color || "#94a3b8";
+                    {dates.map((date, dateIndex) => {
+                      const assignment = getAssignmentForCell(bed.id, date);
+                      const isAssignmentStart = assignment && isSameDay(parseISO(assignment.start_date), date);
+                      const isAssignmentEnd = assignment && isSameDay(parseISO(assignment.end_date), date);
+                      const continuesBeyondView = assignment && isAssignmentStart && 
+                        isAssignmentContinuingBeyondView(assignment, dateIndex, dates);
+                      
+                      if (assignment && isAssignmentStart) {
+                        const displayDays = adjustDisplayDaysForAssignment(assignment, dateIndex, dates);
+                        const teamColor = assignment.profile.team?.color || "#94a3b8";
+                        
+                        return (
+                          <div 
+                            key={dateIndex}
+                            className="relative"
+                            style={{ gridColumn: `span ${displayDays}` }}
+                          >
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div 
+                                    className="absolute top-0 left-0 right-0 bottom-0 m-1 border rounded-md flex items-center justify-between cursor-pointer overflow-visible"
+                                    style={{ 
+                                      borderColor: teamColor, 
+                                      backgroundColor: `${teamColor}30`,
+                                      minWidth: "150px" // Ensure minimum width for the component
+                                    }}
+                                    onClick={(e) => handleAssignmentClick(assignment, e)}
+                                  >
+                                    <div 
+                                      className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
+                                      style={{ backgroundColor: `${teamColor}50` }}
+                                      onMouseDown={(e) => handleResizeStart(e, assignment.id, 'left')}
+                                    >
+                                      <ChevronLeft className="h-3 w-3 text-white" />
+                                    </div>
+                                    
+                                    <div className="flex-1 px-6 py-1 truncate flex flex-col items-center justify-center">
+                                      <div className="flex items-center w-full">
+                                        <Avatar className="h-5 w-5 mr-1 flex-shrink-0">
+                                          <AvatarImage src={assignment.profile.avatar_url || undefined} />
+                                          <AvatarFallback className="text-[10px]">
+                                            {assignment.profile.full_name?.charAt(0) || '?'}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-xs font-medium truncate text-center flex-1">
+                                          {assignment.profile.full_name}
+                                        </span>
+                                      </div>
+                                      <span className="text-[10px] text-muted-foreground truncate w-full text-center">
+                                        {assignment.profile.email}
+                                      </span>
+                                    </div>
+                                    
+                                    {(!continuesBeyondView) ? (
+                                      <div 
+                                        className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
+                                        style={{ backgroundColor: `${teamColor}50` }}
+                                        onMouseDown={(e) => handleResizeStart(e, assignment.id, 'right')}
+                                      >
+                                        <ChevronRight className="h-3 w-3 text-white" />
+                                      </div>
+                                    ) : (
+                                      <div 
+                                        className="absolute right-0 top-0 bottom-0 w-2 flex items-center justify-center"
+                                        style={{ backgroundColor: `${teamColor}50` }}
+                                      >
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="space-y-2 max-w-[300px]">
+                                    <div className="space-y-1">
+                                      <p className="font-semibold">{assignment.profile.full_name}</p>
+                                      <p className="text-xs text-muted-foreground">{assignment.profile.email}</p>
+                                      {assignment.profile.team && (
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-xs text-muted-foreground">Team:</span>
+                                          <TeamBadge team={assignment.profile.team} size="sm" />
+                                        </div>
+                                      )}
+                                      <div className="text-xs text-muted-foreground">
+                                        {format(parseISO(assignment.start_date), 'PP')} - {format(parseISO(assignment.end_date), 'PP')}
+                                        {continuesBeyondView && " (continues beyond current view)"}
+                                      </div>
+                                    </div>
+                                    
+                                    {assignment.profile.housing_preferences && (
+                                      <div className="border-t pt-1">
+                                        <p className="text-xs font-medium mb-1">Housing Preferences:</p>
+                                        {getHousingPreferenceDetails(assignment.profile)}
+                                      </div>
+                                    )}
+                                    
+                                    {assignment.notes && (
+                                      <div className="border-t pt-1">
+                                        <p className="text-xs font-medium">Notes:</p>
+                                        <p className="text-xs">{assignment.notes}</p>
+                                      </div>
+                                    )}
+                                    
+                                    <div className="flex justify-between items-center pt-1 border-t">
+                                      <p className="text-xs text-muted-foreground">Drag edges to resize</p>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6" 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          deleteAssignment(assignment.id);
+                                        }}
+                                      >
+                                        <Trash2 className="h-3 w-3 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        );
+                      }
+                      
+                      if (assignment && !isAssignmentStart) {
+                        return <div key={dateIndex} />;
+                      }
                       
                       return (
                         <div 
                           key={dateIndex}
-                          className="relative"
-                          style={{ gridColumn: `span ${displayDays}` }}
-                        >
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div 
-                                  className="absolute top-0 left-0 right-0 bottom-0 m-1 border rounded-md flex items-center justify-between cursor-pointer"
-                                  style={{ borderColor: teamColor, backgroundColor: `${teamColor}30` }}
-                                  onClick={(e) => handleAssignmentClick(assignment, e)}
-                                >
-                                  <div 
-                                    className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
-                                    style={{ backgroundColor: `${teamColor}50` }}
-                                    onMouseDown={(e) => handleResizeStart(e, assignment.id, 'left')}
-                                  >
-                                    <ChevronLeft className="h-3 w-3 text-white" />
-                                  </div>
-                                  
-                                  <div className="flex-1 px-6 py-1 truncate flex items-center justify-center">
-                                    <Avatar className="h-5 w-5 mr-1 flex-shrink-0">
-                                      <AvatarImage src={assignment.profile.avatar_url || undefined} />
-                                      <AvatarFallback className="text-[10px]">
-                                        {assignment.profile.full_name?.charAt(0) || '?'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs truncate text-center flex-1">
-                                      {assignment.profile.full_name}
-                                    </span>
-                                  </div>
-                                  
-                                  {(!continuesBeyondView) ? (
-                                    <div 
-                                      className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
-                                      style={{ backgroundColor: `${teamColor}50` }}
-                                      onMouseDown={(e) => handleResizeStart(e, assignment.id, 'right')}
-                                    >
-                                      <ChevronRight className="h-3 w-3 text-white" />
-                                    </div>
-                                  ) : (
-                                    <div 
-                                      className="absolute right-0 top-0 bottom-0 w-2 flex items-center justify-center"
-                                      style={{ backgroundColor: `${teamColor}50` }}
-                                    >
-                                    </div>
-                                  )}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="space-y-2 max-w-[300px]">
-                                  <div className="space-y-1">
-                                    <p className="font-semibold">{assignment.profile.full_name}</p>
-                                    {assignment.profile.team && (
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-xs text-muted-foreground">Team:</span>
-                                        <TeamBadge team={assignment.profile.team} size="sm" />
-                                      </div>
-                                    )}
-                                    <div className="text-xs text-muted-foreground">
-                                      {format(parseISO(assignment.start_date), 'PP')} - {format(parseISO(assignment.end_date), 'PP')}
-                                      {continuesBeyondView && " (continues beyond current view)"}
-                                    </div>
-                                  </div>
-                                  
-                                  {assignment.profile.housing_preferences && (
-                                    <div className="border-t pt-1">
-                                      <p className="text-xs font-medium mb-1">Housing Preferences:</p>
-                                      {getHousingPreferenceDetails(assignment.profile)}
-                                    </div>
-                                  )}
-                                  
-                                  {assignment.notes && (
-                                    <div className="border-t pt-1">
-                                      <p className="text-xs font-medium">Notes:</p>
-                                      <p className="text-xs">{assignment.notes}</p>
-                                    </div>
-                                  )}
-                                  
-                                  <div className="flex justify-between items-center pt-1 border-t">
-                                    <p className="text-xs text-muted-foreground">Drag edges to resize</p>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-6 w-6" 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        deleteAssignment(assignment.id);
-                                      }}
-                                    >
-                                      <Trash2 className="h-3 w-3 text-destructive" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                          className="border-r min-h-[60px] p-1"
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, apartment.id, bedroom.id, bed.id, date)}
+                        />
                       );
-                    }
-                    
-                    if (assignment && !isAssignmentStart) {
-                      return <div key={dateIndex} />;
-                    }
-                    
-                    return (
-                      <div 
-                        key={dateIndex}
-                        className="border-r min-h-[60px] p-1"
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, apartment.id, bedroom.id, bed.id, date)}
-                      />
-                    );
-                  })}
-                </div>
-              ))
-            )}
-          </div>
-        ))}
-      </div>
+                    })}
+                  </div>
+                ))
+              )}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
 
       <Sheet open={isEditPanelOpen} onOpenChange={setIsEditPanelOpen}>
         <SheetContent className="w-full sm:w-[540px] overflow-y-auto">

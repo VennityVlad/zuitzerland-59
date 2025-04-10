@@ -11,6 +11,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { format, addWeeks, subWeeks } from "date-fns";
 import AssignmentGridCalendar from "@/components/rooms/AssignmentGridCalendar";
 import PeopleSidebar from "@/components/rooms/PeopleSidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const RoomAssignmentsPage = () => {
   // Set default start date to May 1, 2025
@@ -105,8 +106,8 @@ const RoomAssignmentsPage = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           <PeopleSidebar />
           
-          <div className="flex-1 overflow-x-auto">
-            <Card className="min-h-[600px]">
+          <div className="flex-1 overflow-hidden">
+            <Card>
               <CardContent className="p-4">
                 <AssignmentGridCalendar startDate={currentWeek} />
               </CardContent>
