@@ -10,6 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { ContactRound, Search } from "lucide-react";
 
+type Team = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  color?: string;
+};
+
 type ProfileWithTeam = {
   id: string;
   username: string;
@@ -18,11 +25,7 @@ type ProfileWithTeam = {
   avatar_url: string | null;
   description: string | null;
   role: string | null;
-  teams: {
-    id: string;
-    name: string;
-    logo_url: string | null;
-  } | null;
+  teams: Team | null;
 };
 
 const Directory = () => {
