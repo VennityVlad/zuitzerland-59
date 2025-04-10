@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +28,7 @@ interface OnboardingTaskDefinition {
   id: string;
   title: string;
   description?: string;
+  link?: string;
   subtasks?: {
     id: string;
     label: string;
@@ -71,6 +71,7 @@ const taskDefinitions: OnboardingTaskDefinition[] = [
   {
     id: "4",
     title: "Fill out Arrival & Housing Preference Form",
+    link: "/housing-preferences",
   },
   {
     id: "5",
@@ -116,7 +117,6 @@ const Onboarding = () => {
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
   const [activeTab, setActiveTab] = useState("tasks");
 
-  // Fetch onboarding progress from the user's profile
   useEffect(() => {
     const fetchOnboardingProgress = async () => {
       if (!user?.id) return;
@@ -133,9 +133,7 @@ const Onboarding = () => {
           throw error;
         }
 
-        // Use type assertion to tell TypeScript that data.onboarding_progress exists
         if (data && data.onboarding_progress) {
-          // Fix the type assertion to properly handle the conversion
           const progressData = data.onboarding_progress as unknown;
           setProgress(progressData as OnboardingProgress);
         }
@@ -154,36 +152,28 @@ const Onboarding = () => {
     fetchOnboardingProgress();
   }, [user?.id, toast]);
 
-  // Redirect admins to another page
   useEffect(() => {
     if (!isAdminLoading && isAdmin) {
       navigate('/book');
     }
   }, [isAdmin, isAdminLoading, navigate]);
 
-  // Handle task completion
   const updateTaskStatus = async (taskId: string, completed: boolean) => {
     if (!user?.id || !progress) return;
     
     setIsSaving(true);
 
     try {
-      // Create a deep copy of the progress object
       const updatedProgress = JSON.parse(JSON.stringify(progress)) as OnboardingProgress;
       
-      // Update the task completion status
       updatedProgress.tasks[taskId].completed = completed;
       
-      // If the task has subtasks and is marked as completed, mark all subtasks as completed too
       if (completed && updatedProgress.tasks[taskId].subtasks) {
         Object.keys(updatedProgress.tasks[taskId].subtasks!).forEach(subtaskId => {
           updatedProgress.tasks[taskId].subtasks![subtaskId] = true;
         });
       }
       
-      // If the task is marked as incomplete but has completed subtasks, keep them completed
-      
-      // Recalculate the total completed tasks
       let completedCount = 0;
       Object.values(updatedProgress.tasks).forEach(task => {
         if (task.completed) {
@@ -194,10 +184,8 @@ const Onboarding = () => {
       updatedProgress.totalCompleted = completedCount;
       updatedProgress.lastUpdated = new Date().toISOString();
       
-      // Update the progress state
       setProgress(updatedProgress);
       
-      // Save to the database using type assertion to tell TypeScript onboarding_progress is valid
       const { error } = await supabase
         .from('profiles')
         .update({ 
@@ -226,34 +214,27 @@ const Onboarding = () => {
     }
   };
 
-  // Handle subtask completion
   const updateSubtaskStatus = async (taskId: string, subtaskId: string, completed: boolean) => {
     if (!user?.id || !progress) return;
     
     setIsSaving(true);
     
     try {
-      // Create a deep copy of the progress object
       const updatedProgress = JSON.parse(JSON.stringify(progress)) as OnboardingProgress;
       
-      // Update the subtask completion status
       if (!updatedProgress.tasks[taskId].subtasks) {
         updatedProgress.tasks[taskId].subtasks = {};
       }
       updatedProgress.tasks[taskId].subtasks![subtaskId] = completed;
       
-      // Check if all subtasks are completed
       const allSubtasksCompleted = Object.values(updatedProgress.tasks[taskId].subtasks!).every(status => status);
       
-      // If all subtasks are completed, mark the parent task as completed
       if (allSubtasksCompleted) {
         updatedProgress.tasks[taskId].completed = true;
       } else {
-        // If any subtask is incomplete, make sure the parent task is marked as incomplete
         updatedProgress.tasks[taskId].completed = false;
       }
       
-      // Recalculate the total completed tasks
       let completedCount = 0;
       Object.values(updatedProgress.tasks).forEach(task => {
         if (task.completed) {
@@ -264,10 +245,8 @@ const Onboarding = () => {
       updatedProgress.totalCompleted = completedCount;
       updatedProgress.lastUpdated = new Date().toISOString();
       
-      // Update the progress state
       setProgress(updatedProgress);
       
-      // Save to the database using type assertion to tell TypeScript onboarding_progress is valid
       const { error } = await supabase
         .from('profiles')
         .update({ 
@@ -290,10 +269,13 @@ const Onboarding = () => {
       setIsSaving(false);
     }
   };
-  
-  // Handle navigation to the packing list tab
+
   const handlePackingListClick = () => {
     setActiveTab("packing-list");
+  };
+
+  const handleHousingPreferencesClick = () => {
+    navigate("/housing-preferences");
   };
 
   if (isAdminLoading || isAdmin) {
@@ -360,7 +342,6 @@ const Onboarding = () => {
               
               <div className="mt-4 space-y-2">
                 {taskDefinitions.map((task) => {
-                  // Default to an incomplete task if we don't have progress data yet
                   const taskProgress = progress?.tasks[task.id] || {
                     completed: false,
                     subtasks: task.subtasks ? 
@@ -376,8 +357,8 @@ const Onboarding = () => {
                       false
                   }));
                   
-                  // Special handling for the packing list task
                   const isPackingListTask = task.id === "10";
+                  const isHousingPreferencesTask = task.id === "4";
                   
                   return (
                     <OnboardingTask
@@ -389,8 +370,12 @@ const Onboarding = () => {
                       subtasks={subtasks}
                       onComplete={updateTaskStatus}
                       onSubtaskComplete={updateSubtaskStatus}
-                      onTaskClick={isPackingListTask ? handlePackingListClick : undefined}
-                      isLink={isPackingListTask}
+                      onTaskClick={
+                        isPackingListTask ? handlePackingListClick : 
+                        isHousingPreferencesTask ? handleHousingPreferencesClick : 
+                        undefined
+                      }
+                      isLink={isPackingListTask || isHousingPreferencesTask}
                     />
                   );
                 })}
