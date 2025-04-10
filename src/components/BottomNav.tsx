@@ -1,6 +1,5 @@
-
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal } from "lucide-react";
+import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,42 +39,32 @@ const BottomNav = () => {
     }
   }, [user?.id]);
 
-  // Handle scroll behavior
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
-      // Clear any existing timeout to prevent rapid firing
       if (scrollTimeoutRef.current) {
         window.clearTimeout(scrollTimeoutRef.current);
       }
       
-      // Don't respond to tiny scroll amounts (helps with iOS bounce)
       if (Math.abs(currentScrollY - lastScrollY.current) < 10) {
         return;
       }
       
-      // Ignore bounce scroll at the top of the page
       if (currentScrollY <= 0) {
         setIsVisible(true);
         lastScrollY.current = 0;
         return;
       }
       
-      // Determine if we should show/hide the nav - only hide when scrolling down significantly
       if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-        // Scrolling down - hide nav, but only when we're not at the top
         setIsVisible(false);
       } else {
-        // Scrolling up - show nav
         setIsVisible(true);
       }
       
-      // Update the last scroll position
       lastScrollY.current = currentScrollY > 0 ? currentScrollY : 0;
       
-      // Set a timeout before allowing another scroll event to trigger
-      // This helps with inertial scrolling and bounce effects
       scrollTimeoutRef.current = window.setTimeout(() => {
         scrollTimeoutRef.current = null;
       }, 100);
@@ -91,7 +80,6 @@ const BottomNav = () => {
     };
   }, []);
 
-  // Define a common type for navigation items
   type NavItem = {
     name: string;
     icon: typeof Calendar;
@@ -99,7 +87,18 @@ const BottomNav = () => {
     showAlways: boolean;
   };
 
-  const navItems: NavItem[] = [
+  const navItems: NavItem[] = [];
+
+  if (!isAdmin) {
+    navItems.push({
+      name: "Onboarding",
+      icon: CheckSquare,
+      path: "/onboarding",
+      showAlways: true,
+    });
+  }
+
+  navItems.push(
     {
       name: "Book",
       icon: CalendarDays,
@@ -117,8 +116,8 @@ const BottomNav = () => {
       icon: User,
       path: "/profile",
       showAlways: true,
-    },
-  ];
+    }
+  );
 
   const adminItems: NavItem[] = [
     {
@@ -159,21 +158,17 @@ const BottomNav = () => {
     },
   ];
 
-  // Handle navigation
   const handleNavigation = (path: string) => {
     navigate(path);
   };
 
-  // Handle logout
   const handleLogout = () => {
     logout();
   };
 
-  // Determine which items to show in the main nav (maximum 3 items)
   const mainNavItems = [...navItems];
   const moreItems: NavItem[] = [];
 
-  // For admin users, add the first admin item to main nav and rest to more menu
   if (isAdmin) {
     mainNavItems.push(adminItems[0]);
     moreItems.push(...adminItems.slice(1));
@@ -185,7 +180,6 @@ const BottomNav = () => {
       isVisible ? "translate-y-0" : "translate-y-full"
     )}>
       <div className="grid h-full grid-cols-4">
-        {/* Display the main nav items */}
         {mainNavItems.slice(0, 3).map((item) => (
           <button
             key={item.name}
@@ -209,7 +203,6 @@ const BottomNav = () => {
           </button>
         ))}
         
-        {/* For non-admin users, show logout button as the 4th button */}
         {!isAdmin && (
           <button
             type="button"
@@ -221,7 +214,6 @@ const BottomNav = () => {
           </button>
         )}
         
-        {/* For admin users, show More button with popover as the 4th button */}
         {isAdmin && (
           <Popover>
             <PopoverTrigger asChild>
@@ -235,7 +227,6 @@ const BottomNav = () => {
             </PopoverTrigger>
             <PopoverContent className="w-48 p-2 z-[100]">
               <div className="flex flex-col space-y-1">
-                {/* Display all additional admin items */}
                 {moreItems.map((item) => (
                   <button
                     key={item.name}
@@ -246,7 +237,6 @@ const BottomNav = () => {
                     {item.name}
                   </button>
                 ))}
-                {/* Logout button in the popover */}
                 <button
                   className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 rounded-md hover:bg-gray-100"
                   onClick={handleLogout}

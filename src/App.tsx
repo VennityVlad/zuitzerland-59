@@ -21,6 +21,7 @@ import UserManagement from "./pages/UserManagement";
 import Events from "./pages/Events";
 import RoomManagement from "./pages/RoomManagement";
 import RoomAssignmentsPage from "./pages/rooms/RoomAssignmentsPage";
+import Onboarding from "./pages/Onboarding";
 import NavMenu from "./components/NavMenu";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
@@ -224,6 +225,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/onboarding"
+                element={
+                  <ProtectedRoute>
+                    <Onboarding />
                   </ProtectedRoute>
                 }
               />

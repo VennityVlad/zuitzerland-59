@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,8 @@ import {
   Building,
   Calendar,
   BedDouble,
-  Grid3X3 
+  Grid3X3,
+  CheckSquare
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,7 +34,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import BottomNav from "./BottomNav";
 
-// Define a type for menu items to ensure correct properties
 type MenuItem = {
   label: string;
   icon: React.ReactNode;
@@ -115,7 +114,6 @@ const NavMenu = () => {
     return paths.some(path => location.pathname === path);
   };
 
-  // Define menu items with the correct type
   const menuItems: MenuItem[] = [
     {
       label: "Book",
@@ -128,6 +126,14 @@ const NavMenu = () => {
       path: "/events",
     }
   ];
+
+  if (!isAdmin) {
+    menuItems.unshift({
+      label: "Onboarding",
+      icon: <CheckSquare className="h-5 w-5" />,
+      path: "/onboarding",
+    });
+  }
 
   if (isAdmin) {
     menuItems.push({
@@ -151,7 +157,7 @@ const NavMenu = () => {
     menuItems.push({
       label: "Room Management",
       icon: <BedDouble className="h-5 w-5" />,
-      path: "/room-management", // Added the missing path property
+      path: "/room-management",
       id: "room-management",
       hasSubmenu: true,
       submenuItems: [
