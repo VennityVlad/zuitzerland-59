@@ -85,8 +85,15 @@ export const PackingList = () => {
         }
 
         if (data && data.packing_list) {
-          // If user has saved packing list data
-          setItems(data.packing_list as PackingCategories);
+          // Fix: Type assertion to ensure the correct type is used
+          const packingList = data.packing_list as unknown;
+          // Type guard to ensure it's actually a PackingCategories
+          if (typeof packingList === 'object' && packingList !== null && !Array.isArray(packingList)) {
+            setItems(packingList as PackingCategories);
+          } else {
+            // Fallback to standard items if data structure isn't as expected
+            setItems(standardPackingItems);
+          }
         } else {
           // Use default items if no saved data
           setItems(standardPackingItems);
@@ -128,11 +135,11 @@ export const PackingList = () => {
     }
     
     try {
-      // Save to database
+      // Save to database - fix: Using type assertion to make TypeScript happy
       const { error } = await supabase
         .from('profiles')
         .update({ 
-          packing_list: updatedItems 
+          packing_list: updatedItems as any 
         })
         .eq('privy_id', user.id);
       
