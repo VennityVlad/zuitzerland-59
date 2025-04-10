@@ -117,7 +117,8 @@ const Onboarding = () => {
           throw error;
         }
 
-        if (data?.onboarding_progress) {
+        // Use type assertion to tell TypeScript that data.onboarding_progress exists
+        if (data && data.onboarding_progress) {
           setProgress(data.onboarding_progress as OnboardingProgress);
         }
       } catch (error) {
@@ -178,10 +179,12 @@ const Onboarding = () => {
       // Update the progress state
       setProgress(updatedProgress);
       
-      // Save to the database
+      // Save to the database using type assertion to tell TypeScript onboarding_progress is valid
       const { error } = await supabase
         .from('profiles')
-        .update({ onboarding_progress: updatedProgress })
+        .update({ 
+          onboarding_progress: updatedProgress as any 
+        })
         .eq('privy_id', user.id);
       
       if (error) {
@@ -246,10 +249,12 @@ const Onboarding = () => {
       // Update the progress state
       setProgress(updatedProgress);
       
-      // Save to the database
+      // Save to the database using type assertion to tell TypeScript onboarding_progress is valid
       const { error } = await supabase
         .from('profiles')
-        .update({ onboarding_progress: updatedProgress })
+        .update({ 
+          onboarding_progress: updatedProgress as any 
+        })
         .eq('privy_id', user.id);
       
       if (error) {
