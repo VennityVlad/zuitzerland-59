@@ -32,27 +32,40 @@ interface HousingPreferencesFilterProps {
   onFilterChange: (filters: PreferenceFilters) => void;
 }
 
-// Define common preference categories and options
+// Define preference options based on the housing preferences form
 const preferenceOptions: FilterOption[] = [
+  // Gender
+  { category: "gender", value: "Male", label: "Male" },
+  { category: "gender", value: "Female", label: "Female" },
+  { category: "gender", value: "Non-binary", label: "Non-binary" },
+  
+  // Same gender preference
+  { category: "sameGenderPreference", value: "Yes", label: "Prefers same gender" },
+  { category: "sameGenderPreference", value: "No", label: "Open to mixed gender" },
+  
   // Sleep habits
-  { category: "sleepSchedule", value: "early_riser", label: "Early Riser" },
-  { category: "sleepSchedule", value: "night_owl", label: "Night Owl" },
-  { category: "sleepSchedule", value: "flexible", label: "Flexible Schedule" },
+  { category: "sleepingHabits", value: "Early riser (before 7am)", label: "Early Riser" },
+  { category: "sleepingHabits", value: "Morning person (7am-9am)", label: "Morning Person" },
+  { category: "sleepingHabits", value: "Night owl (sleep after midnight)", label: "Night Owl" },
+  { category: "sleepingHabits", value: "Light sleeper", label: "Light Sleeper" },
+  { category: "sleepingHabits", value: "Heavy sleeper", label: "Heavy Sleeper" },
+  { category: "sleepingHabits", value: "Need silence when sleeping", label: "Needs Silence" },
+  { category: "sleepingHabits", value: "Can sleep with noise", label: "Tolerates Noise" },
   
   // Noise preferences
-  { category: "noisePreference", value: "quiet", label: "Prefers Quiet" },
-  { category: "noisePreference", value: "moderate", label: "Moderate Noise OK" },
-  { category: "noisePreference", value: "social", label: "Social Environment" },
+  { category: "livingHabits", value: "Very tidy", label: "Very Tidy" },
+  { category: "livingHabits", value: "Somewhat tidy", label: "Somewhat Tidy" },
+  { category: "livingHabits", value: "Somewhat messy", label: "Somewhat Messy" },
+  { category: "livingHabits", value: "Very messy", label: "Very Messy" },
+  { category: "livingHabits", value: "Prefer frequent cleaning", label: "Frequent Cleaner" },
+  { category: "livingHabits", value: "Clean occasionally", label: "Occasional Cleaner" },
   
-  // Cleanliness
-  { category: "cleanliness", value: "very_clean", label: "Very Clean" },
-  { category: "cleanliness", value: "tidy", label: "Tidy" },
-  { category: "cleanliness", value: "relaxed", label: "Relaxed About Cleaning" },
-  
-  // Personality
-  { category: "personality", value: "introvert", label: "Introvert" },
-  { category: "personality", value: "extrovert", label: "Extrovert" },
-  { category: "personality", value: "ambivert", label: "Ambivert" },
+  // Social preferences
+  { category: "socialPreferences", value: "Very social, enjoy hosting", label: "Very Social" },
+  { category: "socialPreferences", value: "Social but prefer quiet time too", label: "Balanced Social/Quiet" },
+  { category: "socialPreferences", value: "Prefer quiet, private space", label: "Prefers Privacy" },
+  { category: "socialPreferences", value: "Often have guests over", label: "Has Guests Often" },
+  { category: "socialPreferences", value: "Rarely have guests over", label: "Rarely Has Guests" },
 ];
 
 // Group options by category
@@ -66,10 +79,11 @@ const groupedOptions: Record<string, FilterOption[]> = preferenceOptions.reduce(
 
 // Category display names
 const categoryLabels: Record<string, string> = {
-  sleepSchedule: "Sleep Schedule",
-  noisePreference: "Noise Preference",
-  cleanliness: "Cleanliness",
-  personality: "Personality Type"
+  gender: "Gender",
+  sameGenderPreference: "Room Sharing Preference",
+  sleepingHabits: "Sleep Schedule",
+  livingHabits: "Cleanliness",
+  socialPreferences: "Social Preferences"
 };
 
 const HousingPreferencesFilter = ({ onFilterChange }: HousingPreferencesFilterProps) => {

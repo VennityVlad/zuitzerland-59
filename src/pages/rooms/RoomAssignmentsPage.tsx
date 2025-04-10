@@ -105,9 +105,9 @@ const RoomAssignmentsPage = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           <PeopleSidebar />
           
-          <div className="flex-1 overflow-x-auto">
+          <div className="flex-1 overflow-auto">
             <Card className="min-h-[600px]">
-              <CardContent className="p-4">
+              <CardContent className="p-4 overflow-auto max-h-[75vh]">
                 <AssignmentGridCalendar startDate={currentWeek} />
               </CardContent>
             </Card>

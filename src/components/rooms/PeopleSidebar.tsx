@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -73,7 +72,27 @@ const PeopleSidebar = () => {
         return;
       }
       
-      // Fetch profiles that have paid invoices
+      // Get profiles that already have room assignments
+      const { data: assignedProfiles, error: assignmentError } = await supabase
+        .from('room_assignments')
+        .select('profile_id')
+        .gte('end_date', new Date().toISOString().split('T')[0]); // Only active assignments
+      
+      if (assignmentError) {
+        throw assignmentError;
+      }
+      
+      // Filter out profiles that already have room assignments
+      const assignedProfileIds = new Set(assignedProfiles?.map(assignment => assignment.profile_id) || []);
+      const availableProfileIds = paidProfileIds.filter(id => !assignedProfileIds.has(id));
+      
+      if (availableProfileIds.length === 0) {
+        setProfiles([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch profiles that have paid invoices and don't have active assignments
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -85,7 +104,7 @@ const PeopleSidebar = () => {
           housing_preferences,
           team:teams(id, name, logo_url)
         `)
-        .in('id', paidProfileIds)
+        .in('id', availableProfileIds)
         .order('full_name');
       
       if (error) throw error;
@@ -130,13 +149,11 @@ const PeopleSidebar = () => {
 
   // Function to generate a consistent color based on team ID
   const generateTeamColor = (teamId: string): string => {
-    // Simple hash function to generate a consistent color
     let hash = 0;
     for (let i = 0; i < teamId.length; i++) {
       hash = teamId.charCodeAt(i) + ((hash << 5) - hash);
     }
     
-    // Convert to hex color
     const colors = [
       '#4F46E5', // indigo-600
       '#EC4899', // pink-600
@@ -164,17 +181,37 @@ const PeopleSidebar = () => {
       
       // Check if profile matches all filter categories
       return Object.entries(preferenceFilters).every(([category, selectedValues]) => {
-        const profileValue = profile.housing_preferences[category];
+        const profilePrefs = profile.housing_preferences;
         
-        // If the profile doesn't have this preference category, it doesn't match
-        if (!profileValue) return false;
-        
-        // Check if any of the selected values match the profile's value
-        // Handle both array and string values
-        if (Array.isArray(profileValue)) {
-          return selectedValues.some(value => profileValue.includes(value));
-        } else {
-          return selectedValues.includes(profileValue);
+        // Handle different preference categories differently
+        switch(category) {
+          case "gender":
+            return selectedValues.includes(profilePrefs.gender || "");
+            
+          case "sameGenderPreference":
+            return selectedValues.includes(profilePrefs.sameGenderPreference || "");
+            
+          case "sleepingHabits":
+            // For array values like sleepingHabits, check if any selected values exist in the profile's array
+            if (!Array.isArray(profilePrefs.sleepingHabits)) return false;
+            return selectedValues.some(value => 
+              profilePrefs.sleepingHabits.includes(value)
+            );
+            
+          case "livingHabits":
+            if (!Array.isArray(profilePrefs.livingHabits)) return false;
+            return selectedValues.some(value => 
+              profilePrefs.livingHabits.includes(value)
+            );
+            
+          case "socialPreferences":
+            if (!Array.isArray(profilePrefs.socialPreferences)) return false;
+            return selectedValues.some(value => 
+              profilePrefs.socialPreferences.includes(value)
+            );
+            
+          default:
+            return false;
         }
       });
     });
