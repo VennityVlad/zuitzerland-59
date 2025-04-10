@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -191,7 +192,7 @@ const Onboarding = () => {
       const { error } = await supabase
         .from('profiles')
         .update({ 
-          onboarding_progress: updatedProgress as any 
+          onboarding_progress: updatedProgress 
         })
         .eq('privy_id', user.id);
       
@@ -199,13 +200,18 @@ const Onboarding = () => {
         throw error;
       }
       
+      // If this is the directory opt-in task (#8), also update the opt_in_directory field
       if (taskId === "8") {
-        await supabase
+        const { error: directoryError } = await supabase
           .from('profiles')
           .update({
             opt_in_directory: completed
           })
           .eq('privy_id', user.id);
+          
+        if (directoryError) {
+          throw directoryError;
+        }
       }
       
       toast({

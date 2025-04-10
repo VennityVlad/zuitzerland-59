@@ -135,6 +135,69 @@ const Profile = () => {
     }
   };
 
+  const updateDirectoryOptIn = async (value: boolean) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ opt_in_directory: value })
+        .eq('privy_id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      const { data: onboardingData } = await supabase
+        .from('profiles')
+        .select('onboarding_progress')
+        .eq('privy_id', user.id)
+        .maybeSingle();
+      
+      if (onboardingData?.onboarding_progress) {
+        const updatedProgress = { ...onboardingData.onboarding_progress };
+        
+        updatedProgress.tasks["8"].completed = value;
+        
+        if (value) {
+          if (!updatedProgress.tasks["8"].completed) {
+            updatedProgress.totalCompleted += 1;
+          }
+        } else {
+          if (updatedProgress.tasks["8"].completed) {
+            updatedProgress.totalCompleted -= 1;
+          }
+        }
+        
+        updatedProgress.lastUpdated = new Date().toISOString();
+        
+        await supabase
+          .from('profiles')
+          .update({ 
+            onboarding_progress: updatedProgress 
+          })
+          .eq('privy_id', user.id);
+      }
+
+      setProfileData(prev => ({ ...prev, opt_in_directory: value }));
+      form.setValue("opt_in_directory", value);
+
+      toast({
+        title: "Success",
+        description: value 
+          ? "You've been added to the resident directory" 
+          : "You've been removed from the resident directory",
+      });
+    } catch (error) {
+      console.error('Error updating directory status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update directory status",
+        variant: "destructive",
+      });
+    }
+  };
+
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user?.id) return;
 
@@ -201,6 +264,35 @@ const Profile = () => {
 
         if (updatedProfile) {
           setProfileData(updatedProfile);
+        }
+      }
+
+      if (existingProfile) {
+        const { data: onboardingData } = await supabase
+          .from('profiles')
+          .select('onboarding_progress')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+        
+        if (onboardingData?.onboarding_progress) {
+          const updatedProgress = { ...onboardingData.onboarding_progress };
+          
+          updatedProgress.tasks["8"].completed = values.opt_in_directory;
+          
+          if (values.opt_in_directory && !updatedProgress.tasks["8"].completed) {
+            updatedProgress.totalCompleted += 1;
+          } else if (!values.opt_in_directory && updatedProgress.tasks["8"].completed) {
+            updatedProgress.totalCompleted -= 1;
+          }
+          
+          updatedProgress.lastUpdated = new Date().toISOString();
+          
+          await supabase
+            .from('profiles')
+            .update({ 
+              onboarding_progress: updatedProgress 
+            })
+            .eq('privy_id', user.id);
         }
       }
 
@@ -338,7 +430,10 @@ const Profile = () => {
                       <FormControl>
                         <Switch
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(value) => {
+                            field.onChange(value);
+                            updateDirectoryOptIn(value);
+                          }}
                         />
                       </FormControl>
                     </FormItem>
