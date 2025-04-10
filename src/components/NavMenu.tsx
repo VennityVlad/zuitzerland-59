@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,9 @@ import {
   BedDouble,
   Grid3X3,
   CheckSquare,
-  ContactRound
+  ContactRound,
+  BookOpen,
+  UserCog
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +41,7 @@ import BottomNav from "./BottomNav";
 type MenuItem = {
   label: string;
   icon: React.ReactNode;
-  path: string;
+  path?: string;
   id?: string;
   hasSubmenu?: boolean;
   submenuItems?: {
@@ -115,57 +118,86 @@ const NavMenu = () => {
     return paths.some(path => location.pathname === path);
   };
 
-  const menuItems: MenuItem[] = [
+  // Menu items for non-admin users
+  const regularMenuItems: MenuItem[] = [
     {
       label: "Book",
       icon: <CalendarDays className="h-5 w-5" />,
       path: "/book",
-    }
-  ];
-
-  if (!isAdmin) {
-    menuItems.push({
+    },
+    {
       label: "Onboarding",
       icon: <CheckSquare className="h-5 w-5" />,
       path: "/onboarding",
-    });
-  }
+    },
+    {
+      label: "Events",
+      icon: <Calendar className="h-5 w-5" />,
+      path: "/events",
+    },
+    {
+      label: "Directory",
+      icon: <ContactRound className="h-5 w-5" />,
+      path: "/directory",
+    }
+  ];
 
-  menuItems.push({
-    label: "Events",
-    icon: <Calendar className="h-5 w-5" />,
-    path: "/events",
-  });
-
-  menuItems.push({
-    label: "Directory",
-    icon: <ContactRound className="h-5 w-5" />,
-    path: "/directory",
-  });
-
-  if (isAdmin) {
-    menuItems.push({
-      label: "Invoices",
-      icon: <FileText className="h-5 w-5" />,
-      path: "/invoices",
-    });
-    
-    menuItems.push({
-      label: "Users",
-      icon: <Users className="h-5 w-5" />,
-      path: "/user-management",
-    });
-    
-    menuItems.push({
-      label: "Teams",
-      icon: <Building className="h-5 w-5" />,
-      path: "/teams",
-    });
-    
-    menuItems.push({
+  // Menu items for admin users
+  const adminMenuItems: MenuItem[] = [
+    {
+      label: "Booking Management",
+      icon: <BookOpen className="h-5 w-5" />,
+      id: "booking-management",
+      hasSubmenu: true,
+      submenuItems: [
+        {
+          label: "Book",
+          icon: <CalendarDays className="h-4 w-4" />,
+          path: "/book",
+        },
+        {
+          label: "Invoices",
+          icon: <FileText className="h-4 w-4" />,
+          path: "/invoices",
+        },
+        {
+          label: "Discounts",
+          icon: <Percent className="h-4 w-4" />,
+          path: "/discounts",
+        }
+      ]
+    },
+    {
+      label: "User Management",
+      icon: <UserCog className="h-5 w-5" />,
+      id: "user-management",
+      hasSubmenu: true,
+      submenuItems: [
+        {
+          label: "Users",
+          icon: <Users className="h-4 w-4" />,
+          path: "/user-management",
+        },
+        {
+          label: "Teams",
+          icon: <Building className="h-4 w-4" />,
+          path: "/teams",
+        },
+        {
+          label: "Directory",
+          icon: <ContactRound className="h-4 w-4" />,
+          path: "/directory",
+        }
+      ]
+    },
+    {
+      label: "Events",
+      icon: <Calendar className="h-5 w-5" />,
+      path: "/events",
+    },
+    {
       label: "Room Management",
       icon: <BedDouble className="h-5 w-5" />,
-      path: "/room-management",
       id: "room-management",
       hasSubmenu: true,
       submenuItems: [
@@ -185,30 +217,21 @@ const NavMenu = () => {
           path: "/room-types",
         }
       ]
-    });
-  }
-
-  const adminItems: MenuItem[] = [
+    },
     {
       label: "Reports",
       icon: <BarChart className="h-5 w-5" />,
       path: "/reports",
-    },
-    {
-      label: "Discounts",
-      icon: <Percent className="h-5 w-5" />,
-      path: "/discounts",
     }
   ];
 
-  if (isAdmin) {
-    menuItems.push(...adminItems);
-  }
+  // Choose which menu items to display based on user role
+  const menuItems = isAdmin ? adminMenuItems : regularMenuItems;
 
-  const NavItem = ({ item }: { item: any }) => {
+  const NavItem = ({ item }: { item: MenuItem }) => {
     const isActive = item.hasSubmenu 
-      ? isInSubmenu(item.submenuItems.map((subItem: any) => subItem.path))
-      : isCurrentPath(item.path);
+      ? isInSubmenu(item.submenuItems?.map((subItem) => subItem.path) || [])
+      : item.path ? isCurrentPath(item.path) : false;
     
     return (
       <>
@@ -223,8 +246,8 @@ const NavMenu = () => {
           )}
           onClick={() => {
             if (item.hasSubmenu) {
-              toggleSubmenu(item.id);
-            } else {
+              toggleSubmenu(item.id || "");
+            } else if (item.path) {
               navigate(item.path);
             }
           }}
@@ -237,15 +260,15 @@ const NavMenu = () => {
             <ChevronDown 
               className={cn(
                 "h-4 w-4 transition-transform",
-                isSubmenuExpanded(item.id) && "rotate-180"
+                isSubmenuExpanded(item.id || "") && "rotate-180"
               )} 
             />
           )}
         </Button>
         
-        {item.hasSubmenu && isSubmenuExpanded(item.id) && sidebarOpen && (
+        {item.hasSubmenu && isSubmenuExpanded(item.id || "") && sidebarOpen && (
           <div className="pl-4 mt-1">
-            {item.submenuItems.map((subItem: any, index: number) => (
+            {item.submenuItems?.map((subItem, index) => (
               <Button
                 key={index}
                 variant="ghost"
@@ -302,7 +325,7 @@ const NavMenu = () => {
 
         <div className="flex flex-col p-3 space-y-1">
           {menuItems.map((item, index) => (
-            <NavItem key={item.path || index} item={item} />
+            <NavItem key={item.path || item.id || index} item={item} />
           ))}
         </div>
 
