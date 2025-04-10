@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -39,7 +38,7 @@ type EditAssignmentPanelProps = {
     startDate?: Date;
     endDate?: Date;
   } | null;
-  onClose: () => void;
+  onClose: (wasChanged?: boolean) => void;
 };
 
 const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmentPanelProps) => {
@@ -277,7 +276,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       }
       
       setSaving(false);
-      onClose();
+      onClose(true); // Pass true to indicate changes were made
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -307,7 +306,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       });
       
       setSaving(false);
-      onClose();
+      onClose(true); // Pass true to indicate changes were made
     } catch (error: any) {
       toast({
         variant: "destructive",

@@ -57,9 +57,10 @@ type Bed = {
 
 type AssignmentGridCalendarProps = {
   startDate: Date;
+  onAssignmentChange?: () => void;
 };
 
-const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
+const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGridCalendarProps) => {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -363,6 +364,10 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
       });
       
       fetchData();
+      
+      if (onAssignmentChange) {
+        onAssignmentChange();
+      }
     } catch (error: any) {
       console.error("Error in deleteAssignment:", error);
       toast({
@@ -526,6 +531,10 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
           title: "Assignment updated",
           description: "The assignment dates have been updated.",
         });
+        
+        if (onAssignmentChange) {
+          onAssignmentChange();
+        }
       } catch (error: any) {
         console.error("Error updating assignment:", error);
         toast({
@@ -548,11 +557,18 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
     });
   };
 
-  const handleEditPanelClose = () => {
+  const handleEditPanelClose = (wasChanged: boolean = false) => {
     setIsEditPanelOpen(false);
     setSelectedAssignment(null);
     setNewAssignmentData(null);
-    fetchData();
+    
+    if (wasChanged) {
+      fetchData();
+      
+      if (onAssignmentChange) {
+        onAssignmentChange();
+      }
+    }
   };
 
   const hasBeds = useMemo(() => {
@@ -674,16 +690,23 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                                     <ChevronLeft className="h-3 w-3 text-white" />
                                   </div>
                                   
-                                  <div className="flex-1 px-6 py-1 truncate flex items-center justify-center">
-                                    <Avatar className="h-5 w-5 mr-1 flex-shrink-0">
-                                      <AvatarImage src={assignment.profile.avatar_url || undefined} />
-                                      <AvatarFallback className="text-[10px]">
-                                        {assignment.profile.full_name?.charAt(0) || '?'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs truncate text-center flex-1">
-                                      {assignment.profile.full_name}
-                                    </span>
+                                  <div className="flex-1 px-6 py-1 truncate flex flex-col items-center justify-center">
+                                    <div className="flex items-center gap-1">
+                                      <Avatar className="h-5 w-5 mr-1 flex-shrink-0">
+                                        <AvatarImage src={assignment.profile.avatar_url || undefined} />
+                                        <AvatarFallback className="text-[10px]">
+                                          {assignment.profile.full_name?.charAt(0) || '?'}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="text-xs truncate text-center flex-1">
+                                        {assignment.profile.full_name}
+                                      </span>
+                                    </div>
+                                    {assignment.profile.email && (
+                                      <span className="text-[10px] truncate text-muted-foreground">
+                                        {assignment.profile.email}
+                                      </span>
+                                    )}
                                   </div>
                                   
                                   {(!continuesBeyondView) ? (
@@ -707,6 +730,7 @@ const AssignmentGridCalendar = ({ startDate }: AssignmentGridCalendarProps) => {
                                 <div className="space-y-2 max-w-[300px]">
                                   <div className="space-y-1">
                                     <p className="font-semibold">{assignment.profile.full_name}</p>
+                                    <p className="text-xs">{assignment.profile.email}</p>
                                     {assignment.profile.team && (
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-muted-foreground">Team:</span>

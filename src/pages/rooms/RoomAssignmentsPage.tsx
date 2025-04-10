@@ -16,6 +16,7 @@ const RoomAssignmentsPage = () => {
   // Set default start date to May 1, 2025
   const [currentWeek, setCurrentWeek] = useState(new Date(2025, 4, 1));
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, authenticated, ready } = usePrivy();
@@ -53,6 +54,11 @@ const RoomAssignmentsPage = () => {
     } else {
       setCurrentWeek(subWeeks(currentWeek, 1));
     }
+  };
+
+  // Handler for when assignments change
+  const handleAssignmentChange = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
 
   if (loading || !ready || isAdminLoading) {
@@ -103,12 +109,16 @@ const RoomAssignmentsPage = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-4">
-          <PeopleSidebar />
+          {/* Pass refreshTrigger as a key to force re-render */}
+          <PeopleSidebar key={refreshTrigger} />
           
           <div className="flex-1 overflow-auto">
             <Card className="min-h-[600px]">
               <CardContent className="p-4 overflow-auto max-h-[75vh]">
-                <AssignmentGridCalendar startDate={currentWeek} />
+                <AssignmentGridCalendar 
+                  startDate={currentWeek} 
+                  onAssignmentChange={handleAssignmentChange}
+                />
               </CardContent>
             </Card>
           </div>
