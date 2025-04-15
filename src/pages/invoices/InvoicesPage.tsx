@@ -18,6 +18,7 @@ import { useProfileInvitationStatus } from "./hooks/useProfileInvitationStatus";
 import { useInvoiceExport } from "./hooks/useInvoiceExport";
 import { InvoiceFilterPanel } from "./components/InvoiceFilterPanel";
 import { useInvoices } from "@/hooks/useInvoices";
+import { Invoice } from "@/types/invoice";
 
 const InvoicesPage = () => {
   const { user } = usePrivy();

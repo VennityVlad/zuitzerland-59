@@ -18,6 +18,9 @@ export interface Invoice {
   profile_id?: string;
   imported?: boolean;
   paid_at?: string | null;
+  request_invoice_id?: string;
+  payment_type?: string;
+  booking_details?: any;
   profile?: {
     team?: {
       id: string;
