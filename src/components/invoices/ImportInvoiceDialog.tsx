@@ -222,13 +222,20 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
       let checkoutStr = null;
       
       if (checkinDate) {
-        // Format dates using local date string format YYYY-MM-DD
-        checkinStr = format(checkinDate, 'yyyy-MM-dd');
+        // Fix the timezone issue by using date-local format in ISO string
+        // This ensures the date is stored as the exact date selected without timezone adjustments
+        const year = checkinDate.getFullYear();
+        const month = String(checkinDate.getMonth() + 1).padStart(2, '0');
+        const day = String(checkinDate.getDate()).padStart(2, '0');
+        checkinStr = `${year}-${month}-${day}`;
       }
       
       if (checkoutDate) {
-        // Format dates using local date string format YYYY-MM-DD
-        checkoutStr = format(checkoutDate, 'yyyy-MM-dd');
+        // Fix the timezone issue by using date-local format in ISO string
+        const year = checkoutDate.getFullYear();
+        const month = String(checkoutDate.getMonth() + 1).padStart(2, '0');
+        const day = String(checkoutDate.getDate()).padStart(2, '0');
+        checkoutStr = `${year}-${month}-${day}`;
       }
 
       const { data, error } = await supabase
