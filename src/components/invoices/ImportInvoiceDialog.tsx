@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,18 +10,20 @@ import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Invoice } from "@/types/invoice";
+
+interface ImportInvoiceDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+  existingInvoice?: Invoice;
+}
 
 interface Profile {
   id: string;
   email: string;
   full_name?: string;
   username?: string;
-}
-
-interface ImportInvoiceDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
 }
 
 interface ImportPreviewData {
@@ -43,7 +44,7 @@ interface ImportPreviewData {
   paid_at?: string | null;
 }
 
-export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInvoiceDialogProps) {
+export function ImportInvoiceDialog({ open, onOpenChange, onSuccess, existingInvoice }: ImportInvoiceDialogProps) {
   const { toast } = useToast();
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -55,30 +56,60 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
   const [checkinDate, setCheckinDate] = useState<Date | undefined>(undefined);
   const [checkoutDate, setCheckoutDate] = useState<Date | undefined>(undefined);
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [price, setPrice] = useState<number>(0);
+
   useEffect(() => {
-    const fetchProfiles = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, email, full_name, username')
-          .order('email');
-
-        if (error) throw error;
-        setProfiles(data || []);
-      } catch (error) {
-        console.error('Error fetching profiles:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load user profiles",
-          variant: "destructive",
-        });
-      }
-    };
-
-    if (open) {
-      fetchProfiles();
+    if (open && existingInvoice) {
+      setFirstName(existingInvoice.first_name);
+      setLastName(existingInvoice.last_name);
+      setEmail(existingInvoice.email);
+      setPrice(existingInvoice.price);
+      setSelectedProfileId(existingInvoice.profile_id || "");
+      setCheckinDate(existingInvoice.checkin ? parseISO(existingInvoice.checkin) : undefined);
+      setCheckoutDate(existingInvoice.checkout ? parseISO(existingInvoice.checkout) : undefined);
+      
+      const preview: ImportPreviewData = {
+        room_type: existingInvoice.room_type,
+        price: existingInvoice.price,
+        first_name: existingInvoice.first_name,
+        last_name: existingInvoice.last_name,
+        email: existingInvoice.email,
+        checkin: existingInvoice.checkin,
+        checkout: existingInvoice.checkout,
+        due_date: existingInvoice.due_date,
+        payment_link: existingInvoice.payment_link,
+        status: existingInvoice.status,
+        invoice_uid: existingInvoice.invoice_uid,
+        request_invoice_id: existingInvoice.request_invoice_id,
+        payment_type: 'fiat',
+        created_at: existingInvoice.created_at,
+        paid_at: existingInvoice.paid_at
+      };
+      setPreviewData(preview);
     }
-  }, [open, toast]);
+  }, [open, existingInvoice]);
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, username')
+        .order('email');
+
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load user profiles",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchInvoiceData = async () => {
     if (!invoiceNumber.trim()) {
@@ -198,7 +229,7 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
   };
 
   const handleImport = async () => {
-    if (!previewData) {
+    if (!previewData && !existingInvoice) {
       toast({
         title: "Error",
         description: "No invoice data to import",
@@ -222,8 +253,6 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
       let checkoutStr = null;
       
       if (checkinDate) {
-        // Fix the timezone issue by using date-local format in ISO string
-        // This ensures the date is stored as the exact date selected without timezone adjustments
         const year = checkinDate.getFullYear();
         const month = String(checkinDate.getMonth() + 1).padStart(2, '0');
         const day = String(checkinDate.getDate()).padStart(2, '0');
@@ -231,52 +260,61 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
       }
       
       if (checkoutDate) {
-        // Fix the timezone issue by using date-local format in ISO string
         const year = checkoutDate.getFullYear();
         const month = String(checkoutDate.getMonth() + 1).padStart(2, '0');
         const day = String(checkoutDate.getDate()).padStart(2, '0');
         checkoutStr = `${year}-${month}-${day}`;
       }
 
-      const { data, error } = await supabase
-        .from('invoices')
-        .insert({
-          profile_id: selectedProfileId,
-          booking_details: invoiceData,
-          room_type: previewData.room_type,
-          price: previewData.price,
-          first_name: previewData.first_name,
-          last_name: previewData.last_name,
-          email: previewData.email,
-          checkin: checkinStr,
-          checkout: checkoutStr,
-          due_date: previewData.due_date,
-          payment_link: previewData.payment_link,
-          status: previewData.status,
-          invoice_uid: previewData.invoice_uid,
-          request_invoice_id: previewData.request_invoice_id,
-          payment_type: previewData.payment_type,
-          created_at: previewData.created_at || new Date().toISOString(),
-          paid_at: previewData.paid_at,
-          imported: true
-        })
-        .select()
-        .single();
+      const invoiceToSave = {
+        profile_id: selectedProfileId,
+        room_type: previewData?.room_type || existingInvoice?.room_type,
+        price: Number(price),
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        checkin: checkinStr,
+        checkout: checkoutStr,
+        due_date: previewData?.due_date || existingInvoice?.due_date,
+        payment_link: previewData?.payment_link || existingInvoice?.payment_link,
+        status: previewData?.status || existingInvoice?.status,
+        invoice_uid: previewData?.invoice_uid || existingInvoice?.invoice_uid,
+        request_invoice_id: previewData?.request_invoice_id || existingInvoice?.request_invoice_id,
+        payment_type: previewData?.payment_type || existingInvoice?.payment_type,
+        booking_details: invoiceData || existingInvoice?.booking_details,
+        imported: true
+      };
 
+      let response;
+      
+      if (existingInvoice) {
+        response = await supabase
+          .from('invoices')
+          .update(invoiceToSave)
+          .eq('id', existingInvoice.id)
+          .select();
+      } else {
+        response = await supabase
+          .from('invoices')
+          .insert(invoiceToSave)
+          .select();
+      }
+
+      const { error } = response;
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Invoice imported successfully",
+        description: existingInvoice ? "Invoice updated successfully" : "Invoice imported successfully",
       });
       
       onOpenChange(false);
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error('Error importing invoice:', error);
+      console.error('Error saving invoice:', error);
       toast({
         title: "Error",
-        description: "Failed to import invoice",
+        description: existingInvoice ? "Failed to update invoice" : "Failed to import invoice",
         variant: "destructive",
       });
     } finally {
@@ -291,6 +329,10 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
     setPreviewData(null);
     setCheckinDate(undefined);
     setCheckoutDate(undefined);
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPrice(0);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -309,27 +351,29 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
     }}>
       <SheetContent className="sm:max-w-[500px] md:max-w-[600px] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Import Invoice from Request Finance</SheetTitle>
+          <SheetTitle>{existingInvoice ? "Edit Invoice" : "Import Invoice from Request Finance"}</SheetTitle>
         </SheetHeader>
         
         <div className="space-y-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="invoiceNumber">Invoice Number</Label>
-            <div className="flex gap-2">
-              <Input
-                id="invoiceNumber"
-                value={invoiceNumber}
-                onChange={(e) => setInvoiceNumber(e.target.value)}
-                placeholder="Enter invoice number"
-                disabled={isLoading}
-              />
-              <Button onClick={fetchInvoiceData} disabled={isLoading || !invoiceNumber.trim()}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
-              </Button>
+          {!existingInvoice && (
+            <div className="space-y-2">
+              <Label htmlFor="invoiceNumber">Invoice Number</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="invoiceNumber"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  placeholder="Enter invoice number"
+                  disabled={isLoading}
+                />
+                <Button onClick={fetchInvoiceData} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
           
-          {previewData && (
+          {(previewData || existingInvoice) && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="profile">Associate with User</Label>
@@ -351,75 +395,124 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
                 </Select>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="First Name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Last Name"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label>Check-in Date</Label>
-                  <DatePicker 
-                    date={checkinDate}
-                    onDateChange={setCheckinDate}
-                    placeholder="Select check-in date"
-                    toDate={checkoutDate}
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Check-out Date</Label>
-                  <DatePicker 
-                    date={checkoutDate}
-                    onDateChange={setCheckoutDate}
-                    placeholder="Select check-out date"
-                    fromDate={checkinDate}
+                  <Label htmlFor="price">Price (CHF)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    value={price}
+                    onChange={(e) => setPrice(Number(e.target.value))}
+                    placeholder="Price"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Check-in Date</Label>
+                    <DatePicker 
+                      date={checkinDate}
+                      onDateChange={setCheckinDate}
+                      placeholder="Select check-in date"
+                      toDate={checkoutDate}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Check-out Date</Label>
+                    <DatePicker 
+                      date={checkoutDate}
+                      onDateChange={setCheckoutDate}
+                      placeholder="Select check-out date"
+                      fromDate={checkinDate}
+                    />
+                  </div>
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label>Invoice Preview</Label>
-                <ScrollArea className="h-[200px] rounded-md border p-4">
+              {previewData && (
+                <>
                   <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="text-sm font-medium">Invoice Number:</div>
-                      <div className="text-sm">{previewData.invoice_uid}</div>
-                      
-                      <div className="text-sm font-medium">Status:</div>
-                      <div className="text-sm">{previewData.status}</div>
-                      
-                      <div className="text-sm font-medium">Customer:</div>
-                      <div className="text-sm">{previewData.first_name} {previewData.last_name}</div>
-                      
-                      <div className="text-sm font-medium">Email:</div>
-                      <div className="text-sm">{previewData.email}</div>
-                      
-                      <div className="text-sm font-medium">Room Type:</div>
-                      <div className="text-sm">{previewData.room_type}</div>
-                      
-                      <div className="text-sm font-medium">Price:</div>
-                      <div className="text-sm">CHF {previewData.price.toFixed(2)}</div>
-                      
-                      <div className="text-sm font-medium">Payment Type:</div>
-                      <div className="text-sm">{previewData.payment_type === "fiat" ? "Credit Card" : "Crypto"}</div>
-                      
-                      <div className="text-sm font-medium">Due Date:</div>
-                      <div className="text-sm">{formatDate(previewData.due_date)}</div>
-                      
-                      <div className="text-sm font-medium">Created Date:</div>
-                      <div className="text-sm">{previewData.created_at ? formatDate(previewData.created_at) : "N/A"}</div>
-                      
-                      {previewData.paid_at && (
-                        <>
-                          <div className="text-sm font-medium">Paid Date:</div>
-                          <div className="text-sm">{formatDate(previewData.paid_at)}</div>
-                        </>
-                      )}
-                      
-                      <div className="text-sm font-medium">Check-in:</div>
-                      <div className="text-sm">{checkinDate ? format(checkinDate, "MMM d, yyyy") : "Not specified"}</div>
-                      
-                      <div className="text-sm font-medium">Check-out:</div>
-                      <div className="text-sm">{checkoutDate ? format(checkoutDate, "MMM d, yyyy") : "Not specified"}</div>
-                    </div>
+                    <Label>Invoice Preview</Label>
+                    <ScrollArea className="h-[200px] rounded-md border p-4">
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="text-sm font-medium">Invoice Number:</div>
+                          <div className="text-sm">{previewData.invoice_uid}</div>
+                          
+                          <div className="text-sm font-medium">Status:</div>
+                          <div className="text-sm">{previewData.status}</div>
+                          
+                          <div className="text-sm font-medium">Customer:</div>
+                          <div className="text-sm">{previewData.first_name} {previewData.last_name}</div>
+                          
+                          <div className="text-sm font-medium">Email:</div>
+                          <div className="text-sm">{previewData.email}</div>
+                          
+                          <div className="text-sm font-medium">Room Type:</div>
+                          <div className="text-sm">{previewData.room_type}</div>
+                          
+                          <div className="text-sm font-medium">Price:</div>
+                          <div className="text-sm">CHF {previewData.price.toFixed(2)}</div>
+                          
+                          <div className="text-sm font-medium">Payment Type:</div>
+                          <div className="text-sm">{previewData.payment_type === "fiat" ? "Credit Card" : "Crypto"}</div>
+                          
+                          <div className="text-sm font-medium">Due Date:</div>
+                          <div className="text-sm">{formatDate(previewData.due_date)}</div>
+                          
+                          <div className="text-sm font-medium">Created Date:</div>
+                          <div className="text-sm">{previewData.created_at ? formatDate(previewData.created_at) : "N/A"}</div>
+                          
+                          {previewData.paid_at && (
+                            <>
+                              <div className="text-sm font-medium">Paid Date:</div>
+                              <div className="text-sm">{formatDate(previewData.paid_at)}</div>
+                            </>
+                          )}
+                          
+                          <div className="text-sm font-medium">Check-in:</div>
+                          <div className="text-sm">{checkinDate ? format(checkinDate, "MMM d, yyyy") : "Not specified"}</div>
+                          
+                          <div className="text-sm font-medium">Check-out:</div>
+                          <div className="text-sm">{checkoutDate ? format(checkoutDate, "MMM d, yyyy") : "Not specified"}</div>
+                        </div>
+                      </div>
+                    </ScrollArea>
                   </div>
-                </ScrollArea>
-              </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -431,10 +524,10 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess }: ImportInv
             </Button>
             <Button 
               onClick={handleImport} 
-              disabled={isImporting || !previewData || !selectedProfileId}
+              disabled={isImporting || (!previewData && !existingInvoice) || !selectedProfileId}
             >
               {isImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-              Import Invoice
+              {existingInvoice ? 'Save Changes' : 'Import Invoice'}
             </Button>
           </div>
         </SheetFooter>

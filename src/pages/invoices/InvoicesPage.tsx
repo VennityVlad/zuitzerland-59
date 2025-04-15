@@ -23,7 +23,8 @@ const InvoicesPage = () => {
   const { user } = usePrivy();
   const isMobile = useIsMobile();
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | undefined>(undefined);
+
   const { isAdmin, isLoading: isAdminLoading } = useAdminStatus(user?.id);
   const { invoices, isLoading: invoicesLoading, refetchInvoices } = useInvoices(user?.id, isAdmin);
   const { filters, handleFilterChange, clearFilters } = useInvoiceFilters();
@@ -33,6 +34,11 @@ const InvoicesPage = () => {
 
   const handlePaymentClick = (paymentLink: string) => {
     window.open(paymentLink, '_blank');
+  };
+
+  const handleEditInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsImportDialogOpen(true);
   };
 
   const renderActionButtons = () => {
@@ -124,8 +130,17 @@ const InvoicesPage = () => {
       {isAdmin && (
         <ImportInvoiceDialog 
           open={isImportDialogOpen}
-          onOpenChange={setIsImportDialogOpen}
-          onSuccess={refetchInvoices}
+          onOpenChange={(open) => {
+            setIsImportDialogOpen(open);
+            if (!open) {
+              setSelectedInvoice(undefined);
+            }
+          }}
+          onSuccess={() => {
+            refetchInvoices();
+            setSelectedInvoice(undefined);
+          }}
+          existingInvoice={selectedInvoice}
         />
       )}
     </div>

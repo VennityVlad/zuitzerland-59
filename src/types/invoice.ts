@@ -18,4 +18,12 @@ export interface Invoice {
   profile_id?: string;
   imported?: boolean;
   paid_at?: string | null;
+  profile?: {
+    team?: {
+      id: string;
+      name: string;
+      color?: string;
+      logo_url: string | null;
+    } | null;
+  } | null;
 }

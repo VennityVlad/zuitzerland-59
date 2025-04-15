@@ -1,16 +1,17 @@
-
 import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Mail, Users, Calendar } from "lucide-react";
+import { ExternalLink, Mail, Users, Pencil, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { TeamBadge } from "@/components/TeamBadge";
 
 interface InvoiceCardProps {
   invoice: Invoice;
   onPaymentClick: (paymentLink: string) => void;
   onSendReminder?: (invoice: Invoice, reminderType: 'payment' | 'housing') => void;
   onSendGuildInvite?: (invoice: Invoice, profileId: string) => void;
+  onEdit?: (invoice: Invoice) => void;
   isLoading?: boolean;
   isGuildInviteLoading?: boolean;
   isGuildInvited?: boolean;
@@ -22,6 +23,7 @@ export const InvoiceCard = ({
   onPaymentClick, 
   onSendReminder,
   onSendGuildInvite,
+  onEdit,
   isLoading,
   isGuildInviteLoading,
   isGuildInvited,
@@ -66,8 +68,13 @@ export const InvoiceCard = ({
                 </Badge>
               )}
             </div>
-            <h3 className="text-lg font-medium mt-2">
+            <h3 className="text-lg font-medium mt-2 flex items-center gap-2">
               {invoice.first_name} {invoice.last_name}
+              {invoice.profile?.team && (
+                <div className="ml-2" title={`Team: ${invoice.profile.team.name}`}>
+                  <TeamBadge team={invoice.profile.team} size="sm" />
+                </div>
+              )}
             </h3>
             <p className="text-sm text-gray-500">{invoice.email}</p>
           </div>
@@ -113,6 +120,17 @@ export const InvoiceCard = ({
       </CardContent>
 
       <CardFooter className="flex gap-2 justify-end">
+        {onEdit && (
+          <Button
+            onClick={() => onEdit(invoice)}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            Edit <Pencil className="h-4 w-4" />
+          </Button>
+        )}
+        
         {onSendReminder && (
           <>
             {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
