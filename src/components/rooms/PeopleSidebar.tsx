@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { User, ChevronRight, ChevronDown, Search } from "lucide-react";
+import { User, ChevronRight, ChevronDown, Search, Home } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { TeamBadge } from "@/components/TeamBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import HousingPreferencesFilter, { PreferenceFilters } from "./HousingPreferencesFilter";
 
 type Profile = {
@@ -47,95 +48,46 @@ const PeopleSidebar = () => {
   }, []);
 
   const fetchProfiles = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
       // First, get profiles that have paid invoices
       const { data: profilesWithPaidInvoices, error: invoiceError } = await supabase
         .from('invoices')
-        .select('profile_id')
-        .eq('status', 'paid')
+        .select(`
+          profile_id,
+          first_name,
+          last_name,
+          email,
+          profile:profiles(
+            id,
+            avatar_url,
+            team_id,
+            housing_preferences,
+            team:teams(id, name, logo_url)
+          )
+        `)
+        .in('status', ['paid', 'pending'])
         .not('profile_id', 'is', null);
       
-      if (invoiceError) {
-        throw invoiceError;
-      }
-      
-      // Extract profile IDs from paid invoices
-      const paidProfileIds = profilesWithPaidInvoices
-        .map(invoice => invoice.profile_id)
-        .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
-      
-      if (paidProfileIds.length === 0) {
-        setProfiles([]);
-        setLoading(false);
-        return;
-      }
-      
-      // Get profiles that already have room assignments
-      const { data: assignedProfiles, error: assignmentError } = await supabase
-        .from('room_assignments')
-        .select('profile_id')
-        .gte('end_date', new Date().toISOString().split('T')[0]); // Only active assignments
-      
-      if (assignmentError) {
-        throw assignmentError;
-      }
-      
-      // Filter out profiles that already have room assignments
-      const assignedProfileIds = new Set(assignedProfiles?.map(assignment => assignment.profile_id) || []);
-      const availableProfileIds = paidProfileIds.filter(id => !assignedProfileIds.has(id));
-      
-      if (availableProfileIds.length === 0) {
-        setProfiles([]);
-        setLoading(false);
-        return;
-      }
-      
-      // Fetch profiles that have paid invoices and don't have active assignments
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id, 
-          full_name, 
-          avatar_url, 
-          email,
-          team_id,
-          housing_preferences,
-          team:teams(id, name, logo_url)
-        `)
-        .in('id', availableProfileIds)
-        .order('full_name');
-      
-      if (error) throw error;
-      
-      // Assign default color for teams since the column doesn't exist in DB
-      const profilesWithTeamColors = data?.map(profile => {
-        if (profile.team) {
-          // Generate a consistent color based on team ID
-          const color = generateTeamColor(profile.team.id);
-          return {
-            ...profile,
-            team: {
-              ...profile.team,
-              color: color
-            }
-          };
-        }
-        return profile;
-      }) as Profile[];
-      
-      setProfiles(profilesWithTeamColors || []);
-      
-      // Initially expand all teams
-      const teamsExpanded: Record<string, boolean> = {};
-      profilesWithTeamColors?.forEach(profile => {
-        if (profile.team_id) {
-          teamsExpanded[profile.team_id] = true;
-        }
-      });
-      setExpandedTeams({ 'no-team': true, ...teamsExpanded });
-      
+      if (invoiceError) throw invoiceError;
+
+      // Transform the data to match our Profile type
+      const transformedProfiles = profilesWithPaidInvoices
+        .filter(invoice => invoice.profile) // Filter out any null profiles
+        .map(invoice => ({
+          id: invoice.profile.id,
+          full_name: `${invoice.first_name} ${invoice.last_name}`,
+          avatar_url: invoice.profile.avatar_url,
+          email: invoice.email,
+          team_id: invoice.profile.team_id,
+          housing_preferences: invoice.profile.housing_preferences,
+          team: invoice.profile.team ? {
+            ...invoice.profile.team,
+            color: generateTeamColor(invoice.profile.team.id)
+          } : null
+        }));
+
+      setProfiles(transformedProfiles);
       setLoading(false);
     } catch (error: any) {
       toast({
@@ -147,7 +99,6 @@ const PeopleSidebar = () => {
     }
   };
 
-  // Function to generate a consistent color based on team ID
   const generateTeamColor = (teamId: string): string => {
     let hash = 0;
     for (let i = 0; i < teamId.length; i++) {
@@ -170,7 +121,6 @@ const PeopleSidebar = () => {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // Filter profiles by housing preferences
   const filterProfilesByPreferences = (profilesArray: Profile[]): Profile[] => {
     if (!preferenceFilters || Object.keys(preferenceFilters).length === 0) {
       return profilesArray;
@@ -297,7 +247,55 @@ const PeopleSidebar = () => {
     setPreferenceFilters(filters);
   };
 
-  // Count total profiles
+  const getHousingPreferenceDetails = (profile: Profile): React.ReactNode => {
+    if (!profile.housing_preferences) {
+      return <p className="text-xs italic">No housing preferences set</p>;
+    }
+    
+    const preferenceLabels: Record<string, string> = {
+      sleepSchedule: "Sleep Schedule",
+      noisePreference: "Noise Preference",
+      cleanliness: "Cleanliness",
+      personality: "Personality Type",
+      gender: "Gender",
+      sameGenderPreference: "Same Gender Preference",
+      sleepingHabits: "Sleeping Habits",
+      livingHabits: "Living Habits",
+      socialPreferences: "Social Preferences"
+    };
+    
+    const formatValue = (key: string, value: any): string => {
+      if (Array.isArray(value)) {
+        return value.join(", ");
+      }
+      if (typeof value === "string") {
+        return value
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/_/g, ' ')
+          .replace(/^\w/, c => c.toUpperCase());
+      }
+      return String(value);
+    };
+    
+    return (
+      <div className="space-y-1">
+        {Object.entries(profile.housing_preferences).map(([key, value]) => {
+          if (!value) return null;
+          const label = preferenceLabels[key] || key
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^\w/, c => c.toUpperCase());
+          
+          return (
+            <div key={key}>
+              <span className="font-medium text-xs">{label}:</span>{" "}
+              <span className="text-xs">{formatValue(key, value)}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const totalVisibleProfiles = filteredTeams.reduce(
     (sum, team) => sum + team.member_count, 0
   );
@@ -380,29 +378,49 @@ const PeopleSidebar = () => {
               <div className="grid grid-cols-2 gap-2 pl-2">
                 {team.profiles.map(profile => {
                   const bgColor = team.color || '#94a3b8';
+                  const hasHousingPreferences = profile.housing_preferences && 
+                    Object.keys(profile.housing_preferences).length > 0;
+
                   return (
-                    <div
-                      key={profile.id}
-                      className="p-2 border rounded-md bg-white hover:shadow-md transition-shadow"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, profile)}
-                      style={{ borderLeft: `3px solid ${bgColor}` }}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={profile.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs bg-muted">
-                            {profile.full_name?.charAt(0) || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="text-xs font-medium text-center truncate w-full" title={profile.full_name || undefined}>
-                          {profile.full_name || "Unnamed"}
-                        </div>
-                        <div className="text-xs text-muted-foreground text-center truncate w-full" title={profile.email || undefined}>
-                          {profile.email || "No email"}
-                        </div>
-                      </div>
-                    </div>
+                    <TooltipProvider key={profile.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="p-2 border rounded-md bg-white hover:shadow-md transition-shadow relative"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, profile)}
+                            style={{ borderLeft: `3px solid ${bgColor}` }}
+                          >
+                            {hasHousingPreferences && (
+                              <div className="absolute top-1 left-1 text-primary">
+                                <Home className="h-3 w-3" />
+                              </div>
+                            )}
+                            <div className="flex flex-col items-center gap-1">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={profile.avatar_url || undefined} />
+                                <AvatarFallback className="text-xs bg-muted">
+                                  {profile.full_name?.charAt(0) || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="text-xs font-medium text-center truncate w-full" title={profile.full_name || undefined}>
+                                {profile.full_name || "Unnamed"}
+                              </div>
+                              <div className="text-xs text-muted-foreground text-center truncate w-full" title={profile.email || undefined}>
+                                {profile.email || "No email"}
+                              </div>
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {hasHousingPreferences ? (
+                            getHousingPreferenceDetails(profile)
+                          ) : (
+                            <p className="text-xs italic">No housing preferences set</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   );
                 })}
               </div>
