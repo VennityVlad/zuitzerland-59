@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -108,12 +107,12 @@ const ProtectedRoute = ({
         
         setIsAdmin(profileData?.role === 'admin');
 
-        // Check for valid invoices
+        // Check for valid invoices - now only considering 'paid' status
         const { data: invoiceData, error: invoiceError } = await supabase
           .from('invoices')
           .select('id')
           .eq('profile_id', profileData?.id)
-          .in('status', ['paid', 'pending'])
+          .eq('status', 'paid') // Changed from .in(['paid', 'pending'])
           .maybeSingle();
 
         if (invoiceError) throw invoiceError;
@@ -121,8 +120,8 @@ const ProtectedRoute = ({
         const hasInvoice = !!invoiceData;
         setHasValidInvoice(hasInvoice);
 
-        // Redirect if no valid invoice for non-admin routes
-        if (!hasInvoice && !adminOnly) {
+        // Redirect if no valid invoice for non-admin routes that require payment
+        if (!hasInvoice && !adminOnly && pageKey) {
           toast({
             variant: "destructive",
             title: "Access Denied",
