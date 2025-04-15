@@ -1,3 +1,8 @@
+import { useEffect, useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,10 +29,6 @@ import Onboarding from "./pages/Onboarding";
 import NavMenu from "./components/NavMenu";
 import TransportationGuide from "./pages/TransportationGuide";
 import Directory from "./pages/Directory";
-import { usePrivy } from "@privy-io/react-auth";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "./components/ui/use-toast";
 import { useIsMobile } from "./hooks/use-mobile";
 import { usePageTracking } from "./hooks/usePageTracking";
 
@@ -38,47 +39,97 @@ const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
 
 const ProtectedRoute = ({ 
   children, 
-  adminOnly = false 
+  adminOnly = false,
+  pageKey = ''
 }: { 
   children: React.ReactNode;
   adminOnly?: boolean;
+  pageKey?: string;
 }) => {
-  const { authenticated, ready } = usePrivy();
-  const isMobile = useIsMobile();
+  const { authenticated, ready, user } = usePrivy();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = usePrivy();
+  const [isPageEnabled, setIsPageEnabled] = useState(true);
+  const [hasValidInvoice, setHasValidInvoice] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkPageAccess = async () => {
       if (!user?.id) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase
+        // Check page settings
+        if (pageKey) {
+          const { data: settingsData, error: settingsError } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('key', pageKey)
+            .maybeSingle();
+
+          if (settingsError) throw settingsError;
+          
+          if (settingsData) {
+            const isEnabled = settingsData.value?.enabled ?? true;
+            setIsPageEnabled(isEnabled);
+            
+            if (!isEnabled) {
+              navigate('/book');
+              return;
+            }
+          }
+        }
+
+        // Check admin status
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, id')
           .eq('privy_id', user.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (profileError) throw profileError;
         
-        setIsAdmin(data?.role === 'admin');
+        setIsAdmin(profileData?.role === 'admin');
+
+        // Check for valid invoices
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('profile_id', profileData?.id)
+          .in('status', ['paid', 'pending'])
+          .maybeSingle();
+
+        if (invoiceError) throw invoiceError;
+        
+        const hasInvoice = !!invoiceData;
+        setHasValidInvoice(hasInvoice);
+
+        // Redirect if no valid invoice for non-admin routes
+        if (!hasInvoice && !adminOnly) {
+          toast({
+            variant: "destructive",
+            title: "Access Denied",
+            description: "You need a paid invoice to access this page."
+          });
+          navigate('/book');
+        }
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error checking page access:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     if (user?.id) {
-      checkAdminStatus();
+      checkPageAccess();
     } else {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, pageKey, navigate, toast, adminOnly]);
 
   if (!ready || isLoading) {
     return (
@@ -232,31 +283,15 @@ const App = () => {
               <Route
                 path="/onboarding"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute pageKey="show_onboarding_page">
                     <Onboarding />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/housing-preferences"
-                element={
-                  <ProtectedRoute>
-                    <HousingPreferences />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/transportation-guide"
-                element={
-                  <ProtectedRoute>
-                    <TransportationGuide />
                   </ProtectedRoute>
                 }
               />
               <Route
                 path="/directory"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute pageKey="show_directory_page">
                     <Directory />
                   </ProtectedRoute>
                 }
