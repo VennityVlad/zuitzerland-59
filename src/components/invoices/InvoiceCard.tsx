@@ -53,6 +53,10 @@ export const InvoiceCard = ({
 
   const showGuildInviteButton = onSendGuildInvite && invoice.status === 'paid' && profileId;
 
+  const showHousingPrefsReminder = (invoice.status === 'paid' || invoice.status === 'pending') && 
+    (!invoice.profile?.housing_preferences || 
+     Object.keys(invoice.profile.housing_preferences || {}).length === 0);
+
   return (
     <Card className="mb-4">
       <CardContent className="pt-6">
@@ -145,7 +149,7 @@ export const InvoiceCard = ({
               </Button>
             )}
             
-            {(invoice.status === 'paid' || invoice.status === 'pending') && (
+            {showHousingPrefsReminder && (
               <Button
                 onClick={() => onSendReminder(invoice, 'housing')}
                 variant="outline"

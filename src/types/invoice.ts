@@ -28,5 +28,6 @@ export interface Invoice {
       color?: string;
       logo_url: string | null;
     } | null;
+    housing_preferences?: Record<string, any> | null;
   } | null;
 }

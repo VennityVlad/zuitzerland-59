@@ -27,9 +27,12 @@ export const InvoiceMassActions = ({
     (invoice) => invoice.status !== 'paid' && invoice.status !== 'cancelled'
   );
   
-  // Updated: Filter invoices for housing preferences reminders (paid OR pending)
+  // Updated: Filter invoices for housing preferences reminders (paid OR pending AND no housing preferences set)
   const housingReminderEligibleInvoices = invoices.filter(
-    (invoice) => invoice.status === 'paid' || invoice.status === 'pending'
+    (invoice) => 
+      (invoice.status === 'paid' || invoice.status === 'pending') &&
+      (!invoice.profile?.housing_preferences || 
+       Object.keys(invoice.profile.housing_preferences || {}).length === 0)
   );
   
   // Filter invoices for guild invites (only paid with profile_id and not already invited)
