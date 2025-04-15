@@ -145,7 +145,7 @@ export const InvoiceCard = ({
               </Button>
             )}
             
-            {invoice.status === 'paid' && (
+            {(invoice.status === 'paid' || invoice.status === 'pending') && (
               <Button
                 onClick={() => onSendReminder(invoice, 'housing')}
                 variant="outline"

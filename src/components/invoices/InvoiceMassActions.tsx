@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mail, Users } from "lucide-react";
@@ -28,9 +27,9 @@ export const InvoiceMassActions = ({
     (invoice) => invoice.status !== 'paid' && invoice.status !== 'cancelled'
   );
   
-  // Filter invoices for housing preferences reminders (only paid)
+  // Updated: Filter invoices for housing preferences reminders (paid OR pending)
   const housingReminderEligibleInvoices = invoices.filter(
-    (invoice) => invoice.status === 'paid'
+    (invoice) => invoice.status === 'paid' || invoice.status === 'pending'
   );
   
   // Filter invoices for guild invites (only paid with profile_id and not already invited)
