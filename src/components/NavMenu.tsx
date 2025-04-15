@@ -58,7 +58,64 @@ const NavMenu = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showDirectory, setShowDirectory] = useState(false);
+  const [hasPaidInvoice, setHasPaidInvoice] = useState(false);
   
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role, id')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+        
+        setIsAdmin(profileData?.role === 'admin');
+
+        if (profileData?.id) {
+          const { data: invoiceData, error: invoiceError } = await supabase
+            .from('invoices')
+            .select('id')
+            .eq('profile_id', profileData.id)
+            .eq('status', 'paid')
+            .maybeSingle();
+
+          if (invoiceError) throw invoiceError;
+          setHasPaidInvoice(!!invoiceData);
+        }
+
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('settings')
+          .select('key, value')
+          .in('key', ['show_onboarding_page', 'show_directory_page']);
+
+        if (settingsError) throw settingsError;
+
+        if (settingsData) {
+          const onboardingSetting = settingsData.find(s => s.key === 'show_onboarding_page')?.value;
+          const directorySetting = settingsData.find(s => s.key === 'show_directory_page')?.value;
+
+          setShowOnboarding(typeof onboardingSetting === 'string' 
+            ? JSON.parse(onboardingSetting)?.enabled ?? true 
+            : onboardingSetting?.enabled ?? true);
+            
+          setShowDirectory(typeof directorySetting === 'string' 
+            ? JSON.parse(directorySetting)?.enabled ?? true 
+            : directorySetting?.enabled ?? true);
+        }
+      } catch (error) {
+        console.error('Error checking access:', error);
+      }
+    };
+
+    checkAccess();
+  }, [user?.id]);
+
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -72,30 +129,6 @@ const NavMenu = () => {
       setSidebarOpen(false);
     }
   }, [location.pathname, isMobile]);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user?.id) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('privy_id', user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-        
-        setIsAdmin(data?.role === 'admin');
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      }
-    };
-
-    if (user?.id) {
-      fetchProfile();
-    }
-  }, [user?.id]);
 
   const toggleSubmenu = (id: string) => {
     setExpandedMenus(prev => 
@@ -123,21 +156,21 @@ const NavMenu = () => {
       icon: <CalendarDays className="h-5 w-5" />,
       path: "/book",
     },
-    {
+    ...(showOnboarding && hasPaidInvoice ? [{
       label: "Onboarding",
       icon: <CheckSquare className="h-5 w-5" />,
       path: "/onboarding",
-    },
+    }] : []),
     {
       label: "Events",
       icon: <Calendar className="h-5 w-5" />,
       path: "/events",
     },
-    {
+    ...(showDirectory && hasPaidInvoice ? [{
       label: "Directory",
       icon: <ContactRound className="h-5 w-5" />,
       path: "/directory",
-    }
+    }] : [])
   ];
 
   const adminMenuItems: MenuItem[] = [

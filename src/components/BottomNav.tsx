@@ -12,31 +12,64 @@ const BottomNav = () => {
   const { user, logout } = usePrivy();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showDirectory, setShowDirectory] = useState(false);
+  const [hasPaidInvoice, setHasPaidInvoice] = useState(false);
   const lastScrollY = useRef(0);
   const scrollTimeoutRef = useRef<number | null>(null);
-  
+
   useEffect(() => {
-    const fetchProfile = async () => {
+    const checkAccess = async () => {
       if (!user?.id) return;
 
       try {
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, id')
           .eq('privy_id', user.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (profileError) throw profileError;
         
-        setIsAdmin(data?.role === 'admin');
+        setIsAdmin(profileData?.role === 'admin');
+
+        if (profileData?.id) {
+          const { data: invoiceData, error: invoiceError } = await supabase
+            .from('invoices')
+            .select('id')
+            .eq('profile_id', profileData.id)
+            .eq('status', 'paid')
+            .maybeSingle();
+
+          if (invoiceError) throw invoiceError;
+          setHasPaidInvoice(!!invoiceData);
+        }
+
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('settings')
+          .select('key, value')
+          .in('key', ['show_onboarding_page', 'show_directory_page']);
+
+        if (settingsError) throw settingsError;
+
+        if (settingsData) {
+          const onboardingSetting = settingsData.find(s => s.key === 'show_onboarding_page')?.value;
+          const directorySetting = settingsData.find(s => s.key === 'show_directory_page')?.value;
+
+          setShowOnboarding(typeof onboardingSetting === 'string' 
+            ? JSON.parse(onboardingSetting)?.enabled ?? true 
+            : onboardingSetting?.enabled ?? true);
+            
+          setShowDirectory(typeof directorySetting === 'string' 
+            ? JSON.parse(directorySetting)?.enabled ?? true 
+            : directorySetting?.enabled ?? true);
+        }
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error checking access:', error);
       }
     };
 
-    if (user?.id) {
-      fetchProfile();
-    }
+    checkAccess();
   }, [user?.id]);
 
   useEffect(() => {
@@ -94,7 +127,7 @@ const BottomNav = () => {
     showAlways: true,
   }];
 
-  if (!isAdmin) {
+  if (!isAdmin && showOnboarding && hasPaidInvoice) {
     navItems.push({
       name: "Onboarding",
       icon: CheckSquare,
@@ -103,26 +136,21 @@ const BottomNav = () => {
     });
   }
 
-  navItems.push(
-    {
-      name: "Events",
-      icon: Calendar,
-      path: "/events",
-      showAlways: true,
-    },
-    {
+  navItems.push({
+    name: "Events",
+    icon: Calendar,
+    path: "/events",
+    showAlways: true,
+  });
+
+  if (showDirectory && hasPaidInvoice) {
+    navItems.push({
       name: "Directory",
       icon: ContactRound,
       path: "/directory",
       showAlways: true,
-    },
-    {
-      name: "Profile",
-      icon: User,
-      path: "/profile",
-      showAlways: true,
-    }
-  );
+    });
+  }
 
   const adminItems: NavItem[] = [
     {
