@@ -50,42 +50,69 @@ const PeopleSidebar = () => {
   const fetchProfiles = async () => {
     setLoading(true);
     try {
-      // First, get profiles that have paid invoices
-      const { data: profilesWithPaidInvoices, error: invoiceError } = await supabase
+      // First, get profiles that have paid or pending invoices
+      const { data: invoicesData, error: invoiceError } = await supabase
         .from('invoices')
         .select(`
-          profile_id,
+          id,
           first_name,
           last_name,
           email,
-          profile:profiles(
-            id,
-            avatar_url,
-            team_id,
-            housing_preferences,
-            team:teams(id, name, logo_url)
-          )
+          profile_id,
+          created_at,
+          status
         `)
         .in('status', ['paid', 'pending'])
-        .not('profile_id', 'is', null);
+        .not('profile_id', 'is', null)
+        .order('created_at', { ascending: false });
       
       if (invoiceError) throw invoiceError;
-
-      // Transform the data to match our Profile type
-      const transformedProfiles = profilesWithPaidInvoices
-        .filter(invoice => invoice.profile) // Filter out any null profiles
-        .map(invoice => ({
-          id: invoice.profile.id,
+      
+      // Filter to get only the most recent invoice per profile
+      const profileInvoicesMap = new Map();
+      invoicesData.forEach(invoice => {
+        if (!profileInvoicesMap.has(invoice.profile_id) || 
+            new Date(invoice.created_at) > new Date(profileInvoicesMap.get(invoice.profile_id).created_at)) {
+          profileInvoicesMap.set(invoice.profile_id, invoice);
+        }
+      });
+      
+      const uniqueProfileIds = Array.from(profileInvoicesMap.keys());
+      
+      // Now fetch the profile data for these users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          avatar_url,
+          team_id,
+          housing_preferences,
+          team:teams (
+            id,
+            name,
+            logo_url
+          )
+        `)
+        .in('id', uniqueProfileIds);
+      
+      if (profilesError) throw profilesError;
+      
+      // Merge profile data with invoice data
+      const transformedProfiles = profilesData.map(profile => {
+        const invoice = profileInvoicesMap.get(profile.id);
+        return {
+          id: profile.id,
           full_name: `${invoice.first_name} ${invoice.last_name}`,
-          avatar_url: invoice.profile.avatar_url,
+          avatar_url: profile.avatar_url,
           email: invoice.email,
-          team_id: invoice.profile.team_id,
-          housing_preferences: invoice.profile.housing_preferences,
-          team: invoice.profile.team ? {
-            ...invoice.profile.team,
-            color: generateTeamColor(invoice.profile.team.id)
+          team_id: profile.team_id,
+          housing_preferences: profile.housing_preferences,
+          team: profile.team ? {
+            ...profile.team,
+            color: generateTeamColor(profile.team.id)
           } : null
-        }));
+        };
+      });
 
       setProfiles(transformedProfiles);
       setLoading(false);
