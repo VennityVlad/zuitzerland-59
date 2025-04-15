@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -98,15 +99,31 @@ const PeopleSidebar = () => {
       if (profilesError) throw profilesError;
       
       // Merge profile data with invoice data
-      const transformedProfiles = profilesData.map(profile => {
+      const transformedProfiles: Profile[] = profilesData.map(profile => {
         const invoice = profileInvoicesMap.get(profile.id);
+        
+        // Convert housing_preferences to the right type if needed
+        let housingPrefs: Record<string, any> | null = null;
+        if (profile.housing_preferences) {
+          if (typeof profile.housing_preferences === 'string') {
+            try {
+              housingPrefs = JSON.parse(profile.housing_preferences);
+            } catch (e) {
+              console.error('Error parsing housing preferences:', e);
+              housingPrefs = null;
+            }
+          } else {
+            housingPrefs = profile.housing_preferences as Record<string, any>;
+          }
+        }
+        
         return {
           id: profile.id,
           full_name: `${invoice.first_name} ${invoice.last_name}`,
           avatar_url: profile.avatar_url,
           email: invoice.email,
           team_id: profile.team_id,
-          housing_preferences: profile.housing_preferences,
+          housing_preferences: housingPrefs,
           team: profile.team ? {
             ...profile.team,
             color: generateTeamColor(profile.team.id)

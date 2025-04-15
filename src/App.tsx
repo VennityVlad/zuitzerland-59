@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -74,7 +75,19 @@ const ProtectedRoute = ({
           if (settingsError) throw settingsError;
           
           if (settingsData) {
-            const isEnabled = settingsData.value?.enabled ?? true;
+            // Parse the value if it's a string, otherwise use it directly
+            let valueObj;
+            if (typeof settingsData.value === 'string') {
+              try {
+                valueObj = JSON.parse(settingsData.value);
+              } catch (e) {
+                valueObj = { enabled: true };
+              }
+            } else {
+              valueObj = settingsData.value;
+            }
+            
+            const isEnabled = valueObj?.enabled ?? true;
             setIsPageEnabled(isEnabled);
             
             if (!isEnabled) {
