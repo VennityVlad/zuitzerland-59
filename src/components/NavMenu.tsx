@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import BottomNav from "./BottomNav";
+import { getSettingEnabled } from "@/utils/settingsUtils";
 
 type MenuItem = {
   label: string;
@@ -100,13 +101,8 @@ const NavMenu = () => {
           const onboardingSetting = settingsData.find(s => s.key === 'show_onboarding_page')?.value;
           const directorySetting = settingsData.find(s => s.key === 'show_directory_page')?.value;
 
-          setShowOnboarding(typeof onboardingSetting === 'string' 
-            ? JSON.parse(onboardingSetting)?.enabled ?? true 
-            : onboardingSetting?.enabled ?? true);
-            
-          setShowDirectory(typeof directorySetting === 'string' 
-            ? JSON.parse(directorySetting)?.enabled ?? true 
-            : directorySetting?.enabled ?? true);
+          setShowOnboarding(getSettingEnabled(onboardingSetting));
+          setShowDirectory(getSettingEnabled(directorySetting));
         }
       } catch (error) {
         console.error('Error checking access:', error);

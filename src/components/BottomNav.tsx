@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { getSettingEnabled } from "@/utils/settingsUtils";
 
 const BottomNav = () => {
   const location = useLocation();
@@ -56,13 +57,8 @@ const BottomNav = () => {
           const onboardingSetting = settingsData.find(s => s.key === 'show_onboarding_page')?.value;
           const directorySetting = settingsData.find(s => s.key === 'show_directory_page')?.value;
 
-          setShowOnboarding(typeof onboardingSetting === 'string' 
-            ? JSON.parse(onboardingSetting)?.enabled ?? true 
-            : onboardingSetting?.enabled ?? true);
-            
-          setShowDirectory(typeof directorySetting === 'string' 
-            ? JSON.parse(directorySetting)?.enabled ?? true 
-            : directorySetting?.enabled ?? true);
+          setShowOnboarding(getSettingEnabled(onboardingSetting));
+          setShowDirectory(getSettingEnabled(directorySetting));
         }
       } catch (error) {
         console.error('Error checking access:', error);
