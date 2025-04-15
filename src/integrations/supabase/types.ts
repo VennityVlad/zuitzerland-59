@@ -579,6 +579,7 @@ export type Database = {
       }
       room_types: {
         Row: {
+          active: boolean | null
           code: string
           created_at: string
           description: string | null
@@ -590,6 +591,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          active?: boolean | null
           code: string
           created_at?: string
           description?: string | null
@@ -601,6 +603,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          active?: boolean | null
           code?: string
           created_at?: string
           description?: string | null
