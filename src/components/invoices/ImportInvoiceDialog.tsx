@@ -62,6 +62,29 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess, existingInv
   const [price, setPrice] = useState<number>(0);
 
   useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, username')
+          .order('email');
+
+        if (error) throw error;
+        setProfiles(data || []);
+      } catch (error) {
+        console.error('Error fetching profiles:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load user profiles",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchProfiles();
+  }, []);
+
+  useEffect(() => {
     if (open && existingInvoice) {
       setFirstName(existingInvoice.first_name);
       setLastName(existingInvoice.last_name);
@@ -91,25 +114,6 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess, existingInv
       setPreviewData(preview);
     }
   }, [open, existingInvoice]);
-
-  const fetchProfiles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, username')
-        .order('email');
-
-      if (error) throw error;
-      setProfiles(data || []);
-    } catch (error) {
-      console.error('Error fetching profiles:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load user profiles",
-        variant: "destructive",
-      });
-    }
-  };
 
   const fetchInvoiceData = async () => {
     if (!invoiceNumber.trim()) {
@@ -142,10 +146,9 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess, existingInv
       const paymentTerms = invoice.paymentTerms || {};
       const invoiceLinks = response.data.invoiceLinks || {};
       
-      let roomType = "Standard";
-      if (invoice.invoiceItems && invoice.invoiceItems.length > 0) {
-        roomType = invoice.invoiceItems[0].name || "Standard";
-      }
+      setFirstName(buyerInfo.firstName || "");
+      setLastName(buyerInfo.lastName || "");
+      setEmail(buyerInfo.email || "");
       
       let totalPrice = 0;
       if (invoice.invoiceItems && invoice.invoiceItems.length > 0) {
@@ -171,26 +174,10 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess, existingInv
           return sum + afterTax;
         }, 0);
       }
-
-      let paymentType = "crypto";
-      if (invoice.paymentOptions && invoice.paymentOptions.length > 0) {
-        const hasStripe = invoice.paymentOptions.some((option: any) => option.type === "stripe");
-        paymentType = hasStripe ? "fiat" : "crypto";
-      }
-      
-      let createdAt = invoice.creationDate || null;
-      let paidAt = null;
-      
-      if (invoice.events && Array.isArray(invoice.events)) {
-        const paymentEvent = invoice.events.find((event: any) => event.name === "declareReceivedPayment");
-        
-        if (paymentEvent && paymentEvent.date) {
-          paidAt = paymentEvent.date;
-        }
-      }
+      setPrice(totalPrice);
 
       const preview: ImportPreviewData = {
-        room_type: roomType,
+        room_type: invoice.invoiceItems && invoice.invoiceItems.length > 0 ? invoice.invoiceItems[0].name || "Standard" : "Standard",
         price: totalPrice,
         first_name: buyerInfo.firstName || "",
         last_name: buyerInfo.lastName || "",
@@ -202,9 +189,9 @@ export function ImportInvoiceDialog({ open, onOpenChange, onSuccess, existingInv
         status: invoice.status || "pending",
         invoice_uid: invoice.invoiceNumber || "",
         request_invoice_id: invoice.id || "",
-        payment_type: paymentType,
-        created_at: createdAt,
-        paid_at: paidAt
+        payment_type: invoice.paymentOptions && invoice.paymentOptions.length > 0 ? (invoice.paymentOptions.some((option: any) => option.type === "stripe") ? "fiat" : "crypto") : "crypto",
+        created_at: invoice.creationDate || null,
+        paid_at: null
       };
 
       setPreviewData(preview);
