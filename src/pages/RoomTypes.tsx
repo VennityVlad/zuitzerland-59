@@ -12,6 +12,7 @@ import { Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { Switch } from "@/components/ui/switch";
 
 interface RoomType {
   id: string;
@@ -23,6 +24,7 @@ interface RoomType {
   min_stay_days: number | null;
   created_at: string;
   updated_at: string;
+  active: boolean | null;
 }
 
 const RoomTypes = () => {
@@ -269,6 +271,37 @@ const RoomTypes = () => {
     }
   };
 
+  const handleToggleActive = async (id: string, currentActive: boolean | null) => {
+    try {
+      console.log("Toggling active status for room type:", id, "to:", !currentActive);
+      
+      const { data, error } = await supabase
+        .from('room_types')
+        .update({ active: !currentActive })
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Room type status updated successfully",
+      });
+      
+      fetchRoomTypes();
+    } catch (error) {
+      console.error('Error updating room type status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update room type status",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading || !ready || isAdminLoading) {
     return (
       <div className="flex flex-col h-full">
@@ -390,8 +423,18 @@ const RoomTypes = () => {
                         {roomType.code}
                       </span>
                     </CardTitle>
-                    <CardDescription>
-                      {roomType.min_stay_days ? `Min stay: ${roomType.min_stay_days} days` : 'No minimum stay requirement'}
+                    <CardDescription className="flex justify-between items-center">
+                      <span>{roomType.min_stay_days ? `Min stay: ${roomType.min_stay_days} days` : 'No minimum stay requirement'}</span>
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor={`active-${roomType.id}`} className="text-sm text-muted-foreground">
+                          {roomType.active ? 'Active' : 'Inactive'}
+                        </Label>
+                        <Switch
+                          id={`active-${roomType.id}`}
+                          checked={roomType.active ?? true}
+                          onCheckedChange={() => handleToggleActive(roomType.id, roomType.active)}
+                        />
+                      </div>
                     </CardDescription>
                   </CardHeader>
                   
