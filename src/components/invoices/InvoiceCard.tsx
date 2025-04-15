@@ -1,3 +1,4 @@
+
 import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +56,7 @@ export const InvoiceCard = ({
 
   const showHousingPrefsReminder = (invoice.status === 'paid' || invoice.status === 'pending') && 
     (!invoice.profile?.housing_preferences || 
-     Object.keys(invoice.profile.housing_preferences || {}).length === 0);
+     Object.keys(invoice.profile?.housing_preferences || {}).length === 0);
 
   return (
     <Card className="mb-4">
