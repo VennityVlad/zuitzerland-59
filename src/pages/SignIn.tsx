@@ -15,7 +15,7 @@ const SignIn = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const redirectToHousingPreferences = searchParams.has('housingPreferences');
+  const redirectToHousingPreferences = searchParams.get('housingPreferences') === 'true';
 
   const setupAuth = useCallback(async () => {
     if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {

@@ -383,7 +383,8 @@ const App = () => {
                   </ProtectedRoute>
                 }
               />
-              <Route path="*" element={<Navigate to="/signin" replace />} />
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </PageTrackingWrapper>
         </SupabaseAuthProvider>
