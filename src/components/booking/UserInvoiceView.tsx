@@ -16,17 +16,22 @@ interface UserInvoiceViewProps {
 export function UserInvoiceView({ invoice }: UserInvoiceViewProps) {
   const isMobile = useIsMobile();
   
-  // Fetch room type details
+  // Fetch room type details - Fixed the query to properly handle room types with spaces
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', invoice.room_type],
     queryFn: async () => {
+      if (!invoice.room_type) return null;
+      
       const { data, error } = await supabase
         .from('room_types')
         .select('display_name, description')
         .eq('code', invoice.room_type)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching room type details:', error);
+        return { display_name: invoice.room_type, description: null };
+      }
       return data;
     },
     enabled: Boolean(invoice.room_type)

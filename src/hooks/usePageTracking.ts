@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 
 /**
  * A custom hook to track page views with Plausible Analytics
+ * With error handling for CORS issues
  */
 export const usePageTracking = () => {
   const location = useLocation();
@@ -12,8 +13,8 @@ export const usePageTracking = () => {
     // Only track if Plausible is loaded
     if (window.plausible) {
       try {
-        // Track page view
-        window.plausible('pageview');
+        // Use no-cors mode to prevent CORS errors
+        window.plausible('pageview', { mode: 'no-cors' });
       } catch (error) {
         console.warn('Failed to track page view with Plausible:', error);
       }
