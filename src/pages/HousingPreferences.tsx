@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { PageTitle } from "@/components/PageTitle";
 import { supabase } from "@/integrations/supabase/client";
 import HousingPreferencesForm from "@/components/profile/HousingPreferencesForm";
@@ -10,15 +10,24 @@ import { useToast } from "@/hooks/use-toast";
 const HousingPreferences = () => {
   const { user, authenticated, ready } = usePrivy();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [profileData, setProfileData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Debug logging
+    console.log("HousingPreferences: Mount with", { 
+      authenticated, 
+      ready, 
+      userId: user?.id,
+      pathname: location.pathname
+    });
+    
     // If not authenticated, redirect to sign in with a parameter
     if (ready && !authenticated) {
       console.log("HousingPreferences: Not authenticated, redirecting to sign in");
-      navigate("/signin?housingPreferences=true");
+      navigate("/signin?housingPreferences=true", { replace: true });
       return;
     }
 
@@ -44,13 +53,11 @@ const HousingPreferences = () => {
           setProfileData(data);
         } else {
           console.log("HousingPreferences: No profile found");
-          // Add this log to help diagnose when no profile is found
           toast({
             title: "Error",
             description: "No profile found for your account",
             variant: "destructive",
           });
-          // Don't redirect here, let the user see the error
         }
       } catch (error: any) {
         console.error('Error:', error);
@@ -67,7 +74,7 @@ const HousingPreferences = () => {
     if (authenticated && user?.id) {
       fetchProfile();
     }
-  }, [ready, authenticated, user?.id, navigate, toast]);
+  }, [ready, authenticated, user?.id, navigate, toast, location.pathname]);
 
   // Handle successful form submission
   const handleSuccess = () => {
@@ -79,23 +86,18 @@ const HousingPreferences = () => {
     navigate("/profile");
   };
 
-  if (!ready || (ready && !authenticated)) {
+  if (!ready) {
     return (
       <div className="min-h-screen bg-secondary/30 flex items-center justify-center">
-        <div className="animate-pulse">Redirecting to sign in...</div>
+        <div className="animate-pulse">Loading...</div>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (ready && !authenticated) {
     return (
-      <div className="flex flex-col h-full">
-        <PageTitle title="Housing Preferences" />
-        <div className="py-8 px-4 flex-grow">
-          <div className="container max-w-4xl mx-auto">
-            <div className="animate-pulse">Loading...</div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-secondary/30 flex items-center justify-center">
+        <div className="animate-pulse">Redirecting to sign in...</div>
       </div>
     );
   }
@@ -109,15 +111,16 @@ const HousingPreferences = () => {
       <div className="py-8 px-4 flex-grow">
         <div className="container max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-lg p-8">
-            {profileData && (
+            {isLoading ? (
+              <div className="animate-pulse">Loading profile data...</div>
+            ) : profileData ? (
               <HousingPreferencesForm
                 profileId={profileData.id}
                 userEmail={profileData.email}
                 userName={profileData.username}
                 onSuccess={handleSuccess}
               />
-            )}
-            {!profileData && (
+            ) : (
               <div className="text-center p-6">
                 <p className="text-red-500 font-medium">No profile data found for your account.</p>
                 <button 

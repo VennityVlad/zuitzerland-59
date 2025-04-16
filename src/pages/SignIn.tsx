@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
@@ -21,9 +20,10 @@ const SignIn = () => {
     // Log the current params for debugging
     console.log('SignIn: URL params:', {
       redirectToHousingPreferences,
-      searchParams: Object.fromEntries(searchParams.entries())
+      searchParams: Object.fromEntries(searchParams.entries()),
+      pathname: location.pathname
     });
-  }, [searchParams, redirectToHousingPreferences]);
+  }, [searchParams, redirectToHousingPreferences, location.pathname]);
 
   const setupAuth = useCallback(async () => {
     if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {
@@ -171,7 +171,7 @@ const SignIn = () => {
     <div className="min-h-screen bg-secondary/30 py-12">
       <div className="container max-w-4xl mx-auto px-4">
         <img 
-          src="./lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
+          src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
           alt="Switzerland Logo"
           className="logo"
           onError={(e) => {

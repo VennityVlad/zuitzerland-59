@@ -18,8 +18,7 @@ const NotFound = () => {
 
   // Handle the home button click with correct base path awareness
   const goToHome = () => {
-    const basePath = import.meta.env.BASE_URL || '/';
-    navigate(basePath === '/' ? '/' : basePath);
+    navigate('/', { replace: true });
   };
 
   return (
