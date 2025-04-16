@@ -17,6 +17,14 @@ const SignIn = () => {
   const [searchParams] = useSearchParams();
   const redirectToHousingPreferences = searchParams.get('housingPreferences') === 'true';
 
+  useEffect(() => {
+    // Log the current params for debugging
+    console.log('SignIn: URL params:', {
+      redirectToHousingPreferences,
+      searchParams: Object.fromEntries(searchParams.entries())
+    });
+  }, [searchParams, redirectToHousingPreferences]);
+
   const setupAuth = useCallback(async () => {
     if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {
       return;
@@ -98,9 +106,9 @@ const SignIn = () => {
       // Handle redirects based on URL params
       console.log('Redirecting. Housing preferences param:', redirectToHousingPreferences);
       if (redirectToHousingPreferences) {
-        navigate("/housing-preferences");
+        navigate("/housing-preferences", { replace: true });
       } else {
-        navigate("/");
+        navigate("/", { replace: true });
       }
 
     } catch (error) {
@@ -127,10 +135,10 @@ const SignIn = () => {
     if (authenticated && setupComplete.current && !isSettingUpProfile) {
       if (redirectToHousingPreferences) {
         console.log('Already authenticated, redirecting to housing preferences');
-        navigate("/housing-preferences");
+        navigate("/housing-preferences", { replace: true });
       } else {
         console.log('Already authenticated, redirecting to home');
-        navigate("/");
+        navigate("/", { replace: true });
       }
     }
   }, [authenticated, isSettingUpProfile, navigate, redirectToHousingPreferences]);
@@ -163,9 +171,13 @@ const SignIn = () => {
     <div className="min-h-screen bg-secondary/30 py-12">
       <div className="container max-w-4xl mx-auto px-4">
         <img 
-          src="/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
+          src="./lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png"
           alt="Switzerland Logo"
           className="logo"
+          onError={(e) => {
+            console.error("Image failed to load, attempting fallback", e);
+            e.currentTarget.src = "/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png";
+          }}
         />
         
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">

@@ -16,6 +16,12 @@ const NotFound = () => {
     );
   }, [location.pathname]);
 
+  // Handle the home button click with correct base path awareness
+  const goToHome = () => {
+    const basePath = import.meta.env.BASE_URL || '/';
+    navigate(basePath === '/' ? '/' : basePath);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary/30">
       <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
@@ -26,7 +32,7 @@ const NotFound = () => {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
-            onClick={() => navigate("/")}
+            onClick={goToHome}
             className="flex items-center gap-2"
           >
             <Home size={16} />
