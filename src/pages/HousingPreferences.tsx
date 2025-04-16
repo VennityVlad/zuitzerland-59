@@ -44,6 +44,13 @@ const HousingPreferences = () => {
           setProfileData(data);
         } else {
           console.log("HousingPreferences: No profile found");
+          // Add this log to help diagnose when no profile is found
+          toast({
+            title: "Error",
+            description: "No profile found for your account",
+            variant: "destructive",
+          });
+          // Don't redirect here, let the user see the error
         }
       } catch (error: any) {
         console.error('Error:', error);
@@ -109,6 +116,17 @@ const HousingPreferences = () => {
                 userName={profileData.username}
                 onSuccess={handleSuccess}
               />
+            )}
+            {!profileData && (
+              <div className="text-center p-6">
+                <p className="text-red-500 font-medium">No profile data found for your account.</p>
+                <button 
+                  onClick={() => navigate('/profile')} 
+                  className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+                >
+                  Go to Profile
+                </button>
+              </div>
             )}
           </div>
         </div>

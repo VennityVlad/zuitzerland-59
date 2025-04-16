@@ -63,7 +63,6 @@ const ProtectedRoute = ({
       }
 
       try {
-        // Check page settings
         if (pageKey) {
           const { data: settingsData, error: settingsError } = await supabase
             .from('settings')
@@ -74,7 +73,6 @@ const ProtectedRoute = ({
           if (settingsError) throw settingsError;
           
           if (settingsData) {
-            // Parse the value if it's a string, otherwise use it directly
             let valueObj;
             if (typeof settingsData.value === 'string') {
               try {
@@ -96,7 +94,6 @@ const ProtectedRoute = ({
           }
         }
 
-        // Check admin status
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('role, id')
@@ -107,12 +104,11 @@ const ProtectedRoute = ({
         
         setIsAdmin(profileData?.role === 'admin');
 
-        // Check for valid invoices - now only considering 'paid' status
         const { data: invoiceData, error: invoiceError } = await supabase
           .from('invoices')
           .select('id')
           .eq('profile_id', profileData?.id)
-          .eq('status', 'paid') // Changed from .in(['paid', 'pending'])
+          .eq('status', 'paid')
           .maybeSingle();
 
         if (invoiceError) throw invoiceError;
@@ -120,7 +116,6 @@ const ProtectedRoute = ({
         const hasInvoice = !!invoiceData;
         setHasValidInvoice(hasInvoice);
 
-        // Redirect if no valid invoice for non-admin routes that require payment
         if (!hasInvoice && !adminOnly && pageKey) {
           toast({
             variant: "destructive",
@@ -289,6 +284,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/housing-preferences"
+                element={
+                  <ProtectedRoute>
+                    <HousingPreferences />
                   </ProtectedRoute>
                 }
               />
