@@ -11,8 +11,12 @@ export const usePageTracking = () => {
   useEffect(() => {
     // Only track if Plausible is loaded
     if (window.plausible) {
-      // Track page view
-      window.plausible('pageview');
+      try {
+        // Track page view
+        window.plausible('pageview');
+      } catch (error) {
+        console.warn('Failed to track page view with Plausible:', error);
+      }
     }
   }, [location.pathname]); // Track when path changes
 };
