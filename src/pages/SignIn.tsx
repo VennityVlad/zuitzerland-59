@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
@@ -106,6 +107,7 @@ const SignIn = () => {
       // Handle redirects based on URL params
       console.log('Redirecting. Housing preferences param:', redirectToHousingPreferences);
       if (redirectToHousingPreferences) {
+        // Use navigate instead of window.location to ensure we stay within the SPA routing
         navigate("/housing-preferences", { replace: true });
       } else {
         navigate("/", { replace: true });
@@ -118,6 +120,7 @@ const SignIn = () => {
         description: "There was an error setting up your profile. Please try again.",
         variant: "destructive",
       });
+      setupComplete.current = false;
     } finally {
       setIsSettingUpProfile(false);
     }
@@ -133,11 +136,12 @@ const SignIn = () => {
   // If already authenticated and setup is complete, redirect immediately
   useEffect(() => {
     if (authenticated && setupComplete.current && !isSettingUpProfile) {
+      console.log('Already authenticated, checking redirect parameters');
       if (redirectToHousingPreferences) {
-        console.log('Already authenticated, redirecting to housing preferences');
+        console.log('Redirecting to housing preferences');
         navigate("/housing-preferences", { replace: true });
       } else {
-        console.log('Already authenticated, redirecting to home');
+        console.log('Redirecting to home');
         navigate("/", { replace: true });
       }
     }

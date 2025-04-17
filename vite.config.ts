@@ -20,5 +20,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  base: '/', // Changed to root-relative path for better compatibility
+  base: '/', // Root-relative paths for better compatibility
 }));

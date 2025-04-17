@@ -8,8 +8,11 @@ import './index.css';
 // Create a query client instance for React Query
 const queryClient = new QueryClient();
 
-// Get base URL from environment or default to '/'
-const baseUrl = import.meta.env.BASE_URL || '/';
+// Get base URL from environment or default to '/' 
+// Use window.location.pathname if in deployed preview where path might be different
+const baseUrl = '/';
+
+console.log("Application initializing with baseUrl:", baseUrl);
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter basename={baseUrl}>

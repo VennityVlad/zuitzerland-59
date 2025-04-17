@@ -12,9 +12,11 @@ const NotFound = () => {
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",
-      location.pathname
+      location.pathname,
+      "Search params:",
+      location.search
     );
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   // Handle the home button click with correct base path awareness
   const goToHome = () => {
@@ -27,7 +29,7 @@ const NotFound = () => {
         <h1 className="text-4xl font-bold mb-4 text-gray-800">404</h1>
         <p className="text-xl text-gray-600 mb-6">Oops! Page not found</p>
         <p className="text-gray-500 mb-8">
-          The page you're looking for doesn't exist or has been moved.
+          The page you're looking for ({location.pathname}) doesn't exist or has been moved.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 

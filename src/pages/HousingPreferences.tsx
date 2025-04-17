@@ -58,6 +58,7 @@ const HousingPreferences = () => {
             description: "No profile found for your account",
             variant: "destructive",
           });
+          // Don't redirect if no profile found - let user see the error on this page
         }
       } catch (error: any) {
         console.error('Error:', error);
