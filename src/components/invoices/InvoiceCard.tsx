@@ -1,3 +1,4 @@
+
 import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { format, parseISO } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface InvoiceCardProps {
   invoice: Invoice;
@@ -22,7 +24,7 @@ interface InvoiceCardProps {
 }
 
 export const InvoiceCard = ({ 
-  invoice, 
+  invoice: initialInvoice, 
   onPaymentClick, 
   onSendReminder,
   onSendGuildInvite,
@@ -33,6 +35,9 @@ export const InvoiceCard = ({
   isGuildInvited,
   profileId
 }: InvoiceCardProps) => {
+  // Use local state to immediately update the UI after status change
+  const [invoice, setInvoice] = useState<Invoice>(initialInvoice);
+  
   const formatDate = (dateString: string) => {
     return format(parseISO(dateString), 'MMM d, yyyy');
   };
@@ -55,6 +60,18 @@ export const InvoiceCard = ({
     }
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (onStatusChange) {
+      // Update local state immediately for UI responsiveness
+      setInvoice({
+        ...invoice,
+        status: newStatus
+      });
+      // Call the parent handler to update the backend
+      onStatusChange(invoice, newStatus);
+    }
+  };
+
   const showGuildInviteButton = onSendGuildInvite && invoice.status === 'paid' && profileId;
 
   const showHousingPrefsReminder = (invoice.status === 'paid' || invoice.status === 'pending') && 
@@ -70,18 +87,18 @@ export const InvoiceCard = ({
               {!invoice.invoice_uid ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className={cn("px-2 py-1 h-auto font-normal", getStatusStyle(invoice.status))}>
+                    <Button variant="ghost" className={cn("px-2 py-1 h-auto text-xs font-semibold", getStatusStyle(invoice.status))}>
                       {invoice.status}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => onStatusChange?.(invoice, 'pending')}>
+                    <DropdownMenuItem onClick={() => handleStatusChange('pending')}>
                       Pending
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onStatusChange?.(invoice, 'paid')}>
+                    <DropdownMenuItem onClick={() => handleStatusChange('paid')}>
                       Paid
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onStatusChange?.(invoice, 'cancelled')}>
+                    <DropdownMenuItem onClick={() => handleStatusChange('cancelled')}>
                       Cancelled
                     </DropdownMenuItem>
                   </DropdownMenuContent>
