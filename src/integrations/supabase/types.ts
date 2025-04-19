@@ -304,7 +304,7 @@ export type Database = {
       invoices: {
         Row: {
           auth_user_id: string | null
-          booking_details: Json
+          booking_details: Json | null
           checkin: string
           checkout: string
           created_at: string
@@ -313,23 +313,23 @@ export type Database = {
           first_name: string
           id: string
           imported: boolean | null
-          invoice_uid: string
+          invoice_uid: string | null
           last_name: string
           last_reminder_sent: string | null
           paid_at: string | null
-          payment_link: string
-          payment_type: string
+          payment_link: string | null
+          payment_type: string | null
           price: number
           privy_id: string | null
           profile_id: string | null
           reminder_count: number | null
-          request_invoice_id: string
+          request_invoice_id: string | null
           room_type: string
           status: string
         }
         Insert: {
           auth_user_id?: string | null
-          booking_details: Json
+          booking_details?: Json | null
           checkin: string
           checkout: string
           created_at?: string
@@ -338,23 +338,23 @@ export type Database = {
           first_name: string
           id?: string
           imported?: boolean | null
-          invoice_uid: string
+          invoice_uid?: string | null
           last_name: string
           last_reminder_sent?: string | null
           paid_at?: string | null
-          payment_link: string
-          payment_type: string
+          payment_link?: string | null
+          payment_type?: string | null
           price: number
           privy_id?: string | null
           profile_id?: string | null
           reminder_count?: number | null
-          request_invoice_id: string
+          request_invoice_id?: string | null
           room_type: string
           status?: string
         }
         Update: {
           auth_user_id?: string | null
-          booking_details?: Json
+          booking_details?: Json | null
           checkin?: string
           checkout?: string
           created_at?: string
@@ -363,17 +363,17 @@ export type Database = {
           first_name?: string
           id?: string
           imported?: boolean | null
-          invoice_uid?: string
+          invoice_uid?: string | null
           last_name?: string
           last_reminder_sent?: string | null
           paid_at?: string | null
-          payment_link?: string
-          payment_type?: string
+          payment_link?: string | null
+          payment_type?: string | null
           price?: number
           privy_id?: string | null
           profile_id?: string | null
           reminder_count?: number | null
-          request_invoice_id?: string
+          request_invoice_id?: string | null
           room_type?: string
           status?: string
         }

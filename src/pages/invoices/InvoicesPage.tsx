@@ -24,6 +24,7 @@ const InvoicesPage = () => {
   const { user } = usePrivy();
   const isMobile = useIsMobile();
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | undefined>(undefined);
 
   const { isAdmin, isLoading: isAdminLoading } = useAdminStatus(user?.id);
@@ -47,6 +48,14 @@ const InvoicesPage = () => {
 
     return (
       <>
+        <Button
+          onClick={() => setIsCreateDialogOpen(true)}
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Create Invoice
+        </Button>
         <Button
           onClick={() => setIsImportDialogOpen(true)}
           size="sm"
@@ -129,20 +138,29 @@ const InvoicesPage = () => {
       </div>
       
       {isAdmin && (
-        <ImportInvoiceDialog 
-          open={isImportDialogOpen}
-          onOpenChange={(open) => {
-            setIsImportDialogOpen(open);
-            if (!open) {
+        <>
+          <ImportInvoiceDialog 
+            open={isImportDialogOpen}
+            onOpenChange={(open) => {
+              setIsImportDialogOpen(open);
+              if (!open) {
+                setSelectedInvoice(undefined);
+              }
+            }}
+            onSuccess={() => {
+              refetchInvoices();
               setSelectedInvoice(undefined);
-            }
-          }}
-          onSuccess={() => {
-            refetchInvoices();
-            setSelectedInvoice(undefined);
-          }}
-          existingInvoice={selectedInvoice}
-        />
+            }}
+            existingInvoice={selectedInvoice}
+          />
+          
+          <CreateInvoiceDialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+            onSuccess={refetchInvoices}
+            profiles={profiles}
+          />
+        </>
       )}
     </div>
   );
