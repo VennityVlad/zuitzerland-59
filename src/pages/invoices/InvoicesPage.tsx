@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -10,6 +11,7 @@ import { Download, Plus, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ImportInvoiceDialog } from "@/components/invoices/ImportInvoiceDialog";
+import { CreateInvoiceDialog } from "@/components/invoices/CreateInvoiceDialog";
 import { InvoiceMassActions } from "@/components/invoices/InvoiceMassActions";
 import { useInvoiceFilters } from "./hooks/useInvoiceFilters";
 import { useFilteredInvoices } from "./hooks/useFilteredInvoices";
@@ -26,6 +28,7 @@ const InvoicesPage = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | undefined>(undefined);
+  const [profiles, setProfiles] = useState<Array<{ id: string; email: string; full_name?: string; username?: string; }>>([]);
 
   const { isAdmin, isLoading: isAdminLoading } = useAdminStatus(user?.id);
   const { invoices, isLoading: invoicesLoading, refetchInvoices } = useInvoices(user?.id, isAdmin);
@@ -33,6 +36,29 @@ const InvoicesPage = () => {
   const { roomTypes, filteredInvoices } = useFilteredInvoices(invoices, filters);
   const { profileInvitationStatus } = useProfileInvitationStatus(isAdmin, invoicesLoading, invoices);
   const { isExporting, handleExportCSV } = useInvoiceExport(filteredInvoices);
+
+  useEffect(() => {
+    // Fetch profiles for the admin
+    const fetchProfiles = async () => {
+      if (!isAdmin) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, username')
+          .order('email');
+          
+        if (error) throw error;
+        setProfiles(data || []);
+      } catch (error) {
+        console.error('Error fetching profiles:', error);
+      }
+    };
+    
+    if (isAdmin) {
+      fetchProfiles();
+    }
+  }, [isAdmin]);
 
   const handlePaymentClick = (paymentLink: string) => {
     window.open(paymentLink, '_blank');
