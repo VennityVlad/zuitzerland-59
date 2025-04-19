@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess, profiles }:
   const [price, setPrice] = useState<number>(0);
   const [checkinDate, setCheckinDate] = useState<Date | undefined>(undefined);
   const [checkoutDate, setCheckoutDate] = useState<Date | undefined>(undefined);
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [roomType, setRoomType] = useState<string>("");
 
   const handleCreate = async () => {
@@ -41,7 +39,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess, profiles }:
       return;
     }
 
-    if (!checkinDate || !checkoutDate || !dueDate) {
+    if (!checkinDate || !checkoutDate) {
       toast({
         title: "Error",
         description: "Please select all required dates",
@@ -61,7 +59,6 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess, profiles }:
         email: email,
         checkin: format(checkinDate, 'yyyy-MM-dd'),
         checkout: format(checkoutDate, 'yyyy-MM-dd'),
-        due_date: dueDate.toISOString(),
         status: 'pending',
         imported: false
       };
@@ -100,7 +97,6 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess, profiles }:
     setPrice(0);
     setCheckinDate(undefined);
     setCheckoutDate(undefined);
-    setDueDate(undefined);
     setRoomType("");
   };
 
@@ -177,16 +173,12 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess, profiles }:
 
           <div className="space-y-2">
             <Label htmlFor="roomType">Room Type</Label>
-            <Select value={roomType} onValueChange={setRoomType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select room type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Standard">Standard</SelectItem>
-                <SelectItem value="Premium">Premium</SelectItem>
-                <SelectItem value="Deluxe">Deluxe</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              id="roomType"
+              value={roomType}
+              onChange={(e) => setRoomType(e.target.value)}
+              placeholder="Enter room type"
+            />
           </div>
 
           <div className="space-y-2">
@@ -219,15 +211,6 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess, profiles }:
                 fromDate={checkinDate}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Due Date</Label>
-            <DatePicker 
-              date={dueDate}
-              onDateChange={setDueDate}
-              placeholder="Select due date"
-            />
           </div>
         </div>
         

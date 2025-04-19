@@ -134,7 +134,6 @@ export const InvoiceTable = ({
         description: `Guild invitation sent to ${invoice.email}`,
       });
       
-      // Update local state to reflect the invitation was sent
       profileInvitationStatus[profileId] = true;
     } catch (error) {
       console.error('Error sending guild invitation:', error);
@@ -148,7 +147,29 @@ export const InvoiceTable = ({
     }
   };
 
-  // Card view (default view now)
+  const handleStatusChange = async (invoice: Invoice, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: newStatus })
+        .eq('id', invoice.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status Updated",
+        description: `Invoice status updated to ${newStatus}`,
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update invoice status",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (useCardView) {
     return (
       <div className="space-y-4">
@@ -159,6 +180,7 @@ export const InvoiceTable = ({
             onPaymentClick={onPaymentClick}
             onSendReminder={isAdmin ? handleSendReminder : undefined}
             onSendGuildInvite={isAdmin ? handleSendGuildInvite : undefined}
+            onStatusChange={isAdmin ? handleStatusChange : undefined}
             isLoading={loadingInvoiceId === invoice.id}
             isGuildInviteLoading={guildInviteLoading === invoice.id}
             isGuildInvited={invoice.profile_id ? profileInvitationStatus[invoice.profile_id] : false}
@@ -169,8 +191,6 @@ export const InvoiceTable = ({
     );
   }
 
-  // Table view (only used if explicitly set to false)
-  // Admin view includes additional user information columns
   if (isAdmin) {
     return (
       <ScrollArea className="w-full">
@@ -289,7 +309,6 @@ export const InvoiceTable = ({
     );
   }
 
-  // Regular user view with table
   return (
     <ScrollArea className="w-full">
       <div className="min-w-max">

@@ -1,4 +1,3 @@
-
 import { Invoice } from "@/types/invoice";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, Mail, Users, Pencil, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { TeamBadge } from "@/components/TeamBadge";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface InvoiceCardProps {
   invoice: Invoice;
@@ -13,6 +14,7 @@ interface InvoiceCardProps {
   onSendReminder?: (invoice: Invoice, reminderType: 'payment' | 'housing') => void;
   onSendGuildInvite?: (invoice: Invoice, profileId: string) => void;
   onEdit?: (invoice: Invoice) => void;
+  onStatusChange?: (invoice: Invoice, newStatus: string) => void;
   isLoading?: boolean;
   isGuildInviteLoading?: boolean;
   isGuildInvited?: boolean;
@@ -25,6 +27,7 @@ export const InvoiceCard = ({
   onSendReminder,
   onSendGuildInvite,
   onEdit,
+  onStatusChange,
   isLoading,
   isGuildInviteLoading,
   isGuildInvited,
@@ -64,12 +67,38 @@ export const InvoiceCard = ({
         <div className="flex justify-between items-start mb-4">
           <div>
             <div className="flex gap-2 items-center">
-              <Badge className={getStatusStyle(invoice.status)}>
-                {invoice.status}
-              </Badge>
+              {!invoice.invoice_uid ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className={cn("px-2 py-1 h-auto font-normal", getStatusStyle(invoice.status))}>
+                      {invoice.status}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => onStatusChange?.(invoice, 'pending')}>
+                      Pending
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onStatusChange?.(invoice, 'paid')}>
+                      Paid
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onStatusChange?.(invoice, 'cancelled')}>
+                      Cancelled
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Badge className={getStatusStyle(invoice.status)}>
+                  {invoice.status}
+                </Badge>
+              )}
               {invoice.imported && (
                 <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
                   Imported
+                </Badge>
+              )}
+              {!invoice.invoice_uid && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-200">
+                  Created
                 </Badge>
               )}
             </div>

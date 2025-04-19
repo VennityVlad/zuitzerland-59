@@ -308,7 +308,7 @@ export type Database = {
           checkin: string
           checkout: string
           created_at: string
-          due_date: string
+          due_date: string | null
           email: string
           first_name: string
           id: string
@@ -333,7 +333,7 @@ export type Database = {
           checkin: string
           checkout: string
           created_at?: string
-          due_date: string
+          due_date?: string | null
           email: string
           first_name: string
           id?: string
@@ -358,7 +358,7 @@ export type Database = {
           checkin?: string
           checkout?: string
           created_at?: string
-          due_date?: string
+          due_date?: string | null
           email?: string
           first_name?: string
           id?: string
