@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 type Bedroom = {
   id: string;
-  apartment_id: string;
+  location_id: string;
   name: string;
   description: string | null;
   beds?: Bed[];
