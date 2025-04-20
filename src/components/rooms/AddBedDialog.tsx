@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { BedDouble } from "lucide-react";
 
 type Bedroom = {
   id: string;
-  apartment_id: string;
+  location_id: string;
   name: string;
   description: string | null;
 };
