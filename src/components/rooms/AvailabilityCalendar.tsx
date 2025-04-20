@@ -52,8 +52,10 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
   const [dragStartState, setDragStartState] = useState<boolean | null>(null);
   const { toast } = useToast();
 
-  // Generate day columns for the week
+  // Ensure dayColumns is properly memoized and has a valid initial value
   const dayColumns: DayColumn[] = useMemo(() => {
+    if (!startDate) return [];
+    
     return Array.from({ length: 7 }, (_, i) => {
       const date = addDays(startDate, i);
       return {

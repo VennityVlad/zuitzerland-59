@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -230,7 +229,7 @@ const NavMenu = () => {
       hasSubmenu: true,
       submenuItems: [
         {
-          label: "Apartments",
+          label: "Locations",
           icon: <Building className="h-4 w-4" />,
           path: "/room-management",
         },
