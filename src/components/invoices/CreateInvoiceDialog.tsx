@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,10 +120,17 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess, profiles }:
                 setSelectedProfileId(value);
                 const profile = profiles.find(p => p.id === value);
                 if (profile) {
-                  setEmail(profile.email);
-                  const [first = "", ...rest] = (profile.full_name || "").split(" ");
-                  setFirstName(first);
-                  setLastName(rest.join(" "));
+                  setEmail(profile.email || "");
+                  
+                  // Handle full_name safely with null checks
+                  if (profile.full_name) {
+                    const nameParts = profile.full_name.split(" ");
+                    setFirstName(nameParts[0] || "");
+                    setLastName(nameParts.slice(1).join(" ") || "");
+                  } else {
+                    setFirstName(profile.username || "");
+                    setLastName("");
+                  }
                 }
               }}
             >
