@@ -24,7 +24,7 @@ type Location = {
 
 type Bedroom = {
   id: string;
-  location_id: string;
+  location_id: string;  // Ensure this matches the Supabase table definition
   name: string;
   description: string | null;
   beds?: Bed[];
@@ -184,6 +184,50 @@ const RoomDetailView = ({ apartment, onUpdate }: RoomDetailViewProps) => {
         return <Badge variant="outline" className="bg-indigo-50 text-indigo-800 border-indigo-200">Meeting Room</Badge>;
       default:
         return <Badge variant="outline">{apartment.type}</Badge>;
+    }
+  };
+
+  const handleSelectLocation = async (location: Location) => {
+    setSelectedLocation(null);
+    
+    try {
+      // Fetch bedrooms using location_id instead of apartment_id
+      const { data: bedroomsData, error: bedroomsError } = await supabase
+        .from('bedrooms')
+        .select('*')
+        .eq('location_id', location.id)  // Use location_id here
+        .order('name');
+      
+      if (bedroomsError) throw bedroomsError;
+      
+      const bedrooms = bedroomsData as unknown as Bedroom[];
+      
+      // Fetch beds for each bedroom
+      const bedroomsWithBeds = [...bedrooms];
+      
+      for (const bedroom of bedroomsWithBeds) {
+        const { data: bedsData, error: bedsError } = await supabase
+          .from('beds')
+          .select('*')
+          .eq('bedroom_id', bedroom.id)
+          .order('name');
+        
+        if (bedsError) throw bedsError;
+        
+        bedroom.beds = bedsData as unknown as Bed[];
+      }
+      
+      // Update selected location with bedrooms and beds
+      setSelectedLocation({
+        ...location,
+        bedrooms: bedroomsWithBeds,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error fetching location details",
+        description: error.message,
+      });
     }
   };
 
