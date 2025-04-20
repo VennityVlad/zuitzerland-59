@@ -267,7 +267,7 @@ const RoomDetailView = ({ apartment, onUpdate }: RoomDetailViewProps) => {
         </TabsContent>
         
         <TabsContent value="assignments" className="mt-0">
-          <RoomAssignments apartmentId={apartment.id} />
+          <RoomAssignments locationId={apartment.id} />
         </TabsContent>
       </CardContent>
       
