@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Building, BedDouble, Plus, Minus } from "lucide-react";
+import { Building, BedDouble, Plus, Minus, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -17,6 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Card, 
   CardContent, 
@@ -25,13 +32,14 @@ import {
   CardDescription
 } from "@/components/ui/card";
 
-type Apartment = {
+type Location = {
   id?: string;
   name: string;
   building: string;
   floor: string;
   description: string;
   max_occupancy: number | null;
+  type: string;
 };
 
 type Bedroom = {
@@ -48,33 +56,34 @@ type Bed = {
   description: string;
 };
 
-interface CreateApartmentSheetProps {
+interface CreateLocationSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: () => void;
-  apartment?: Apartment;
+  apartment?: Location;
   isEditing?: boolean;
 }
 
-export function CreateApartmentSheet({ 
+export function CreateLocationSheet({ 
   open, 
   onOpenChange, 
   onSubmit, 
   apartment,
   isEditing = false
-}: CreateApartmentSheetProps) {
+}: CreateLocationSheetProps) {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Apartment details
-  const [newApartment, setNewApartment] = useState<Apartment>(
+  // Location details
+  const [newLocation, setNewLocation] = useState<Location>(
     apartment || {
       name: "",
       building: "",
       floor: "",
       description: "",
-      max_occupancy: null
+      max_occupancy: null,
+      type: "Apartment"
     }
   );
 
@@ -93,26 +102,41 @@ export function CreateApartmentSheet({
     }]
   );
 
+  const locationTypes = ["Apartment", "Meeting Room"];
+
   const steps = [
-    { title: "Apartment Details", description: "Enter the basic information about the apartment" },
-    { title: "Bedrooms & Beds", description: "Configure bedrooms and beds in this apartment" },
+    { title: "Location Details", description: "Enter the basic information about the location" },
+    { title: "Bedrooms & Beds", description: "Configure bedrooms and beds in this location" },
     { title: "Review", description: "Review all information before saving" }
   ];
 
-  const validateApartmentDetails = () => {
-    if (!newApartment.name.trim()) {
+  const validateLocationDetails = () => {
+    if (!newLocation.name.trim()) {
       toast({
         title: "Error",
-        description: "Apartment name is required",
+        description: "Location name is required",
         variant: "destructive",
       });
       return false;
     }
     
+    if (!newLocation.type) {
+      toast({
+        title: "Error",
+        description: "Location type is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     return true;
   };
 
   const validateBedroomsAndBeds = () => {
+    if (newLocation.type === "Meeting Room") {
+      return true; // No bedrooms/beds validation needed for meeting rooms
+    }
+    
     for (const bedroom of bedrooms) {
       if (!bedroom.name.trim()) {
         toast({
@@ -157,19 +181,29 @@ export function CreateApartmentSheet({
   };
 
   const handleNext = () => {
-    if (currentStep === 0 && !validateApartmentDetails()) {
+    if (currentStep === 0 && !validateLocationDetails()) {
       return;
     }
     
     if (currentStep === 1 && !validateBedroomsAndBeds()) {
       return;
     }
-    
-    setCurrentStep(prev => prev + 1);
+
+    // Skip bedroom step for meeting rooms
+    if (currentStep === 0 && newLocation.type === "Meeting Room") {
+      setCurrentStep(2); // Skip to review step
+    } else {
+      setCurrentStep(prev => prev + 1);
+    }
   };
 
   const handlePrevious = () => {
-    setCurrentStep(prev => prev - 1);
+    // Handle skipping bedroom step when going back from review for meeting rooms
+    if (currentStep === 2 && newLocation.type === "Meeting Room") {
+      setCurrentStep(0);
+    } else {
+      setCurrentStep(prev => prev - 1);
+    }
   };
 
   const addBedroom = () => {
@@ -255,56 +289,63 @@ export function CreateApartmentSheet({
     try {
       setIsSubmitting(true);
       
-      if (!validateApartmentDetails() || !validateBedroomsAndBeds()) {
+      if (!validateLocationDetails()) {
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (newLocation.type === "Apartment" && !validateBedroomsAndBeds()) {
         setIsSubmitting(false);
         return;
       }
 
-      // 1. Create or update apartment
-      let apartmentId = apartment?.id;
+      // 1. Create or update location
+      let locationId = apartment?.id;
       
-      if (isEditing && apartmentId) {
-        // Update existing apartment
+      if (isEditing && locationId) {
+        // Update existing location
         const { error: updateError } = await supabase
-          .from('apartments')
+          .from('locations')
           .update({
-            name: newApartment.name,
-            building: newApartment.building || null,
-            floor: newApartment.floor || null,
-            description: newApartment.description || null,
-            max_occupancy: newApartment.max_occupancy || null
+            name: newLocation.name,
+            building: newLocation.building || null,
+            floor: newLocation.floor || null,
+            description: newLocation.description || null,
+            max_occupancy: newLocation.max_occupancy || null,
+            type: newLocation.type
           })
-          .eq('id', apartmentId);
+          .eq('id', locationId);
 
         if (updateError) throw updateError;
       } else {
-        // Create new apartment
-        const { data: apartmentData, error: apartmentError } = await supabase
-          .from('apartments')
+        // Create new location
+        const { data: locationData, error: locationError } = await supabase
+          .from('locations')
           .insert({
-            name: newApartment.name,
-            building: newApartment.building || null,
-            floor: newApartment.floor || null,
-            description: newApartment.description || null,
-            max_occupancy: newApartment.max_occupancy || null
+            name: newLocation.name,
+            building: newLocation.building || null,
+            floor: newLocation.floor || null,
+            description: newLocation.description || null,
+            max_occupancy: newLocation.max_occupancy || null,
+            type: newLocation.type
           })
           .select('id')
           .single();
 
-        if (apartmentError) throw apartmentError;
-        apartmentId = apartmentData.id;
+        if (locationError) throw locationError;
+        locationId = locationData.id;
       }
       
       // In edit mode, we don't want to add/remove bedrooms and beds
       // It could lead to data loss if users already assigned to those beds
-      if (!isEditing && apartmentId) {
+      if (!isEditing && locationId && newLocation.type === "Apartment") {
         // 2. Create bedrooms and beds for each bedroom
         for (const bedroom of bedrooms) {
           // Create bedroom
           const { data: bedroomData, error: bedroomError } = await supabase
             .from('bedrooms')
             .insert({
-              apartment_id: apartmentId,
+              location_id: locationId,
               name: bedroom.name,
               description: bedroom.description || null
             })
@@ -332,17 +373,17 @@ export function CreateApartmentSheet({
       toast({
         title: "Success",
         description: isEditing 
-          ? "Apartment updated successfully" 
-          : "Apartment created successfully with bedrooms and beds",
+          ? "Location updated successfully" 
+          : `${newLocation.type} created successfully${newLocation.type === "Apartment" ? " with bedrooms and beds" : ""}`,
       });
       
       onOpenChange(false);
       onSubmit();
     } catch (error) {
-      console.error('Error saving apartment:', error);
+      console.error('Error saving location:', error);
       toast({
         title: "Error",
-        description: `Failed to save apartment: ${error instanceof Error ? error.message : "Unknown error"}`,
+        description: `Failed to save location: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       });
     } finally {
@@ -354,7 +395,7 @@ export function CreateApartmentSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md md:max-w-lg overflow-y-auto">
         <SheetHeader className="mb-6">
-          <SheetTitle>{isEditing ? "Edit Apartment" : "Create New Apartment"}</SheetTitle>
+          <SheetTitle>{isEditing ? "Edit Location" : "Create New Location"}</SheetTitle>
           <SheetDescription>
             {steps[currentStep].description}
           </SheetDescription>
@@ -362,42 +403,70 @@ export function CreateApartmentSheet({
 
         <div className="mb-6">
           <div className="flex justify-between mb-2">
-            {steps.map((step, index) => (
-              <div 
-                key={index} 
-                className={`flex flex-col items-center ${index === currentStep ? 'text-primary' : 'text-muted-foreground'}`}
-              >
+            {steps.map((step, index) => {
+              // Skip the bedroom step badge for meeting rooms
+              if (index === 1 && newLocation.type === "Meeting Room") {
+                return null;
+              }
+              
+              return (
                 <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 
-                  ${index === currentStep ? 'bg-primary text-white' : 
-                    index < currentStep ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}
+                  key={index} 
+                  className={`flex flex-col items-center ${index === currentStep ? 'text-primary' : 'text-muted-foreground'}`}
                 >
-                  {index + 1}
+                  <div 
+                    className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 
+                    ${index === currentStep ? 'bg-primary text-white' : 
+                      index < currentStep ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    {index === 1 && newLocation.type === "Meeting Room" ? 3 : index + 1}
+                  </div>
+                  <span className="text-xs">{step.title}</span>
                 </div>
-                <span className="text-xs">{step.title}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="w-full h-2 bg-muted rounded-full">
             <div 
               className="h-2 bg-primary rounded-full transition-all" 
-              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+              style={{ 
+                width: `${((currentStep + 1) / (newLocation.type === "Meeting Room" ? 2 : steps.length)) * 100}%` 
+              }}
             ></div>
           </div>
         </div>
 
         <div className="space-y-6 mt-6">
-          {/* Step 1: Apartment Details */}
+          {/* Step 1: Location Details */}
           {currentStep === 0 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Apartment Name *</Label>
+                <Label htmlFor="name">Location Name *</Label>
                 <Input 
                   id="name" 
-                  value={newApartment.name}
-                  onChange={(e) => setNewApartment({...newApartment, name: e.target.value})}
-                  placeholder="e.g., Apartment 101, Suite A"
+                  value={newLocation.name}
+                  onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
+                  placeholder="e.g., Apartment 101, Conference Room A"
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="type">Location Type *</Label>
+                <Select
+                  value={newLocation.type}
+                  onValueChange={(value) => setNewLocation({...newLocation, type: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locationTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -405,8 +474,8 @@ export function CreateApartmentSheet({
                   <Label htmlFor="building">Building</Label>
                   <Input 
                     id="building" 
-                    value={newApartment.building}
-                    onChange={(e) => setNewApartment({...newApartment, building: e.target.value})}
+                    value={newLocation.building}
+                    onChange={(e) => setNewLocation({...newLocation, building: e.target.value})}
                     placeholder="e.g., Main Building"
                   />
                 </div>
@@ -415,8 +484,8 @@ export function CreateApartmentSheet({
                   <Label htmlFor="floor">Floor</Label>
                   <Input 
                     id="floor" 
-                    value={newApartment.floor}
-                    onChange={(e) => setNewApartment({...newApartment, floor: e.target.value})}
+                    value={newLocation.floor}
+                    onChange={(e) => setNewLocation({...newLocation, floor: e.target.value})}
                     placeholder="e.g., 1st, Ground"
                   />
                 </div>
@@ -427,9 +496,9 @@ export function CreateApartmentSheet({
                 <Input
                   id="max_occupancy"
                   type="number"
-                  value={newApartment.max_occupancy === null ? "" : newApartment.max_occupancy}
-                  onChange={(e) => setNewApartment({
-                    ...newApartment, 
+                  value={newLocation.max_occupancy === null ? "" : newLocation.max_occupancy}
+                  onChange={(e) => setNewLocation({
+                    ...newLocation, 
                     max_occupancy: e.target.value ? parseInt(e.target.value) : null
                   })}
                   placeholder="Maximum number of occupants"
@@ -441,17 +510,17 @@ export function CreateApartmentSheet({
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
-                  value={newApartment.description}
-                  onChange={(e) => setNewApartment({...newApartment, description: e.target.value})}
-                  placeholder="Describe the apartment (features, location, etc.)"
+                  value={newLocation.description}
+                  onChange={(e) => setNewLocation({...newLocation, description: e.target.value})}
+                  placeholder="Describe the location (features, location, etc.)"
                   rows={3}
                 />
               </div>
             </div>
           )}
           
-          {/* Step 2: Bedrooms and Beds */}
-          {currentStep === 1 && (
+          {/* Step 2: Bedrooms and Beds - Only shown for Apartments */}
+          {currentStep === 1 && newLocation.type === "Apartment" && (
             <div className="space-y-6">
               {!isEditing && (
                 <div className="flex justify-between items-center">
@@ -601,37 +670,41 @@ export function CreateApartmentSheet({
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Apartment Details</CardTitle>
+                  <CardTitle>Location Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm font-medium">Name</p>
-                      <p className="text-sm text-muted-foreground">{newApartment.name}</p>
+                      <p className="text-sm text-muted-foreground">{newLocation.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Type</p>
+                      <p className="text-sm text-muted-foreground">{newLocation.type}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium">Building</p>
-                      <p className="text-sm text-muted-foreground">{newApartment.building || 'N/A'}</p>
+                      <p className="text-sm text-muted-foreground">{newLocation.building || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium">Floor</p>
-                      <p className="text-sm text-muted-foreground">{newApartment.floor || 'N/A'}</p>
+                      <p className="text-sm text-muted-foreground">{newLocation.floor || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium">Max Occupancy</p>
-                      <p className="text-sm text-muted-foreground">{newApartment.max_occupancy || 'N/A'}</p>
+                      <p className="text-sm text-muted-foreground">{newLocation.max_occupancy || 'N/A'}</p>
                     </div>
                   </div>
-                  {newApartment.description && (
+                  {newLocation.description && (
                     <div className="pt-2">
                       <p className="text-sm font-medium">Description</p>
-                      <p className="text-sm text-muted-foreground">{newApartment.description}</p>
+                      <p className="text-sm text-muted-foreground">{newLocation.description}</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
               
-              {!isEditing && (
+              {!isEditing && newLocation.type === "Apartment" && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Bedrooms and Beds</CardTitle>
@@ -673,7 +746,7 @@ export function CreateApartmentSheet({
             </Button>
           )}
           
-          {currentStep < steps.length - 1 ? (
+          {currentStep < (newLocation.type === "Meeting Room" ? 2 : steps.length - 1) ? (
             <Button onClick={handleNext}>
               Next
             </Button>
@@ -683,7 +756,7 @@ export function CreateApartmentSheet({
               disabled={isSubmitting}
               className="w-full sm:w-auto"
             >
-              {isSubmitting ? "Saving..." : (isEditing ? "Update Apartment" : "Create Apartment")}
+              {isSubmitting ? "Saving..." : (isEditing ? "Update Location" : "Create Location")}
             </Button>
           )}
         </SheetFooter>

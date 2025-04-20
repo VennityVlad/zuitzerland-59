@@ -2,27 +2,29 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Building, Home } from "lucide-react";
+import { Plus, Building, Home, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import RoomSkeleton from "@/components/rooms/RoomSkeleton";
 import RoomDetailView from "@/components/rooms/RoomDetailView";
-import { CreateApartmentSheet } from "@/components/rooms/CreateApartmentSheet";
+import { CreateLocationSheet } from "@/components/rooms/CreateApartmentSheet";
+import { Badge } from "@/components/ui/badge";
 
-type Apartment = {
+type Location = {
   id: string;
   name: string;
   building: string | null;
   floor: string | null;
   description: string | null;
   max_occupancy: number | null;
+  type: string;
   bedrooms?: Bedroom[];
 };
 
 type Bedroom = {
   id: string;
-  apartment_id: string;
+  location_id: string;
   name: string;
   description: string | null;
   beds?: Bed[];
@@ -36,81 +38,81 @@ type Bed = {
   description: string | null;
 };
 
-const RoomsPage = () => {
-  const [rooms, setRooms] = useState<Apartment[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<Apartment | null>(null);
+const LocationsPage = () => {
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
-  const [addApartmentSheetOpen, setAddApartmentSheetOpen] = useState(false);
-  const [editApartmentSheetOpen, setEditApartmentSheetOpen] = useState(false);
+  const [addLocationSheetOpen, setAddLocationSheetOpen] = useState(false);
+  const [editLocationSheetOpen, setEditLocationSheetOpen] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
-    fetchRooms();
+    fetchLocations();
   }, []);
   
-  const fetchRooms = async () => {
+  const fetchLocations = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('apartments')
+        .from('locations')
         .select('*')
         .order('name');
       
       if (error) throw error;
       
-      setRooms(data as unknown as Apartment[]);
+      setLocations(data as unknown as Location[]);
       setLoading(false);
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error fetching apartments",
+        title: "Error fetching locations",
         description: error.message,
       });
       setLoading(false);
     }
   };
   
-  const handleDeleteRoom = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete ${name}? This will also delete all bedrooms and beds within this apartment.`)) {
+  const handleDeleteLocation = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete ${name}? This will also delete all bedrooms and beds within this location.`)) {
       return;
     }
     
     try {
       const { error } = await supabase
-        .from('apartments')
+        .from('locations')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
       
       toast({
-        title: "Apartment deleted",
+        title: "Location deleted",
         description: `${name} has been deleted.`,
       });
       
-      fetchRooms();
+      fetchLocations();
       
-      if (selectedRoom && selectedRoom.id === id) {
-        setSelectedRoom(null);
+      if (selectedLocation && selectedLocation.id === id) {
+        setSelectedLocation(null);
       }
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error deleting apartment",
+        title: "Error deleting location",
         description: error.message,
       });
     }
   };
   
-  const handleSelectRoom = async (room: Apartment) => {
-    setSelectedRoom(null);
+  const handleSelectLocation = async (location: Location) => {
+    setSelectedLocation(null);
     
     try {
       // Fetch bedrooms
       const { data: bedroomsData, error: bedroomsError } = await supabase
         .from('bedrooms')
         .select('*')
-        .eq('apartment_id', room.id)
+        .eq('location_id', location.id)
         .order('name');
       
       if (bedroomsError) throw bedroomsError;
@@ -132,17 +134,39 @@ const RoomsPage = () => {
         bedroom.beds = bedsData as unknown as Bed[];
       }
       
-      // Update selected room with bedrooms and beds
-      setSelectedRoom({
-        ...room,
+      // Update selected location with bedrooms and beds
+      setSelectedLocation({
+        ...location,
         bedrooms: bedroomsWithBeds,
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error fetching apartment details",
+        title: "Error fetching location details",
         description: error.message,
       });
+    }
+  };
+
+  const getLocationTypeIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'apartment':
+        return <Home className="h-4 w-4 text-primary" />;
+      case 'meeting room':
+        return <MapPin className="h-4 w-4 text-indigo-500" />;
+      default:
+        return <Building className="h-4 w-4 text-primary" />;
+    }
+  };
+  
+  const getLocationTypeBadge = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'apartment':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">Apartment</Badge>;
+      case 'meeting room':
+        return <Badge variant="outline" className="bg-indigo-50 text-indigo-800 border-indigo-200">Meeting Room</Badge>;
+      default:
+        return <Badge variant="outline">{type}</Badge>;
     }
   };
   
@@ -150,7 +174,7 @@ const RoomsPage = () => {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Apartments</h2>
+          <h2 className="text-2xl font-bold">Locations</h2>
           <Skeleton className="h-9 w-32" />
         </div>
         
@@ -165,44 +189,47 @@ const RoomsPage = () => {
   
   return (
     <div className="space-y-6">
-      {!selectedRoom ? (
+      {!selectedLocation ? (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Apartments</h2>
-            <Button onClick={() => setAddApartmentSheetOpen(true)}>
+            <h2 className="text-2xl font-bold">Locations</h2>
+            <Button onClick={() => setAddLocationSheetOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Apartment
+              Add Location
             </Button>
           </div>
           
-          {rooms.length === 0 ? (
+          {locations.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground mb-4">No apartments found. Click "Add Apartment" to create your first apartment.</p>
-                <Button onClick={() => setAddApartmentSheetOpen(true)}>
+                <p className="text-muted-foreground mb-4">No locations found. Click "Add Location" to create your first location.</p>
+                <Button onClick={() => setAddLocationSheetOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Apartment
+                  Add Location
                 </Button>
               </CardContent>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rooms.map((room) => (
+              {locations.map((location) => (
                 <Card 
-                  key={room.id} 
+                  key={location.id} 
                   className="cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => handleSelectRoom(room)}
+                  onClick={() => handleSelectLocation(location)}
                 >
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-primary" />
-                          <h3 className="font-medium">{room.name}</h3>
+                          {getLocationTypeIcon(location.type)}
+                          <h3 className="font-medium">{location.name}</h3>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          <p>Building: {room.building || "N/A"}</p>
-                          <p>Floor: {room.floor || "N/A"}</p>
+                          <p>Building: {location.building || "N/A"}</p>
+                          <p>Floor: {location.floor || "N/A"}</p>
+                          <div className="mt-2">
+                            {getLocationTypeBadge(location.type)}
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -211,8 +238,8 @@ const RoomsPage = () => {
                           size="icon"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedRoom(room);
-                            setEditApartmentSheetOpen(true);
+                            setSelectedLocation(location);
+                            setEditLocationSheetOpen(true);
                           }}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
@@ -224,7 +251,7 @@ const RoomsPage = () => {
                           size="icon"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteRoom(room.id, room.name);
+                            handleDeleteLocation(location.id, location.name);
                           }}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-destructive">
@@ -245,37 +272,37 @@ const RoomsPage = () => {
             <Button 
               variant="ghost" 
               className="mr-2"
-              onClick={() => setSelectedRoom(null)}
+              onClick={() => setSelectedLocation(null)}
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
               Back
             </Button>
-            <h2 className="text-2xl font-bold">Apartment Details</h2>
+            <h2 className="text-2xl font-bold">Location Details</h2>
           </div>
           
           <RoomDetailView 
-            apartment={selectedRoom} 
-            onUpdate={() => handleSelectRoom(selectedRoom)}
+            apartment={selectedLocation} 
+            onUpdate={() => handleSelectLocation(selectedLocation)}
           />
         </div>
       )}
       
-      {/* Create Apartment Sheet */}
-      <CreateApartmentSheet 
-        open={addApartmentSheetOpen}
-        onOpenChange={setAddApartmentSheetOpen}
-        onSubmit={fetchRooms}
+      {/* Create Location Sheet */}
+      <CreateLocationSheet 
+        open={addLocationSheetOpen}
+        onOpenChange={setAddLocationSheetOpen}
+        onSubmit={fetchLocations}
       />
       
-      {/* Edit Apartment Sheet */}
-      {selectedRoom && (
-        <CreateApartmentSheet 
-          open={editApartmentSheetOpen}
-          onOpenChange={setEditApartmentSheetOpen}
-          onSubmit={fetchRooms}
-          apartment={selectedRoom}
+      {/* Edit Location Sheet */}
+      {selectedLocation && (
+        <CreateLocationSheet 
+          open={editLocationSheetOpen}
+          onOpenChange={setEditLocationSheetOpen}
+          onSubmit={fetchLocations}
+          apartment={selectedLocation}
           isEditing={true}
         />
       )}
@@ -283,4 +310,4 @@ const RoomsPage = () => {
   );
 };
 
-export default RoomsPage;
+export default LocationsPage;

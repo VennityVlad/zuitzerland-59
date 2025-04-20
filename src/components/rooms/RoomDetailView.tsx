@@ -1,28 +1,31 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, BedDouble, Home, User, Calendar } from "lucide-react";
+import { Plus, BedDouble, Home, User, Calendar, MapPin, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import AddBedroomDialog from "./AddBedroomDialog";
 import AddBedDialog from "./AddBedDialog";
 import BedroomList from "./BedroomList";
 import RoomAssignments from "./RoomAssignments";
+import { Badge } from "@/components/ui/badge";
 
-type Apartment = {
+type Location = {
   id: string;
   name: string;
   building: string | null;
   floor: string | null;
   description: string | null;
   max_occupancy: number | null;
+  type: string;
   bedrooms?: Bedroom[];
 };
 
 type Bedroom = {
   id: string;
-  apartment_id: string;
+  location_id: string;
   name: string;
   description: string | null;
   beds?: Bed[];
@@ -37,7 +40,7 @@ type Bed = {
 };
 
 type RoomDetailViewProps = {
-  apartment: Apartment;
+  apartment: Location;
   onUpdate: () => void;
 };
 
@@ -48,12 +51,14 @@ const RoomDetailView = ({ apartment, onUpdate }: RoomDetailViewProps) => {
   const [activeTab, setActiveTab] = useState("details");
   const { toast } = useToast();
 
+  const isApartment = apartment.type === "Apartment";
+
   const handleAddBedroom = async (data: { name: string; description: string }) => {
     try {
       const { error } = await supabase
         .from('bedrooms')
         .insert({
-          apartment_id: apartment.id,
+          location_id: apartment.id,
           name: data.name,
           description: data.description || null,
         });
@@ -161,11 +166,36 @@ const RoomDetailView = ({ apartment, onUpdate }: RoomDetailViewProps) => {
     }
   };
 
+  const getLocationTypeIcon = () => {
+    switch (apartment.type.toLowerCase()) {
+      case 'apartment':
+        return <Home className="h-5 w-5 text-primary" />;
+      case 'meeting room':
+        return <MapPin className="h-5 w-5 text-indigo-500" />;
+      default:
+        return <Building className="h-5 w-5 text-primary" />;
+    }
+  };
+
+  const getLocationTypeBadge = () => {
+    switch (apartment.type.toLowerCase()) {
+      case 'apartment':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">Apartment</Badge>;
+      case 'meeting room':
+        return <Badge variant="outline" className="bg-indigo-50 text-indigo-800 border-indigo-200">Meeting Room</Badge>;
+      default:
+        return <Badge variant="outline">{apartment.type}</Badge>;
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-xl">{apartment.name}</CardTitle>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-xl">{apartment.name}</CardTitle>
+            {getLocationTypeBadge()}
+          </div>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="details">Details</TabsTrigger>
@@ -198,28 +228,42 @@ const RoomDetailView = ({ apartment, onUpdate }: RoomDetailViewProps) => {
             </div>
           )}
           
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Home className="h-5 w-5 text-primary" />
-                Bedrooms
-              </h3>
-              <Button size="sm" onClick={() => setAddBedroomDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Bedroom
-              </Button>
+          {isApartment && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Home className="h-5 w-5 text-primary" />
+                  Bedrooms
+                </h3>
+                <Button size="sm" onClick={() => setAddBedroomDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Bedroom
+                </Button>
+              </div>
+              
+              <BedroomList 
+                bedrooms={apartment.bedrooms || []} 
+                onAddBed={(bedroom) => {
+                  setSelectedBedroom(bedroom);
+                  setAddBedDialogOpen(true);
+                }}
+                onDeleteBedroom={handleDeleteBedroom}
+                onDeleteBed={handleDeleteBed}
+              />
             </div>
-            
-            <BedroomList 
-              bedrooms={apartment.bedrooms || []} 
-              onAddBed={(bedroom) => {
-                setSelectedBedroom(bedroom);
-                setAddBedDialogOpen(true);
-              }}
-              onDeleteBedroom={handleDeleteBedroom}
-              onDeleteBed={handleDeleteBed}
-            />
-          </div>
+          )}
+          
+          {!isApartment && (
+            <div className="mt-6 p-4 border rounded-md">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-indigo-500" />
+                <h3 className="text-lg font-semibold">Meeting Room</h3>
+              </div>
+              <p className="mt-2 text-muted-foreground">
+                This is a meeting room. You can manage room assignments but not add bedrooms or beds.
+              </p>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="assignments" className="mt-0">
@@ -227,18 +271,22 @@ const RoomDetailView = ({ apartment, onUpdate }: RoomDetailViewProps) => {
         </TabsContent>
       </CardContent>
       
-      <AddBedroomDialog 
-        open={addBedroomDialogOpen}
-        onOpenChange={setAddBedroomDialogOpen}
-        onSubmit={handleAddBedroom}
-      />
-      
-      <AddBedDialog 
-        open={addBedDialogOpen}
-        onOpenChange={setAddBedDialogOpen}
-        bedroom={selectedBedroom}
-        onSubmit={handleAddBed}
-      />
+      {isApartment && (
+        <>
+          <AddBedroomDialog 
+            open={addBedroomDialogOpen}
+            onOpenChange={setAddBedroomDialogOpen}
+            onSubmit={handleAddBedroom}
+          />
+          
+          <AddBedDialog 
+            open={addBedDialogOpen}
+            onOpenChange={setAddBedDialogOpen}
+            bedroom={selectedBedroom}
+            onSubmit={handleAddBed}
+          />
+        </>
+      )}
     </Card>
   );
 };

@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, User, Building, Home, BedDouble } from "lucide-react";
+import { Plus, User, Building, Home, BedDouble, MapPin } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,14 +13,15 @@ import EditAssignmentPanel from "./EditAssignmentPanel";
 type Assignment = {
   id: string;
   profile_id: string;
-  apartment_id: string | null;
+  location_id: string | null;
   bedroom_id: string | null;
   bed_id: string | null;
   start_date: string;
   end_date: string;
   notes: string | null;
-  apartment: {
+  location: {
     name: string;
+    type: string;
   } | null;
   bedroom: {
     name: string;
@@ -58,14 +60,14 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         .select(`
           *,
           profile:profiles(full_name, email, avatar_url),
-          apartment:apartments(name),
+          location:locations(name, type),
           bedroom:bedrooms(name),
           bed:beds(name, bed_type)
         `)
         .order('start_date', { ascending: false });
       
       if (apartmentId) {
-        query = query.eq('apartment_id', apartmentId);
+        query = query.eq('location_id', apartmentId);
       }
       
       const { data, error } = await query;
@@ -128,6 +130,19 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
     fetchAssignments();
   };
 
+  const getLocationIcon = (type: string | undefined) => {
+    if (!type) return <Building className="h-5 w-5 text-primary" />;
+    
+    switch (type.toLowerCase()) {
+      case 'apartment':
+        return <Home className="h-5 w-5 text-primary" />;
+      case 'meeting room':
+        return <MapPin className="h-5 w-5 text-indigo-500" />;
+      default:
+        return <Building className="h-5 w-5 text-primary" />;
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -173,8 +188,8 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
             {apartmentId 
-              ? "No assignments found for this room. Click 'Add Assignment' from the main Assignments page to add the first one."
-              : "No assignments found. Click 'Add Assignment' to assign a profile to a room."
+              ? "No assignments found for this location. Click 'Add Assignment' from the main Assignments page to add the first one."
+              : "No assignments found. Click 'Add Assignment' to assign a profile to a location."
             }
           </CardContent>
         </Card>
