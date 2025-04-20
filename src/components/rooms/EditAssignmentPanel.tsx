@@ -5,7 +5,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 type Assignment = {
   id: string;
   profile_id: string;
-  apartment_id: string;
+  location_id: string;
   bedroom_id: string | null;
   bed_id: string | null;
   start_date: string;
@@ -33,7 +33,7 @@ type EditAssignmentPanelProps = {
   assignment: Assignment | null;
   initialData?: {
     profileId?: string;
-    apartmentId?: string;
+    locationId?: string;
     bedroomId?: string;
     bedId?: string;
     startDate?: Date;
@@ -46,15 +46,15 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profiles, setProfiles] = useState<any[]>([]);
-  const [apartments, setApartments] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   const [bedrooms, setBedrooms] = useState<any[]>([]);
   const [beds, setBeds] = useState<any[]>([]);
   
   const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>(
     assignment?.profile_id || initialData?.profileId
   );
-  const [selectedApartmentId, setSelectedApartmentId] = useState<string | undefined>(
-    assignment?.apartment_id || initialData?.apartmentId
+  const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(
+    assignment?.location_id || initialData?.locationId
   );
   const [selectedBedroomId, setSelectedBedroomId] = useState<string | undefined>(
     assignment?.bedroom_id || initialData?.bedroomId
@@ -80,7 +80,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
     // Set initial form state when assignment or initialData changes
     if (assignment) {
       setSelectedProfileId(assignment.profile_id);
-      setSelectedApartmentId(assignment.apartment_id);
+      setSelectedLocationId(assignment.location_id);
       setSelectedBedroomId(assignment.bedroom_id || undefined);
       setSelectedBedId(assignment.bed_id || undefined);
       setStartDate(new Date(assignment.start_date));
@@ -88,7 +88,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       setNotes(assignment.notes || '');
     } else if (initialData) {
       setSelectedProfileId(initialData.profileId);
-      setSelectedApartmentId(initialData.apartmentId);
+      setSelectedLocationId(initialData.locationId);
       setSelectedBedroomId(initialData.bedroomId);
       setSelectedBedId(initialData.bedId);
       setStartDate(initialData.startDate);
@@ -132,18 +132,18 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       
       if (profilesError) throw profilesError;
       
-      const { data: apartmentsData, error: apartmentsError } = await supabase
-        .from('apartments')
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('locations')
         .select('id, name')
         .order('name');
       
-      if (apartmentsError) throw apartmentsError;
+      if (locationsError) throw locationsError;
 
       setProfiles(profilesData || []);
-      setApartments(apartmentsData || []);
+      setLocations(locationsData || []);
       
-      if (selectedApartmentId) {
-        await fetchBedroomsByApartment(selectedApartmentId);
+      if (selectedLocationId) {
+        await fetchBedroomsByLocation(selectedLocationId);
       }
       
       if (selectedBedroomId) {
@@ -161,13 +161,13 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
     }
   };
   
-  const fetchBedroomsByApartment = async (apartmentId: string) => {
+  const fetchBedroomsByLocation = async (locationId: string) => {
     try {
-      console.log("Fetching bedrooms for apartment:", apartmentId);
+      console.log("Fetching bedrooms for location:", locationId);
       const { data, error } = await supabase
         .from('bedrooms')
         .select('id, name')
-        .eq('apartment_id', apartmentId)
+        .eq('location_id', locationId)
         .order('name');
       
       if (error) throw error;
@@ -205,13 +205,13 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
     }
   };
   
-  const handleApartmentChange = async (apartmentId: string) => {
-    setSelectedApartmentId(apartmentId);
+  const handleLocationChange = async (locationId: string) => {
+    setSelectedLocationId(locationId);
     setSelectedBedroomId(undefined);
     setSelectedBedId(undefined);
     setBedrooms([]);
     setBeds([]);
-    await fetchBedroomsByApartment(apartmentId);
+    await fetchBedroomsByLocation(locationId);
   };
   
   const handleBedroomChange = async (bedroomId: string) => {
@@ -222,7 +222,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   };
   
   const saveAssignment = async () => {
-    if (!selectedProfileId || !selectedApartmentId || !selectedBedroomId || !selectedBedId || !startDate || !endDate) {
+    if (!selectedProfileId || !selectedLocationId || !startDate || !endDate) {
       toast({
         variant: "destructive",
         title: "Missing information",
@@ -239,7 +239,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       
       const assignmentData = {
         profile_id: selectedProfileId,
-        apartment_id: selectedApartmentId,
+        location_id: selectedLocationId,
         bedroom_id: selectedBedroomId,
         bed_id: selectedBedId,
         start_date: formattedStartDate,
@@ -320,8 +320,8 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   
   // Find the selected profile
   const selectedProfile = profiles.find(profile => profile.id === selectedProfileId);
-  // Find apartment and bedroom details for display
-  const selectedApartment = apartments.find(apt => apt.id === selectedApartmentId);
+  // Find location and bedroom details for display
+  const selectedLocation = locations.find(loc => loc.id === selectedLocationId);
   const selectedBedroom = bedrooms.find(bedroom => bedroom.id === selectedBedroomId);
   const selectedBed = beds.find(bed => bed.id === selectedBedId);
 
@@ -391,21 +391,21 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             </Select>
           </div>
           
-          {/* Apartment Selection */}
+          {/* Location Selection */}
           <div className="space-y-2">
-            <Label htmlFor="apartment">Apartment</Label>
+            <Label htmlFor="location">Location</Label>
             <Select
-              value={selectedApartmentId}
-              onValueChange={handleApartmentChange}
-              disabled={apartments.length === 0}
+              value={selectedLocationId}
+              onValueChange={handleLocationChange}
+              disabled={locations.length === 0}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select an apartment" />
+                <SelectValue placeholder="Select a location" />
               </SelectTrigger>
               <SelectContent>
-                {apartments.map(apartment => (
-                  <SelectItem key={apartment.id} value={apartment.id}>
-                    {apartment.name}
+                {locations.map(location => (
+                  <SelectItem key={location.id} value={location.id}>
+                    {location.name}
                   </SelectItem>
                 ))}
               </SelectContent>

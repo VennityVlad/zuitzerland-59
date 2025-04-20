@@ -80,7 +80,7 @@ const AddAssignmentDialog = ({ open, onOpenChange, onSubmit }: AddAssignmentDial
   const fetchRooms = async () => {
     try {
       const { data, error } = await supabase
-        .from('apartments')
+        .from('locations')
         .select(`
           id, 
           name, 
@@ -187,7 +187,7 @@ const AddAssignmentDialog = ({ open, onOpenChange, onSubmit }: AddAssignmentDial
         .from('room_assignments')
         .insert({
           profile_id: profileId,
-          apartment_id: roomId,
+          location_id: roomId,
           bedroom_id: bedroomId || null,
           bed_id: bedId || null,
           start_date: formattedStartDate,

@@ -28,7 +28,7 @@ type Profile = {
 type Assignment = {
   id: string;
   profile_id: string;
-  apartment_id: string;
+  location_id: string;
   bedroom_id: string | null;
   bed_id: string | null;
   start_date: string;
@@ -37,7 +37,7 @@ type Assignment = {
   profile: Profile;
 };
 
-type Apartment = {
+type Location = {
   id: string;
   name: string;
   bedrooms: Bedroom[];
@@ -61,7 +61,7 @@ type AssignmentGridCalendarProps = {
 };
 
 const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGridCalendarProps) => {
-  const [apartments, setApartments] = useState<Apartment[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [resizingState, setResizingState] = useState<{
@@ -83,7 +83,7 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [newAssignmentData, setNewAssignmentData] = useState<{
     profileId?: string;
-    apartmentId?: string;
+    locationId?: string;
     bedroomId?: string;
     bedId?: string;
     startDate?: Date;
@@ -119,25 +119,25 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
     try {
       console.log("Starting to fetch data...");
       
-      const { data: apartmentsData, error: apartmentsError } = await supabase
-        .from('apartments')
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('locations')
         .select('id, name')
         .order('name');
       
-      if (apartmentsError) {
-        console.error("Error fetching apartments:", apartmentsError);
-        throw apartmentsError;
+      if (locationsError) {
+        console.error("Error fetching locations:", locationsError);
+        throw locationsError;
       }
       
-      console.log("Apartments fetched:", apartmentsData?.length || 0);
+      console.log("Locations fetched:", locationsData?.length || 0);
 
-      const fullApartments: Apartment[] = [];
+      const fullLocations: Location[] = [];
 
-      for (const apartment of apartmentsData || []) {
+      for (const location of locationsData || []) {
         const { data: bedroomsData, error: bedroomsError } = await supabase
           .from('bedrooms')
           .select('id, name')
-          .eq('apartment_id', apartment.id)
+          .eq('location_id', location.id)
           .order('name');
         
         if (bedroomsError) {
@@ -165,26 +165,27 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
           });
         }
 
-        fullApartments.push({
-          ...apartment,
+        fullLocations.push({
+          ...location,
           bedrooms
         });
       }
 
-      setApartments(fullApartments);
+      setLocations(fullLocations);
 
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('room_assignments')
         .select(`
           id,
           profile_id,
-          apartment_id,
+          location_id,
           bedroom_id,
           bed_id,
           start_date,
           end_date,
           notes,
           profile:profiles(
+            id,
             full_name, 
             avatar_url,
             email,
@@ -297,10 +298,10 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
     );
   };
 
-  const createAssignment = (profileId: string, apartmentId: string, bedroomId: string, bedId: string, startDate: Date, endDate: Date) => {
+  const createAssignment = (profileId: string, locationId: string, bedroomId: string, bedId: string, startDate: Date, endDate: Date) => {
     setNewAssignmentData({
       profileId,
-      apartmentId,
+      locationId,
       bedroomId,
       bedId,
       startDate,
@@ -378,7 +379,7 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
     }
   };
 
-  const handleDrop = (e: React.DragEvent, apartmentId: string, bedroomId: string, bedId: string, date: Date) => {
+  const handleDrop = (e: React.DragEvent, locationId: string, bedroomId: string, bedId: string, date: Date) => {
     e.preventDefault();
     
     try {
@@ -386,11 +387,11 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
       if (!profileData) return;
       
       const profile = JSON.parse(profileData);
-      console.log("Drop event:", { apartmentId, bedroomId, bedId, date, profile });
+      console.log("Drop event:", { locationId, bedroomId, bedId, date, profile });
       
       createAssignment(
         profile.id,
-        apartmentId,
+        locationId,
         bedroomId,
         bedId,
         date,
@@ -503,48 +504,20 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
 
   const handleMouseUp = async () => {
     if (!resizingState.active || !resizingState.id) {
-      setResizingState({
-        id: null,
-        direction: null,
-        active: false,
-        initialMouseX: null,
-        initialStartDate: null,
-        initialEndDate: null
-      });
       return;
     }
     
-    const updatedAssignment = assignments.find(a => a.id === resizingState.id);
-    if (updatedAssignment) {
-      try {
-        const { error } = await supabase
-          .from('room_assignments')
-          .update({
-            start_date: updatedAssignment.start_date,
-            end_date: updatedAssignment.end_date
-          })
-          .eq('id', resizingState.id);
-        
-        if (error) throw error;
-        
-        toast({
-          title: "Assignment updated",
-          description: "The assignment dates have been updated.",
-        });
-        
-        if (onAssignmentChange) {
-          onAssignmentChange();
-        }
-      } catch (error: any) {
-        console.error("Error updating assignment:", error);
-        toast({
-          variant: "destructive",
-          title: "Error updating assignment",
-          description: error.message,
-        });
-        
-        fetchData();
-      }
+    const assignment = assignments.find(a => a.id === resizingState.id);
+    if (!assignment) return;
+    
+    try {
+      await updateAssignment(
+        resizingState.id,
+        parseISO(assignment.start_date),
+        parseISO(assignment.end_date)
+      );
+    } catch (error) {
+      console.error("Error updating assignment during resize:", error);
     }
     
     setResizingState({
@@ -557,74 +530,19 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
     });
   };
 
-  const handleEditPanelClose = (wasChanged: boolean = false) => {
-    setIsEditPanelOpen(false);
-    setSelectedAssignment(null);
-    setNewAssignmentData(null);
-    
-    if (wasChanged) {
-      fetchData();
-      
-      if (onAssignmentChange) {
-        onAssignmentChange();
-      }
-    }
-  };
-
-  const hasBeds = useMemo(() => {
-    return apartments.some(apt => apt.bedrooms.some(br => br.beds.length > 0));
-  }, [apartments]);
-
   if (loading) {
     return (
-      <div className="w-full h-[600px] flex items-center justify-center">
-        <div className="text-muted-foreground">Loading calendar...</div>
-      </div>
-    );
-  }
-
-  if (!hasBeds && apartments.length === 0) {
-    return (
-      <div className="text-center py-12 space-y-4">
-        <h3 className="font-medium text-lg">No apartments found</h3>
-        <p className="text-muted-foreground">
-          You need to create apartments, bedrooms, and beds before you can assign people to them.
-        </p>
-        <Button 
-          onClick={() => {
-            const roomsTab = document.querySelector('[value="rooms"]') as HTMLButtonElement;
-            if (roomsTab) roomsTab.click();
-          }}
-        >
-          <Home className="mr-2 h-4 w-4" />
-          Create Apartments
-        </Button>
-      </div>
-    );
-  }
-
-  if (!hasBeds && apartments.length > 0) {
-    return (
-      <div className="text-center py-12 space-y-4">
-        <h3 className="font-medium text-lg">No beds found</h3>
-        <p className="text-muted-foreground">
-          You have apartments, but you need to add bedrooms and beds to them before you can assign people.
-        </p>
-        <Button 
-          onClick={() => {
-            const roomsTab = document.querySelector('[value="rooms"]') as HTMLButtonElement;
-            if (roomsTab) roomsTab.click();
-          }}
-        >
-          <Home className="mr-2 h-4 w-4" />
-          Manage Apartments
-        </Button>
+      <div className="text-center p-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-muted rounded-md mb-4 w-1/3 mx-auto"></div>
+          <div className="h-[500px] bg-muted/50 rounded-md"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div>
       <div className="grid grid-cols-[200px,repeat(7,1fr)] border-b bg-muted/30">
         <div className="p-2 font-semibold border-r">Room</div>
         {dates.map((date, i) => (
@@ -639,13 +557,13 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
       </div>
 
       <div className="max-h-[500px] overflow-y-auto">
-        {apartments.map((apartment) => (
-          <div key={apartment.id} className="mb-4">
+        {locations.map((location) => (
+          <div key={location.id} className="mb-4">
             <div className="text-lg font-semibold p-2 bg-muted/20 sticky top-0 z-10">
-              {apartment.name}
+              {location.name}
             </div>
             
-            {apartment.bedrooms.flatMap((bedroom) => 
+            {location.bedrooms.flatMap((bedroom) => 
               bedroom.beds.map((bed) => (
                 <div key={bed.id} className="grid grid-cols-[200px,repeat(7,1fr)] border-b hover:bg-muted/10">
                   <div className="p-2 border-r flex items-center">
@@ -788,7 +706,7 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
                         key={dateIndex}
                         className="border-r min-h-[60px] p-1"
                         onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, apartment.id, bedroom.id, bed.id, date)}
+                        onDrop={(e) => handleDrop(e, location.id, bedroom.id, bed.id, date)}
                       />
                     );
                   })}
@@ -800,11 +718,18 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
       </div>
 
       <Sheet open={isEditPanelOpen} onOpenChange={setIsEditPanelOpen}>
-        <SheetContent className="w-full sm:w-[540px] overflow-y-auto">
+        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
           <EditAssignmentPanel 
             assignment={selectedAssignment} 
             initialData={newAssignmentData}
-            onClose={handleEditPanelClose}
+            onClose={() => {
+              setIsEditPanelOpen(false);
+              setNewAssignmentData(null);
+              fetchData();
+              if (onAssignmentChange) {
+                onAssignmentChange();
+              }
+            }} 
           />
         </SheetContent>
       </Sheet>

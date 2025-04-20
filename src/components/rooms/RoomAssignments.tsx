@@ -38,10 +38,10 @@ type Assignment = {
 };
 
 type RoomAssignmentsProps = {
-  apartmentId?: string;
+  locationId?: string;
 };
 
-const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
+const RoomAssignments = ({ locationId }: RoomAssignmentsProps) => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
@@ -50,7 +50,7 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
 
   useEffect(() => {
     fetchAssignments();
-  }, [apartmentId]);
+  }, [locationId]);
 
   const fetchAssignments = async () => {
     setLoading(true);
@@ -66,8 +66,8 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         `)
         .order('start_date', { ascending: false });
       
-      if (apartmentId) {
-        query = query.eq('location_id', apartmentId);
+      if (locationId) {
+        query = query.eq('location_id', locationId);
       }
       
       const { data, error } = await query;
@@ -177,7 +177,7 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
         
         <Button 
           onClick={handleAddAssignment}
-          disabled={!!apartmentId}
+          disabled={!!locationId}
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Assignment
@@ -187,7 +187,7 @@ const RoomAssignments = ({ apartmentId }: RoomAssignmentsProps) => {
       {assignments.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
-            {apartmentId 
+            {locationId 
               ? "No assignments found for this location. Click 'Add Assignment' from the main Assignments page to add the first one."
               : "No assignments found. Click 'Add Assignment' to assign a profile to a location."
             }
