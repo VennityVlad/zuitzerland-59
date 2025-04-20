@@ -31,6 +31,7 @@ import TransportationGuide from "./pages/TransportationGuide";
 import Directory from "./pages/Directory";
 import { useIsMobile } from "./hooks/use-mobile";
 import { usePageTracking } from "./hooks/usePageTracking";
+import AvailabilityPage from "./pages/rooms/AvailabilityPage";
 
 const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
   usePageTracking();
@@ -164,6 +165,146 @@ const ProtectedRoute = ({
   );
 };
 
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/supabase-signin" element={<SupabaseSignIn />} />
+      
+      <Route path="/signin" element={<SignIn />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/book"
+        element={
+          <ProtectedRoute>
+            <Book />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/housing-preferences"
+        element={
+          <ProtectedRoute>
+            <HousingPreferences />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/onboarding"
+        element={
+          <ProtectedRoute pageKey="show_onboarding_page">
+            <Onboarding />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/directory"
+        element={
+          <ProtectedRoute pageKey="show_directory_page">
+            <Directory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/invoices"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <Invoices />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <Reports />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/discounts"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <Discounts />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events"
+        element={
+          <ProtectedRoute>
+            <Events />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/room-types"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <RoomTypes />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teams"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <Teams />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/user-management"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <UserManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/room-management"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <RoomManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/room-assignments"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <RoomAssignmentsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/availability"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <AvailabilityPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/404" element={<NotFound />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
 const App = () => {
   const [privyAppId, setPrivyAppId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -259,133 +400,7 @@ const App = () => {
       >
         <SupabaseAuthProvider>
           <PageTrackingWrapper>
-            <Routes>
-              <Route path="/supabase-signin" element={<SupabaseSignIn />} />
-              
-              <Route path="/signin" element={<SignIn />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/book"
-                element={
-                  <ProtectedRoute>
-                    <Book />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/housing-preferences"
-                element={
-                  <ProtectedRoute>
-                    <HousingPreferences />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/onboarding"
-                element={
-                  <ProtectedRoute pageKey="show_onboarding_page">
-                    <Onboarding />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/directory"
-                element={
-                  <ProtectedRoute pageKey="show_directory_page">
-                    <Directory />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/invoices"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <Invoices />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <Reports />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/discounts"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <Discounts />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/events"
-                element={
-                  <ProtectedRoute>
-                    <Events />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/room-types"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <RoomTypes />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/teams"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <Teams />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/user-management"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <UserManagement />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/room-management"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <RoomManagement />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/room-assignments"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <RoomAssignmentsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/404" element={<NotFound />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppRoutes />
           </PageTrackingWrapper>
         </SupabaseAuthProvider>
       </PrivyProvider>

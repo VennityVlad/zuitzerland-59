@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import BottomNav from "./BottomNav";
+import { useMenuVisibility } from "@/hooks/useMenuVisibility";
 import { getSettingEnabled } from "@/utils/settingsUtils";
 
 type MenuItem = {
@@ -241,6 +243,11 @@ const NavMenu = () => {
           label: "Room Types",
           icon: <Layers className="h-4 w-4" />,
           path: "/room-types",
+        },
+        {
+          label: "Availability",
+          icon: <Calendar className="h-4 w-4" />,
+          path: "/availability",
         }
       ]
     },
