@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import PageTitle from "@/components/PageTitle";
+import { PageTitle } from "@/components/PageTitle";
 import AvailabilityCalendar from "@/components/rooms/AvailabilityCalendar";
 import LocationSelector from "@/components/rooms/LocationSelector";
 import AvailabilityControls from "@/components/rooms/AvailabilityControls";
