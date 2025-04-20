@@ -39,12 +39,22 @@ export const InvoiceCard = ({
   const [invoice, setInvoice] = useState<Invoice>(initialInvoice);
   
   const formatDate = (dateString: string) => {
-    return format(parseISO(dateString), 'MMM d, yyyy');
+    try {
+      return format(parseISO(dateString), 'MMM d, yyyy');
+    } catch (error) {
+      console.error(`Error formatting date ${dateString}:`, error);
+      return 'Invalid date';
+    }
   };
 
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return 'Never';
-    return format(parseISO(dateString), 'MMM d, yyyy h:mm a');
+    try {
+      return format(parseISO(dateString), 'MMM d, yyyy h:mm a');
+    } catch (error) {
+      console.error(`Error formatting date ${dateString}:`, error);
+      return 'Invalid date';
+    }
   };
 
   const getStatusStyle = (status: string) => {
@@ -72,11 +82,16 @@ export const InvoiceCard = ({
     }
   };
 
-  const showGuildInviteButton = onSendGuildInvite && invoice.status === 'paid' && profileId;
+  // Safely check for profile data and housing preferences
+  const showGuildInviteButton = onSendGuildInvite && 
+    invoice.status === 'paid' && 
+    profileId !== undefined && 
+    profileId !== null;
 
   const showHousingPrefsReminder = (invoice.status === 'paid' || invoice.status === 'pending') && 
-    (!invoice.profile?.housing_preferences || 
-     Object.keys(invoice.profile?.housing_preferences || {}).length === 0);
+    invoice.profile && 
+    (!invoice.profile.housing_preferences || 
+     Object.keys(invoice.profile.housing_preferences || {}).length === 0);
 
   return (
     <Card className="mb-4">
@@ -88,7 +103,7 @@ export const InvoiceCard = ({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className={cn("px-2 py-1 h-auto text-xs font-semibold", getStatusStyle(invoice.status))}>
-                      {invoice.status}
+                      {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
@@ -105,7 +120,7 @@ export const InvoiceCard = ({
                 </DropdownMenu>
               ) : (
                 <Badge className={getStatusStyle(invoice.status)}>
-                  {invoice.status}
+                  {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                 </Badge>
               )}
               {invoice.imported && (
@@ -120,25 +135,25 @@ export const InvoiceCard = ({
               )}
             </div>
             <h3 className="text-lg font-medium mt-2 flex items-center gap-2">
-              {invoice.first_name} {invoice.last_name}
+              {invoice.first_name || ''} {invoice.last_name || ''}
               {invoice.profile?.team && (
                 <div className="ml-2" title={`Team: ${invoice.profile.team.name}`}>
                   <TeamBadge team={invoice.profile.team} size="sm" />
                 </div>
               )}
             </h3>
-            <p className="text-sm text-gray-500">{invoice.email}</p>
+            <p className="text-sm text-gray-500">{invoice.email || 'No email'}</p>
           </div>
           <div className="text-right">
             <p className="font-semibold">CHF {invoice.price.toFixed(2)}</p>
-            <p className="text-sm text-gray-500">Due: {formatDate(invoice.due_date)}</p>
+            {invoice.due_date && <p className="text-sm text-gray-500">Due: {formatDate(invoice.due_date)}</p>}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-sm mb-4">
           <div>
             <p className="text-gray-500">Room Type</p>
-            <p>{invoice.room_type}</p>
+            <p>{invoice.room_type || 'Not specified'}</p>
           </div>
           <div>
             <p className="text-gray-500">Created</p>
