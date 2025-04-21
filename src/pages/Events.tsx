@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
@@ -9,26 +8,9 @@ import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { EventRSVPAvatars } from "@/components/events/EventRSVPAvatars";
+import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 
-import { Button } from "@/components/ui/button";
-import { PageTitle } from "@/components/PageTitle";
-import { CreateEventSheet } from "@/components/events/CreateEventSheet";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Base Event interface without profiles
 interface Event {
   id: string;
   title: string;
@@ -42,7 +24,6 @@ interface Event {
   created_at: string;
 }
 
-// Event with profiles (for join results)
 interface EventWithProfile extends Event {
   profiles?: {
     username: string | null;
@@ -61,7 +42,6 @@ const Events = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
-  // Fetch user profile to check if admin
   const { data: userProfile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
@@ -88,9 +68,7 @@ const Events = () => {
     enabled: !!(privyUser?.id || supabaseUser?.id)
   });
   
-  // Check if user has permission to create/edit events (admin, co-curator, co-designer)
   const canManageEvents = userProfile?.role === 'admin' || userProfile?.role === 'co-curator' || userProfile?.role === 'co-designer';
-  // Check if user is an admin
   const isAdmin = userProfile?.role === 'admin';
   
   const userId = privyUser?.id || supabaseUser?.id || "";
@@ -112,6 +90,38 @@ const Events = () => {
       return data as unknown as EventWithProfile[];
     }
   });
+
+  const { data: rsvps, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useQuery({
+    queryKey: ["event_rsvps"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_rsvps")
+        .select("event_id, profile_id, profiles(id, username, avatar_url)");
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const getRSVPedEventIds = () => {
+    if (!rsvps || !profileId) return [];
+    return rsvps.filter(r => r.profile_id === profileId).map(r => r.event_id);
+  };
+  const userRSVPEventIds = getRSVPedEventIds();
+
+  const rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]> = {};
+  if (rsvps) {
+    rsvps.forEach(r => {
+      if (!rsvpMap[r.event_id]) rsvpMap[r.event_id] = [];
+      const profile = r.profiles
+        ? {
+            id: r.profiles.id,
+            username: r.profiles.username,
+            avatar_url: r.profiles.avatar_url,
+          }
+        : { id: "-", username: "-", avatar_url: "" };
+      rsvpMap[r.event_id].push(profile);
+    });
+  }
 
   const handleCreateEventSuccess = () => {
     refetch();
@@ -159,14 +169,12 @@ const Events = () => {
     setCreateEventOpen(true);
   };
 
-  // Check if user can edit a specific event (owner or admin)
   const canEditEvent = (event: EventWithProfile) => {
     if (isAdmin) return true;
     if (event.profiles?.id === profileId) return true;
     return false;
   };
-  
-  // Function to generate iCalendar format
+
   const generateICalEvent = (event: Event) => {
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
@@ -196,8 +204,7 @@ const Events = () => {
     
     return icalContent;
   };
-  
-  // Function to add event to calendar
+
   const addToCalendar = (event: Event) => {
     const icalContent = generateICalEvent(event);
     
@@ -216,7 +223,6 @@ const Events = () => {
     });
   };
 
-  // Format time for display
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean) => {
     const start = parseISO(startDate);
     const end = parseISO(endDate);
@@ -228,7 +234,6 @@ const Events = () => {
     return `${format(start, "h:mm a")} ${end ? `- ${format(end, "h:mm a")}` : ""}`;
   };
 
-  // Format date for the sidebar display
   const formatDateForSidebar = (date: Date) => {
     return (
       <div className="flex flex-col items-center">
@@ -238,7 +243,6 @@ const Events = () => {
     );
   };
 
-  // Function to format date range for display
   const formatDateRange = (startDate: string, endDate: string, isAllDay: boolean) => {
     const start = parseISO(startDate);
     const end = parseISO(endDate);
@@ -250,27 +254,30 @@ const Events = () => {
     return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
   };
 
-  // Filter events by upcoming or past
   const currentDate = new Date();
   const upcomingEvents = events?.filter(event => new Date(event.end_date) >= currentDate) || [];
   const pastEvents = events?.filter(event => new Date(event.end_date) < currentDate) || [];
   
-  // Display events based on active tab
-  const displayEvents = activeTab === "upcoming" ? upcomingEvents : pastEvents;
+  const rsvpedEvents = events?.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
+
+  const isSmallDevice = typeof window !== "undefined" ? window.innerWidth < 640 : false;
 
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <PageTitle 
           title="Events" 
           description="View and manage upcoming events" 
           icon={<CalendarDays className="h-8 w-8" />} 
         />
         {canManageEvents && (
-          <Button onClick={() => {
-            setEventToEdit(null);
-            setCreateEventOpen(true);
-          }}>
+          <Button 
+            onClick={() => {
+              setEventToEdit(null);
+              setCreateEventOpen(true);
+            }}
+            className="w-full sm:w-auto"
+          >
             <Plus className="mr-2 h-4 w-4" /> Create Event
           </Button>
         )}
@@ -278,41 +285,68 @@ const Events = () => {
 
       <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
         <div className="flex justify-end mb-4">
-          <TabsList className="grid w-[200px] grid-cols-2">
+          <TabsList className="grid w-full sm:w-[320px] grid-cols-3">
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             <TabsTrigger value="past">Past</TabsTrigger>
+            <TabsTrigger value="going">Going</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="upcoming" className="space-y-4">
           {renderEventsList(
-            upcomingEvents, 
-            isLoading, 
-            profileLoading, 
+            upcomingEvents,
+            isLoading,
+            profileLoading,
             canManageEvents,
-            canEditEvent, 
-            openDeleteDialog, 
-            handleEditEvent, 
-            addToCalendar, 
-            formatDateForSidebar, 
+            canEditEvent,
+            openDeleteDialog,
+            handleEditEvent,
+            addToCalendar,
+            formatDateForSidebar,
             formatEventTime,
-            formatDateRange
+            formatDateRange,
+            rsvpMap,
+            userRSVPEventIds,
+            profileId,
+            refetchRSVPs
           )}
         </TabsContent>
-
         <TabsContent value="past" className="space-y-4">
           {renderEventsList(
-            pastEvents, 
-            isLoading, 
-            profileLoading, 
+            pastEvents,
+            isLoading,
+            profileLoading,
             canManageEvents,
-            canEditEvent, 
-            openDeleteDialog, 
-            handleEditEvent, 
-            addToCalendar, 
-            formatDateForSidebar, 
+            canEditEvent,
+            openDeleteDialog,
+            handleEditEvent,
+            addToCalendar,
+            formatDateForSidebar,
             formatEventTime,
-            formatDateRange
+            formatDateRange,
+            rsvpMap,
+            userRSVPEventIds,
+            profileId,
+            refetchRSVPs
+          )}
+        </TabsContent>
+        <TabsContent value="going" className="space-y-4">
+          {renderEventsList(
+            rsvpedEvents,
+            isLoading,
+            profileLoading,
+            canManageEvents,
+            canEditEvent,
+            openDeleteDialog,
+            handleEditEvent,
+            addToCalendar,
+            formatDateForSidebar,
+            formatEventTime,
+            formatDateRange,
+            rsvpMap,
+            userRSVPEventIds,
+            profileId,
+            refetchRSVPs
           )}
         </TabsContent>
       </Tabs>
@@ -350,7 +384,6 @@ const Events = () => {
   );
 };
 
-// Helper function to render the events list
 const renderEventsList = (
   events: EventWithProfile[], 
   isLoading: boolean, 
@@ -362,7 +395,11 @@ const renderEventsList = (
   addToCalendar: (event: Event) => void,
   formatDateForSidebar: (date: Date) => JSX.Element,
   formatEventTime: (startDate: string, endDate: string, isAllDay: boolean) => string,
-  formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string
+  formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
+  rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
+  userRSVPEventIds: string[],
+  profileId: string | undefined,
+  refetchRSVPs: () => void
 ) => {
   if (isLoading || profileLoading) {
     return (
@@ -371,7 +408,6 @@ const renderEventsList = (
       </div>
     );
   }
-
   if (!events || events.length === 0) {
     return (
       <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
@@ -389,12 +425,9 @@ const renderEventsList = (
     );
   }
 
-  // Group events by date for the timeline view, using the START date
   const eventsByDate = events.reduce((acc, event) => {
     const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
-    }
+    if (!acc[dateKey]) acc[dateKey] = [];
     acc[dateKey].push(event);
     return acc;
   }, {} as Record<string, EventWithProfile[]>);
@@ -402,98 +435,103 @@ const renderEventsList = (
   return (
     <div className="space-y-8">
       {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
-        // Use the first event's start date for the sidebar display
         const date = new Date(dateEvents[0].start_date);
         return (
           <div key={dateKey} className="relative">
-            <div className="flex">
-              {/* Date sidebar */}
-              <div className="mr-4 w-20 flex-shrink-0 flex flex-col items-center">
+            <div className="flex flex-col sm:flex-row">
+              <div className="mr-4 w-full sm:w-20 flex-shrink-0 flex flex-row sm:flex-col items-center">
                 {formatDateForSidebar(date)}
-                <div className="h-full w-0.5 bg-gray-200 mt-2 rounded-full"></div>
+                <div className="hidden sm:block h-full w-0.5 bg-gray-200 mt-2 rounded-full"></div>
               </div>
               
-              {/* Events for this date */}
               <div className="flex-1 space-y-4">
-                {dateEvents.map((event) => (
-                  <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
-                    <div className="h-1" style={{ backgroundColor: event.color }}></div>
-                    <CardContent className="p-4">
-                      {/* Time badge */}
-                      <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                        <Badge className="w-fit" variant="outline">
-                          {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
-                        </Badge>
-                      </div>
-                      
-                      {/* Title */}
-                      <h3 className="text-xl font-bold mb-2">{event.title}</h3>
-                      
-                      {/* Date Range */}
-                      <div className="flex items-center text-sm text-gray-600 mb-3">
-                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                        <span>{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
-                      </div>
-                      
-                      {/* Description */}
-                      {event.description && (
-                        <p className="text-sm text-gray-600 mb-4">{event.description}</p>
-                      )}
-                      
-                      {/* Meta info */}
-                      <div className="space-y-2 text-sm">
-                        {event.location && (
+                {dateEvents.map((event) => {
+                  const isRSVPed = !!profileId && userRSVPEventIds.includes(event.id);
+                  const rsvpProfiles = rsvpMap[event.id] || [];
+                  return (
+                    <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
+                      <div className="h-1" style={{ backgroundColor: event.color }}></div>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                          <Badge className="w-fit" variant="outline">
+                            {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
+                          </Badge>
+                        </div>
+                        
+                        <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                        
+                        <div className="flex items-center text-sm text-gray-600 mb-3">
+                          <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                          <span>{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
+                        </div>
+                        {event.description && (
+                          <p className="text-sm text-gray-600 mb-4">{event.description}</p>
+                        )}
+                        <div className="space-y-2 text-sm">
+                          {event.location && (
+                            <div className="flex items-center">
+                              <MapPin className="h-4 w-4 text-gray-500 mr-2" />
+                              <span>{event.location}</span>
+                            </div>
+                          )}
                           <div className="flex items-center">
-                            <MapPin className="h-4 w-4 text-gray-500 mr-2" />
-                            <span>{event.location}</span>
+                            <User className="h-4 w-4 text-gray-500 mr-2" />
+                            <span>Hosted by {event.profiles?.username || "Anonymous"}</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {!!profileId && (
+                            <EventRSVPButton
+                              eventId={event.id}
+                              profileId={profileId}
+                              initialRSVP={isRSVPed}
+                              onChange={() => refetchRSVPs()}
+                            />
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addToCalendar(event)}
+                            className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                          >
+                            <CalendarPlus className="h-4 w-4 mr-2" />
+                            Add to Calendar
+                          </Button>
+                          {canEditEvent(event) && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditEvent(event)}
+                                className="text-amber-500 border-amber-500 hover:bg-amber-50"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openDeleteDialog(event)}
+                                className="text-red-500 border-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                        {rsvpProfiles.length > 0 && (
+                          <div className="mt-4">
+                            <span className="text-xs text-gray-600 mb-1 block">
+                              Going: {rsvpProfiles.length}
+                            </span>
+                            <EventRSVPAvatars profiles={rsvpProfiles} />
                           </div>
                         )}
-                        
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 text-gray-500 mr-2" />
-                          <span>Hosted by {event.profiles?.username || "Anonymous"}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addToCalendar(event)}
-                          className="text-blue-500 border-blue-500 hover:bg-blue-50"
-                        >
-                          <CalendarPlus className="h-4 w-4 mr-2" />
-                          Add to Calendar
-                        </Button>
-                        
-                        {canEditEvent(event) && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditEvent(event)}
-                              className="text-amber-500 border-amber-500 hover:bg-amber-50"
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </Button>
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteDialog(event)}
-                              className="text-red-500 border-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           </div>
