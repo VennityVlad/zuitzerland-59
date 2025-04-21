@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,15 +37,8 @@ const LocationSelector = ({
   onLocationChange,
 }: LocationSelectorProps) => {
   const [open, setOpen] = useState(false);
-  
-  // Create a memoized, safe version of the locations array
-  const safeLocations = useMemo(() => {
-    // Ensure locations is an array and has content
-    return Array.isArray(locations) ? locations : [];
-  }, [locations]);
 
-  // Early return with a message if no locations are available
-  if (safeLocations.length === 0) {
+  if (!Array.isArray(locations) || locations.length === 0) {
     return <div className="text-muted-foreground">No locations found</div>;
   }
 
@@ -80,7 +73,7 @@ const LocationSelector = ({
             <CommandInput placeholder="Search location..." />
             <CommandEmpty>No location found.</CommandEmpty>
             <CommandGroup className="max-h-[300px] overflow-auto">
-              {safeLocations.map((location) => (
+              {locations.map((location) => (
                 <CommandItem
                   key={location.id}
                   value={location.id}

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PageTitle } from "@/components/PageTitle";
@@ -21,7 +21,7 @@ const AvailabilityPage = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0); 
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -31,27 +31,26 @@ const AvailabilityPage = () => {
         const { data, error } = await supabase
           .from("locations")
           .select("id, name, type, building, floor")
-          .order("name", { ascending: true });
+          .order("name");
 
         if (error) throw error;
-        
-        // Ensure data is an array before proceeding
+
+        // Set locations and default selection
         const locationData = Array.isArray(data) ? data : [];
         setLocations(locationData);
-
-        // Only set selected location if we have locations
+        
         if (locationData.length > 0) {
           setSelectedLocation(locationData[0]);
         } else {
           setSelectedLocation(null);
         }
       } catch (error: any) {
+        console.error("Error fetching locations:", error);
         toast({
           variant: "destructive",
           title: "Error fetching locations",
           description: error.message,
         });
-        // Reset to empty array on error
         setLocations([]);
         setSelectedLocation(null);
       } finally {
@@ -64,7 +63,7 @@ const AvailabilityPage = () => {
 
   const handleLocationChange = useCallback((location: Location) => {
     setSelectedLocation(location);
-    setCalendarRefreshKey(prevKey => prevKey + 1); // Refresh when location is changed
+    setCalendarRefreshKey(prevKey => prevKey + 1);
   }, []);
 
   return (
