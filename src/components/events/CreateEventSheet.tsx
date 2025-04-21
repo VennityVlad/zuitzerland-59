@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isWithinInterval } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -20,12 +20,22 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CreateEventSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   userId: string;
+  profileId?: string;
   event?: Event | null; // Added event prop for editing
 }
 
@@ -52,6 +62,22 @@ interface NewEvent {
   created_by: string;
 }
 
+interface Location {
+  id: string;
+  name: string;
+  type: string;
+  building: string | null;
+  floor: string | null;
+}
+
+interface Availability {
+  id: string;
+  location_id: string;
+  start_time: string;
+  end_time: string;
+  is_available: boolean;
+}
+
 // Common color options for events
 const colorOptions = [
   { label: "Navy", value: "#1a365d" },
@@ -63,11 +89,16 @@ const colorOptions = [
   { label: "Pink", value: "#d53f8c" },
 ];
 
-export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event }: CreateEventSheetProps) {
+export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profileId, event }: CreateEventSheetProps) {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
   const [userProfile, setUserProfile] = useState<{ id: string } | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [locationAvailabilities, setLocationAvailabilities] = useState<Availability[]>([]);
+  const [availabilityValidationError, setAvailabilityValidationError] = useState<string | null>(null);
+  
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
     description: "",
@@ -99,11 +130,50 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event 
       resetForm();
     }
   }, [event]);
+  
+  // Fetch meeting room locations
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        setIsLoadingLocations(true);
+        const { data, error } = await supabase
+          .from('locations')
+          .select('*')
+          .eq('type', 'Meeting Room')
+          .order('name');
+          
+        if (error) throw error;
+        setLocations(data || []);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load meeting rooms",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    
+    if (open) {
+      fetchLocations();
+    }
+  }, [open, toast]);
 
   // Fetch the user's profile ID when the component mounts or userId changes
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user && !userId) return;
+      
+      // If profileId is directly provided, use it
+      if (profileId) {
+        setUserProfile({ id: profileId });
+        if (!isEditMode) {
+          setNewEvent(prev => ({ ...prev, created_by: profileId }));
+        }
+        return;
+      }
       
       try {
         setIsLoadingProfile(true);
@@ -155,7 +225,35 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event 
     };
     
     fetchUserProfile();
-  }, [user, userId, toast, isEditMode]);
+  }, [user, userId, profileId, toast, isEditMode]);
+  
+  // Fetch location availability when location or dates change
+  useEffect(() => {
+    const fetchLocationAvailability = async () => {
+      if (!newEvent.location) {
+        setLocationAvailabilities([]);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('location_availability')
+          .select('*')
+          .eq('location_id', newEvent.location);
+        
+        if (error) throw error;
+        
+        setLocationAvailabilities(data || []);
+        validateLocationAvailability(data || []);
+      } catch (error) {
+        console.error("Error fetching location availability:", error);
+      }
+    };
+    
+    if (newEvent.location) {
+      fetchLocationAvailability();
+    }
+  }, [newEvent.location, newEvent.start_date, newEvent.end_date]);
 
   const resetForm = () => {
     setNewEvent({
@@ -168,6 +266,41 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event 
       is_all_day: false,
       created_by: userProfile?.id || ""
     });
+    setAvailabilityValidationError(null);
+  };
+  
+  // Validate if the selected time slot conflicts with any unavailable periods
+  const validateLocationAvailability = (availabilities: Availability[]) => {
+    if (!newEvent.location || availabilities.length === 0) {
+      setAvailabilityValidationError(null);
+      return true;
+    }
+    
+    const eventStart = new Date(newEvent.start_date);
+    const eventEnd = new Date(newEvent.end_date);
+    
+    // Check if any unavailable period overlaps with our event time
+    const conflicts = availabilities.filter(period => {
+      if (period.is_available) return false; // Skip available periods
+      
+      const periodStart = new Date(period.start_time);
+      const periodEnd = new Date(period.end_time);
+      
+      // Check if event overlaps with unavailable period
+      return (
+        (eventStart >= periodStart && eventStart < periodEnd) || // Event starts during unavailable period
+        (eventEnd > periodStart && eventEnd <= periodEnd) || // Event ends during unavailable period
+        (eventStart <= periodStart && eventEnd >= periodEnd) // Event completely covers unavailable period
+      );
+    });
+    
+    if (conflicts.length > 0) {
+      setAvailabilityValidationError("Selected location is not available during this time period");
+      return false;
+    } else {
+      setAvailabilityValidationError(null);
+      return true;
+    }
   };
 
   const handleSubmit = async () => {
@@ -212,6 +345,17 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event 
         toast({
           title: "Error",
           description: "End date must be after start date",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Validate location availability
+      if (newEvent.location && !validateLocationAvailability(locationAvailabilities)) {
+        toast({
+          title: "Error",
+          description: availabilityValidationError || "Location is not available during selected time",
           variant: "destructive",
         });
         setIsSubmitting(false);
@@ -321,6 +465,13 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event 
       [type === 'start' ? 'start_date' : 'end_date']: format(date, 'yyyy-MM-dd\'T\'HH:mm:ss')
     });
   };
+  
+  const handleLocationChange = (locationId: string) => {
+    setNewEvent({
+      ...newEvent,
+      location: locationId
+    });
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -367,13 +518,39 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Location (Optional)</Label>
-                <Input 
-                  id="location" 
-                  value={newEvent.location}
-                  onChange={(e) => setNewEvent({...newEvent, location: e.target.value})}
-                  placeholder="Conference Room A"
-                />
+                <Label htmlFor="location">Location</Label>
+                {isLoadingLocations ? (
+                  <div className="py-2 animate-pulse">Loading locations...</div>
+                ) : (
+                  <Select
+                    value={newEvent.location}
+                    onValueChange={handleLocationChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a meeting room" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Meeting Rooms</SelectLabel>
+                        {locations.length === 0 ? (
+                          <div className="py-2 text-center text-sm text-muted-foreground">
+                            No meeting rooms available
+                          </div>
+                        ) : (
+                          locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                              {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                )}
+                {availabilityValidationError && (
+                  <p className="text-sm text-red-500 mt-1">{availabilityValidationError}</p>
+                )}
               </div>
             </div>
 
@@ -486,7 +663,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, event 
             <Button 
               className="w-full" 
               onClick={handleSubmit} 
-              disabled={isSubmitting || (!userProfile && !isEditMode)}
+              disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError}
             >
               {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
             </Button>

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
@@ -7,6 +8,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 
 import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/PageTitle";
@@ -44,6 +46,7 @@ interface Event {
 interface EventWithProfile extends Event {
   profiles?: {
     username: string | null;
+    id: string;
   } | null;
 }
 
@@ -85,15 +88,20 @@ const Events = () => {
     enabled: !!(privyUser?.id || supabaseUser?.id)
   });
   
-  // Check if user is an admin based on profile role
+  // Check if user has permission to create/edit events (admin, co-curator, co-designer)
+  const canManageEvents = userProfile?.role === 'admin' || userProfile?.role === 'co-curator' || userProfile?.role === 'co-designer';
+  // Check if user is an admin
   const isAdmin = userProfile?.role === 'admin';
+  
+  const userId = privyUser?.id || supabaseUser?.id || "";
+  const profileId = userProfile?.id;
 
   const { data: events, isLoading, refetch } = useQuery({
     queryKey: ["events"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("*, profiles:profiles!events_created_by_fkey(username)")
+        .select("*, profiles:profiles!events_created_by_fkey(username, id)")
         .order("start_date", { ascending: true });
 
       if (error) {
@@ -149,6 +157,13 @@ const Events = () => {
   const handleEditEvent = (event: Event) => {
     setEventToEdit(event);
     setCreateEventOpen(true);
+  };
+
+  // Check if user can edit a specific event (owner or admin)
+  const canEditEvent = (event: EventWithProfile) => {
+    if (isAdmin) return true;
+    if (event.profiles?.id === profileId) return true;
+    return false;
   };
   
   // Function to generate iCalendar format
@@ -243,9 +258,6 @@ const Events = () => {
   // Display events based on active tab
   const displayEvents = activeTab === "upcoming" ? upcomingEvents : pastEvents;
 
-  // Determine which user ID to use
-  const userId = privyUser?.id || supabaseUser?.id || "";
-
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
@@ -254,7 +266,7 @@ const Events = () => {
           description="View and manage upcoming events" 
           icon={<CalendarDays className="h-8 w-8" />} 
         />
-        {isAdmin && (
+        {canManageEvents && (
           <Button onClick={() => {
             setEventToEdit(null);
             setCreateEventOpen(true);
@@ -277,7 +289,8 @@ const Events = () => {
             upcomingEvents, 
             isLoading, 
             profileLoading, 
-            isAdmin, 
+            canManageEvents,
+            canEditEvent, 
             openDeleteDialog, 
             handleEditEvent, 
             addToCalendar, 
@@ -292,7 +305,8 @@ const Events = () => {
             pastEvents, 
             isLoading, 
             profileLoading, 
-            isAdmin, 
+            canManageEvents,
+            canEditEvent, 
             openDeleteDialog, 
             handleEditEvent, 
             addToCalendar, 
@@ -309,6 +323,7 @@ const Events = () => {
         onSuccess={handleCreateEventSuccess}
         userId={userId}
         event={eventToEdit}
+        profileId={profileId}
       />
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
@@ -340,7 +355,8 @@ const renderEventsList = (
   events: EventWithProfile[], 
   isLoading: boolean, 
   profileLoading: boolean,
-  isAdmin: boolean,
+  canManageEvents: boolean,
+  canEditEvent: (event: EventWithProfile) => boolean,
   openDeleteDialog: (event: Event) => void,
   handleEditEvent: (event: Event) => void,
   addToCalendar: (event: Event) => void,
@@ -362,9 +378,9 @@ const renderEventsList = (
         <CalendarDays className="mx-auto h-12 w-12 text-gray-400" />
         <h3 className="mt-4 text-lg font-medium">No events found</h3>
         <p className="mt-2 text-sm text-gray-500">
-          {isAdmin ? "Get started by creating a new event." : "Check back later for upcoming events."}
+          {canManageEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
         </p>
-        {isAdmin && (
+        {canManageEvents && (
           <Button className="mt-4" onClick={() => {}}>
             <Plus className="mr-2 h-4 w-4" /> Create Event
           </Button>
@@ -403,7 +419,7 @@ const renderEventsList = (
                   <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
                     <div className="h-1" style={{ backgroundColor: event.color }}></div>
                     <CardContent className="p-4">
-                      {/* Time badge - MODIFIED HERE to eliminate duplicate "All day" label */}
+                      {/* Time badge */}
                       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
                         <Badge className="w-fit" variant="outline">
                           {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
@@ -451,7 +467,7 @@ const renderEventsList = (
                           Add to Calendar
                         </Button>
                         
-                        {isAdmin && (
+                        {canEditEvent(event) && (
                           <>
                             <Button
                               variant="outline"
