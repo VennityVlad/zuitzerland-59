@@ -27,10 +27,15 @@ export const TagSelector = ({ selectedTags, onTagsChange }: TagSelectorProps) =>
   }, []);
 
   const fetchTags = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('event_tags')
       .select('*')
       .order('name');
+    
+    if (error) {
+      console.error('Error fetching tags:', error);
+      return;
+    }
     
     if (data) {
       setAvailableTags(data);

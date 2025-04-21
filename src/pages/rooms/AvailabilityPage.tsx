@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +21,7 @@ const AvailabilityPage = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0); // Add refresh trigger
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,10 +57,9 @@ const AvailabilityPage = () => {
 
   const handleLocationChange = (location: Location) => {
     setSelectedLocation(location);
-    setCalendarRefreshKey((k) => k + 1); // Refresh when location is changed
+    setCalendarRefreshKey((k) => k + 1);
   };
 
-  // Callback passed to controls to refresh calendar when template applied
   const handleAvailabilityChange = useCallback(() => {
     setCalendarRefreshKey((k) => k + 1);
   }, []);
@@ -93,14 +93,14 @@ const AvailabilityPage = () => {
                 <div className="lg:col-span-3">
                   <AvailabilityCalendar 
                     locationId={selectedLocation.id} 
-                    refreshKey={calendarRefreshKey} // <--- pass refresh key
+                    refreshKey={calendarRefreshKey}
                   />
                 </div>
                 <div>
                   <AvailabilityControls
                     locationId={selectedLocation.id}
                     locationName={selectedLocation.name}
-                    onAvailabilityChange={handleAvailabilityChange} // <--- pass refresh callback
+                    onAvailabilityChange={handleAvailabilityChange}
                   />
                 </div>
               </div>

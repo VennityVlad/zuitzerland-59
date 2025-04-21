@@ -131,10 +131,43 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         is_all_day: event.is_all_day,
         created_by: event.created_by
       });
+      
+      setUseCustomLocation(!!event.location_text);
+      
+      // Fetch event tags if editing
+      if (event.id) {
+        fetchEventTags(event.id);
+      }
     } else {
       resetForm();
     }
   }, [event]);
+  
+  const fetchEventTags = async (eventId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('event_tag_relations')
+        .select(`
+          tag_id,
+          event_tags (id, name, color)
+        `)
+        .eq('event_id', eventId);
+      
+      if (error) throw error;
+      
+      if (data) {
+        const tags = data.map(item => ({
+          id: item.event_tags.id,
+          name: item.event_tags.name,
+          color: item.event_tags.color || "#1a365d"
+        }));
+        
+        setSelectedTags(tags);
+      }
+    } catch (error) {
+      console.error("Error fetching event tags:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -265,7 +298,9 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       is_all_day: false,
       created_by: userProfile?.id || ""
     });
+    setSelectedTags([]);
     setAvailabilityValidationError(null);
+    setUseCustomLocation(false);
   };
 
   const validateLocationAvailability = (availabilities: Availability[]) => {
@@ -312,8 +347,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
     }
     let query = supabase
       .from('events')
-      .select('id, title, start_date, end_date, location')
-      .eq('location', newEvent.location_id);
+      .select('id, title, start_date, end_date')
+      .eq('location_id', newEvent.location_id);
 
     if (isEditMode && event) {
       query = query.neq('id', event.id);
@@ -321,21 +356,25 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
 
     const { data, error } = await query;
     if (error) {
+      console.error("Error checking overlaps:", error);
       setOverlapValidationError("Error checking overlapping events");
       return false;
     }
+    
     const overlaps = (data || []).find((e) => {
       return (
         new Date(e.start_date) < end &&
         new Date(e.end_date) > start
       );
     });
+    
     if (overlaps) {
       setOverlapValidationError(
         `Room already booked for this time (conflict with "${overlaps.title}")`
       );
       return false;
     }
+    
     setOverlapValidationError(null);
     return true;
   };

@@ -15,7 +15,8 @@ interface Event {
   description: string | null;
   start_date: string;
   end_date: string;
-  location: string | null;
+  location_id: string | null;
+  location_text: string | null;
   color: string;
   is_all_day: boolean;
 }
