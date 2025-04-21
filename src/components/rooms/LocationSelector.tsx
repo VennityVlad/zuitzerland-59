@@ -37,8 +37,11 @@ const LocationSelector = ({
   onLocationChange,
 }: LocationSelectorProps) => {
   const [open, setOpen] = useState(false);
+  
+  // Ensure locations is always an array
+  const safeLocations = Array.isArray(locations) ? locations : [];
 
-  if (!Array.isArray(locations) || locations.length === 0) {
+  if (!safeLocations.length) {
     return <div className="text-muted-foreground">No locations found</div>;
   }
 
@@ -73,7 +76,7 @@ const LocationSelector = ({
             <CommandInput placeholder="Search location..." />
             <CommandEmpty>No location found.</CommandEmpty>
             <CommandGroup className="max-h-[300px] overflow-auto">
-              {locations.map((location) => (
+              {safeLocations.map((location) => (
                 <CommandItem
                   key={location.id}
                   value={location.id}

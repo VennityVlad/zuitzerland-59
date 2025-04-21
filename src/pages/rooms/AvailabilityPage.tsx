@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PageTitle } from "@/components/PageTitle";
@@ -21,7 +21,7 @@ const AvailabilityPage = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0); // Add refresh trigger
   const { toast } = useToast();
 
   useEffect(() => {
@@ -31,28 +31,22 @@ const AvailabilityPage = () => {
         const { data, error } = await supabase
           .from("locations")
           .select("id, name, type, building, floor")
-          .order("name");
+          .order("name", { ascending: true });
 
         if (error) throw error;
-
-        // Set locations and default selection
         const locationData = Array.isArray(data) ? data : [];
         setLocations(locationData);
-        
+
         if (locationData.length > 0) {
           setSelectedLocation(locationData[0]);
-        } else {
-          setSelectedLocation(null);
         }
       } catch (error: any) {
-        console.error("Error fetching locations:", error);
         toast({
           variant: "destructive",
           title: "Error fetching locations",
           description: error.message,
         });
         setLocations([]);
-        setSelectedLocation(null);
       } finally {
         setIsLoading(false);
       }
@@ -61,9 +55,14 @@ const AvailabilityPage = () => {
     fetchLocations();
   }, [toast]);
 
-  const handleLocationChange = useCallback((location: Location) => {
+  const handleLocationChange = (location: Location) => {
     setSelectedLocation(location);
-    setCalendarRefreshKey(prevKey => prevKey + 1);
+    setCalendarRefreshKey((k) => k + 1); // Refresh when location is changed
+  };
+
+  // Callback passed to controls to refresh calendar when template applied
+  const handleAvailabilityChange = useCallback(() => {
+    setCalendarRefreshKey((k) => k + 1);
   }, []);
 
   return (
@@ -95,14 +94,14 @@ const AvailabilityPage = () => {
                 <div className="lg:col-span-3">
                   <AvailabilityCalendar 
                     locationId={selectedLocation.id} 
-                    refreshKey={calendarRefreshKey}
+                    refreshKey={calendarRefreshKey} // <--- pass refresh key
                   />
                 </div>
                 <div>
                   <AvailabilityControls
                     locationId={selectedLocation.id}
                     locationName={selectedLocation.name}
-                    onAvailabilityChange={() => setCalendarRefreshKey(prevKey => prevKey + 1)}
+                    onAvailabilityChange={handleAvailabilityChange} // <--- pass refresh callback
                   />
                 </div>
               </div>
