@@ -10,6 +10,22 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { EventRSVPAvatars } from "@/components/events/EventRSVPAvatars";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
+import { PageTitle } from "@/components/PageTitle";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 
 interface Event {
   id: string;
