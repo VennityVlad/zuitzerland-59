@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, parseISO, isWithinInterval } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
@@ -36,7 +35,7 @@ interface CreateEventSheetProps {
   onSuccess: () => void;
   userId: string;
   profileId?: string;
-  event?: Event | null; // Added event prop for editing
+  event?: Event | null;
 }
 
 interface Event {
@@ -78,7 +77,6 @@ interface Availability {
   is_available: boolean;
 }
 
-// Common color options for events
 const colorOptions = [
   { label: "Navy", value: "#1a365d" },
   { label: "Blue", value: "#3182ce" },
@@ -98,21 +96,21 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [locationAvailabilities, setLocationAvailabilities] = useState<Availability[]>([]);
   const [availabilityValidationError, setAvailabilityValidationError] = useState<string | null>(null);
-  
+  const [overlapValidationError, setOverlapValidationError] = useState<string | null>(null);
+
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
     description: "",
     start_date: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm:ss'),
-    end_date: format(new Date(new Date().getTime() + 2 * 60 * 60 * 1000), 'yyyy-MM-dd\'T\'HH:mm:ss'), // Default to 2 hours from now
+    end_date: format(new Date(new Date().getTime() + 2 * 60 * 60 * 1000), 'yyyy-MM-dd\'T\'HH:mm:ss'),
     location: "",
     color: "#1a365d",
     is_all_day: false,
     created_by: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isEditMode = !!event; // Check if we're in edit mode
+  const isEditMode = !!event;
 
-  // Set form data when editing an event
   useEffect(() => {
     if (event) {
       setNewEvent({
@@ -126,12 +124,10 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         created_by: event.created_by
       });
     } else {
-      // Reset form when not editing
       resetForm();
     }
   }, [event]);
-  
-  // Fetch meeting room locations
+
   useEffect(() => {
     const fetchLocations = async () => {
       try {
@@ -161,12 +157,10 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
     }
   }, [open, toast]);
 
-  // Fetch the user's profile ID when the component mounts or userId changes
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user && !userId) return;
       
-      // If profileId is directly provided, use it
       if (profileId) {
         setUserProfile({ id: profileId });
         if (!isEditMode) {
@@ -180,7 +174,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         
         let { data, error } = { data: null, error: null };
         
-        // If using Privy, query by privy_id
         if (userId.startsWith('did:privy:')) {
           ({ data, error } = await supabase
             .from('profiles')
@@ -188,7 +181,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             .filter('privy_id', 'eq', userId)
             .single());
         } 
-        // If using Supabase auth, query by auth_user_id
         else if (user?.id) {
           ({ data, error } = await supabase
             .from('profiles')
@@ -206,7 +198,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
           console.log("Found user profile:", data);
           setUserProfile(data);
           
-          // Only set created_by if we're not in edit mode
           if (!isEditMode) {
             setNewEvent(prev => ({ ...prev, created_by: data.id }));
           }
@@ -226,8 +217,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
     
     fetchUserProfile();
   }, [user, userId, profileId, toast, isEditMode]);
-  
-  // Fetch location availability when location or dates change
+
   useEffect(() => {
     const fetchLocationAvailability = async () => {
       if (!newEvent.location) {
@@ -268,8 +258,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
     });
     setAvailabilityValidationError(null);
   };
-  
-  // Validate if the selected time slot conflicts with any unavailable periods
+
   const validateLocationAvailability = (availabilities: Availability[]) => {
     if (!newEvent.location || availabilities.length === 0) {
       setAvailabilityValidationError(null);
@@ -279,18 +268,16 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
     const eventStart = new Date(newEvent.start_date);
     const eventEnd = new Date(newEvent.end_date);
     
-    // Check if any unavailable period overlaps with our event time
     const conflicts = availabilities.filter(period => {
-      if (period.is_available) return false; // Skip available periods
+      if (period.is_available) return false;
       
       const periodStart = new Date(period.start_time);
       const periodEnd = new Date(period.end_time);
       
-      // Check if event overlaps with unavailable period
       return (
-        (eventStart >= periodStart && eventStart < periodEnd) || // Event starts during unavailable period
-        (eventEnd > periodStart && eventEnd <= periodEnd) || // Event ends during unavailable period
-        (eventStart <= periodStart && eventEnd >= periodEnd) // Event completely covers unavailable period
+        (eventStart >= periodStart && eventStart < periodEnd) ||
+        (eventEnd > periodStart && eventEnd <= periodEnd) ||
+        (eventStart <= periodStart && eventEnd >= periodEnd)
       );
     });
     
@@ -302,6 +289,55 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       return true;
     }
   };
+
+  const checkForEventOverlap = async () => {
+    if (!newEvent.location) {
+      setOverlapValidationError(null);
+      return true;
+    }
+    const start = new Date(newEvent.start_date);
+    const end = new Date(newEvent.end_date);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      setOverlapValidationError(null);
+      return true;
+    }
+    let query = supabase
+      .from('events')
+      .select('id, title, start_date, end_date, location')
+      .eq('location', newEvent.location);
+
+    if (isEditMode && event) {
+      query = query.neq('id', event.id);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      setOverlapValidationError("Error checking overlapping events");
+      return false;
+    }
+    const overlaps = (data || []).find((e) => {
+      return (
+        new Date(e.start_date) < end &&
+        new Date(e.end_date) > start
+      );
+    });
+    if (overlaps) {
+      setOverlapValidationError(
+        `Room already booked for this time (conflict with "${overlaps.title}")`
+      );
+      return false;
+    }
+    setOverlapValidationError(null);
+    return true;
+  };
+
+  useEffect(() => {
+    if (newEvent.location && newEvent.start_date && newEvent.end_date) {
+      checkForEventOverlap();
+    } else {
+      setOverlapValidationError(null);
+    }
+  }, [newEvent.location, newEvent.start_date, newEvent.end_date, isEditMode, event]);
 
   const handleSubmit = async () => {
     try {
@@ -327,7 +363,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         return;
       }
 
-      // Check if dates are valid
       const startDate = new Date(newEvent.start_date);
       const endDate = new Date(newEvent.end_date);
       
@@ -351,8 +386,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         return;
       }
       
-      // Validate location availability
-      if (newEvent.location && !validateLocationAvailability(locationAvailabilities)) {
+      if (!validateLocationAvailability(locationAvailabilities)) {
         toast({
           title: "Error",
           description: availabilityValidationError || "Location is not available during selected time",
@@ -362,7 +396,16 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         return;
       }
 
-      // Create or update the event
+      if (!await checkForEventOverlap()) {
+        toast({
+          title: "Room is already booked",
+          description: overlapValidationError || "There is an overlapping event for this room.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       if (isEditMode) {
         console.log("Updating event:", event.id);
         const { data, error } = await supabase
@@ -375,7 +418,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             location: newEvent.location || null,
             color: newEvent.color,
             is_all_day: newEvent.is_all_day,
-            // Don't update created_by when editing
           })
           .eq('id', event.id)
           .select();
@@ -417,7 +459,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         });
       }
       
-      // Reset form and close sheet
       resetForm();
       onOpenChange(false);
       onSuccess();
@@ -440,7 +481,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       ? new Date(newEvent.start_date) 
       : new Date(newEvent.end_date);
     
-    // Preserve the time from the current value
     const hours = currentDate.getHours();
     const minutes = currentDate.getMinutes();
     
@@ -465,7 +505,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       [type === 'start' ? 'start_date' : 'end_date']: format(date, 'yyyy-MM-dd\'T\'HH:mm:ss')
     });
   };
-  
+
   const handleLocationChange = (locationId: string) => {
     setNewEvent({
       ...newEvent,
@@ -550,6 +590,9 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
                 )}
                 {availabilityValidationError && (
                   <p className="text-sm text-red-500 mt-1">{availabilityValidationError}</p>
+                )}
+                {overlapValidationError && (
+                  <p className="text-sm text-red-500 mt-1">{overlapValidationError}</p>
                 )}
               </div>
             </div>
@@ -663,7 +706,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             <Button 
               className="w-full" 
               onClick={handleSubmit} 
-              disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError}
+              disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError || !!overlapValidationError}
             >
               {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
             </Button>
