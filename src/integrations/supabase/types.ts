@@ -247,6 +247,66 @@ export type Database = {
           },
         ]
       }
+      event_tag_relations: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_tag_relations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_tag_relations_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "event_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           color: string | null
@@ -256,7 +316,8 @@ export type Database = {
           end_date: string
           id: string
           is_all_day: boolean | null
-          location: string | null
+          location_id: string | null
+          location_text: string | null
           start_date: string
           title: string
           updated_at: string
@@ -269,7 +330,8 @@ export type Database = {
           end_date: string
           id?: string
           is_all_day?: boolean | null
-          location?: string | null
+          location_id?: string | null
+          location_text?: string | null
           start_date: string
           title: string
           updated_at?: string
@@ -282,7 +344,8 @@ export type Database = {
           end_date?: string
           id?: string
           is_all_day?: boolean | null
-          location?: string | null
+          location_id?: string | null
+          location_text?: string | null
           start_date?: string
           title?: string
           updated_at?: string
@@ -300,6 +363,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]

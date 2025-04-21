@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -33,11 +33,23 @@ interface Event {
   description: string | null;
   start_date: string;
   end_date: string;
-  location: string | null;
+  location_id: string | null;
+  location_text: string | null;
   color: string;
   is_all_day: boolean;
   created_by: string;
   created_at: string;
+  locations?: {
+    name: string;
+    building: string | null;
+    floor: string | null;
+  } | null;
+  event_tags?: {
+    tags: {
+      id: string;
+      name: string;
+    }
+  }[] | null;
 }
 
 interface EventWithProfile extends Event {
@@ -95,7 +107,14 @@ const Events = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("*, profiles:profiles!events_created_by_fkey(username, id)")
+        .select(`
+          *,
+          profiles:profiles!events_created_by_fkey(username, id),
+          locations:location_id (name, building, floor),
+          event_tags:event_tag_relations (
+            tags:event_tags (id, name)
+          )
+        `)
         .order("start_date", { ascending: true });
 
       if (error) {
@@ -213,7 +232,7 @@ const Events = () => {
       `DTEND:${icalEnd}`,
       `SUMMARY:${event.title}`,
       event.description ? `DESCRIPTION:${event.description}` : '',
-      event.location ? `LOCATION:${event.location}` : '',
+      event.location_text ? `LOCATION:${event.location_text}` : '',
       'END:VEVENT',
       'END:VCALENDAR'
     ].filter(Boolean).join('\r\n');
@@ -464,6 +483,10 @@ const renderEventsList = (
                 {dateEvents.map((event) => {
                   const isRSVPed = !!profileId && userRSVPEventIds.includes(event.id);
                   const rsvpProfiles = rsvpMap[event.id] || [];
+                  const location = event.locations ? 
+                    `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
+                    event.location_text;
+
                   return (
                     <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
                       <div className="h-1" style={{ backgroundColor: event.color }}></div>
@@ -484,10 +507,10 @@ const renderEventsList = (
                           <p className="text-sm text-gray-600 mb-4">{event.description}</p>
                         )}
                         <div className="space-y-2 text-sm">
-                          {event.location && (
+                          {location && (
                             <div className="flex items-center">
                               <MapPin className="h-4 w-4 text-gray-500 mr-2" />
-                              <span>{event.location}</span>
+                              <span>{location}</span>
                             </div>
                           )}
                           <div className="flex items-center">
@@ -495,6 +518,20 @@ const renderEventsList = (
                             <span>Hosted by {event.profiles?.username || "Anonymous"}</span>
                           </div>
                         </div>
+
+                        {event.event_tags && event.event_tags.length > 0 && (
+                          <div className="flex items-center gap-2 mt-4">
+                            <Tag className="h-4 w-4 text-gray-500" />
+                            <div className="flex flex-wrap gap-2">
+                              {event.event_tags.map(tag => (
+                                <Badge key={tag.tags.id} variant="secondary">
+                                  {tag.tags.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="flex flex-wrap gap-2 mt-4">
                           {!!profileId && (
                             <EventRSVPButton

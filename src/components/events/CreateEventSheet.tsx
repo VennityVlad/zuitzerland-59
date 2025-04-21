@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TagSelector } from "./TagSelector";
 
 interface CreateEventSheetProps {
   open: boolean;
@@ -44,10 +45,12 @@ interface Event {
   description: string | null;
   start_date: string;
   end_date: string;
-  location: string | null;
+  location_id: string | null;
+  location_text: string | null;
   color: string;
   is_all_day: boolean;
   created_by: string;
+  tags?: { id: string; name: string; color: string; }[];
 }
 
 interface NewEvent {
@@ -55,7 +58,8 @@ interface NewEvent {
   description: string;
   start_date: string;
   end_date: string;
-  location: string;
+  location_id: string | null;
+  location_text: string | null;
   color: string;
   is_all_day: boolean;
   created_by: string;
@@ -97,13 +101,16 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
   const [locationAvailabilities, setLocationAvailabilities] = useState<Availability[]>([]);
   const [availabilityValidationError, setAvailabilityValidationError] = useState<string | null>(null);
   const [overlapValidationError, setOverlapValidationError] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<{ id: string; name: string; color: string; }[]>([]);
+  const [useCustomLocation, setUseCustomLocation] = useState(false);
 
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
     description: "",
     start_date: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm:ss'),
     end_date: format(new Date(new Date().getTime() + 2 * 60 * 60 * 1000), 'yyyy-MM-dd\'T\'HH:mm:ss'),
-    location: "",
+    location_id: null,
+    location_text: "",
     color: "#1a365d",
     is_all_day: false,
     created_by: ""
@@ -118,7 +125,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         description: event.description || "",
         start_date: event.start_date,
         end_date: event.end_date,
-        location: event.location || "",
+        location_id: event.location_id,
+        location_text: event.location_text || "",
         color: event.color,
         is_all_day: event.is_all_day,
         created_by: event.created_by
@@ -220,7 +228,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
 
   useEffect(() => {
     const fetchLocationAvailability = async () => {
-      if (!newEvent.location) {
+      if (!newEvent.location_id) {
         setLocationAvailabilities([]);
         return;
       }
@@ -229,7 +237,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         const { data, error } = await supabase
           .from('location_availability')
           .select('*')
-          .eq('location_id', newEvent.location);
+          .eq('location_id', newEvent.location_id);
         
         if (error) throw error;
         
@@ -240,10 +248,10 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       }
     };
     
-    if (newEvent.location) {
+    if (newEvent.location_id) {
       fetchLocationAvailability();
     }
-  }, [newEvent.location, newEvent.start_date, newEvent.end_date]);
+  }, [newEvent.location_id, newEvent.start_date, newEvent.end_date]);
 
   const resetForm = () => {
     setNewEvent({
@@ -251,7 +259,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       description: "",
       start_date: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm:ss'),
       end_date: format(new Date(new Date().getTime() + 2 * 60 * 60 * 1000), 'yyyy-MM-dd\'T\'HH:mm:ss'),
-      location: "",
+      location_id: null,
+      location_text: "",
       color: "#1a365d",
       is_all_day: false,
       created_by: userProfile?.id || ""
@@ -260,7 +269,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
   };
 
   const validateLocationAvailability = (availabilities: Availability[]) => {
-    if (!newEvent.location || availabilities.length === 0) {
+    if (!newEvent.location_id || availabilities.length === 0) {
       setAvailabilityValidationError(null);
       return true;
     }
@@ -291,7 +300,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
   };
 
   const checkForEventOverlap = async () => {
-    if (!newEvent.location) {
+    if (!newEvent.location_id) {
       setOverlapValidationError(null);
       return true;
     }
@@ -304,7 +313,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
     let query = supabase
       .from('events')
       .select('id, title, start_date, end_date, location')
-      .eq('location', newEvent.location);
+      .eq('location', newEvent.location_id);
 
     if (isEditMode && event) {
       query = query.neq('id', event.id);
@@ -332,12 +341,12 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
   };
 
   useEffect(() => {
-    if (newEvent.location && newEvent.start_date && newEvent.end_date) {
+    if (newEvent.location_id && newEvent.start_date && newEvent.end_date) {
       checkForEventOverlap();
     } else {
       setOverlapValidationError(null);
     }
-  }, [newEvent.location, newEvent.start_date, newEvent.end_date, isEditMode, event]);
+  }, [newEvent.location_id, newEvent.start_date, newEvent.end_date, isEditMode, event]);
 
   const handleSubmit = async () => {
     try {
@@ -415,7 +424,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             description: newEvent.description || null,
             start_date: newEvent.start_date,
             end_date: newEvent.end_date,
-            location: newEvent.location || null,
+            location_id: useCustomLocation ? null : newEvent.location_id,
+            location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
             is_all_day: newEvent.is_all_day,
           })
@@ -427,13 +437,25 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
           throw error;
         }
 
-        toast({
-          title: "Success",
-          description: "Event updated successfully",
-        });
+        // Update tags
+        if (data) {
+          await supabase
+            .from('event_tag_relations')
+            .delete()
+            .eq('event_id', event.id);
+
+          if (selectedTags.length > 0) {
+            await supabase
+              .from('event_tag_relations')
+              .insert(
+                selectedTags.map(tag => ({
+                  event_id: event.id,
+                  tag_id: tag.id
+                }))
+              );
+          }
+        }
       } else {
-        console.log("Creating event with profile ID:", userProfile?.id);
-        
         const { data, error } = await supabase
           .from('events')
           .insert({
@@ -441,22 +463,28 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             description: newEvent.description || null,
             start_date: newEvent.start_date,
             end_date: newEvent.end_date,
-            location: newEvent.location || null,
+            location_id: useCustomLocation ? null : newEvent.location_id,
+            location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
             is_all_day: newEvent.is_all_day,
             created_by: userProfile?.id
           })
-          .select();
+          .select()
+          .single();
 
-        if (error) {
-          console.error("Supabase insert error:", error);
-          throw error;
+        if (error) throw error;
+
+        // Add tags
+        if (data && selectedTags.length > 0) {
+          await supabase
+            .from('event_tag_relations')
+            .insert(
+              selectedTags.map(tag => ({
+                event_id: data.id,
+                tag_id: tag.id
+              }))
+            );
         }
-
-        toast({
-          title: "Success",
-          description: "Event created successfully",
-        });
       }
       
       resetForm();
@@ -509,7 +537,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
   const handleLocationChange = (locationId: string) => {
     setNewEvent({
       ...newEvent,
-      location: locationId
+      location_id: locationId,
+      location_text: null
     });
   };
 
@@ -558,42 +587,49 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                {isLoadingLocations ? (
-                  <div className="py-2 animate-pulse">Loading locations...</div>
-                ) : (
-                  <Select
-                    value={newEvent.location}
-                    onValueChange={handleLocationChange}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a meeting room" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Meeting Rooms</SelectLabel>
-                        {locations.length === 0 ? (
-                          <div className="py-2 text-center text-sm text-muted-foreground">
-                            No meeting rooms available
-                          </div>
-                        ) : (
-                          locations.map((location) => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
-                              {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                )}
-                {availabilityValidationError && (
-                  <p className="text-sm text-red-500 mt-1">{availabilityValidationError}</p>
-                )}
-                {overlapValidationError && (
-                  <p className="text-sm text-red-500 mt-1">{overlapValidationError}</p>
-                )}
+                <Label>Location</Label>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={useCustomLocation}
+                      onCheckedChange={setUseCustomLocation}
+                    />
+                    <Label>Use custom location</Label>
+                  </div>
+
+                  {useCustomLocation ? (
+                    <Input
+                      value={newEvent.location_text || ''}
+                      onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value, location_id: null})}
+                      placeholder="Enter custom location..."
+                    />
+                  ) : (
+                    <Select
+                      value={newEvent.location_id || ''}
+                      onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name}
+                            {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <TagSelector
+                  selectedTags={selectedTags}
+                  onTagsChange={setSelectedTags}
+                />
               </div>
             </div>
 
