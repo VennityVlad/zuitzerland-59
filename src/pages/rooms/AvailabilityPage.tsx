@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PageTitle } from "@/components/PageTitle";
@@ -21,6 +21,7 @@ const AvailabilityPage = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0); // Add refresh trigger
   const { toast } = useToast();
 
   useEffect(() => {
@@ -33,12 +34,9 @@ const AvailabilityPage = () => {
           .order("name", { ascending: true });
 
         if (error) throw error;
-
-        // Ensure data is an array
         const locationData = Array.isArray(data) ? data : [];
         setLocations(locationData);
-        
-        // Only set selected location if we have locations
+
         if (locationData.length > 0) {
           setSelectedLocation(locationData[0]);
         }
@@ -48,7 +46,6 @@ const AvailabilityPage = () => {
           title: "Error fetching locations",
           description: error.message,
         });
-        // Initialize with empty array on error
         setLocations([]);
       } finally {
         setIsLoading(false);
@@ -60,12 +57,18 @@ const AvailabilityPage = () => {
 
   const handleLocationChange = (location: Location) => {
     setSelectedLocation(location);
+    setCalendarRefreshKey((k) => k + 1); // Refresh when location is changed
   };
+
+  // Callback passed to controls to refresh calendar when template applied
+  const handleAvailabilityChange = useCallback(() => {
+    setCalendarRefreshKey((k) => k + 1);
+  }, []);
 
   return (
     <div className="container mx-auto p-4 md:p-6">
       <PageTitle title="Availability Management" />
-      
+
       <div className="grid gap-6">
         {isLoading ? (
           <>
@@ -80,32 +83,36 @@ const AvailabilityPage = () => {
           </>
         ) : (
           <>
-            <LocationSelector 
+            <LocationSelector
               locations={locations}
               selectedLocation={selectedLocation}
               onLocationChange={handleLocationChange}
             />
-            
+
             {selectedLocation && (
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div className="lg:col-span-3">
-                  <AvailabilityCalendar locationId={selectedLocation.id} />
+                  <AvailabilityCalendar 
+                    locationId={selectedLocation.id} 
+                    refreshKey={calendarRefreshKey} // <--- pass refresh key
+                  />
                 </div>
                 <div>
-                  <AvailabilityControls 
-                    locationId={selectedLocation.id} 
-                    locationName={selectedLocation.name} 
+                  <AvailabilityControls
+                    locationId={selectedLocation.id}
+                    locationName={selectedLocation.name}
+                    onAvailabilityChange={handleAvailabilityChange} // <--- pass refresh callback
                   />
                 </div>
               </div>
             )}
-            
+
             {!selectedLocation && locations.length > 0 && (
               <div className="text-center p-8">
                 <p>Please select a location to manage availability.</p>
               </div>
             )}
-            
+
             {locations.length === 0 && !isLoading && (
               <Card>
                 <CardContent className="pt-6">

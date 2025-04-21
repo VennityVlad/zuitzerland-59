@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +27,7 @@ import { format, startOfWeek, addDays } from "date-fns";
 type ControlsProps = {
   locationId: string;
   locationName: string;
+  onAvailabilityChange?: () => void;
 };
 
 type TimeRange = {
@@ -44,7 +44,11 @@ const timeOptions = Array.from({ length: 24 }, (_, i) => {
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const WEEKEND = ["Saturday", "Sunday"];
 
-const AvailabilityControls = ({ locationId, locationName }: ControlsProps) => {
+const AvailabilityControls = ({
+  locationId,
+  locationName,
+  onAvailabilityChange,
+}: ControlsProps) => {
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
   const [weekdayRange, setWeekdayRange] = useState<TimeRange>({ start: "09:00", end: "17:00" });
   const [weekendRange, setWeekendRange] = useState<TimeRange>({ start: "10:00", end: "16:00" });
@@ -61,22 +65,18 @@ const AvailabilityControls = ({ locationId, locationName }: ControlsProps) => {
     try {
       setIsApplyingTemplate(true);
       
-      // Start from Monday (weekStartsOn: 1)
       const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
       const batchInserts = [];
       
-      // Process weekdays if included
       if (includeWeekdays) {
         for (let i = 0; i < 5; i++) {
           const currentDate = addDays(weekStart, i);
           const dateStr = format(currentDate, 'yyyy-MM-dd');
           
-          // For each hour slot in the time range
           for (let hour = 0; hour < 24; hour++) {
             const hourStr = hour.toString().padStart(2, '0');
             const timeStr = `${hourStr}:00`;
             
-            // Check if this hour is within the selected range for weekdays
             const isWithinRange = timeStr >= weekdayRange.start && timeStr < weekdayRange.end;
             const isAvailable = selectedTemplate !== "unavailable" && isWithinRange;
             
@@ -90,18 +90,15 @@ const AvailabilityControls = ({ locationId, locationName }: ControlsProps) => {
         }
       }
       
-      // Process weekend if included
       if (includeWeekend) {
         for (let i = 5; i < 7; i++) {
           const currentDate = addDays(weekStart, i);
           const dateStr = format(currentDate, 'yyyy-MM-dd');
           
-          // For each hour slot in the time range
           for (let hour = 0; hour < 24; hour++) {
             const hourStr = hour.toString().padStart(2, '0');
             const timeStr = `${hourStr}:00`;
             
-            // Check if this hour is within the selected range for weekend
             const isWithinRange = timeStr >= weekendRange.start && timeStr < weekendRange.end;
             const isAvailable = selectedTemplate !== "unavailable" && isWithinRange;
             
@@ -115,7 +112,6 @@ const AvailabilityControls = ({ locationId, locationName }: ControlsProps) => {
         }
       }
       
-      // First delete existing records for this time period and location
       const weekStartStr = format(weekStart, 'yyyy-MM-dd');
       const weekEndStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
       
@@ -128,7 +124,6 @@ const AvailabilityControls = ({ locationId, locationName }: ControlsProps) => {
         
       if (deleteError) throw deleteError;
       
-      // Now insert the new batch
       const { error: insertError } = await supabase
         .from('location_availability')
         .insert(batchInserts);
@@ -141,6 +136,8 @@ const AvailabilityControls = ({ locationId, locationName }: ControlsProps) => {
       });
       
       setConfirmDialogOpen(false);
+
+      if (typeof onAvailabilityChange === "function") onAvailabilityChange();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -155,7 +152,6 @@ const AvailabilityControls = ({ locationId, locationName }: ControlsProps) => {
   const onTemplateChange = (value: string) => {
     setSelectedTemplate(value as "office" | "full" | "custom" | "unavailable");
     
-    // Apply preset time ranges based on template
     switch (value) {
       case "office":
         setWeekdayRange({ start: "09:00", end: "17:00" });

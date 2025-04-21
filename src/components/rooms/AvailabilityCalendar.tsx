@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +42,13 @@ const TIME_SLOTS: TimeSlot[] = HOURS.map(hour => ({
   formatted: format(new Date().setHours(hour, 0), 'h:mm a')
 }));
 
-const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
+const AvailabilityCalendar = ({
+  locationId,
+  refreshKey,
+}: {
+  locationId: string;
+  refreshKey?: number;
+}) => {
   const [startDate, setStartDate] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [availabilityData, setAvailabilityData] = useState<AvailabilitySlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +57,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
   const [dragStartState, setDragStartState] = useState<boolean | null>(null);
   const { toast } = useToast();
 
-  // Ensure dayColumns is properly memoized and has a valid initial value
   const dayColumns: DayColumn[] = useMemo(() => {
     if (!startDate) return [];
     
@@ -67,7 +71,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
     });
   }, [startDate]);
 
-  // Fetch availability data when locationId or date range changes
   useEffect(() => {
     const fetchAvailability = async () => {
       if (!locationId) return;
@@ -89,10 +92,8 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
 
         setAvailabilityData(data || []);
         
-        // Initialize cell states from the data
         const newCellStates: Record<string, CellState> = {};
         
-        // First set all cells as available by default
         dayColumns.forEach(day => {
           const dateStr = format(day.date, 'yyyy-MM-dd');
           HOURS.forEach(hour => {
@@ -105,11 +106,10 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
           });
         });
         
-        // Then update with actual availability data
         (data || []).forEach(slot => {
-          const startDate = new Date(slot.start_time);
-          const dateStr = format(startDate, 'yyyy-MM-dd');
-          const hour = startDate.getHours();
+          const start = new Date(slot.start_time);
+          const dateStr = format(start, 'yyyy-MM-dd');
+          const hour = start.getHours();
           const cellKey = `${dateStr}-${hour}`;
           
           newCellStates[cellKey] = {
@@ -133,9 +133,8 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
     };
 
     fetchAvailability();
-  }, [locationId, startDate, dayColumns, toast]);
+  }, [locationId, startDate, dayColumns, toast, refreshKey]);
 
-  // Handle toggling a single cell
   const toggleCell = async (dateStr: string, hour: number) => {
     const cellKey = `${dateStr}-${hour}`;
     const currentCell = cellStates[cellKey];
@@ -144,7 +143,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
     
     const newIsAvailable = !currentCell.isAvailable;
     
-    // Update local state first for immediate feedback
     setCellStates(prev => ({
       ...prev,
       [cellKey]: {
@@ -155,7 +153,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
     
     try {
       if (currentCell.slotId) {
-        // Update existing availability record
         const { error } = await supabase
           .from('location_availability')
           .update({ is_available: newIsAvailable })
@@ -163,9 +160,8 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
           
         if (error) throw error;
       } else {
-        // Create new availability record
-        const startTime = new Date(`${dateStr}T${hour}:00:00`);
-        const endTime = new Date(`${dateStr}T${hour + 1}:00:00`);
+        const startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:00:00`);
+        const endTime = new Date(`${dateStr}T${(hour + 1).toString().padStart(2, '0')}:00:00`);
         
         const { data, error } = await supabase
           .from('location_availability')
@@ -176,21 +172,21 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
             is_available: newIsAvailable
           })
           .select('*')
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         
-        // Update cell state with the new slot ID
-        setCellStates(prev => ({
-          ...prev,
-          [cellKey]: {
-            ...prev[cellKey],
-            slotId: data.id
-          }
-        }));
+        if (data) {
+          setCellStates(prev => ({
+            ...prev,
+            [cellKey]: {
+              ...prev[cellKey],
+              slotId: data.id
+            }
+          }));
+        }
       }
     } catch (error: any) {
-      // Revert state on error
       setCellStates(prev => ({
         ...prev,
         [cellKey]: {
@@ -207,7 +203,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
     }
   };
 
-  // Handle mouse drag operations
   const handleMouseDown = (dateStr: string, hour: number) => {
     const cellKey = `${dateStr}-${hour}`;
     const currentState = cellStates[cellKey]?.isAvailable;
@@ -215,7 +210,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
     setIsDragging(true);
     setDragStartState(currentState);
     
-    // Toggle the initial cell
     toggleCell(dateStr, hour);
   };
 
@@ -225,7 +219,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
     const cellKey = `${dateStr}-${hour}`;
     const currentCell = cellStates[cellKey];
     
-    // Only change cells that don't match the drag start state
     if (currentCell && currentCell.isAvailable === dragStartState) {
       toggleCell(dateStr, hour);
     }
@@ -236,7 +229,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
     setDragStartState(null);
   };
 
-  // Navigation functions
   const goToPreviousWeek = () => {
     setStartDate(prev => addDays(prev, -7));
   };
@@ -292,7 +284,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
             }}
           >
             <div className="min-w-[800px]">
-              {/* Header row with days */}
               <div className="grid grid-cols-8 border-b">
                 <div className="p-2 font-medium text-center text-sm text-muted-foreground">
                   Time
@@ -310,9 +301,7 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
                 ))}
               </div>
 
-              {/* Time slots grid */}
               <div className="grid grid-cols-8">
-                {/* Time column */}
                 <div className="border-r">
                   {TIME_SLOTS.map((slot) => (
                     <div 
@@ -324,7 +313,6 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
                   ))}
                 </div>
 
-                {/* Day columns */}
                 {dayColumns.map((day) => (
                   <div key={day.dayName} className={day.isToday ? "bg-primary/5" : ""}>
                     {TIME_SLOTS.map((slot) => {
@@ -341,136 +329,14 @@ const AvailabilityCalendar = ({ locationId }: { locationId: string }) => {
                               : "bg-gray-100 hover:bg-gray-200"
                           }`}
                           onMouseDown={() => {
-                            setIsDragging(true);
-                            setDragStartState(isAvailable);
-                            
-                            const toggleCell = async () => {
-                              const currentCell = cellStates[cellKey];
-                              if (!currentCell) return;
-                              
-                              const newIsAvailable = !currentCell.isAvailable;
-                              
-                              setCellStates(prev => ({
-                                ...prev,
-                                [cellKey]: {
-                                  ...prev[cellKey],
-                                  isAvailable: newIsAvailable
-                                }
-                              }));
-                              
-                              try {
-                                if (currentCell.slotId) {
-                                  await supabase
-                                    .from('location_availability')
-                                    .update({ is_available: newIsAvailable })
-                                    .eq('id', currentCell.slotId);
-                                } else {
-                                  const startTime = new Date(`${dateStr}T${slot.hour}:00:00`);
-                                  const endTime = new Date(`${dateStr}T${slot.hour + 1}:00:00`);
-                                  
-                                  const { data, error } = await supabase
-                                    .from('location_availability')
-                                    .insert({
-                                      location_id: locationId,
-                                      start_time: startTime.toISOString(),
-                                      end_time: endTime.toISOString(),
-                                      is_available: newIsAvailable
-                                    })
-                                    .select('*')
-                                    .single();
-                                    
-                                  if (!error && data) {
-                                    setCellStates(prev => ({
-                                      ...prev,
-                                      [cellKey]: {
-                                        ...prev[cellKey],
-                                        slotId: data.id
-                                      }
-                                    }));
-                                  }
-                                }
-                              } catch (error: any) {
-                                toast({
-                                  variant: "destructive",
-                                  title: "Error updating availability",
-                                  description: error.message,
-                                });
-                                
-                                setCellStates(prev => ({
-                                  ...prev,
-                                  [cellKey]: {
-                                    ...prev[cellKey],
-                                    isAvailable: currentCell.isAvailable
-                                  }
-                                }));
-                              }
-                            };
-                            
-                            toggleCell();
+                            toggleCell(dateStr, slot.hour);
                           }}
                           onMouseEnter={() => {
                             if (!isDragging || dragStartState === null) return;
                             
                             const currentCell = cellStates[cellKey];
-                            if (!currentCell || currentCell.isAvailable === dragStartState) {
-                              const toggleCell = async () => {
-                                setCellStates(prev => ({
-                                  ...prev,
-                                  [cellKey]: {
-                                    ...prev[cellKey],
-                                    isAvailable: !dragStartState
-                                  }
-                                }));
-                                
-                                try {
-                                  if (currentCell?.slotId) {
-                                    await supabase
-                                      .from('location_availability')
-                                      .update({ is_available: !dragStartState })
-                                      .eq('id', currentCell.slotId);
-                                  } else {
-                                    const startTime = new Date(`${dateStr}T${slot.hour}:00:00`);
-                                    const endTime = new Date(`${dateStr}T${slot.hour + 1}:00:00`);
-                                    
-                                    const { data, error } = await supabase
-                                      .from('location_availability')
-                                      .insert({
-                                        location_id: locationId,
-                                        start_time: startTime.toISOString(),
-                                        end_time: endTime.toISOString(),
-                                        is_available: !dragStartState
-                                      })
-                                      .select('*')
-                                      .single();
-                                      
-                                    if (!error && data) {
-                                      setCellStates(prev => ({
-                                        ...prev,
-                                        [cellKey]: {
-                                          ...prev[cellKey],
-                                          slotId: data.id
-                                        }
-                                      }));
-                                    }
-                                  }
-                                } catch (error: any) {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Error updating availability",
-                                    description: error.message,
-                                  });
-                                  
-                                  setCellStates(prev => ({
-                                    ...prev,
-                                    [cellKey]: {
-                                      ...prev[cellKey],
-                                      isAvailable: currentCell?.isAvailable ?? true
-                                    }
-                                  }));
-                                }
-                              };
-                              
-                              toggleCell();
+                            if (currentCell && currentCell.isAvailable === dragStartState) {
+                              toggleCell(dateStr, slot.hour);
                             }
                           }}
                         >
