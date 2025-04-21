@@ -21,7 +21,7 @@ const AvailabilityPage = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0); // Add refresh trigger
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0); 
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,11 +34,16 @@ const AvailabilityPage = () => {
           .order("name", { ascending: true });
 
         if (error) throw error;
+        
+        // Ensure data is an array before proceeding
         const locationData = Array.isArray(data) ? data : [];
         setLocations(locationData);
 
+        // Only set selected location if we have locations
         if (locationData.length > 0) {
           setSelectedLocation(locationData[0]);
+        } else {
+          setSelectedLocation(null);
         }
       } catch (error: any) {
         toast({
@@ -46,7 +51,9 @@ const AvailabilityPage = () => {
           title: "Error fetching locations",
           description: error.message,
         });
+        // Reset to empty array on error
         setLocations([]);
+        setSelectedLocation(null);
       } finally {
         setIsLoading(false);
       }
@@ -55,14 +62,9 @@ const AvailabilityPage = () => {
     fetchLocations();
   }, [toast]);
 
-  const handleLocationChange = (location: Location) => {
+  const handleLocationChange = useCallback((location: Location) => {
     setSelectedLocation(location);
-    setCalendarRefreshKey((k) => k + 1); // Refresh when location is changed
-  };
-
-  // Callback passed to controls to refresh calendar when template applied
-  const handleAvailabilityChange = useCallback(() => {
-    setCalendarRefreshKey((k) => k + 1);
+    setCalendarRefreshKey(prevKey => prevKey + 1); // Refresh when location is changed
   }, []);
 
   return (
@@ -94,14 +96,14 @@ const AvailabilityPage = () => {
                 <div className="lg:col-span-3">
                   <AvailabilityCalendar 
                     locationId={selectedLocation.id} 
-                    refreshKey={calendarRefreshKey} // <--- pass refresh key
+                    refreshKey={calendarRefreshKey}
                   />
                 </div>
                 <div>
                   <AvailabilityControls
                     locationId={selectedLocation.id}
                     locationName={selectedLocation.name}
-                    onAvailabilityChange={handleAvailabilityChange} // <--- pass refresh callback
+                    onAvailabilityChange={() => setCalendarRefreshKey(prevKey => prevKey + 1)}
                   />
                 </div>
               </div>

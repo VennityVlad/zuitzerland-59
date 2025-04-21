@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,10 +38,14 @@ const LocationSelector = ({
 }: LocationSelectorProps) => {
   const [open, setOpen] = useState(false);
   
-  // Ensure locations is always an array
-  const safeLocations = Array.isArray(locations) ? locations : [];
+  // Create a memoized, safe version of the locations array
+  const safeLocations = useMemo(() => {
+    // Ensure locations is an array and has content
+    return Array.isArray(locations) ? locations : [];
+  }, [locations]);
 
-  if (!safeLocations.length) {
+  // Early return with a message if no locations are available
+  if (safeLocations.length === 0) {
     return <div className="text-muted-foreground">No locations found</div>;
   }
 
