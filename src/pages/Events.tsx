@@ -1,7 +1,19 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Link } from "lucide-react";
+import { 
+  CalendarDays, 
+  Plus, 
+  Trash2, 
+  CalendarPlus, 
+  MapPin, 
+  User, 
+  Edit, 
+  Calendar, 
+  Tag, 
+  Mic, 
+  Link as LucideLink 
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -52,7 +64,7 @@ interface Event {
   }[] | null;
   av_needs?: string | null;
   speakers?: string | null;
-  relevant_links?: string | null;
+  relevant_links?: string[] | null;
 }
 
 interface EventWithProfile extends Event {
