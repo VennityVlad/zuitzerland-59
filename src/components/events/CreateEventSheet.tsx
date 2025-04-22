@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
-import { Calendar as CalendarIcon, Clock, Link, Plus, X } from "lucide-react";
+import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 
@@ -41,7 +42,6 @@ interface Event {
   tags?: { id: string; name: string; color: string; }[];
   av_needs?: string | null;
   speakers?: string | null;
-  link?: string | null;
 }
 
 interface Location {
@@ -78,22 +78,14 @@ const colorOptions = [
   { label: "Gray", value: "#1A202C" }
 ];
 
-interface NewEvent {
-  title: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  av_needs?: string;
-  speakers?: string;
-  link?: string;
-}
-
-export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profileId, event }: CreateEventSheetProps) {
+export function CreateEventSheet({ 
+  open, 
+  onOpenChange, 
+  onSuccess, 
+  userId, 
+  profileId, 
+  event 
+}: CreateEventSheetProps) {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
   const [userProfile, setUserProfile] = useState<{ id: string } | null>(null);
@@ -117,20 +109,10 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
     is_all_day: false,
     created_by: "",
     av_needs: "",
-    speakers: "",
-    link: ""
+    speakers: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!event;
-
-  const validateUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
 
   useEffect(() => {
     if (event) {
@@ -144,9 +126,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         color: event.color,
         is_all_day: event.is_all_day,
         created_by: event.created_by,
-        av_needs: event.av_needs || "",
-        speakers: event.speakers || "",
-        link: event.link || ""
+        av_needs: event.av_needs,
+        speakers: event.speakers
       });
       
       setUseCustomLocation(!!event.location_text);
@@ -314,8 +295,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       is_all_day: false,
       created_by: userProfile?.id || "",
       av_needs: "",
-      speakers: "",
-      link: ""
+      speakers: ""
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
@@ -420,16 +400,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         return;
       }
 
-      if (newEvent.link && !validateUrl(newEvent.link)) {
-        toast({
-          title: "Error",
-          description: "Please enter a valid URL",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
       if (!userProfile?.id && !isEditMode) {
         toast({
           title: "Error",
@@ -484,6 +454,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       }
 
       if (isEditMode) {
+        console.log("Updating event:", event.id);
         const { data, error } = await supabase
           .from('events')
           .update({
@@ -497,27 +468,31 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             is_all_day: newEvent.is_all_day,
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
-            link: newEvent.link || null
           })
           .eq('id', event.id)
           .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase update error:", error);
+          throw error;
+        }
 
-        await supabase
-          .from('event_tag_relations')
-          .delete()
-          .eq('event_id', event.id);
-
-        if (selectedTags.length > 0) {
+        if (data) {
           await supabase
             .from('event_tag_relations')
-            .insert(
-              selectedTags.map(tag => ({
-                event_id: event.id,
-                tag_id: tag.id
-              }))
-            );
+            .delete()
+            .eq('event_id', event.id);
+
+          if (selectedTags.length > 0) {
+            await supabase
+              .from('event_tag_relations')
+              .insert(
+                selectedTags.map(tag => ({
+                  event_id: event.id,
+                  tag_id: tag.id
+                }))
+              );
+          }
         }
       } else {
         const { data, error } = await supabase
@@ -533,8 +508,7 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             is_all_day: newEvent.is_all_day,
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
-            created_by: userProfile?.id,
-            link: newEvent.link || null
+            created_by: userProfile?.id
           })
           .select()
           .single();
@@ -825,16 +799,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Event Link</Label>
-              <Input 
-                type="url"
-                placeholder="https://example.com"
-                value={newEvent.link || ''}
-                onChange={(e) => setNewEvent({...newEvent, link: e.target.value})}
-              />
-            </div>
-
             <Button 
               className="w-full" 
               onClick={handleSubmit} 
@@ -847,4 +811,19 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       </SheetContent>
     </Sheet>
   );
+}
+
+// Define the NewEvent interface as well
+interface NewEvent {
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  location_id: string | null;
+  location_text: string | null;
+  color: string;
+  is_all_day: boolean;
+  created_by: string;
+  av_needs?: string;
+  speakers?: string;
 }
