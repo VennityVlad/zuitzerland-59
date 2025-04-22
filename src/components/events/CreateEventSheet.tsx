@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
@@ -8,6 +8,8 @@ import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 
 // UI Component imports
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -86,6 +88,7 @@ export function CreateEventSheet({
   profileId, 
   event 
 }: CreateEventSheetProps) {
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
   const [userProfile, setUserProfile] = useState<{ id: string } | null>(null);
@@ -582,9 +585,255 @@ export function CreateEventSheet({
     });
   };
 
+  const ContentWrapper = ({ children }: { children: React.ReactNode }) => {
+    return (
+      <ScrollArea className="h-[calc(100vh-4rem)] pr-4">
+        <div className="space-y-6 pb-6">
+          {children}
+        </div>
+      </ScrollArea>
+    );
+  };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="h-[96vh] pt-4">
+          <DrawerHeader className="mb-6">
+            <DrawerTitle>{isEditMode ? "Edit Event" : "Create New Event"}</DrawerTitle>
+            <DrawerDescription>
+              {isEditMode ? "Update the details of this event" : "Fill in the details to create a new event"}
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          <div className="px-4">
+            <ContentWrapper>
+              {isLoadingProfile ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-pulse">Loading user profile...</div>
+                </div>
+              ) : !userProfile && !isEditMode ? (
+                <div className="text-center py-8">
+                  <p className="text-red-500">
+                    User profile not found. Please complete your profile setup before creating events.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Event Title</Label>
+                      <Input 
+                        id="title" 
+                        value={newEvent.title}
+                        onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                        placeholder="Team Meeting"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description (Optional)</Label>
+                      <Textarea 
+                        id="description" 
+                        value={newEvent.description}
+                        onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                        placeholder="Details about the event..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Location</Label>
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={useCustomLocation}
+                            onCheckedChange={setUseCustomLocation}
+                          />
+                          <Label>Use custom location</Label>
+                        </div>
+
+                        {useCustomLocation ? (
+                          <Input
+                            value={newEvent.location_text || ''}
+                            onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value, location_id: null})}
+                            placeholder="Enter custom location..."
+                          />
+                        ) : (
+                          <Select
+                            value={newEvent.location_id || ''}
+                            onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a location" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {locations.map((location) => (
+                                <SelectItem key={location.id} value={location.id}>
+                                  {location.name}
+                                  {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Tags</Label>
+                      <TagSelector
+                        selectedTags={selectedTags}
+                        onTagsChange={setSelectedTags}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>A/V Needs</Label>
+                      <Textarea 
+                        value={newEvent.av_needs}
+                        onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
+                        placeholder="Any specific A/V requirements (e.g., projector, microphone)"
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <Label>Speakers</Label>
+                      <Textarea 
+                        value={newEvent.speakers}
+                        onChange={(e) => setNewEvent({...newEvent, speakers: e.target.value})}
+                        placeholder="List of speakers for this event"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is-all-day"
+                      checked={newEvent.is_all_day}
+                      onCheckedChange={(checked) => setNewEvent({...newEvent, is_all_day: checked})}
+                    />
+                    <Label htmlFor="is-all-day">All day event</Label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Start Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {newEvent.start_date ? format(parseISO(newEvent.start_date), 'MMM d, yyyy') : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={newEvent.start_date ? parseISO(newEvent.start_date) : undefined}
+                            onSelect={(date) => handleDateChange('start', date)}
+                            className="p-3 pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {!newEvent.is_all_day && (
+                      <div className="space-y-2">
+                        <Label htmlFor="start-time">Start Time</Label>
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <Input 
+                            id="start-time" 
+                            type="time"
+                            value={format(parseISO(newEvent.start_date), 'HH:mm')}
+                            onChange={(e) => handleTimeChange('start', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>End Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
+                            onSelect={(date) => handleDateChange('end', date)}
+                            className="p-3 pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {!newEvent.is_all_day && (
+                      <div className="space-y-2">
+                        <Label htmlFor="end-time">End Time</Label>
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <Input 
+                            id="end-time" 
+                            type="time"
+                            value={format(parseISO(newEvent.end_date), 'HH:mm')}
+                            onChange={(e) => handleTimeChange('end', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Event Color</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {colorOptions.map((color) => (
+                        <div
+                          key={color.value}
+                          className={`h-8 w-8 rounded-full cursor-pointer border-2 ${
+                            newEvent.color === color.value ? 'border-gray-900' : 'border-transparent'
+                          }`}
+                          style={{ backgroundColor: color.value }}
+                          onClick={() => setNewEvent({...newEvent, color: color.value})}
+                          title={color.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button 
+                    className="w-full" 
+                    onClick={handleSubmit} 
+                    disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError || !!overlapValidationError}
+                  >
+                    {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
+                  </Button>
+                </div>
+              )}
+            </ContentWrapper>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md md:max-w-lg">
+      <SheetContent className="sm:max-w-md md:max-w-lg overflow-hidden">
         <SheetHeader className="mb-6">
           <SheetTitle>{isEditMode ? "Edit Event" : "Create New Event"}</SheetTitle>
           <SheetDescription>
@@ -592,222 +841,224 @@ export function CreateEventSheet({
           </SheetDescription>
         </SheetHeader>
 
-        {isLoadingProfile ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-pulse">Loading user profile...</div>
-          </div>
-        ) : !userProfile && !isEditMode ? (
-          <div className="text-center py-8">
-            <p className="text-red-500">
-              User profile not found. Please complete your profile setup before creating events.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Event Title</Label>
-                <Input 
-                  id="title" 
-                  value={newEvent.title}
-                  onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                  placeholder="Team Meeting"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea 
-                  id="description" 
-                  value={newEvent.description}
-                  onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                  placeholder="Details about the event..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={useCustomLocation}
-                      onCheckedChange={setUseCustomLocation}
-                    />
-                    <Label>Use custom location</Label>
-                  </div>
-
-                  {useCustomLocation ? (
-                    <Input
-                      value={newEvent.location_text || ''}
-                      onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value, location_id: null})}
-                      placeholder="Enter custom location..."
-                    />
-                  ) : (
-                    <Select
-                      value={newEvent.location_id || ''}
-                      onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                            {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <TagSelector
-                  selectedTags={selectedTags}
-                  onTagsChange={setSelectedTags}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>A/V Needs</Label>
-                <Textarea 
-                  value={newEvent.av_needs}
-                  onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
-                  placeholder="Any specific A/V requirements (e.g., projector, microphone)"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2 mt-4">
-                <Label>Speakers</Label>
-                <Textarea 
-                  value={newEvent.speakers}
-                  onChange={(e) => setNewEvent({...newEvent, speakers: e.target.value})}
-                  placeholder="List of speakers for this event"
-                  rows={2}
-                />
-              </div>
+        <ContentWrapper>
+          {isLoadingProfile ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-pulse">Loading user profile...</div>
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is-all-day"
-                checked={newEvent.is_all_day}
-                onCheckedChange={(checked) => setNewEvent({...newEvent, is_all_day: checked})}
-              />
-              <Label htmlFor="is-all-day">All day event</Label>
+          ) : !userProfile && !isEditMode ? (
+            <div className="text-center py-8">
+              <p className="text-red-500">
+                User profile not found. Please complete your profile setup before creating events.
+              </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.start_date ? format(parseISO(newEvent.start_date), 'MMM d, yyyy') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newEvent.start_date ? parseISO(newEvent.start_date) : undefined}
-                      onSelect={(date) => handleDateChange('start', date)}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {!newEvent.is_all_day && (
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start-time">Start Time</Label>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <Input 
-                      id="start-time" 
-                      type="time"
-                      value={format(parseISO(newEvent.start_date), 'HH:mm')}
-                      onChange={(e) => handleTimeChange('start', e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
-                      onSelect={(date) => handleDateChange('end', date)}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {!newEvent.is_all_day && (
-                <div className="space-y-2">
-                  <Label htmlFor="end-time">End Time</Label>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <Input 
-                      id="end-time" 
-                      type="time"
-                      value={format(parseISO(newEvent.end_date), 'HH:mm')}
-                      onChange={(e) => handleTimeChange('end', e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Event Color</Label>
-              <div className="flex flex-wrap gap-2">
-                {colorOptions.map((color) => (
-                  <div
-                    key={color.value}
-                    className={`h-8 w-8 rounded-full cursor-pointer border-2 ${
-                      newEvent.color === color.value ? 'border-gray-900' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => setNewEvent({...newEvent, color: color.value})}
-                    title={color.label}
+                  <Label htmlFor="title">Event Title</Label>
+                  <Input 
+                    id="title" 
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                    placeholder="Team Meeting"
                   />
-                ))}
-              </div>
-            </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description (Optional)</Label>
+                  <Textarea 
+                    id="description" 
+                    value={newEvent.description}
+                    onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                    placeholder="Details about the event..."
+                    rows={3}
+                  />
+                </div>
 
-            <Button 
-              className="w-full" 
-              onClick={handleSubmit} 
-              disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError || !!overlapValidationError}
-            >
-              {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
-            </Button>
-          </div>
-        )}
+                <div className="space-y-2">
+                  <Label>Location</Label>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={useCustomLocation}
+                        onCheckedChange={setUseCustomLocation}
+                      />
+                      <Label>Use custom location</Label>
+                    </div>
+
+                    {useCustomLocation ? (
+                      <Input
+                        value={newEvent.location_text || ''}
+                        onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value, location_id: null})}
+                        placeholder="Enter custom location..."
+                      />
+                    ) : (
+                      <Select
+                        value={newEvent.location_id || ''}
+                        onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                              {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tags</Label>
+                  <TagSelector
+                    selectedTags={selectedTags}
+                    onTagsChange={setSelectedTags}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>A/V Needs</Label>
+                  <Textarea 
+                    value={newEvent.av_needs}
+                    onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
+                    placeholder="Any specific A/V requirements (e.g., projector, microphone)"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2 mt-4">
+                  <Label>Speakers</Label>
+                  <Textarea 
+                    value={newEvent.speakers}
+                    onChange={(e) => setNewEvent({...newEvent, speakers: e.target.value})}
+                    placeholder="List of speakers for this event"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is-all-day"
+                  checked={newEvent.is_all_day}
+                  onCheckedChange={(checked) => setNewEvent({...newEvent, is_all_day: checked})}
+                />
+                <Label htmlFor="is-all-day">All day event</Label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEvent.start_date ? format(parseISO(newEvent.start_date), 'MMM d, yyyy') : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newEvent.start_date ? parseISO(newEvent.start_date) : undefined}
+                        onSelect={(date) => handleDateChange('start', date)}
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {!newEvent.is_all_day && (
+                  <div className="space-y-2">
+                    <Label htmlFor="start-time">Start Time</Label>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <Input 
+                        id="start-time" 
+                        type="time"
+                        value={format(parseISO(newEvent.start_date), 'HH:mm')}
+                        onChange={(e) => handleTimeChange('start', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
+                        onSelect={(date) => handleDateChange('end', date)}
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {!newEvent.is_all_day && (
+                  <div className="space-y-2">
+                    <Label htmlFor="end-time">End Time</Label>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <Input 
+                        id="end-time" 
+                        type="time"
+                        value={format(parseISO(newEvent.end_date), 'HH:mm')}
+                        onChange={(e) => handleTimeChange('end', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Event Color</Label>
+                <div className="flex flex-wrap gap-2">
+                  {colorOptions.map((color) => (
+                    <div
+                      key={color.value}
+                      className={`h-8 w-8 rounded-full cursor-pointer border-2 ${
+                        newEvent.color === color.value ? 'border-gray-900' : 'border-transparent'
+                      }`}
+                      style={{ backgroundColor: color.value }}
+                      onClick={() => setNewEvent({...newEvent, color: color.value})}
+                      title={color.label}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <Button 
+                className="w-full" 
+                onClick={handleSubmit} 
+                disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError || !!overlapValidationError}
+              >
+                {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
+              </Button>
+            </div>
+          )}
+        </ContentWrapper>
       </SheetContent>
     </Sheet>
   );
