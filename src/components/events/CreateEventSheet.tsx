@@ -41,7 +41,7 @@ interface Event {
   tags?: { id: string; name: string; color: string; }[];
   av_needs?: string | null;
   speakers?: string | null;
-  relevant_links?: { title: string; url: string }[];
+  link?: string | null;
 }
 
 interface Location {
@@ -78,14 +78,22 @@ const colorOptions = [
   { label: "Gray", value: "#1A202C" }
 ];
 
-export function CreateEventSheet({ 
-  open, 
-  onOpenChange, 
-  onSuccess, 
-  userId, 
-  profileId, 
-  event 
-}: CreateEventSheetProps) {
+interface NewEvent {
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  location_id: string | null;
+  location_text: string | null;
+  color: string;
+  is_all_day: boolean;
+  created_by: string;
+  av_needs?: string;
+  speakers?: string;
+  link?: string;
+}
+
+export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profileId, event }: CreateEventSheetProps) {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
   const [userProfile, setUserProfile] = useState<{ id: string } | null>(null);
@@ -97,7 +105,6 @@ export function CreateEventSheet({
   const [overlapValidationError, setOverlapValidationError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<{ id: string; name: string; color: string; }[]>([]);
   const [useCustomLocation, setUseCustomLocation] = useState(false);
-  const [relevantLinks, setRelevantLinks] = useState<{ title: string; url: string }[]>([]);
 
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
@@ -111,10 +118,19 @@ export function CreateEventSheet({
     created_by: "",
     av_needs: "",
     speakers: "",
-    relevant_links: []
+    link: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!event;
+
+  const validateUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     if (event) {
@@ -128,9 +144,9 @@ export function CreateEventSheet({
         color: event.color,
         is_all_day: event.is_all_day,
         created_by: event.created_by,
-        av_needs: event.av_needs,
-        speakers: event.speakers,
-        relevant_links: event.relevant_links || []
+        av_needs: event.av_needs || "",
+        speakers: event.speakers || "",
+        link: event.link || ""
       });
       
       setUseCustomLocation(!!event.location_text);
@@ -299,7 +315,7 @@ export function CreateEventSheet({
       created_by: userProfile?.id || "",
       av_needs: "",
       speakers: "",
-      relevant_links: []
+      link: ""
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
@@ -404,6 +420,16 @@ export function CreateEventSheet({
         return;
       }
 
+      if (newEvent.link && !validateUrl(newEvent.link)) {
+        toast({
+          title: "Error",
+          description: "Please enter a valid URL",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       if (!userProfile?.id && !isEditMode) {
         toast({
           title: "Error",
@@ -458,7 +484,6 @@ export function CreateEventSheet({
       }
 
       if (isEditMode) {
-        console.log("Updating event:", event.id);
         const { data, error } = await supabase
           .from('events')
           .update({
@@ -472,32 +497,27 @@ export function CreateEventSheet({
             is_all_day: newEvent.is_all_day,
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
-            relevant_links: JSON.stringify(newEvent.relevant_links)
+            link: newEvent.link || null
           })
           .eq('id', event.id)
           .select();
 
-        if (error) {
-          console.error("Supabase update error:", error);
-          throw error;
-        }
+        if (error) throw error;
 
-        if (data) {
+        await supabase
+          .from('event_tag_relations')
+          .delete()
+          .eq('event_id', event.id);
+
+        if (selectedTags.length > 0) {
           await supabase
             .from('event_tag_relations')
-            .delete()
-            .eq('event_id', event.id);
-
-          if (selectedTags.length > 0) {
-            await supabase
-              .from('event_tag_relations')
-              .insert(
-                selectedTags.map(tag => ({
-                  event_id: event.id,
-                  tag_id: tag.id
-                }))
-              );
-          }
+            .insert(
+              selectedTags.map(tag => ({
+                event_id: event.id,
+                tag_id: tag.id
+              }))
+            );
         }
       } else {
         const { data, error } = await supabase
@@ -514,7 +534,7 @@ export function CreateEventSheet({
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
             created_by: userProfile?.id,
-            relevant_links: JSON.stringify(newEvent.relevant_links)
+            link: newEvent.link || null
           })
           .select()
           .single();
@@ -586,20 +606,6 @@ export function CreateEventSheet({
       location_id: locationId,
       location_text: null
     });
-  };
-
-  const addRelevantLink = () => {
-    setRelevantLinks([...relevantLinks, { title: '', url: '' }]);
-  };
-
-  const removeRelevantLink = (indexToRemove: number) => {
-    setRelevantLinks(relevantLinks.filter((_, index) => index !== indexToRemove));
-  };
-
-  const updateRelevantLink = (index: number, field: 'title' | 'url', value: string) => {
-    const newLinks = [...relevantLinks];
-    newLinks[index][field] = value;
-    setRelevantLinks(newLinks);
   };
 
   return (
@@ -819,39 +825,14 @@ export function CreateEventSheet({
               </div>
             </div>
 
-            <div className="space-y-2 mt-4">
-              <Label>Relevant Links</Label>
-              {relevantLinks.map((link, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <Input 
-                    placeholder="Link Title" 
-                    value={link.title}
-                    onChange={(e) => updateRelevantLink(index, 'title', e.target.value)}
-                    className="flex-grow"
-                  />
-                  <Input 
-                    placeholder="URL" 
-                    value={link.url}
-                    onChange={(e) => updateRelevantLink(index, 'url', e.target.value)}
-                    className="flex-grow"
-                  />
-                  <Button 
-                    variant="destructive" 
-                    size="icon" 
-                    onClick={() => removeRelevantLink(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={addRelevantLink}
-                className="w-full mt-2"
-              >
-                <Plus className="mr-2 h-4 w-4" /> Add Link
-              </Button>
+            <div className="space-y-2">
+              <Label>Event Link</Label>
+              <Input 
+                type="url"
+                placeholder="https://example.com"
+                value={newEvent.link || ''}
+                onChange={(e) => setNewEvent({...newEvent, link: e.target.value})}
+              />
             </div>
 
             <Button 
@@ -866,19 +847,4 @@ export function CreateEventSheet({
       </SheetContent>
     </Sheet>
   );
-}
-
-interface NewEvent {
-  title: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  av_needs?: string;
-  speakers?: string;
-  relevant_links?: { title: string; url: string }[];
 }

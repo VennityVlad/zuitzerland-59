@@ -64,7 +64,7 @@ interface Event {
   }[] | null;
   av_needs?: string | null;
   speakers?: string | null;
-  relevant_links?: string[] | null;
+  link?: string | null;
 }
 
 interface EventWithProfile extends Event {
