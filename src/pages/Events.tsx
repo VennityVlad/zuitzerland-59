@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Microphone } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -15,6 +15,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { CreateEventSheet } from "@/components/events/CreateEventSheet";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 
 interface Event {
   id: string;
@@ -545,7 +556,7 @@ const renderEventsList = (
 
                         {event.speakers && (
                           <div className="flex items-center gap-2 mt-4">
-                            <Microphone className="h-4 w-4 text-gray-500" />
+                            <Mic className="h-4 w-4 text-gray-500" />
                             <div className="text-sm text-gray-600">
                               <span className="font-semibold">Speakers:</span> {event.speakers}
                             </div>

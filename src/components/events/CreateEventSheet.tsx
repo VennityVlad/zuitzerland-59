@@ -1,8 +1,32 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+
+// UI Component imports
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { TagSelector } from "@/components/events/TagSelector";
+
+// Type definitions
+interface CreateEventSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+  userId: string;
+  profileId?: string;
+  event?: Event | null;
+}
 
 interface Event {
   id: string;
@@ -16,23 +40,43 @@ interface Event {
   is_all_day: boolean;
   created_by: string;
   tags?: { id: string; name: string; color: string; }[];
-  av_needs?: string;
-  speakers?: string;
+  av_needs?: string | null;
+  speakers?: string | null;
 }
 
-interface NewEvent {
-  title: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  av_needs?: string;
-  speakers?: string;
+interface Location {
+  id: string;
+  name: string;
+  building: string | null;
+  floor: string | null;
+  type: string;
+  description?: string | null;
+  max_occupancy?: number | null;
+  created_at: string;
+  updated_at: string;
 }
+
+interface Availability {
+  id: string;
+  location_id: string;
+  start_time: string;
+  end_time: string;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Color options for events
+const colorOptions = [
+  { label: "Blue", value: "#1a365d" },
+  { label: "Green", value: "#1C4532" },
+  { label: "Red", value: "#822727" },
+  { label: "Purple", value: "#553C9A" },
+  { label: "Orange", value: "#974820" },
+  { label: "Pink", value: "#97266D" },
+  { label: "Cyan", value: "#0D7490" },
+  { label: "Gray", value: "#1A202C" }
+];
 
 export function CreateEventSheet({ 
   open, 
@@ -767,4 +811,19 @@ export function CreateEventSheet({
       </SheetContent>
     </Sheet>
   );
+}
+
+// Define the NewEvent interface as well
+interface NewEvent {
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  location_id: string | null;
+  location_text: string | null;
+  color: string;
+  is_all_day: boolean;
+  created_by: string;
+  av_needs?: string;
+  speakers?: string;
 }
