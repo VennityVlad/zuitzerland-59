@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Calendar } from "@/components/ui/calendar";
 import { useState } from "react";
@@ -19,6 +18,8 @@ interface Event {
   location_text: string | null;
   color: string;
   is_all_day: boolean;
+  av_needs?: string | null;
+  speakers?: string | null;
 }
 
 interface EventCalendarProps {
@@ -29,7 +30,6 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2025, 4)); // May 2025
   const { toast } = useToast();
 
-  // Fetch calendar events
   const { data: events, isLoading: isLoadingEvents } = useQuery({
     queryKey: ["calendar-events", format(currentMonth, "yyyy-MM")],
     queryFn: async () => {
@@ -51,12 +51,10 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
     }
   });
 
-  // Function to handle month change
   const handleMonthChange = (date: Date) => {
     setCurrentMonth(startOfMonth(date));
   };
 
-  // Function to check if a day has events
   const getDayEvents = (day: Date): Event[] => {
     if (!events) return [];
     
@@ -64,14 +62,12 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
       const startDate = new Date(event.start_date);
       const endDate = new Date(event.end_date);
       
-      // Check if the day is within the event dates
       return isWithinInterval(day, { start: startDate, end: endDate }) ||
              isSameDay(day, startDate) || 
              isSameDay(day, endDate);
     });
   };
 
-  // Custom renderer for calendar days
   const renderDay = (date: Date, modifiers: Record<string, boolean>) => {
     const dayEvents = getDayEvents(date);
     const hasEvents = dayEvents.length > 0;
@@ -124,7 +120,6 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
     );
   };
 
-  // Custom DayContent component that works with react-day-picker
   const CustomDayContent = (props: { date: Date; displayMonth: Date }) => {
     const { date } = props;
     const modifiers = {
@@ -135,7 +130,6 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
     return renderDay(date, modifiers);
   };
 
-  // Format the date range for an event
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = parseISO(startDate);
     const end = parseISO(endDate);

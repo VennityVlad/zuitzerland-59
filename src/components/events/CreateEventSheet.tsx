@@ -1,43 +1,8 @@
-import { useState, useEffect } from "react";
-import { format, parseISO, isWithinInterval } from "date-fns";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { format, parseISO } from "date-fns";
+import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
-
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle 
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { TagSelector } from "./TagSelector";
-
-interface CreateEventSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-  userId: string;
-  profileId?: string;
-  event?: Event | null;
-}
 
 interface Event {
   id: string;
@@ -51,6 +16,8 @@ interface Event {
   is_all_day: boolean;
   created_by: string;
   tags?: { id: string; name: string; color: string; }[];
+  av_needs?: string;
+  speakers?: string;
 }
 
 interface NewEvent {
@@ -63,35 +30,18 @@ interface NewEvent {
   color: string;
   is_all_day: boolean;
   created_by: string;
+  av_needs?: string;
+  speakers?: string;
 }
 
-interface Location {
-  id: string;
-  name: string;
-  type: string;
-  building: string | null;
-  floor: string | null;
-}
-
-interface Availability {
-  id: string;
-  location_id: string;
-  start_time: string;
-  end_time: string;
-  is_available: boolean;
-}
-
-const colorOptions = [
-  { label: "Navy", value: "#1a365d" },
-  { label: "Blue", value: "#3182ce" },
-  { label: "Green", value: "#38a169" },
-  { label: "Red", value: "#e53e3e" },
-  { label: "Orange", value: "#dd6b20" },
-  { label: "Purple", value: "#805ad5" },
-  { label: "Pink", value: "#d53f8c" },
-];
-
-export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profileId, event }: CreateEventSheetProps) {
+export function CreateEventSheet({ 
+  open, 
+  onOpenChange, 
+  onSuccess, 
+  userId, 
+  profileId, 
+  event 
+}: CreateEventSheetProps) {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
   const [userProfile, setUserProfile] = useState<{ id: string } | null>(null);
@@ -113,7 +63,9 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
     location_text: "",
     color: "#1a365d",
     is_all_day: false,
-    created_by: ""
+    created_by: "",
+    av_needs: "",
+    speakers: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!event;
@@ -129,12 +81,13 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
         location_text: event.location_text || "",
         color: event.color,
         is_all_day: event.is_all_day,
-        created_by: event.created_by
+        created_by: event.created_by,
+        av_needs: event.av_needs,
+        speakers: event.speakers
       });
       
       setUseCustomLocation(!!event.location_text);
       
-      // Fetch event tags if editing
       if (event.id) {
         fetchEventTags(event.id);
       }
@@ -296,7 +249,9 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
       location_text: "",
       color: "#1a365d",
       is_all_day: false,
-      created_by: userProfile?.id || ""
+      created_by: userProfile?.id || "",
+      av_needs: "",
+      speakers: ""
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
@@ -467,6 +422,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
             is_all_day: newEvent.is_all_day,
+            av_needs: newEvent.av_needs || null,
+            speakers: newEvent.speakers || null,
           })
           .eq('id', event.id)
           .select();
@@ -476,7 +433,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
           throw error;
         }
 
-        // Update tags
         if (data) {
           await supabase
             .from('event_tag_relations')
@@ -506,6 +462,8 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
             location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
             is_all_day: newEvent.is_all_day,
+            av_needs: newEvent.av_needs || null,
+            speakers: newEvent.speakers || null,
             created_by: userProfile?.id
           })
           .select()
@@ -513,7 +471,6 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
 
         if (error) throw error;
 
-        // Add tags
         if (data && selectedTags.length > 0) {
           await supabase
             .from('event_tag_relations')
@@ -668,6 +625,26 @@ export function CreateEventSheet({ open, onOpenChange, onSuccess, userId, profil
                 <TagSelector
                   selectedTags={selectedTags}
                   onTagsChange={setSelectedTags}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>A/V Needs</Label>
+                <Textarea 
+                  value={newEvent.av_needs}
+                  onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
+                  placeholder="Any specific A/V requirements (e.g., projector, microphone)"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2 mt-4">
+                <Label>Speakers</Label>
+                <Textarea 
+                  value={newEvent.speakers}
+                  onChange={(e) => setNewEvent({...newEvent, speakers: e.target.value})}
+                  placeholder="List of speakers for this event"
+                  rows={2}
                 />
               </div>
             </div>

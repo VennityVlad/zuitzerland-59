@@ -1,7 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Microphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -15,17 +15,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 
 interface Event {
   id: string;
@@ -50,6 +39,8 @@ interface Event {
       name: string;
     }
   }[] | null;
+  av_needs?: string | null;
+  speakers?: string | null;
 }
 
 interface EventWithProfile extends Event {
@@ -320,10 +311,11 @@ const Events = () => {
 
       <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
         <div className="flex justify-end mb-4">
-          <TabsList className="grid w-full sm:w-[320px] grid-cols-3">
+          <TabsList className="grid w-full sm:w-[400px] grid-cols-4">
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             <TabsTrigger value="past">Past</TabsTrigger>
             <TabsTrigger value="going">Going</TabsTrigger>
+            <TabsTrigger value="hosting">Hosting</TabsTrigger>
           </TabsList>
         </div>
 
@@ -368,6 +360,25 @@ const Events = () => {
         <TabsContent value="going" className="space-y-4">
           {renderEventsList(
             rsvpedEvents,
+            isLoading,
+            profileLoading,
+            canManageEvents,
+            canEditEvent,
+            openDeleteDialog,
+            handleEditEvent,
+            addToCalendar,
+            formatDateForSidebar,
+            formatEventTime,
+            formatDateRange,
+            rsvpMap,
+            userRSVPEventIds,
+            profileId,
+            refetchRSVPs
+          )}
+        </TabsContent>
+        <TabsContent value="hosting" className="space-y-4">
+          {renderEventsList(
+            events?.filter(event => event.created_by === profileId) || [],
             isLoading,
             profileLoading,
             canManageEvents,
@@ -528,6 +539,15 @@ const renderEventsList = (
                                   {tag.tags.name}
                                 </Badge>
                               ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {event.speakers && (
+                          <div className="flex items-center gap-2 mt-4">
+                            <Microphone className="h-4 w-4 text-gray-500" />
+                            <div className="text-sm text-gray-600">
+                              <span className="font-semibold">Speakers:</span> {event.speakers}
                             </div>
                           </div>
                         )}

@@ -309,6 +309,7 @@ export type Database = {
       }
       events: {
         Row: {
+          av_needs: string | null
           color: string | null
           created_at: string
           created_by: string
@@ -318,11 +319,13 @@ export type Database = {
           is_all_day: boolean | null
           location_id: string | null
           location_text: string | null
+          speakers: string | null
           start_date: string
           title: string
           updated_at: string
         }
         Insert: {
+          av_needs?: string | null
           color?: string | null
           created_at?: string
           created_by: string
@@ -332,11 +335,13 @@ export type Database = {
           is_all_day?: boolean | null
           location_id?: string | null
           location_text?: string | null
+          speakers?: string | null
           start_date: string
           title: string
           updated_at?: string
         }
         Update: {
+          av_needs?: string | null
           color?: string | null
           created_at?: string
           created_by?: string
@@ -346,6 +351,7 @@ export type Database = {
           is_all_day?: boolean | null
           location_id?: string | null
           location_text?: string | null
+          speakers?: string | null
           start_date?: string
           title?: string
           updated_at?: string
