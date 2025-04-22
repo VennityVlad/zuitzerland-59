@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
-import { zonedTimeToUtc, utcToZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { Calendar as CalendarIcon, Clock, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -83,9 +83,9 @@ const TIME_ZONE = "Europe/Zurich";
 
 const getInitialStartDate = () => {
   const now = new Date();
-  const zonedNow = utcToZonedTime(now, TIME_ZONE);
+  const zonedNow = toZonedTime(now, TIME_ZONE);
   const nextHour = startOfHour(addHours(zonedNow, 1));
-  return format(zonedTimeToUtc(nextHour, TIME_ZONE), "yyyy-MM-dd'T'HH:mm:ss");
+  return format(fromZonedTime(nextHour, TIME_ZONE), "yyyy-MM-dd'T'HH:mm:ss");
 };
 
 const getInitialEndDate = (startDate: string) => {
@@ -590,15 +590,15 @@ export function CreateEventSheet({
       ? parseISO(newEvent.start_date)
       : parseISO(newEvent.end_date);
     
-    const zonedCurrentDate = utcToZonedTime(currentDate, TIME_ZONE);
+    const zonedCurrentDate = toZonedTime(currentDate, TIME_ZONE);
     const hours = zonedCurrentDate.getHours();
     const minutes = zonedCurrentDate.getMinutes();
     
-    const zonedNewDate = utcToZonedTime(date, TIME_ZONE);
+    const zonedNewDate = toZonedTime(date, TIME_ZONE);
     zonedNewDate.setHours(hours);
     zonedNewDate.setMinutes(minutes);
     
-    const newUtcDate = zonedTimeToUtc(zonedNewDate, TIME_ZONE);
+    const newUtcDate = fromZonedTime(zonedNewDate, TIME_ZONE);
     
     if (type === 'start') {
       const newStartDate = format(newUtcDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
@@ -618,12 +618,12 @@ export function CreateEventSheet({
   const handleTimeChange = (type: 'start' | 'end', timeString: string) => {
     const [hours, minutes] = timeString.split(':').map(Number);
     const date = parseISO(type === 'start' ? newEvent.start_date : newEvent.end_date);
-    const zonedDate = utcToZonedTime(date, TIME_ZONE);
+    const zonedDate = toZonedTime(date, TIME_ZONE);
     
     zonedDate.setHours(hours);
     zonedDate.setMinutes(minutes);
     
-    const utcDate = zonedTimeToUtc(zonedDate, TIME_ZONE);
+    const utcDate = fromZonedTime(zonedDate, TIME_ZONE);
     
     if (type === 'start') {
       const newStartDate = format(utcDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
