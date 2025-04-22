@@ -319,6 +319,7 @@ export type Database = {
           is_all_day: boolean | null
           location_id: string | null
           location_text: string | null
+          relevant_links: Json | null
           speakers: string | null
           start_date: string
           title: string
@@ -335,6 +336,7 @@ export type Database = {
           is_all_day?: boolean | null
           location_id?: string | null
           location_text?: string | null
+          relevant_links?: Json | null
           speakers?: string | null
           start_date: string
           title: string
@@ -351,6 +353,7 @@ export type Database = {
           is_all_day?: boolean | null
           location_id?: string | null
           location_text?: string | null
+          relevant_links?: Json | null
           speakers?: string | null
           start_date?: string
           title?: string

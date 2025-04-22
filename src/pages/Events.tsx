@@ -52,6 +52,7 @@ interface Event {
   }[] | null;
   av_needs?: string | null;
   speakers?: string | null;
+  relevant_links?: Json | null;
 }
 
 interface EventWithProfile extends Event {
@@ -559,6 +560,28 @@ const renderEventsList = (
                             <Mic className="h-4 w-4 text-gray-500" />
                             <div className="text-sm text-gray-600">
                               <span className="font-semibold">Speakers:</span> {event.speakers}
+                            </div>
+                          </div>
+                        )}
+
+                        {event.relevant_links && (
+                          <div className="flex items-center gap-2 mt-4">
+                            <Link className="h-4 w-4 text-gray-500" />
+                            <div className="text-sm text-gray-600">
+                              <span className="font-semibold">Relevant Links:</span>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {JSON.parse(event.relevant_links as string).map((link: { title: string; url: string }, index: number) => (
+                                  <a 
+                                    key={index} 
+                                    href={link.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-blue-600 hover:underline"
+                                  >
+                                    {link.title || link.url}
+                                  </a>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         )}

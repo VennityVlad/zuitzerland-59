@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Link, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 
@@ -42,6 +41,7 @@ interface Event {
   tags?: { id: string; name: string; color: string; }[];
   av_needs?: string | null;
   speakers?: string | null;
+  relevant_links?: { title: string; url: string }[];
 }
 
 interface Location {
@@ -97,6 +97,7 @@ export function CreateEventSheet({
   const [overlapValidationError, setOverlapValidationError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<{ id: string; name: string; color: string; }[]>([]);
   const [useCustomLocation, setUseCustomLocation] = useState(false);
+  const [relevantLinks, setRelevantLinks] = useState<{ title: string; url: string }[]>([]);
 
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
@@ -109,7 +110,8 @@ export function CreateEventSheet({
     is_all_day: false,
     created_by: "",
     av_needs: "",
-    speakers: ""
+    speakers: "",
+    relevant_links: []
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!event;
@@ -127,7 +129,8 @@ export function CreateEventSheet({
         is_all_day: event.is_all_day,
         created_by: event.created_by,
         av_needs: event.av_needs,
-        speakers: event.speakers
+        speakers: event.speakers,
+        relevant_links: event.relevant_links || []
       });
       
       setUseCustomLocation(!!event.location_text);
@@ -295,7 +298,8 @@ export function CreateEventSheet({
       is_all_day: false,
       created_by: userProfile?.id || "",
       av_needs: "",
-      speakers: ""
+      speakers: "",
+      relevant_links: []
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
@@ -468,6 +472,7 @@ export function CreateEventSheet({
             is_all_day: newEvent.is_all_day,
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
+            relevant_links: JSON.stringify(newEvent.relevant_links)
           })
           .eq('id', event.id)
           .select();
@@ -508,7 +513,8 @@ export function CreateEventSheet({
             is_all_day: newEvent.is_all_day,
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
-            created_by: userProfile?.id
+            created_by: userProfile?.id,
+            relevant_links: JSON.stringify(newEvent.relevant_links)
           })
           .select()
           .single();
@@ -580,6 +586,20 @@ export function CreateEventSheet({
       location_id: locationId,
       location_text: null
     });
+  };
+
+  const addRelevantLink = () => {
+    setRelevantLinks([...relevantLinks, { title: '', url: '' }]);
+  };
+
+  const removeRelevantLink = (indexToRemove: number) => {
+    setRelevantLinks(relevantLinks.filter((_, index) => index !== indexToRemove));
+  };
+
+  const updateRelevantLink = (index: number, field: 'title' | 'url', value: string) => {
+    const newLinks = [...relevantLinks];
+    newLinks[index][field] = value;
+    setRelevantLinks(newLinks);
   };
 
   return (
@@ -799,6 +819,41 @@ export function CreateEventSheet({
               </div>
             </div>
 
+            <div className="space-y-2 mt-4">
+              <Label>Relevant Links</Label>
+              {relevantLinks.map((link, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <Input 
+                    placeholder="Link Title" 
+                    value={link.title}
+                    onChange={(e) => updateRelevantLink(index, 'title', e.target.value)}
+                    className="flex-grow"
+                  />
+                  <Input 
+                    placeholder="URL" 
+                    value={link.url}
+                    onChange={(e) => updateRelevantLink(index, 'url', e.target.value)}
+                    className="flex-grow"
+                  />
+                  <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    onClick={() => removeRelevantLink(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={addRelevantLink}
+                className="w-full mt-2"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add Link
+              </Button>
+            </div>
+
             <Button 
               className="w-full" 
               onClick={handleSubmit} 
@@ -813,7 +868,6 @@ export function CreateEventSheet({
   );
 }
 
-// Define the NewEvent interface as well
 interface NewEvent {
   title: string;
   description: string;
@@ -826,4 +880,5 @@ interface NewEvent {
   created_by: string;
   av_needs?: string;
   speakers?: string;
+  relevant_links?: { title: string; url: string }[];
 }
