@@ -111,8 +111,8 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
                       />
                       <span className="font-semibold">{event.title}</span>
                     </div>
-                    {event.location && (
-                      <div className="text-[10px] text-gray-500 ml-3.5">{event.location}</div>
+                    {(event.location_text || event.location_id) && (
+                      <div className="text-[10px] text-gray-500 ml-3.5">{event.location_text || `Location ID: ${event.location_id}`}</div>
                     )}
                   </div>
                 ))}
