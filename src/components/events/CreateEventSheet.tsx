@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 
@@ -41,6 +41,7 @@ interface Event {
   tags?: { id: string; name: string; color: string; }[];
   av_needs?: string | null;
   speakers?: string | null;
+  link?: string | null;
 }
 
 interface Location {
@@ -108,7 +109,8 @@ export function CreateEventSheet({
     is_all_day: false,
     created_by: "",
     av_needs: "",
-    speakers: ""
+    speakers: "",
+    link: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!event;
@@ -126,7 +128,8 @@ export function CreateEventSheet({
         is_all_day: event.is_all_day,
         created_by: event.created_by,
         av_needs: event.av_needs,
-        speakers: event.speakers
+        speakers: event.speakers,
+        link: event.link
       });
       
       setUseCustomLocation(!!event.location_text);
@@ -294,7 +297,8 @@ export function CreateEventSheet({
       is_all_day: false,
       created_by: userProfile?.id || "",
       av_needs: "",
-      speakers: ""
+      speakers: "",
+      link: ""
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
@@ -385,6 +389,16 @@ export function CreateEventSheet({
     }
   }, [newEvent.location_id, newEvent.start_date, newEvent.end_date, isEditMode, event]);
 
+  const validateUrl = (url: string): boolean => {
+    if (!url) return true; // Allow empty URLs
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -393,6 +407,16 @@ export function CreateEventSheet({
         toast({
           title: "Error",
           description: "Event title is required",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (newEvent.link && !validateUrl(newEvent.link)) {
+        toast({
+          title: "Error",
+          description: "Please enter a valid URL",
           variant: "destructive",
         });
         setIsSubmitting(false);
@@ -467,6 +491,7 @@ export function CreateEventSheet({
             is_all_day: newEvent.is_all_day,
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
+            link: newEvent.link || null,
           })
           .eq('id', event.id)
           .select();
@@ -507,6 +532,7 @@ export function CreateEventSheet({
             is_all_day: newEvent.is_all_day,
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
+            link: newEvent.link || null,
             created_by: userProfile?.id
           })
           .select()
@@ -690,6 +716,34 @@ export function CreateEventSheet({
                   rows={2}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="link">Event Link (Optional)</Label>
+                <div className="flex items-center space-x-2">
+                  <Link className="h-4 w-4 text-gray-500" />
+                  <Input
+                    id="link"
+                    type="url"
+                    value={newEvent.link || ''}
+                    onChange={(e) => {
+                      const url = e.target.value;
+                      setNewEvent({...newEvent, link: url});
+                    }}
+                    onBlur={(e) => {
+                      const url = e.target.value;
+                      if (url && !validateUrl(url)) {
+                        toast({
+                          title: "Invalid URL",
+                          description: "Please enter a valid URL including http:// or https://",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    placeholder="https://example.com"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -824,4 +878,5 @@ interface NewEvent {
   created_by: string;
   av_needs?: string;
   speakers?: string;
+  link?: string;
 }
