@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
@@ -584,8 +583,8 @@ export function CreateEventSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md md:max-w-lg">
-        <SheetHeader className="mb-6">
+      <SheetContent className="sm:max-w-md md:max-w-lg h-full flex flex-col">
+        <SheetHeader className="mb-6 flex-shrink-0">
           <SheetTitle>{isEditMode ? "Edit Event" : "Create New Event"}</SheetTitle>
           <SheetDescription>
             {isEditMode ? "Update the details of this event" : "Fill in the details to create a new event"}
@@ -603,7 +602,7 @@ export function CreateEventSheet({
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6 pb-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Event Title</Label>
@@ -813,7 +812,6 @@ export function CreateEventSheet({
   );
 }
 
-// Define the NewEvent interface as well
 interface NewEvent {
   title: string;
   description: string;
