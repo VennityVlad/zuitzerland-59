@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
+import { zonedTimeToUtc, utcToZonedTime } from "date-fns-tz";
 import { Calendar as CalendarIcon, Clock, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -78,6 +79,21 @@ const colorOptions = [
   { label: "Gray", value: "#1A202C" }
 ];
 
+const TIME_ZONE = "Europe/Zurich";
+
+const getInitialStartDate = () => {
+  const now = new Date();
+  const zonedNow = utcToZonedTime(now, TIME_ZONE);
+  const nextHour = startOfHour(addHours(zonedNow, 1));
+  return format(zonedTimeToUtc(nextHour, TIME_ZONE), "yyyy-MM-dd'T'HH:mm:ss");
+};
+
+const getInitialEndDate = (startDate: string) => {
+  const start = parseISO(startDate);
+  const end = addHours(start, 1);
+  return format(end, "yyyy-MM-dd'T'HH:mm:ss");
+};
+
 export function CreateEventSheet({ 
   open, 
   onOpenChange, 
@@ -101,8 +117,8 @@ export function CreateEventSheet({
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
     description: "",
-    start_date: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm:ss'),
-    end_date: format(new Date(new Date().getTime() + 2 * 60 * 60 * 1000), 'yyyy-MM-dd\'T\'HH:mm:ss'),
+    start_date: getInitialStartDate(),
+    end_date: getInitialEndDate(getInitialStartDate()),
     location_id: null,
     location_text: "",
     color: "#1a365d",
@@ -289,8 +305,8 @@ export function CreateEventSheet({
     setNewEvent({
       title: "",
       description: "",
-      start_date: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm:ss'),
-      end_date: format(new Date(new Date().getTime() + 2 * 60 * 60 * 1000), 'yyyy-MM-dd\'T\'HH:mm:ss'),
+      start_date: getInitialStartDate(),
+      end_date: getInitialEndDate(getInitialStartDate()),
       location_id: null,
       location_text: "",
       color: "#1a365d",
@@ -571,32 +587,57 @@ export function CreateEventSheet({
     if (!date) return;
     
     const currentDate = type === 'start' 
-      ? new Date(newEvent.start_date) 
-      : new Date(newEvent.end_date);
+      ? parseISO(newEvent.start_date)
+      : parseISO(newEvent.end_date);
     
-    const hours = currentDate.getHours();
-    const minutes = currentDate.getMinutes();
+    const zonedCurrentDate = utcToZonedTime(currentDate, TIME_ZONE);
+    const hours = zonedCurrentDate.getHours();
+    const minutes = zonedCurrentDate.getMinutes();
     
-    date.setHours(hours);
-    date.setMinutes(minutes);
+    const zonedNewDate = utcToZonedTime(date, TIME_ZONE);
+    zonedNewDate.setHours(hours);
+    zonedNewDate.setMinutes(minutes);
     
-    setNewEvent({
-      ...newEvent,
-      [type === 'start' ? 'start_date' : 'end_date']: format(date, 'yyyy-MM-dd\'T\'HH:mm:ss')
-    });
+    const newUtcDate = zonedTimeToUtc(zonedNewDate, TIME_ZONE);
+    
+    if (type === 'start') {
+      const newStartDate = format(newUtcDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      setNewEvent(prev => ({
+        ...prev,
+        start_date: newStartDate,
+        end_date: format(addHours(newUtcDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
+      }));
+    } else {
+      setNewEvent(prev => ({
+        ...prev,
+        end_date: format(newUtcDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
+      }));
+    }
   };
 
   const handleTimeChange = (type: 'start' | 'end', timeString: string) => {
     const [hours, minutes] = timeString.split(':').map(Number);
-    const date = new Date(type === 'start' ? newEvent.start_date : newEvent.end_date);
+    const date = parseISO(type === 'start' ? newEvent.start_date : newEvent.end_date);
+    const zonedDate = utcToZonedTime(date, TIME_ZONE);
     
-    date.setHours(hours);
-    date.setMinutes(minutes);
+    zonedDate.setHours(hours);
+    zonedDate.setMinutes(minutes);
     
-    setNewEvent({
-      ...newEvent,
-      [type === 'start' ? 'start_date' : 'end_date']: format(date, 'yyyy-MM-dd\'T\'HH:mm:ss')
-    });
+    const utcDate = zonedTimeToUtc(zonedDate, TIME_ZONE);
+    
+    if (type === 'start') {
+      const newStartDate = format(utcDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      setNewEvent(prev => ({
+        ...prev,
+        start_date: newStartDate,
+        end_date: format(addHours(utcDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
+      }));
+    } else {
+      setNewEvent(prev => ({
+        ...prev,
+        end_date: format(utcDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
+      }));
+    }
   };
 
   const handleLocationChange = (locationId: string) => {
