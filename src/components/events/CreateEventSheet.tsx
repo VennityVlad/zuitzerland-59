@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -137,8 +136,8 @@ export function CreateEventSheet({
       setNewEvent({
         title: event.title,
         description: event.description || "",
-        start_date: convertUTCToCEST(event.start_date),
-        end_date: convertUTCToCEST(event.end_date),
+        start_date: convertToLocal(event.start_date),
+        end_date: convertToLocal(event.end_date),
         location_id: event.location_id,
         location_text: event.location_text || "",
         color: event.color,
@@ -159,20 +158,16 @@ export function CreateEventSheet({
     }
   }, [event]);
 
-  // Convert CEST to UTC (for saving to database)
-  const convertCESTToUTC = (dateTimeString: string): string => {
-    const localDate = parseISO(dateTimeString);
-    // Subtract 2 hours to convert from CEST to UTC
-    const utcDate = new Date(localDate.getTime() - 2 * 60 * 60 * 1000);
+  const convertToUTC = (dateTimeString: string): string => {
+    const cestDate = parseISO(dateTimeString);
+    const utcDate = new Date(cestDate.getTime() - 2 * 60 * 60 * 1000);
     return format(utcDate, "yyyy-MM-dd'T'HH:mm:ss");
   };
 
-  // Convert UTC to CEST (for displaying in UI)
-  const convertUTCToCEST = (utcDateTimeString: string): string => {
+  const convertToLocal = (utcDateTimeString: string): string => {
     const utcDate = new Date(utcDateTimeString);
-    // Add 2 hours to convert from UTC to CEST
-    const localDate = new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
-    return format(localDate, "yyyy-MM-dd'T'HH:mm:ss");
+    const cestDate = new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
+    return format(cestDate, "yyyy-MM-dd'T'HH:mm:ss");
   };
 
   const fetchEventTags = async (eventId: string) => {
@@ -380,11 +375,6 @@ export function CreateEventSheet({
       setOverlapValidationError(null);
       return true;
     }
-    
-    // Convert to UTC for comparison with database values
-    const startUTC = new Date(convertCESTToUTC(newEvent.start_date));
-    const endUTC = new Date(convertCESTToUTC(newEvent.end_date));
-    
     let query = supabase
       .from('events')
       .select('id, title, start_date, end_date')
@@ -402,11 +392,9 @@ export function CreateEventSheet({
     }
     
     const overlaps = (data || []).find((e) => {
-      const eStart = new Date(e.start_date);
-      const eEnd = new Date(e.end_date);
       return (
-        eStart < endUTC &&
-        eEnd > startUTC
+        new Date(e.start_date) < end &&
+        new Date(e.end_date) > start
       );
     });
     
@@ -442,12 +430,6 @@ export function CreateEventSheet({
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
-      console.log("Submit button clicked. Current state:", { 
-        userProfile, 
-        isEditMode,
-        availabilityError: availabilityValidationError, 
-        overlapError: overlapValidationError
-      });
       
       if (!newEvent.title) {
         toast({
@@ -532,8 +514,7 @@ export function CreateEventSheet({
         return;
       }
 
-      const overlapValid = await checkForEventOverlap();
-      if (!overlapValid) {
+      if (!await checkForEventOverlap()) {
         toast({
           title: "Room is already booked",
           description: overlapValidationError || "There is an overlapping event for this room.",
@@ -543,17 +524,6 @@ export function CreateEventSheet({
         return;
       }
 
-      // Convert times from CEST to UTC for database storage
-      const utcStartDate = convertCESTToUTC(newEvent.start_date);
-      const utcEndDate = convertCESTToUTC(newEvent.end_date);
-      
-      console.log("Saving dates:", {
-        cestStart: newEvent.start_date,
-        cestEnd: newEvent.end_date,
-        utcStart: utcStartDate,
-        utcEnd: utcEndDate
-      });
-
       if (isEditMode) {
         console.log("Updating event:", event.id);
         const { data, error } = await supabase
@@ -561,8 +531,8 @@ export function CreateEventSheet({
           .update({
             title: newEvent.title,
             description: newEvent.description || null,
-            start_date: utcStartDate,
-            end_date: utcEndDate,
+            start_date: convertToUTC(newEvent.start_date),
+            end_date: convertToUTC(newEvent.end_date),
             location_id: useCustomLocation ? null : newEvent.location_id,
             location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
@@ -602,8 +572,8 @@ export function CreateEventSheet({
           .insert({
             title: newEvent.title,
             description: newEvent.description || null,
-            start_date: utcStartDate,
-            end_date: utcEndDate,
+            start_date: convertToUTC(newEvent.start_date),
+            end_date: convertToUTC(newEvent.end_date),
             location_id: useCustomLocation ? null : newEvent.location_id,
             location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
@@ -633,7 +603,6 @@ export function CreateEventSheet({
       resetForm();
       onOpenChange(false);
       onSuccess();
-      
     } catch (error) {
       console.error('Error saving event:', error);
       toast({
@@ -699,6 +668,14 @@ export function CreateEventSheet({
         end_date: format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     }
+  };
+
+  const handleLocationChange = (locationId: string) => {
+    setNewEvent({
+      ...newEvent,
+      location_id: locationId,
+      location_text: null
+    });
   };
 
   return (
@@ -946,14 +923,6 @@ export function CreateEventSheet({
                   />
                 ))}
               </div>
-            </div>
-
-            {/* Debug information */}
-            <div className="text-xs text-gray-500 border-t pt-2 mt-2">
-              <p>Button disabled state: {isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError || !!overlapValidationError ? 'true' : 'false'}</p>
-              {availabilityValidationError && <p>Availability error: {availabilityValidationError}</p>}
-              {overlapValidationError && <p>Overlap error: {overlapValidationError}</p>}
-              <p>User profile: {userProfile ? 'found' : 'not found'}</p>
             </div>
 
             <Button 

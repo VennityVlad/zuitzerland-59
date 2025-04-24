@@ -34,6 +34,7 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
+  const TIME_ZONE = "Europe/Zurich";
 
   const { data: events, isLoading: isLoadingEvents } = useQuery({
     queryKey: ["calendar-events", format(currentMonth, "yyyy-MM")],
@@ -80,7 +81,6 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
     setCurrentMonth(newMonth);
   };
 
-  // Convert UTC to CEST (for displaying in UI)
   const convertUTCToCEST = (utcDateString: string): Date => {
     const utcDate = new Date(utcDateString);
     // Add 2 hours to convert from UTC to CEST
