@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronRight } from "lucide-react";
@@ -56,7 +56,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
 
   return (
     <div className="relative">
-      <ScrollArea className="w-full pb-4" orientation="horizontal">
+      <ScrollArea className="w-full pb-4">
         <div className="flex gap-2 pb-2 pr-12">
           {displayTags.map(tag => (
             <Button
@@ -73,6 +73,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
             </Button>
           ))}
         </div>
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
       
       {tags.length > visibleTagCount && (
