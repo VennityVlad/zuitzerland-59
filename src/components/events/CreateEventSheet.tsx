@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -958,3 +959,45 @@ export function CreateEventSheet({
               <Label>Event Color</Label>
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map((color) => (
+                  <div
+                    key={color.value}
+                    className={`h-8 w-8 rounded-full cursor-pointer border-2 ${
+                      newEvent.color === color.value ? 'border-gray-900' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    onClick={() => setNewEvent({...newEvent, color: color.value})}
+                    title={color.label}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <Button 
+              className="w-full" 
+              onClick={handleSubmit} 
+              disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError || !!overlapValidationError}
+            >
+              {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
+            </Button>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+interface NewEvent {
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  location_id: string | null;
+  location_text: string | null;
+  color: string;
+  is_all_day: boolean;
+  created_by: string;
+  av_needs?: string;
+  speakers?: string;
+  link?: string;
+  timezone: string;
+}
