@@ -296,13 +296,7 @@ const Events = () => {
     });
   };
 
-  const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
-    if (isAllDay) {
-      return "All day";
-    }
-    
-    return `${formatInTimeZone(new Date(startDate), timezone, "h:mm a")} - ${formatInTimeZone(new Date(endDate), timezone, "h:mm a")} (${timezone.split('/')[1].replace('_', ' ')})`;
-  };
+  const TIME_ZONE = "Europe/Zurich";
 
   const formatDateForSidebar = (date: Date) => {
     return (
@@ -322,6 +316,14 @@ const Events = () => {
     }
     
     return `${formatInTimeZone(start, TIME_ZONE, "MMM d")} - ${formatInTimeZone(end, TIME_ZONE, "MMM d, yyyy")}`;
+  };
+
+  const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
+    if (isAllDay) {
+      return "All day";
+    }
+    
+    return `${formatInTimeZone(new Date(startDate), timezone, "h:mm a")} - ${formatInTimeZone(new Date(endDate), timezone, "h:mm a")} (${timezone.split('/')[1].replace('_', ' ')})`;
   };
 
   const currentDate = new Date();
