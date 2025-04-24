@@ -301,8 +301,8 @@ const Events = () => {
   const formatDateForSidebar = (date: Date) => {
     return (
       <div className="flex flex-col items-center">
-        <div className="text-lg font-semibold">{formatInTimeZone(date, TIME_ZONE, "MMM d")}</div>
-        <div className="text-sm text-gray-500">{formatInTimeZone(date, TIME_ZONE, "EEEE")}</div>
+        <div className="text-lg font-semibold">{format(date, "MMM d")}</div>
+        <div className="text-sm text-gray-500">{format(date, "EEEE")}</div>
       </div>
     );
   };
@@ -312,17 +312,17 @@ const Events = () => {
     const end = new Date(endDate);
     
     if (isSameDay(start, end)) {
-      return formatInTimeZone(start, TIME_ZONE, "MMM d, yyyy");
+      return format(start, "MMM d, yyyy");
     }
     
-    return `${formatInTimeZone(start, TIME_ZONE, "MMM d")} - ${formatInTimeZone(end, TIME_ZONE, "MMM d, yyyy")}`;
+    return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
   };
 
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
     if (isAllDay) {
       return "All day";
     }
-    
+
     return `${formatInTimeZone(new Date(startDate), timezone, "h:mm a")} - ${formatInTimeZone(new Date(endDate), timezone, "h:mm a")} (${timezone.split('/')[1].replace('_', ' ')})`;
   };
 
