@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
@@ -46,7 +46,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
     return (
       <div className="w-full overflow-x-auto pb-4 flex gap-2">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-10 w-28 bg-gray-200 animate-pulse rounded-full"></div>
+          <div key={i} className="h-9 w-24 bg-gray-200 animate-pulse rounded-full"></div>
         ))}
       </div>
     );
@@ -62,9 +62,10 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
             <Button
               key={tag.id}
               variant={selectedTags.includes(tag.id) ? "default" : "outline"}
-              className={`rounded-full whitespace-nowrap ${
+              size="sm"
+              className={`rounded-full whitespace-nowrap h-9 px-4 text-sm font-medium transition-colors ${
                 selectedTags.includes(tag.id) 
-                  ? "bg-primary text-primary-foreground" 
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
                   : "bg-secondary/50 text-secondary-foreground hover:bg-secondary/80"
               }`}
               onClick={() => toggleTag(tag.id)}
@@ -80,11 +81,11 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
         <div className="absolute right-0 top-0 bottom-0 flex items-center">
           <Button 
             variant="ghost" 
-            size="icon" 
-            className="rounded-full bg-white/80 backdrop-blur-sm shadow-sm border"
+            size="icon"
+            className="h-9 w-9 rounded-full bg-white/80 backdrop-blur-sm shadow-sm border"
             onClick={() => setShowMore(!showMore)}
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       )}
