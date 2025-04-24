@@ -1,29 +1,10 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { Calendar } from "@/components/ui/calendar";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { format, startOfMonth, isSameDay, isWithinInterval, parseISO, isSameMonth } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-import { DayContent } from "react-day-picker";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState } from "react";
+import { format, addMonths, subMonths } from "date-fns";
 import { Button } from "@/components/ui/button";
-
-interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  av_needs?: string | null;
-  speakers?: string | null;
-}
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface EventCalendarProps {
   onSelectDate?: (date: Date | undefined) => void;
@@ -33,31 +14,44 @@ interface EventCalendarProps {
 export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const { toast } = useToast();
 
-  const { data: events, isLoading: isLoadingEvents } = useQuery({
-    queryKey: ["calendar-events", format(currentMonth, "yyyy-MM")],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .order("start_date", { ascending: true });
+  const weekDays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
-      if (error) {
-        toast({
-          title: "Error fetching events",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
-      }
-
-      return data as Event[];
+  const generateCalendarDays = () => {
+    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    
+    let days: (Date | null)[] = [];
+    
+    // Get the day of the week for the first day (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    let firstDayOfWeek = firstDay.getDay();
+    // Adjust for Monday as first day of week
+    firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+    
+    // Add null for days before the first day of the month
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      days.push(null);
     }
-  });
+    
+    // Add all days of the month
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      days.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
+    }
+    
+    // Add null for remaining days to complete the grid
+    const remainingDays = 42 - days.length; // 6 rows * 7 days = 42
+    for (let i = 0; i < remainingDays; i++) {
+      days.push(null);
+    }
+    
+    return days;
+  };
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date && selectedDate && isSameDay(date, selectedDate)) {
+  const handleDateSelect = (date: Date) => {
+    if (date && selectedDate && 
+        date.getDate() === selectedDate.getDate() &&
+        date.getMonth() === selectedDate.getMonth() &&
+        date.getFullYear() === selectedDate.getFullYear()) {
       setSelectedDate(undefined);
       if (onSelectDate) onSelectDate(undefined);
     } else {
@@ -66,140 +60,86 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
     }
   };
 
-  const handleMonthChange = (date: Date) => {
-    setCurrentMonth(startOfMonth(date));
+  const handlePreviousMonth = () => {
+    setCurrentMonth(prev => subMonths(prev, 1));
   };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const newMonth = new Date(currentMonth);
-    if (direction === 'prev') {
-      newMonth.setMonth(newMonth.getMonth() - 1);
-    } else {
-      newMonth.setMonth(newMonth.getMonth() + 1);
-    }
-    setCurrentMonth(newMonth);
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => addMonths(prev, 1));
   };
 
-  const getDayEvents = (day: Date): Event[] => {
-    if (!events) return [];
-    
-    return events.filter(event => {
-      const startDate = new Date(event.start_date);
-      const endDate = new Date(event.end_date);
-      
-      return isWithinInterval(day, { start: startDate, end: endDate }) ||
-             isSameDay(day, startDate) || 
-             isSameDay(day, endDate);
-    });
-  };
-
-  const renderDay = (date: Date, modifiers: Record<string, boolean>) => {
-    const dayEvents = getDayEvents(date);
-    const hasEvents = dayEvents.length > 0;
-    
-    return (
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className={`relative h-9 w-9 p-0 flex items-center justify-center rounded-md ${
-              isSameDay(date, selectedDate || new Date(0)) ? "bg-primary text-primary-foreground" : 
-              modifiers.today ? "bg-accent text-accent-foreground" : ""
-            }`}>
-              <span>{format(date, "d")}</span>
-              {hasEvents && (
-                <div className="absolute -bottom-1 flex gap-0.5 justify-center">
-                  {dayEvents.slice(0, 3).map((event, i) => (
-                    <div 
-                      key={i}
-                      className="h-1 w-1 rounded-full" 
-                      style={{ backgroundColor: event.color }}
-                    />
-                  ))}
-                  {dayEvents.length > 3 && <div className="h-1 w-1 rounded-full bg-gray-400" />}
-                </div>
-              )}
-            </div>
-          </TooltipTrigger>
-          {hasEvents && (
-            <TooltipContent side="bottom" className="p-2 max-w-xs">
-              <div className="space-y-1">
-                {dayEvents.map((event) => (
-                  <div key={event.id} className="text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: event.color }}
-                      />
-                      <span className="font-semibold">{event.title}</span>
-                    </div>
-                    {(event.location_text || event.location_id) && (
-                      <div className="text-[10px] text-gray-500 ml-3.5">{event.location_text || `Location ID: ${event.location_id}`}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </TooltipContent>
-          )}
-        </Tooltip>
-      </TooltipProvider>
-    );
-  };
-
-  const CustomDayContent = (props: { date: Date; displayMonth: Date }) => {
-    const { date } = props;
-    const modifiers = {
-      selected: selectedDate ? isSameDay(date, selectedDate) : false,
-      today: isSameDay(date, new Date())
-    };
-    
-    return renderDay(date, modifiers);
-  };
-
-  const formatMonthTitle = (month: Date) => {
-    return format(month, "MMMM yyyy");
-  };
+  const calendarDays = generateCalendarDays();
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-100 p-4 ${className}`}>
+    <Card className={cn("bg-white p-4", className)}>
       <h4 className="text-lg font-semibold text-gray-900 mb-4">Event Calendar</h4>
       
       <div className="flex items-center justify-between mb-4">
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={() => navigateMonth('prev')}
+          onClick={handlePreviousMonth}
           className="h-8 w-8 p-0"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h5 className="font-medium">{formatMonthTitle(currentMonth)}</h5>
+        <h5 className="font-medium">{format(currentMonth, "MMMM yyyy")}</h5>
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={() => navigateMonth('next')}
+          onClick={handleNextMonth}
           className="h-8 w-8 p-0"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
-      <Calendar 
-        mode="single"
-        month={currentMonth}
-        onMonthChange={handleMonthChange}
-        selected={selectedDate}
-        onSelect={handleDateSelect}
-        modifiersStyles={{
-          selected: { backgroundColor: 'var(--primary)' },
-          today: { backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }
-        }}
-        components={{
-          DayContent: CustomDayContent
-        }}
-        className="pointer-events-auto [&_.rdp-nav]:hidden"
-        weekStartsOn={1}
-      />
-      
+      <div className="grid grid-cols-7 gap-1">
+        {weekDays.map(day => (
+          <div 
+            key={day} 
+            className="text-center text-sm font-medium text-gray-500 p-2"
+          >
+            {day}
+          </div>
+        ))}
+        
+        {calendarDays.map((date, index) => {
+          if (!date) {
+            return (
+              <div 
+                key={`empty-${index}`} 
+                className="aspect-square p-2 text-center text-gray-400"
+              />
+            );
+          }
+
+          const isSelected = selectedDate && 
+            date.getDate() === selectedDate.getDate() &&
+            date.getMonth() === selectedDate.getMonth() &&
+            date.getFullYear() === selectedDate.getFullYear();
+
+          const isToday = 
+            date.getDate() === new Date().getDate() &&
+            date.getMonth() === new Date().getMonth() &&
+            date.getFullYear() === new Date().getFullYear();
+
+          return (
+            <button
+              key={date.toISOString()}
+              onClick={() => handleDateSelect(date)}
+              className={cn(
+                "aspect-square p-2 text-sm relative hover:bg-gray-100 rounded-md transition-colors",
+                isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                isToday && !isSelected && "bg-accent text-accent-foreground",
+              )}
+            >
+              {date.getDate()}
+            </button>
+          );
+        })}
+      </div>
+
       {selectedDate && (
         <div className="mt-4 pt-3 border-t border-gray-100">
           <div className="flex items-center justify-between">
@@ -209,7 +149,7 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => handleDateSelect(undefined)}
+              onClick={() => handleDateSelect(selectedDate)}
               className="h-7 text-xs"
             >
               Clear
@@ -217,6 +157,6 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
