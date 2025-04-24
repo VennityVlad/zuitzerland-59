@@ -171,17 +171,18 @@ export function CreateEventSheet({
     }
   }, [event]);
 
-  const convertToUTC = (dateTimeString: string): string => {
-    const cestDate = parseISO(dateTimeString);
-    const utcDate = new Date(cestDate.getTime() - 2 * 60 * 60 * 1000);
-    return format(utcDate, "yyyy-MM-dd'T'HH:mm:ss");
-  };
+  // Remove the timezone conversion functions that are causing the offset
+  // const convertToUTC = (dateTimeString: string): string => {
+  //   const cestDate = parseISO(dateTimeString);
+  //   const utcDate = new Date(cestDate.getTime() - 2 * 60 * 60 * 1000);
+  //   return format(utcDate, "yyyy-MM-dd'T'HH:mm:ss");
+  // };
 
-  const convertToLocal = (utcDateTimeString: string): string => {
-    const utcDate = new Date(utcDateTimeString);
-    const cestDate = new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
-    return format(cestDate, "yyyy-MM-dd'T'HH:mm:ss");
-  };
+  // const convertToLocal = (utcDateTimeString: string): string => {
+  //   const utcDate = new Date(utcDateTimeString);
+  //   const cestDate = new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
+  //   return format(cestDate, "yyyy-MM-dd'T'HH:mm:ss");
+  // };
 
   const fetchEventTags = async (eventId: string) => {
     try {
@@ -538,24 +539,28 @@ export function CreateEventSheet({
         return;
       }
 
+      // Store dates as-is without timezone conversion
+      // This will preserve the selected times without offsets
+      const eventData = {
+        title: newEvent.title,
+        description: newEvent.description || null,
+        start_date: newEvent.start_date,
+        end_date: newEvent.end_date,
+        location_id: useCustomLocation ? null : newEvent.location_id,
+        location_text: useCustomLocation ? newEvent.location_text : null,
+        color: newEvent.color,
+        is_all_day: newEvent.is_all_day,
+        av_needs: newEvent.av_needs || null,
+        speakers: newEvent.speakers || null,
+        link: newEvent.link || null,
+        timezone: newEvent.timezone
+      };
+
       if (isEditMode) {
         console.log("Updating event:", event.id);
         const { data, error } = await supabase
           .from('events')
-          .update({
-            title: newEvent.title,
-            description: newEvent.description || null,
-            start_date: newEvent.start_date,
-            end_date: newEvent.end_date,
-            location_id: useCustomLocation ? null : newEvent.location_id,
-            location_text: useCustomLocation ? newEvent.location_text : null,
-            color: newEvent.color,
-            is_all_day: newEvent.is_all_day,
-            av_needs: newEvent.av_needs || null,
-            speakers: newEvent.speakers || null,
-            link: newEvent.link || null,
-            timezone: newEvent.timezone
-          })
+          .update(eventData)
           .eq('id', event.id)
           .select();
 
@@ -585,19 +590,8 @@ export function CreateEventSheet({
         const { data, error } = await supabase
           .from('events')
           .insert({
-            title: newEvent.title,
-            description: newEvent.description || null,
-            start_date: newEvent.start_date,
-            end_date: newEvent.end_date,
-            location_id: useCustomLocation ? null : newEvent.location_id,
-            location_text: useCustomLocation ? newEvent.location_text : null,
-            color: newEvent.color,
-            is_all_day: newEvent.is_all_day,
-            av_needs: newEvent.av_needs || null,
-            speakers: newEvent.speakers || null,
-            link: newEvent.link || null,
-            created_by: userProfile?.id,
-            timezone: newEvent.timezone
+            ...eventData,
+            created_by: userProfile?.id
           })
           .select()
           .single();
