@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
-import { toZonedTime, formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
@@ -133,12 +133,10 @@ const Events = () => {
     }
   });
 
-  // Apply filters to events
   const filteredEvents = React.useMemo(() => {
     if (!events) return [];
     
     return events.filter(event => {
-      // Filter by tags if any are selected
       if (selectedTags.length > 0) {
         const eventTagIds = event.event_tags?.map(tag => tag.tags.id) || [];
         if (!selectedTags.some(tagId => eventTagIds.includes(tagId))) {
@@ -146,7 +144,6 @@ const Events = () => {
         }
       }
       
-      // Filter by selected date if one is chosen
       if (selectedDate) {
         const startDate = new Date(event.start_date);
         const endDate = new Date(event.end_date);
@@ -250,7 +247,6 @@ const Events = () => {
   };
 
   const generateICalEvent = (event: Event) => {
-    // Get the event dates in UTC (as stored in the database)
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
     
@@ -302,7 +298,6 @@ const Events = () => {
   
   const convertUTCToCEST = (utcDateString: string): Date => {
     const utcDate = new Date(utcDateString);
-    // Add 2 hours to convert from UTC to CEST
     return new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
   };
   
@@ -311,32 +306,30 @@ const Events = () => {
       return "All day";
     }
     
-    // Convert UTC dates from database to CEST time zone for display
-    const start = convertUTCToCEST(startDate);
-    const end = convertUTCToCEST(endDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
     
-    return `${format(start, "h:mm a")} - ${format(end, "h:mm a")} CEST`;
+    return `${formatInTimeZone(start, TIME_ZONE, "h:mm a")} - ${formatInTimeZone(end, TIME_ZONE, "h:mm a")} CEST`;
   };
 
   const formatDateForSidebar = (date: Date) => {
     return (
       <div className="flex flex-col items-center">
-        <div className="text-lg font-semibold">{format(date, "MMM d")}</div>
-        <div className="text-sm text-gray-500">{format(date, "EEEE")}</div>
+        <div className="text-lg font-semibold">{formatInTimeZone(date, TIME_ZONE, "MMM d")}</div>
+        <div className="text-sm text-gray-500">{formatInTimeZone(date, TIME_ZONE, "EEEE")}</div>
       </div>
     );
   };
 
   const formatDateRange = (startDate: string, endDate: string, isAllDay: boolean) => {
-    // Convert UTC dates from database to CEST time zone for display
-    const start = convertUTCToCEST(startDate);
-    const end = convertUTCToCEST(endDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
     
     if (isSameDay(start, end)) {
-      return `${format(start, "MMM d, yyyy")}`;
+      return formatInTimeZone(start, TIME_ZONE, "MMM d, yyyy");
     }
     
-    return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+    return `${formatInTimeZone(start, TIME_ZONE, "MMM d")} - ${formatInTimeZone(end, TIME_ZONE, "MMM d, yyyy")}`;
   };
 
   const currentDate = new Date();

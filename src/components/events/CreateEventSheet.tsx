@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -138,8 +137,8 @@ export function CreateEventSheet({
       setNewEvent({
         title: event.title,
         description: event.description || "",
-        start_date: convertToLocal(event.start_date),
-        end_date: convertToLocal(event.end_date),
+        start_date: event.start_date,
+        end_date: event.end_date,
         location_id: event.location_id,
         location_text: event.location_text || "",
         color: event.color,
@@ -533,8 +532,8 @@ export function CreateEventSheet({
           .update({
             title: newEvent.title,
             description: newEvent.description || null,
-            start_date: convertToUTC(newEvent.start_date),
-            end_date: convertToUTC(newEvent.end_date),
+            start_date: newEvent.start_date,
+            end_date: newEvent.end_date,
             location_id: useCustomLocation ? null : newEvent.location_id,
             location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
@@ -574,8 +573,8 @@ export function CreateEventSheet({
           .insert({
             title: newEvent.title,
             description: newEvent.description || null,
-            start_date: convertToUTC(newEvent.start_date),
-            end_date: convertToUTC(newEvent.end_date),
+            start_date: newEvent.start_date,
+            end_date: newEvent.end_date,
             location_id: useCustomLocation ? null : newEvent.location_id,
             location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
