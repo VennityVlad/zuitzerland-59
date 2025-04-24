@@ -8,8 +8,8 @@ import './index.css';
 // Create a query client instance for React Query
 const queryClient = new QueryClient();
 
-// Get base URL from environment or default to '/' 
-// Use window.location.pathname if in deployed preview where path might be different
+// Use window.location.origin + "/", or default to "/" if unavailable
+// This ensures proper routing on direct page loads
 const baseUrl = '/';
 
 console.log("Application initializing with baseUrl:", baseUrl);

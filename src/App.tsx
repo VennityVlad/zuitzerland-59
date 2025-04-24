@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -6,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import Index from "./pages/Index";
@@ -300,7 +301,8 @@ function AppRoutes() {
         }
       />
       <Route path="/404" element={<NotFound />} />
-      <Route path="*" element={<NotFound />} />
+      {/* Add a catch-all route that renders the NotFound component for any unmatched routes */}
+      <Route path="*" element={<Navigate to="/404" />} />
     </Routes>
   );
 }
