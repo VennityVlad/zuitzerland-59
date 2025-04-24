@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
-import { zonedTimeToUtc, utcToZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
@@ -262,8 +262,8 @@ const Events = () => {
   };
 
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean) => {
-    const start = utcToZonedTime(parseISO(startDate), "Europe/Zurich");
-    const end = utcToZonedTime(parseISO(endDate), "Europe/Zurich");
+    const start = toZonedTime(parseISO(startDate), "Europe/Zurich");
+    const end = toZonedTime(parseISO(endDate), "Europe/Zurich");
     
     if (isAllDay) {
       return "All day";
@@ -493,7 +493,7 @@ const renderEventsList = (
   return (
     <div className="space-y-8">
       {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
-        const date = utcToZonedTime(new Date(dateEvents[0].start_date), "Europe/Zurich");
+        const date = toZonedTime(new Date(dateEvents[0].start_date), "Europe/Zurich");
         return (
           <div key={dateKey} className="relative">
             <div className="flex flex-col sm:flex-row">
