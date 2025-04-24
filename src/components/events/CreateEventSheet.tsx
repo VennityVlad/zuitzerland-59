@@ -429,6 +429,26 @@ export function CreateEventSheet({
         return;
       }
 
+      if (useCustomLocation && !newEvent.location_text) {
+        toast({
+          title: "Error",
+          description: "Please enter a custom location",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!useCustomLocation && !newEvent.location_id) {
+        toast({
+          title: "Error",
+          description: "Please select a location",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       if (newEvent.link && !validateUrl(newEvent.link)) {
         toast({
           title: "Error",

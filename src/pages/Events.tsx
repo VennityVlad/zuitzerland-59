@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
+import { zonedTimeToUtc, utcToZonedTime } from "date-fns-tz";
 import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
@@ -261,14 +262,14 @@ const Events = () => {
   };
 
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean) => {
-    const start = parseISO(startDate);
-    const end = parseISO(endDate);
+    const start = utcToZonedTime(parseISO(startDate), "Europe/Zurich");
+    const end = utcToZonedTime(parseISO(endDate), "Europe/Zurich");
     
     if (isAllDay) {
       return "All day";
     }
     
-    return `${format(start, "h:mm a")} ${end ? `- ${format(end, "h:mm a")}` : ""}`;
+    return `${format(start, "h:mm a")} - ${format(end, "h:mm a")} CEST`;
   };
 
   const formatDateForSidebar = (date: Date) => {
@@ -492,7 +493,7 @@ const renderEventsList = (
   return (
     <div className="space-y-8">
       {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
-        const date = new Date(dateEvents[0].start_date);
+        const date = utcToZonedTime(new Date(dateEvents[0].start_date), "Europe/Zurich");
         return (
           <div key={dateKey} className="relative">
             <div className="flex flex-col sm:flex-row">
