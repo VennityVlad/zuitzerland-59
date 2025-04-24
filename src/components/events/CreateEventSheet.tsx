@@ -85,7 +85,7 @@ const getInitialStartDate = () => {
   const now = new Date();
   const zonedNow = toZonedTime(now, TIME_ZONE);
   const nextHour = startOfHour(addHours(zonedNow, 1));
-  return format(fromZonedTime(nextHour, TIME_ZONE), "yyyy-MM-dd'T'HH:mm:ss");
+  return format(nextHour, "yyyy-MM-dd'T'HH:mm:ss");
 };
 
 const getInitialEndDate = (startDate: string) => {
@@ -610,52 +610,50 @@ export function CreateEventSheet({
       ? parseISO(newEvent.start_date)
       : parseISO(newEvent.end_date);
     
-    const zonedCurrentDate = toZonedTime(currentDate, TIME_ZONE);
-    const hours = zonedCurrentDate.getHours();
-    const minutes = zonedCurrentDate.getMinutes();
+    const hours = currentDate.getHours();
+    const minutes = currentDate.getMinutes();
     
-    const zonedNewDate = toZonedTime(date, TIME_ZONE);
-    zonedNewDate.setHours(hours);
-    zonedNewDate.setMinutes(minutes);
-    
-    const newUtcDate = fromZonedTime(zonedNewDate, TIME_ZONE);
+    const newDate = new Date(date);
+    newDate.setHours(hours);
+    newDate.setMinutes(minutes);
     
     if (type === 'start') {
-      const newStartDate = format(newUtcDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
       setNewEvent(prev => ({
         ...prev,
         start_date: newStartDate,
-        end_date: format(addHours(newUtcDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     } else {
       setNewEvent(prev => ({
         ...prev,
-        end_date: format(newUtcDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     }
   };
 
   const handleTimeChange = (type: 'start' | 'end', timeString: string) => {
     const [hours, minutes] = timeString.split(':').map(Number);
-    const date = parseISO(type === 'start' ? newEvent.start_date : newEvent.end_date);
-    const zonedDate = toZonedTime(date, TIME_ZONE);
     
-    zonedDate.setHours(hours);
-    zonedDate.setMinutes(minutes);
+    const currentDate = type === 'start' 
+      ? parseISO(newEvent.start_date) 
+      : parseISO(newEvent.end_date);
     
-    const utcDate = fromZonedTime(zonedDate, TIME_ZONE);
+    const newDate = new Date(currentDate);
+    newDate.setHours(hours);
+    newDate.setMinutes(minutes);
     
     if (type === 'start') {
-      const newStartDate = format(utcDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
       setNewEvent(prev => ({
         ...prev,
         start_date: newStartDate,
-        end_date: format(addHours(utcDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     } else {
       setNewEvent(prev => ({
         ...prev,
-        end_date: format(utcDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     }
   };
