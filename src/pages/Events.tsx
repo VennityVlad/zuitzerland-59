@@ -55,6 +55,8 @@ interface Event {
   }[] | null;
   av_needs?: string | null;
   speakers?: string | null;
+  link?: string | null;
+  timezone: string;
 }
 
 interface EventWithProfile extends Event {
