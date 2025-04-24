@@ -85,7 +85,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
             className="h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm shadow-sm border"
             onClick={() => setShowMore(!showMore)}
           >
-            <ChevronRight className="h-3.5 w-3.5" />
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showMore ? 'rotate-180' : ''}`} />
           </Button>
         </div>
       )}
