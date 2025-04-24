@@ -195,7 +195,8 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
         components={{
           DayContent: CustomDayContent
         }}
-        className="pointer-events-auto"
+        className="pointer-events-auto [&_.rdp-nav]:hidden"
+        weekStartsOn={1}
       />
       
       {selectedDate && (
