@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -17,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { TagSelector } from "@/components/events/TagSelector";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Type definitions
 interface CreateEventSheetProps {
@@ -722,6 +724,95 @@ export function CreateEventSheet({
                 />
               </div>
 
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is-all-day"
+                  checked={newEvent.is_all_day}
+                  onCheckedChange={(checked) => setNewEvent({...newEvent, is_all_day: checked})}
+                />
+                <Label htmlFor="is-all-day">All day event</Label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEvent.start_date ? format(parseISO(newEvent.start_date), 'MMM d, yyyy') : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newEvent.start_date ? parseISO(newEvent.start_date) : undefined}
+                        onSelect={(date) => handleDateChange('start', date)}
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {!newEvent.is_all_day && (
+                  <div className="space-y-2">
+                    <Label htmlFor="start-time">Start Time</Label>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <Input 
+                        id="start-time" 
+                        type="time"
+                        value={format(parseISO(newEvent.start_date), 'HH:mm')}
+                        onChange={(e) => handleTimeChange('start', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
+                        onSelect={(date) => handleDateChange('end', date)}
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {!newEvent.is_all_day && (
+                  <div className="space-y-2">
+                    <Label htmlFor="end-time">End Time</Label>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <Input 
+                        id="end-time" 
+                        type="time"
+                        value={format(parseISO(newEvent.end_date), 'HH:mm')}
+                        onChange={(e) => handleTimeChange('end', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label>Location <span className="text-red-500">*</span></Label>
                 <div className="space-y-4">
@@ -741,23 +832,34 @@ export function CreateEventSheet({
                       required
                     />
                   ) : (
-                    <Select
-                      value={newEvent.location_id || ''}
-                      onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                            {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <>
+                      <Select
+                        value={newEvent.location_id || ''}
+                        onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                              {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {overlapValidationError && (
+                        <Alert variant="destructive" className="mt-2">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription className="ml-2">
+                            {overlapValidationError}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -817,95 +919,6 @@ export function CreateEventSheet({
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is-all-day"
-                checked={newEvent.is_all_day}
-                onCheckedChange={(checked) => setNewEvent({...newEvent, is_all_day: checked})}
-              />
-              <Label htmlFor="is-all-day">All day event</Label>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.start_date ? format(parseISO(newEvent.start_date), 'MMM d, yyyy') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newEvent.start_date ? parseISO(newEvent.start_date) : undefined}
-                      onSelect={(date) => handleDateChange('start', date)}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {!newEvent.is_all_day && (
-                <div className="space-y-2">
-                  <Label htmlFor="start-time">Start Time</Label>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <Input 
-                      id="start-time" 
-                      type="time"
-                      value={format(parseISO(newEvent.start_date), 'HH:mm')}
-                      onChange={(e) => handleTimeChange('start', e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
-                      onSelect={(date) => handleDateChange('end', date)}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {!newEvent.is_all_day && (
-                <div className="space-y-2">
-                  <Label htmlFor="end-time">End Time</Label>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <Input 
-                      id="end-time" 
-                      type="time"
-                      value={format(parseISO(newEvent.end_date), 'HH:mm')}
-                      onChange={(e) => handleTimeChange('end', e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="space-y-2">
