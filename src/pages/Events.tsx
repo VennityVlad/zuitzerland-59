@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 import { TagFilter } from "@/components/events/TagFilter";
 import { EventCalendar } from "@/components/calendar/EventCalendar";
+import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -319,11 +320,7 @@ const Events = () => {
   };
 
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
-    if (isAllDay) {
-      return "All day";
-    }
-
-    return `${formatInTimeZone(new Date(startDate), timezone, "h:mm a")} - ${formatInTimeZone(new Date(endDate), timezone, "h:mm a")} (${timezone.split('/')[1].replace('_', ' ')})`;
+    return formatTimeRange(startDate, endDate, isAllDay, timezone);
   };
 
   const currentDate = new Date();
