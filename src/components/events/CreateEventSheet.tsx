@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { Calendar as CalendarIcon, Clock, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -84,8 +83,7 @@ const TIME_ZONE = "Europe/Zurich";
 
 const getInitialStartDate = () => {
   const now = new Date();
-  const zonedNow = toZonedTime(now, TIME_ZONE);
-  const nextHour = startOfHour(addHours(zonedNow, 1));
+  const nextHour = startOfHour(addHours(now, 1));
   return format(nextHour, "yyyy-MM-dd'T'HH:mm:ss");
 };
 
@@ -161,15 +159,15 @@ export function CreateEventSheet({
   }, [event]);
 
   const convertToUTC = (dateTimeString: string): string => {
-    const localDate = toZonedTime(new Date(dateTimeString), TIME_ZONE);
-    const utcDate = fromZonedTime(localDate, 'UTC');
+    const cestDate = parseISO(dateTimeString);
+    const utcDate = new Date(cestDate.getTime() - 2 * 60 * 60 * 1000);
     return format(utcDate, "yyyy-MM-dd'T'HH:mm:ss");
   };
 
   const convertToLocal = (utcDateTimeString: string): string => {
     const utcDate = new Date(utcDateTimeString);
-    const localDate = toZonedTime(utcDate, TIME_ZONE);
-    return format(localDate, "yyyy-MM-dd'T'HH:mm:ss");
+    const cestDate = new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
+    return format(cestDate, "yyyy-MM-dd'T'HH:mm:ss");
   };
 
   const fetchEventTags = async (eventId: string) => {

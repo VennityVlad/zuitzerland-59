@@ -46,7 +46,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
     return (
       <div className="w-full overflow-x-auto pb-4 flex gap-2">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-9 w-24 bg-gray-200 animate-pulse rounded-full"></div>
+          <div key={i} className="h-8 w-24 bg-gray-200 animate-pulse rounded-full"></div>
         ))}
       </div>
     );
@@ -63,7 +63,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
               key={tag.id}
               variant={selectedTags.includes(tag.id) ? "default" : "outline"}
               size="sm"
-              className={`rounded-full whitespace-nowrap h-9 px-4 text-sm font-medium transition-colors ${
+              className={`rounded-full whitespace-nowrap h-8 px-3 text-xs font-medium transition-colors ${
                 selectedTags.includes(tag.id) 
                   ? "bg-primary text-primary-foreground hover:bg-primary/90" 
                   : "bg-secondary/50 text-secondary-foreground hover:bg-secondary/80"
@@ -82,10 +82,10 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
           <Button 
             variant="ghost" 
             size="icon"
-            className="h-9 w-9 rounded-full bg-white/80 backdrop-blur-sm shadow-sm border"
+            className="h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm shadow-sm border"
             onClick={() => setShowMore(!showMore)}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
       )}

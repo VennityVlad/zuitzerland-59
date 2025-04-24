@@ -300,14 +300,20 @@ const Events = () => {
 
   const TIME_ZONE = "Europe/Zurich";
   
+  const convertUTCToCEST = (utcDateString: string): Date => {
+    const utcDate = new Date(utcDateString);
+    // Add 2 hours to convert from UTC to CEST
+    return new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
+  };
+  
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean) => {
     if (isAllDay) {
       return "All day";
     }
     
     // Convert UTC dates from database to CEST time zone for display
-    const start = toZonedTime(parseISO(startDate), TIME_ZONE);
-    const end = toZonedTime(parseISO(endDate), TIME_ZONE);
+    const start = convertUTCToCEST(startDate);
+    const end = convertUTCToCEST(endDate);
     
     return `${format(start, "h:mm a")} - ${format(end, "h:mm a")} CEST`;
   };
@@ -323,8 +329,8 @@ const Events = () => {
 
   const formatDateRange = (startDate: string, endDate: string, isAllDay: boolean) => {
     // Convert UTC dates from database to CEST time zone for display
-    const start = toZonedTime(parseISO(startDate), TIME_ZONE);
-    const end = toZonedTime(parseISO(endDate), TIME_ZONE);
+    const start = convertUTCToCEST(startDate);
+    const end = convertUTCToCEST(endDate);
     
     if (isSameDay(start, end)) {
       return `${format(start, "MMM d, yyyy")}`;
