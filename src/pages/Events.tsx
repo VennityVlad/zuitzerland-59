@@ -17,16 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CreateEventSheet } from "@/components/events/CreateEventSheet";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 
 interface Event {
   id: string;
@@ -262,12 +253,12 @@ const Events = () => {
   };
 
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean) => {
-    const start = toZonedTime(parseISO(startDate), "Europe/Zurich");
-    const end = toZonedTime(parseISO(endDate), "Europe/Zurich");
-    
     if (isAllDay) {
       return "All day";
     }
+    
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
     
     return `${format(start, "h:mm a")} - ${format(end, "h:mm a")} CEST`;
   };
@@ -493,7 +484,7 @@ const renderEventsList = (
   return (
     <div className="space-y-8">
       {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
-        const date = toZonedTime(new Date(dateEvents[0].start_date), "Europe/Zurich");
+        const date = parseISO(dateEvents[0].start_date);
         return (
           <div key={dateKey} className="relative">
             <div className="flex flex-col sm:flex-row">

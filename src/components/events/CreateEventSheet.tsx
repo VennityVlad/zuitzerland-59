@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { TagSelector } from "@/components/events/TagSelector";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // Type definitions
 interface CreateEventSheetProps {
@@ -113,6 +114,7 @@ export function CreateEventSheet({
   const [overlapValidationError, setOverlapValidationError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<{ id: string; name: string; color: string; }[]>([]);
   const [useCustomLocation, setUseCustomLocation] = useState(false);
+  const [locationRequired, setLocationRequired] = useState(false);
 
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
@@ -711,7 +713,7 @@ export function CreateEventSheet({
               </div>
 
               <div className="space-y-2">
-                <Label>Location</Label>
+                <Label>Location <span className="text-red-500">*</span></Label>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -726,11 +728,13 @@ export function CreateEventSheet({
                       value={newEvent.location_text || ''}
                       onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value, location_id: null})}
                       placeholder="Enter custom location..."
+                      required
                     />
                   ) : (
                     <Select
                       value={newEvent.location_id || ''}
                       onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
+                      required
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a location" />
