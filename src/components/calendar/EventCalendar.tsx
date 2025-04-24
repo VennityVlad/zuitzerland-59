@@ -1,9 +1,9 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Calendar } from "@/components/ui/calendar";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, isSameDay, isWithinInterval, parseISO, isSameMonth } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -81,18 +81,12 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
     setCurrentMonth(newMonth);
   };
 
-  const convertUTCToCEST = (utcDateString: string): Date => {
-    const utcDate = new Date(utcDateString);
-    // Add 2 hours to convert from UTC to CEST
-    return new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
-  };
-
   const getDayEvents = (day: Date): Event[] => {
     if (!events) return [];
     
     return events.filter(event => {
-      const startDate = convertUTCToCEST(event.start_date);
-      const endDate = convertUTCToCEST(event.end_date);
+      const startDate = new Date(event.start_date);
+      const endDate = new Date(event.end_date);
       
       return isWithinInterval(day, { start: startDate, end: endDate }) ||
              isSameDay(day, startDate) || 

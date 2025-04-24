@@ -296,13 +296,6 @@ const Events = () => {
     });
   };
 
-  const TIME_ZONE = "Europe/Zurich";
-  
-  const convertUTCToCEST = (utcDateString: string): Date => {
-    const utcDate = new Date(utcDateString);
-    return new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
-  };
-  
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
     if (isAllDay) {
       return "All day";
