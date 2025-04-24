@@ -1,15 +1,17 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronRight } from "lucide-react";
-
-interface Tag {
-  id: string;
-  name: string;
-}
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TagFilterProps {
   selectedTags: string[];
@@ -17,9 +19,8 @@ interface TagFilterProps {
 }
 
 export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
-  const [showMore, setShowMore] = useState(false);
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
-  const visibleTagCount = isMobile ? 4 : 8;
+  const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const { data: tags, isLoading } = useQuery({
     queryKey: ["event-tags"],
@@ -28,65 +29,134 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
         .from("event_tags")
         .select("*")
         .order("name");
-
       if (error) throw error;
-      return data as Tag[];
-    }
+      return data;
+    },
   });
 
   const toggleTag = (tagId: string) => {
     if (selectedTags.includes(tagId)) {
-      onTagsChange(selectedTags.filter(id => id !== tagId));
+      onTagsChange(selectedTags.filter((id) => id !== tagId));
     } else {
       onTagsChange([...selectedTags, tagId]);
     }
   };
 
-  if (isLoading || !tags) {
-    return (
-      <div className="w-full overflow-x-auto pb-4 flex gap-2">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-8 w-24 bg-gray-200 animate-pulse rounded-full"></div>
-        ))}
-      </div>
-    );
-  }
+  const removeTag = (tagId: string) => {
+    onTagsChange(selectedTags.filter((id) => id !== tagId));
+  };
 
-  const displayTags = showMore ? tags : tags.slice(0, visibleTagCount);
+  const clearAllTags = () => {
+    onTagsChange([]);
+    setOpen(false);
+  };
+
+  const selectedCount = selectedTags.length;
 
   return (
-    <div className="relative">
-      <ScrollArea className="w-full pb-4">
-        <div className="flex gap-2 pb-2 pr-12">
-          {displayTags.map(tag => (
+    <div className="flex flex-col space-y-2 w-full">
+      <div className="flex items-center space-x-2">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
             <Button
-              key={tag.id}
-              variant={selectedTags.includes(tag.id) ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              className={`rounded-full whitespace-nowrap h-8 px-3 text-xs font-medium transition-colors ${
-                selectedTags.includes(tag.id) 
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                  : "bg-secondary/50 text-secondary-foreground hover:bg-secondary/80"
-              }`}
-              onClick={() => toggleTag(tag.id)}
+              className="h-9 border-dashed flex-shrink-0"
             >
-              {tag.name}
+              <ChevronDownIcon className="mr-2 h-4 w-4" />
+              Filter by tag
+              {selectedCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-2 rounded-sm px-1 font-normal"
+                >
+                  {selectedCount}
+                </Badge>
+              )}
             </Button>
-          ))}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
-      
-      {tags.length > visibleTagCount && (
-        <div className="absolute right-0 top-0 bottom-0 flex items-center">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm shadow-sm border"
-            onClick={() => setShowMore(!showMore)}
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-full max-w-[300px]"
+            align={isMobile ? "start" : "start"}
           >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Filter by tag</h4>
+                {selectedCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllTags}
+                    className="h-auto p-0 text-xs text-muted-foreground"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+              {isLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <p className="text-sm text-muted-foreground">Loading...</p>
+                </div>
+              ) : !tags || tags.length === 0 ? (
+                <div className="flex items-center justify-center p-4">
+                  <p className="text-sm text-muted-foreground">No tags found</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-60">
+                  <div className="space-y-2">
+                    {tags.map((tag) => (
+                      <div
+                        key={tag.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={`w-full justify-start ${
+                            selectedTags.includes(tag.id)
+                              ? "border-primary bg-primary/10"
+                              : ""
+                          }`}
+                          onClick={() => toggleTag(tag.id)}
+                        >
+                          <div className="flex-1 text-left">{tag.name}</div>
+                          {selectedTags.includes(tag.id) && (
+                            <CheckIcon className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {selectedTags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedTags.map((tagId) => {
+            const tag = tags?.find((t) => t.id === tagId);
+            if (!tag) return null;
+            return (
+              <Badge
+                key={tagId}
+                variant="secondary"
+                className="flex items-center gap-1 pr-1"
+              >
+                {tag.name}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 ml-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => removeTag(tagId)}
+                >
+                  <XIcon className="h-3 w-3" />
+                </Button>
+              </Badge>
+            );
+          })}
         </div>
       )}
     </div>

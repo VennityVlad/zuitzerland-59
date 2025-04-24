@@ -338,7 +338,7 @@ const Events = () => {
   const hasActiveFilters = selectedTags.length > 0 || !!selectedDate;
 
   return (
-    <div className="container py-6 space-y-6 max-w-7xl mx-auto">
+    <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <PageTitle 
           title="Events" 
@@ -360,16 +360,18 @@ const Events = () => {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
-          <TagFilter 
-            selectedTags={selectedTags} 
-            onTagsChange={setSelectedTags} 
-          />
+          <div className="overflow-x-auto pb-2">
+            <TagFilter 
+              selectedTags={selectedTags} 
+              onTagsChange={setSelectedTags} 
+            />
+          </div>
           
           {hasActiveFilters && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-gray-700 truncate">
                   {selectedTags.length > 0 && `${selectedTags.length} tag${selectedTags.length !== 1 ? 's' : ''}`}
                   {selectedTags.length > 0 && selectedDate && ', '}
                   {selectedDate && `Date: ${format(selectedDate, 'MMM d, yyyy')}`}
@@ -385,7 +387,7 @@ const Events = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="col-span-1 md:col-span-3">
             <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-4 mb-2">
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
                 <TabsTrigger value="past">Past</TabsTrigger>
                 <TabsTrigger value="going">Going</TabsTrigger>
@@ -408,7 +410,8 @@ const Events = () => {
                   rsvpMap,
                   userRSVPEventIds,
                   profileId,
-                  refetchRSVPs
+                  refetchRSVPs,
+                  isMobile
                 )}
               </TabsContent>
               <TabsContent value="past" className="space-y-4 mt-4">
@@ -427,7 +430,8 @@ const Events = () => {
                   rsvpMap,
                   userRSVPEventIds,
                   profileId,
-                  refetchRSVPs
+                  refetchRSVPs,
+                  isMobile
                 )}
               </TabsContent>
               <TabsContent value="going" className="space-y-4 mt-4">
@@ -446,7 +450,8 @@ const Events = () => {
                   rsvpMap,
                   userRSVPEventIds,
                   profileId,
-                  refetchRSVPs
+                  refetchRSVPs,
+                  isMobile
                 )}
               </TabsContent>
               <TabsContent value="hosting" className="space-y-4 mt-4">
@@ -465,7 +470,8 @@ const Events = () => {
                   rsvpMap,
                   userRSVPEventIds,
                   profileId,
-                  refetchRSVPs
+                  refetchRSVPs,
+                  isMobile
                 )}
               </TabsContent>
             </Tabs>
@@ -527,7 +533,8 @@ const renderEventsList = (
   rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
   userRSVPEventIds: string[],
   profileId: string | undefined,
-  refetchRSVPs: () => void
+  refetchRSVPs: () => void,
+  isMobile: boolean
 ) => {
   if (isLoading || profileLoading) {
     return (
@@ -567,12 +574,12 @@ const renderEventsList = (
         return (
           <div key={dateKey} className="relative">
             <div className="flex flex-col sm:flex-row">
-              <div className="mr-4 w-full sm:w-20 flex-shrink-0 flex flex-row sm:flex-col items-center">
+              <div className="mr-4 w-full sm:w-20 flex-shrink-0 flex flex-row sm:flex-col items-center mb-4 sm:mb-0">
                 {formatDateForSidebar(date)}
                 <div className="hidden sm:block h-full w-0.5 bg-gray-200 mt-2 rounded-full"></div>
               </div>
               
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 space-y-4 w-full">
                 {dateEvents.map((event) => {
                   const isRSVPed = !!profileId && userRSVPEventIds.includes(event.id);
                   const rsvpProfiles = rsvpMap[event.id] || [];
@@ -581,7 +588,7 @@ const renderEventsList = (
                     event.location_text;
 
                   return (
-                    <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200">
+                    <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200 w-full">
                       <div className="h-1" style={{ backgroundColor: event.color }}></div>
                       <CardContent className="p-4">
                         <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
@@ -590,31 +597,31 @@ const renderEventsList = (
                           </Badge>
                         </div>
                         
-                        <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                        <h3 className="text-xl font-bold mb-2 break-words">{event.title}</h3>
                         
                         <div className="flex items-center text-sm text-gray-600 mb-3">
-                          <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                          <span>{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
+                          <Calendar className="h-4 w-4 mr-2 flex-shrink-0 text-gray-500" />
+                          <span className="truncate">{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
                         </div>
                         {event.description && (
-                          <p className="text-sm text-gray-600 mb-4">{event.description}</p>
+                          <p className="text-sm text-gray-600 mb-4 break-words">{event.description}</p>
                         )}
                         <div className="space-y-2 text-sm">
                           {location && (
-                            <div className="flex items-center">
-                              <MapPin className="h-4 w-4 text-gray-500 mr-2" />
-                              <span>{location}</span>
+                            <div className="flex items-start">
+                              <MapPin className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                              <span className="break-words">{location}</span>
                             </div>
                           )}
                           <div className="flex items-center">
-                            <User className="h-4 w-4 text-gray-500 mr-2" />
-                            <span>Hosted by {event.profiles?.username || "Anonymous"}</span>
+                            <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
+                            <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
                           </div>
                         </div>
 
                         {event.event_tags && event.event_tags.length > 0 && (
-                          <div className="flex items-center gap-2 mt-4">
-                            <Tag className="h-4 w-4 text-gray-500" />
+                          <div className="flex items-start gap-2 mt-4">
+                            <Tag className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
                             <div className="flex flex-wrap gap-2">
                               {event.event_tags.map(tag => (
                                 <Badge key={tag.tags.id} variant="secondary">
@@ -626,9 +633,9 @@ const renderEventsList = (
                         )}
 
                         {event.speakers && (
-                          <div className="flex items-center gap-2 mt-4">
-                            <Mic className="h-4 w-4 text-gray-500" />
-                            <div className="text-sm text-gray-600">
+                          <div className="flex items-start gap-2 mt-4">
+                            <Mic className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-gray-600 break-words">
                               <span className="font-semibold">Speakers:</span> {event.speakers}
                             </div>
                           </div>
@@ -650,7 +657,7 @@ const renderEventsList = (
                             className="text-blue-500 border-blue-500 hover:bg-blue-50"
                           >
                             <CalendarPlus className="h-4 w-4 mr-2" />
-                            Add to Calendar
+                            {isMobile ? "" : "Add to Calendar"}
                           </Button>
                           {canEditEvent(event) && (
                             <>
@@ -661,7 +668,7 @@ const renderEventsList = (
                                 className="text-amber-500 border-amber-500 hover:bg-amber-50"
                               >
                                 <Edit className="h-4 w-4 mr-2" />
-                                Edit
+                                {isMobile ? "" : "Edit"}
                               </Button>
                               <Button
                                 variant="outline"
@@ -670,7 +677,7 @@ const renderEventsList = (
                                 className="text-red-500 border-red-500 hover:bg-red-50"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                                {isMobile ? "" : "Delete"}
                               </Button>
                             </>
                           )}

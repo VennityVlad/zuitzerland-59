@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Calendar } from "@/components/ui/calendar";
 import { useState, useEffect } from "react";
@@ -202,7 +203,7 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
       {selectedDate && (
         <div className="mt-4 pt-3 border-t border-gray-100">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 truncate">
               Filtering on: {format(selectedDate, "MMMM d, yyyy")}
             </span>
             <Button 
