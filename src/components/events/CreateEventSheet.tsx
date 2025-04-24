@@ -773,35 +773,14 @@ export function CreateEventSheet({
                 {!newEvent.is_all_day && (
                   <div className="space-y-2">
                     <Label htmlFor="start-time">Start Time</Label>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          <Input 
-                            id="start-time" 
-                            type="time"
-                            value={format(parseISO(newEvent.start_date), 'HH:mm')}
-                            onChange={(e) => handleTimeChange('start', e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <Select
-                          value={newEvent.timezone}
-                          onValueChange={(value) => setNewEvent({ ...newEvent, timezone: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select timezone" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIME_ZONES.map((tz) => (
-                              <SelectItem key={tz.value} value={tz.value}>
-                                {tz.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <Input 
+                        id="start-time" 
+                        type="time"
+                        value={format(parseISO(newEvent.start_date), 'HH:mm')}
+                        onChange={(e) => handleTimeChange('start', e.target.value)}
+                      />
                     </div>
                   </div>
                 )}
@@ -845,6 +824,26 @@ export function CreateEventSheet({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Timezone field moved here as its own row */}
+              <div className="space-y-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Select
+                  value={newEvent.timezone}
+                  onValueChange={(value) => setNewEvent({ ...newEvent, timezone: value })}
+                >
+                  <SelectTrigger id="timezone">
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_ZONES.map((tz) => (
+                      <SelectItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -959,45 +958,3 @@ export function CreateEventSheet({
               <Label>Event Color</Label>
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map((color) => (
-                  <div
-                    key={color.value}
-                    className={`h-8 w-8 rounded-full cursor-pointer border-2 ${
-                      newEvent.color === color.value ? 'border-gray-900' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => setNewEvent({...newEvent, color: color.value})}
-                    title={color.label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <Button 
-              className="w-full" 
-              onClick={handleSubmit} 
-              disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError || !!overlapValidationError}
-            >
-              {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
-            </Button>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-interface NewEvent {
-  title: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  av_needs?: string;
-  speakers?: string;
-  link?: string;
-  timezone: string;
-}
