@@ -1,12 +1,15 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Calendar } from "@/components/ui/calendar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfMonth, isSameDay, isWithinInterval, parseISO } from "date-fns";
+import { format, startOfMonth, isSameDay, isWithinInterval, parseISO, isSameMonth } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { DayContent } from "react-day-picker";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Event {
   id: string;
@@ -23,11 +26,13 @@ interface Event {
 }
 
 interface EventCalendarProps {
-  onSelectDate?: (date: Date) => void;
+  onSelectDate?: (date: Date | undefined) => void;
+  className?: string;
 }
 
-export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2025, 4)); // May 2025
+export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) => {
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
 
   const { data: events, isLoading: isLoadingEvents } = useQuery({
@@ -51,8 +56,29 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
     }
   });
 
+  const handleDateSelect = (date: Date | undefined) => {
+    // If selecting the same date, toggle it off
+    if (date && selectedDate && isSameDay(date, selectedDate)) {
+      setSelectedDate(undefined);
+      if (onSelectDate) onSelectDate(undefined);
+    } else {
+      setSelectedDate(date);
+      if (onSelectDate) onSelectDate(date);
+    }
+  };
+
   const handleMonthChange = (date: Date) => {
     setCurrentMonth(startOfMonth(date));
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newMonth = new Date(currentMonth);
+    if (direction === 'prev') {
+      newMonth.setMonth(newMonth.getMonth() - 1);
+    } else {
+      newMonth.setMonth(newMonth.getMonth() + 1);
+    }
+    setCurrentMonth(newMonth);
   };
 
   const getDayEvents = (day: Date): Event[] => {
@@ -77,7 +103,7 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
         <Tooltip>
           <TooltipTrigger asChild>
             <div className={`relative h-9 w-9 p-0 flex items-center justify-center rounded-md ${
-              modifiers.selected ? "bg-primary text-primary-foreground" : 
+              isSameDay(date, selectedDate || new Date(0)) ? "bg-primary text-primary-foreground" : 
               modifiers.today ? "bg-accent text-accent-foreground" : ""
             }`}>
               <span>{format(date, "d")}</span>
@@ -123,69 +149,74 @@ export const EventCalendar = ({ onSelectDate }: EventCalendarProps) => {
   const CustomDayContent = (props: { date: Date; displayMonth: Date }) => {
     const { date } = props;
     const modifiers = {
-      selected: false,
+      selected: selectedDate ? isSameDay(date, selectedDate) : false,
       today: isSameDay(date, new Date())
     };
     
     return renderDay(date, modifiers);
   };
 
-  const formatDateRange = (startDate: string, endDate: string) => {
-    const start = parseISO(startDate);
-    const end = parseISO(endDate);
-    
-    if (isSameDay(start, end)) {
-      return format(start, "MMM d, yyyy");
-    }
-    
-    return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+  const formatMonthTitle = (month: Date) => {
+    return format(month, "MMMM yyyy");
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-      <h4 className="text-lg font-semibold text-gray-900 mb-4">Program Calendar</h4>
+    <div className={`bg-white rounded-lg shadow-sm border border-gray-100 p-4 ${className}`}>
+      <h4 className="text-lg font-semibold text-gray-900 mb-4">Event Calendar</h4>
       
-      <div className="flex flex-col gap-2 mb-4">
-        {isLoadingEvents ? (
-          <div className="animate-pulse w-full h-8 bg-gray-200 rounded"></div>
-        ) : events && events.length > 0 ? (
-          events.map(event => (
-            <Badge 
-              key={event.id} 
-              variant="outline" 
-              className="justify-start" 
-              style={{ 
-                backgroundColor: `${event.color}20`, // Adding transparency
-                color: event.color,
-                borderColor: event.color
-              }}
-            >
-              {event.title} ({formatDateRange(event.start_date, event.end_date)})
-            </Badge>
-          ))
-        ) : (
-          <div className="text-sm text-gray-500">No events scheduled</div>
-        )}
+      <div className="flex items-center justify-between mb-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigateMonth('prev')}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <h5 className="font-medium">{formatMonthTitle(currentMonth)}</h5>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigateMonth('next')}
+          className="h-8 w-8 p-0"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       <Calendar 
         mode="single"
-        defaultMonth={new Date(2025, 4)} // May 2025
+        month={currentMonth}
         onMonthChange={handleMonthChange}
-        disabled={(date) => 
-          date < new Date(2025, 4, 1) || date > new Date(2025, 4, 26)
-        }
+        selected={selectedDate}
+        onSelect={handleDateSelect}
         modifiersStyles={{
           selected: { backgroundColor: 'var(--primary)' },
           today: { backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }
         }}
-        selected={onSelectDate ? undefined : undefined}
-        onSelect={onSelectDate}
         components={{
           DayContent: CustomDayContent
         }}
         className="pointer-events-auto"
       />
+      
+      {selectedDate && (
+        <div className="mt-4 pt-3 border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              Filtering on: {format(selectedDate, "MMMM d, yyyy")}
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => handleDateSelect(undefined)}
+              className="h-7 text-xs"
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

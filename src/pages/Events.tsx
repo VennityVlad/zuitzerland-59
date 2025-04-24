@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, isSameDay } from "date-fns";
+import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -17,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CreateEventSheet } from "@/components/events/CreateEventSheet";
+import { TagFilter } from "@/components/events/TagFilter";
+import { EventCalendar } from "@/components/calendar/EventCalendar";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +71,8 @@ const Events = () => {
   const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("upcoming");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { user: privyUser } = usePrivy();
   const { user: supabaseUser } = useSupabaseAuth();
   const { toast } = useToast();
@@ -106,7 +111,7 @@ const Events = () => {
   const profileId = userProfile?.id;
 
   const { data: events, isLoading, refetch } = useQuery({
-    queryKey: ["events"],
+    queryKey: ["events", selectedTags, selectedDate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
@@ -128,6 +133,38 @@ const Events = () => {
       return data as unknown as EventWithProfile[];
     }
   });
+
+  // Apply filters to events
+  const filteredEvents = React.useMemo(() => {
+    if (!events) return [];
+    
+    return events.filter(event => {
+      // Filter by tags if any are selected
+      if (selectedTags.length > 0) {
+        const eventTagIds = event.event_tags?.map(tag => tag.tags.id) || [];
+        if (!selectedTags.some(tagId => eventTagIds.includes(tagId))) {
+          return false;
+        }
+      }
+      
+      // Filter by selected date if one is chosen
+      if (selectedDate) {
+        const startDate = new Date(event.start_date);
+        const endDate = new Date(event.end_date);
+        
+        const isEventOnSelectedDate = 
+          isWithinInterval(selectedDate, { start: startDate, end: endDate }) ||
+          isSameDay(selectedDate, startDate) || 
+          isSameDay(selectedDate, endDate);
+          
+        if (!isEventOnSelectedDate) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [events, selectedTags, selectedDate]);
 
   const { data: rsvps, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useQuery({
     queryKey: ["event_rsvps"],
@@ -293,12 +330,18 @@ const Events = () => {
   };
 
   const currentDate = new Date();
-  const upcomingEvents = events?.filter(event => new Date(event.end_date) >= currentDate) || [];
-  const pastEvents = events?.filter(event => new Date(event.end_date) < currentDate) || [];
+  const upcomingEvents = filteredEvents.filter(event => new Date(event.end_date) >= currentDate) || [];
+  const pastEvents = filteredEvents.filter(event => new Date(event.end_date) < currentDate) || [];
   
-  const rsvpedEvents = events?.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
+  const rsvpedEvents = filteredEvents.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
+  const hostingEvents = filteredEvents.filter(event => event.created_by === profileId) || [];
 
-  const isSmallDevice = typeof window !== "undefined" ? window.innerWidth < 640 : false;
+  const clearFilters = () => {
+    setSelectedTags([]);
+    setSelectedDate(undefined);
+  };
+
+  const hasActiveFilters = selectedTags.length > 0 || !!selectedDate;
 
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto">
@@ -321,93 +364,126 @@ const Events = () => {
         )}
       </div>
 
-      <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
-        <div className="flex justify-end mb-4">
-          <TabsList className="grid w-full sm:w-[400px] grid-cols-4">
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="past">Past</TabsTrigger>
-            <TabsTrigger value="going">Going</TabsTrigger>
-            <TabsTrigger value="hosting">Hosting</TabsTrigger>
-          </TabsList>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4">
+          <TagFilter 
+            selectedTags={selectedTags} 
+            onTagsChange={setSelectedTags} 
+          />
+          
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-700">
+                  {selectedTags.length > 0 && `${selectedTags.length} tag${selectedTags.length !== 1 ? 's' : ''}`}
+                  {selectedTags.length > 0 && selectedDate && ', '}
+                  {selectedDate && `Date: ${format(selectedDate, 'MMM d, yyyy')}`}
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            </div>
+          )}
         </div>
 
-        <TabsContent value="upcoming" className="space-y-4">
-          {renderEventsList(
-            upcomingEvents,
-            isLoading,
-            profileLoading,
-            canManageEvents,
-            canEditEvent,
-            openDeleteDialog,
-            handleEditEvent,
-            addToCalendar,
-            formatDateForSidebar,
-            formatEventTime,
-            formatDateRange,
-            rsvpMap,
-            userRSVPEventIds,
-            profileId,
-            refetchRSVPs
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="col-span-1 md:col-span-3">
+            <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="past">Past</TabsTrigger>
+                <TabsTrigger value="going">Going</TabsTrigger>
+                <TabsTrigger value="hosting">Hosting</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="upcoming" className="space-y-4 mt-4">
+                {renderEventsList(
+                  upcomingEvents,
+                  isLoading,
+                  profileLoading,
+                  canManageEvents,
+                  canEditEvent,
+                  openDeleteDialog,
+                  handleEditEvent,
+                  addToCalendar,
+                  formatDateForSidebar,
+                  formatEventTime,
+                  formatDateRange,
+                  rsvpMap,
+                  userRSVPEventIds,
+                  profileId,
+                  refetchRSVPs
+                )}
+              </TabsContent>
+              <TabsContent value="past" className="space-y-4 mt-4">
+                {renderEventsList(
+                  pastEvents,
+                  isLoading,
+                  profileLoading,
+                  canManageEvents,
+                  canEditEvent,
+                  openDeleteDialog,
+                  handleEditEvent,
+                  addToCalendar,
+                  formatDateForSidebar,
+                  formatEventTime,
+                  formatDateRange,
+                  rsvpMap,
+                  userRSVPEventIds,
+                  profileId,
+                  refetchRSVPs
+                )}
+              </TabsContent>
+              <TabsContent value="going" className="space-y-4 mt-4">
+                {renderEventsList(
+                  rsvpedEvents,
+                  isLoading,
+                  profileLoading,
+                  canManageEvents,
+                  canEditEvent,
+                  openDeleteDialog,
+                  handleEditEvent,
+                  addToCalendar,
+                  formatDateForSidebar,
+                  formatEventTime,
+                  formatDateRange,
+                  rsvpMap,
+                  userRSVPEventIds,
+                  profileId,
+                  refetchRSVPs
+                )}
+              </TabsContent>
+              <TabsContent value="hosting" className="space-y-4 mt-4">
+                {renderEventsList(
+                  hostingEvents,
+                  isLoading,
+                  profileLoading,
+                  canManageEvents,
+                  canEditEvent,
+                  openDeleteDialog,
+                  handleEditEvent,
+                  addToCalendar,
+                  formatDateForSidebar,
+                  formatEventTime,
+                  formatDateRange,
+                  rsvpMap,
+                  userRSVPEventIds,
+                  profileId,
+                  refetchRSVPs
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+          
+          {!isMobile && (
+            <div className="col-span-1 space-y-4">
+              <EventCalendar onSelectDate={setSelectedDate} />
+            </div>
           )}
-        </TabsContent>
-        <TabsContent value="past" className="space-y-4">
-          {renderEventsList(
-            pastEvents,
-            isLoading,
-            profileLoading,
-            canManageEvents,
-            canEditEvent,
-            openDeleteDialog,
-            handleEditEvent,
-            addToCalendar,
-            formatDateForSidebar,
-            formatEventTime,
-            formatDateRange,
-            rsvpMap,
-            userRSVPEventIds,
-            profileId,
-            refetchRSVPs
-          )}
-        </TabsContent>
-        <TabsContent value="going" className="space-y-4">
-          {renderEventsList(
-            rsvpedEvents,
-            isLoading,
-            profileLoading,
-            canManageEvents,
-            canEditEvent,
-            openDeleteDialog,
-            handleEditEvent,
-            addToCalendar,
-            formatDateForSidebar,
-            formatEventTime,
-            formatDateRange,
-            rsvpMap,
-            userRSVPEventIds,
-            profileId,
-            refetchRSVPs
-          )}
-        </TabsContent>
-        <TabsContent value="hosting" className="space-y-4">
-          {renderEventsList(
-            events?.filter(event => event.created_by === profileId) || [],
-            isLoading,
-            profileLoading,
-            canManageEvents,
-            canEditEvent,
-            openDeleteDialog,
-            handleEditEvent,
-            addToCalendar,
-            formatDateForSidebar,
-            formatEventTime,
-            formatDateRange,
-            rsvpMap,
-            userRSVPEventIds,
-            profileId,
-            refetchRSVPs
-          )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       <CreateEventSheet
         open={createEventOpen}
