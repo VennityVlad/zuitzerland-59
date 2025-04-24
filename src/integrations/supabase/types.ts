@@ -322,6 +322,7 @@ export type Database = {
           location_text: string | null
           speakers: string | null
           start_date: string
+          timezone: string
           title: string
           updated_at: string
         }
@@ -339,6 +340,7 @@ export type Database = {
           location_text?: string | null
           speakers?: string | null
           start_date: string
+          timezone?: string
           title: string
           updated_at?: string
         }
@@ -356,6 +358,7 @@ export type Database = {
           location_text?: string | null
           speakers?: string | null
           start_date?: string
+          timezone?: string
           title?: string
           updated_at?: string
         }

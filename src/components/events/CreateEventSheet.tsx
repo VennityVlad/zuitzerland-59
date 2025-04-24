@@ -44,6 +44,7 @@ interface Event {
   av_needs?: string | null;
   speakers?: string | null;
   link?: string | null;
+  timezone: string;
 }
 
 interface Location {
@@ -80,7 +81,15 @@ const colorOptions = [
   { label: "Gray", value: "#1A202C" }
 ];
 
-const TIME_ZONE = "Europe/Zurich";
+const TIME_ZONES = [
+  { value: 'Europe/Zurich', label: 'Central European Time (CEST)' },
+  { value: 'Europe/London', label: 'British Time (BST)' },
+  { value: 'America/New_York', label: 'Eastern Time (ET)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+  { value: 'Asia/Singapore', label: 'Singapore Time (SGT)' },
+  { value: 'Asia/Tokyo', label: 'Japan Time (JST)' },
+  { value: 'Australia/Sydney', label: 'Australian Eastern Time (AET)' },
+];
 
 const getInitialStartDate = () => {
   const now = new Date();
@@ -127,7 +136,8 @@ export function CreateEventSheet({
     created_by: "",
     av_needs: "",
     speakers: "",
-    link: ""
+    link: "",
+    timezone: 'Europe/Zurich'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!event;
@@ -146,7 +156,8 @@ export function CreateEventSheet({
         created_by: event.created_by,
         av_needs: event.av_needs,
         speakers: event.speakers,
-        link: event.link
+        link: event.link,
+        timezone: event.timezone || 'Europe/Zurich'
       });
       
       setUseCustomLocation(!!event.location_text);
@@ -327,7 +338,8 @@ export function CreateEventSheet({
       created_by: userProfile?.id || "",
       av_needs: "",
       speakers: "",
-      link: ""
+      link: "",
+      timezone: 'Europe/Zurich'
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
@@ -541,6 +553,7 @@ export function CreateEventSheet({
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
             link: newEvent.link || null,
+            timezone: newEvent.timezone
           })
           .eq('id', event.id)
           .select();
@@ -582,7 +595,8 @@ export function CreateEventSheet({
             av_needs: newEvent.av_needs || null,
             speakers: newEvent.speakers || null,
             link: newEvent.link || null,
-            created_by: userProfile?.id
+            created_by: userProfile?.id,
+            timezone: newEvent.timezone
           })
           .select()
           .single();
@@ -759,14 +773,35 @@ export function CreateEventSheet({
                 {!newEvent.is_all_day && (
                   <div className="space-y-2">
                     <Label htmlFor="start-time">Start Time</Label>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <Input 
-                        id="start-time" 
-                        type="time"
-                        value={format(parseISO(newEvent.start_date), 'HH:mm')}
-                        onChange={(e) => handleTimeChange('start', e.target.value)}
-                      />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <Input 
+                            id="start-time" 
+                            type="time"
+                            value={format(parseISO(newEvent.start_date), 'HH:mm')}
+                            onChange={(e) => handleTimeChange('start', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <Select
+                          value={newEvent.timezone}
+                          onValueChange={(value) => setNewEvent({ ...newEvent, timezone: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select timezone" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_ZONES.map((tz) => (
+                              <SelectItem key={tz.value} value={tz.value}>
+                                {tz.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -964,4 +999,5 @@ interface NewEvent {
   av_needs?: string;
   speakers?: string;
   link?: string;
+  timezone: string;
 }

@@ -301,15 +301,12 @@ const Events = () => {
     return new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
   };
   
-  const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean) => {
+  const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
     if (isAllDay) {
       return "All day";
     }
     
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    return `${formatInTimeZone(start, TIME_ZONE, "h:mm a")} - ${formatInTimeZone(end, TIME_ZONE, "h:mm a")} CEST`;
+    return `${formatInTimeZone(new Date(startDate), timezone, "h:mm a")} - ${formatInTimeZone(new Date(endDate), timezone, "h:mm a")} (${timezone.split('/')[1].replace('_', ' ')})`;
   };
 
   const formatDateForSidebar = (date: Date) => {
@@ -531,7 +528,7 @@ const renderEventsList = (
   handleEditEvent: (event: Event) => void,
   addToCalendar: (event: Event) => void,
   formatDateForSidebar: (date: Date) => JSX.Element,
-  formatEventTime: (startDate: string, endDate: string, isAllDay: boolean) => string,
+  formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
   formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
   rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
   userRSVPEventIds: string[],
@@ -595,7 +592,7 @@ const renderEventsList = (
                       <CardContent className="p-4">
                         <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
                           <Badge className="w-fit" variant="outline">
-                            {formatEventTime(event.start_date, event.end_date, event.is_all_day)}
+                            {formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}
                           </Badge>
                         </div>
                         
