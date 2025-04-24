@@ -53,6 +53,39 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
 
   const selectedCount = selectedTags.length;
 
+  if (isMobile) {
+    return (
+      <div className="w-full space-y-4">
+        <div className="overflow-x-auto pb-2 -mx-4 px-4">
+          <div className="flex space-x-2 min-w-max">
+            {!isLoading && tags?.map((tag) => (
+              <Button
+                key={tag.id}
+                variant={selectedTags.includes(tag.id) ? "default" : "outline"}
+                size="sm"
+                className="flex items-center space-x-1 whitespace-nowrap"
+                onClick={() => toggleTag(tag.id)}
+              >
+                <span>{tag.name}</span>
+                {selectedTags.includes(tag.id) && (
+                  <XIcon className="h-3 w-3 ml-1" onClick={(e) => {
+                    e.stopPropagation();
+                    removeTag(tag.id);
+                  }} />
+                )}
+              </Button>
+            ))}
+            {isLoading && (
+              <div className="flex items-center justify-center p-2">
+                <p className="text-sm text-muted-foreground">Loading tags...</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col space-y-2 w-full">
       <div className="flex items-center space-x-2">
@@ -75,10 +108,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent
-            className="w-full max-w-[300px]"
-            align={isMobile ? "start" : "start"}
-          >
+          <PopoverContent className="w-full max-w-[300px]" align="start">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium">Filter by tag</h4>
