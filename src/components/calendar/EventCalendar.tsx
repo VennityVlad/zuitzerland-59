@@ -3,6 +3,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, isSameDay, isWithinInterval, parseISO, isSameMonth } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
+  const TIME_ZONE = "Europe/Zurich";
 
   const { data: events, isLoading: isLoadingEvents } = useQuery({
     queryKey: ["calendar-events", format(currentMonth, "yyyy-MM")],
@@ -56,7 +58,6 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
   });
 
   const handleDateSelect = (date: Date | undefined) => {
-    // If selecting the same date, toggle it off
     if (date && selectedDate && isSameDay(date, selectedDate)) {
       setSelectedDate(undefined);
       if (onSelectDate) onSelectDate(undefined);
@@ -84,8 +85,8 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
     if (!events) return [];
     
     return events.filter(event => {
-      const startDate = new Date(event.start_date);
-      const endDate = new Date(event.end_date);
+      const startDate = toZonedTime(new Date(event.start_date), TIME_ZONE);
+      const endDate = toZonedTime(new Date(event.end_date), TIME_ZONE);
       
       return isWithinInterval(day, { start: startDate, end: endDate }) ||
              isSameDay(day, startDate) || 

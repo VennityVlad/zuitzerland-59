@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
@@ -251,6 +250,7 @@ const Events = () => {
   };
 
   const generateICalEvent = (event: Event) => {
+    // Get the event dates in UTC (as stored in the database)
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
     
@@ -298,13 +298,16 @@ const Events = () => {
     });
   };
 
+  const TIME_ZONE = "Europe/Zurich";
+  
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean) => {
     if (isAllDay) {
       return "All day";
     }
     
-    const start = parseISO(startDate);
-    const end = parseISO(endDate);
+    // Convert UTC dates from database to CEST time zone for display
+    const start = toZonedTime(parseISO(startDate), TIME_ZONE);
+    const end = toZonedTime(parseISO(endDate), TIME_ZONE);
     
     return `${format(start, "h:mm a")} - ${format(end, "h:mm a")} CEST`;
   };
@@ -319,8 +322,9 @@ const Events = () => {
   };
 
   const formatDateRange = (startDate: string, endDate: string, isAllDay: boolean) => {
-    const start = parseISO(startDate);
-    const end = parseISO(endDate);
+    // Convert UTC dates from database to CEST time zone for display
+    const start = toZonedTime(parseISO(startDate), TIME_ZONE);
+    const end = toZonedTime(parseISO(endDate), TIME_ZONE);
     
     if (isSameDay(start, end)) {
       return `${format(start, "MMM d, yyyy")}`;

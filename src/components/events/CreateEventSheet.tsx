@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { Calendar as CalendarIcon, Clock, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -138,8 +138,8 @@ export function CreateEventSheet({
       setNewEvent({
         title: event.title,
         description: event.description || "",
-        start_date: event.start_date,
-        end_date: event.end_date,
+        start_date: convertToLocal(event.start_date),
+        end_date: convertToLocal(event.end_date),
         location_id: event.location_id,
         location_text: event.location_text || "",
         color: event.color,
@@ -159,7 +159,19 @@ export function CreateEventSheet({
       resetForm();
     }
   }, [event]);
-  
+
+  const convertToUTC = (dateTimeString: string): string => {
+    const localDate = toZonedTime(new Date(dateTimeString), TIME_ZONE);
+    const utcDate = fromZonedTime(localDate, 'UTC');
+    return format(utcDate, "yyyy-MM-dd'T'HH:mm:ss");
+  };
+
+  const convertToLocal = (utcDateTimeString: string): string => {
+    const utcDate = new Date(utcDateTimeString);
+    const localDate = toZonedTime(utcDate, TIME_ZONE);
+    return format(localDate, "yyyy-MM-dd'T'HH:mm:ss");
+  };
+
   const fetchEventTags = async (eventId: string) => {
     try {
       const { data, error } = await supabase
@@ -521,8 +533,8 @@ export function CreateEventSheet({
           .update({
             title: newEvent.title,
             description: newEvent.description || null,
-            start_date: newEvent.start_date,
-            end_date: newEvent.end_date,
+            start_date: convertToUTC(newEvent.start_date),
+            end_date: convertToUTC(newEvent.end_date),
             location_id: useCustomLocation ? null : newEvent.location_id,
             location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
@@ -562,8 +574,8 @@ export function CreateEventSheet({
           .insert({
             title: newEvent.title,
             description: newEvent.description || null,
-            start_date: newEvent.start_date,
-            end_date: newEvent.end_date,
+            start_date: convertToUTC(newEvent.start_date),
+            end_date: convertToUTC(newEvent.end_date),
             location_id: useCustomLocation ? null : newEvent.location_id,
             location_text: useCustomLocation ? newEvent.location_text : null,
             color: newEvent.color,
