@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -68,6 +69,22 @@ interface Availability {
   is_available: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface NewEvent {
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  location_id: string | null;
+  location_text: string | null;
+  color: string;
+  is_all_day: boolean;
+  created_by: string;
+  av_needs?: string | null;
+  speakers?: string | null;
+  link?: string | null;
+  timezone: string;
 }
 
 // Color options for events
@@ -170,19 +187,6 @@ export function CreateEventSheet({
       resetForm();
     }
   }, [event]);
-
-  // Remove the timezone conversion functions that are causing the offset
-  // const convertToUTC = (dateTimeString: string): string => {
-  //   const cestDate = parseISO(dateTimeString);
-  //   const utcDate = new Date(cestDate.getTime() - 2 * 60 * 60 * 1000);
-  //   return format(utcDate, "yyyy-MM-dd'T'HH:mm:ss");
-  // };
-
-  // const convertToLocal = (utcDateTimeString: string): string => {
-  //   const utcDate = new Date(utcDateTimeString);
-  //   const cestDate = new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
-  //   return format(cestDate, "yyyy-MM-dd'T'HH:mm:ss");
-  // };
 
   const fetchEventTags = async (eventId: string) => {
     try {
@@ -956,4 +960,32 @@ export function CreateEventSheet({
             </div>
 
             <div className="space-y-2">
-              <Label>Event Color</
+              <Label>Event Color</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {colorOptions.map((color) => (
+                  <Button
+                    key={color.value}
+                    type="button"
+                    className={`h-8 w-full ${
+                      newEvent.color === color.value ? 'ring-2 ring-offset-2 ring-offset-background ring-primary' : ''
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    onClick={() => setNewEvent({...newEvent, color: color.value})}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            <Button 
+              className="w-full" 
+              onClick={handleSubmit}
+              disabled={isSubmitting || (!userProfile && !isEditMode)}
+            >
+              {isSubmitting ? "Saving..." : isEditMode ? "Update Event" : "Create Event"}
+            </Button>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
