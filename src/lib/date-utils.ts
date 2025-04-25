@@ -37,13 +37,20 @@ export const formatTimeRange = (
   const start = typeof startDate === 'string' ? new Date(startDate + 'Z') : startDate;
   const end = typeof endDate === 'string' ? new Date(endDate + 'Z') : endDate;
   
-  return `${formatInTimeZone(start, timezone, "h:mm a")} - ${formatInTimeZone(end, timezone, "h:mm a")} (${getReadableTimezoneName(timezone)})`;
+  // Use a default timezone if none is provided
+  const safeTimezone = timezone || 'UTC';
+  
+  return `${formatInTimeZone(start, safeTimezone, "h:mm a")} - ${formatInTimeZone(end, safeTimezone, "h:mm a")} (${getReadableTimezoneName(safeTimezone)})`;
 };
 
 /**
  * Extract a readable timezone name from a timezone identifier
+ * Safely handles null, undefined, or malformed timezone strings
  */
-export const getReadableTimezoneName = (timezone: string): string => {
-  if (!timezone || !timezone.includes('/')) return timezone;
-  return timezone.split('/')[1].replace('_', ' ');
+export const getReadableTimezoneName = (timezone: string | null | undefined): string => {
+  if (!timezone) return 'UTC';
+  if (!timezone.includes('/')) return timezone;
+  
+  const parts = timezone.split('/');
+  return parts.length > 1 ? parts[1].replace('_', ' ') : timezone;
 };
