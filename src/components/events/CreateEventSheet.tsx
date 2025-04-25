@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -87,7 +86,7 @@ interface NewEvent {
   timezone: string;
 }
 
-// Color options for events
+// Remove color options
 const colorOptions = [
   { label: "Blue", value: "#1a365d" },
   { label: "Green", value: "#1C4532" },
@@ -149,7 +148,7 @@ export function CreateEventSheet({
     end_date: getInitialEndDate(getInitialStartDate()),
     location_id: null,
     location_text: "",
-    color: "#1a365d",
+    color: "#1a365d", // Keep default color, but we'll modify the form
     is_all_day: false,
     created_by: "",
     av_needs: "",
@@ -555,7 +554,7 @@ export function CreateEventSheet({
         end_date: format(zonedEndDate, 'yyyy-MM-dd\'T\'HH:mm:ss'),
         location_id: useCustomLocation ? null : newEvent.location_id,
         location_text: useCustomLocation ? newEvent.location_text : null,
-        color: newEvent.color,
+        color: "#1a365d", // Always use a default color
         is_all_day: newEvent.is_all_day,
         av_needs: newEvent.av_needs || null,
         speakers: newEvent.speakers || null,
@@ -959,22 +958,8 @@ export function CreateEventSheet({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Event Color</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {colorOptions.map((color) => (
-                  <Button
-                    key={color.value}
-                    type="button"
-                    className={`h-8 w-full ${
-                      newEvent.color === color.value ? 'ring-2 ring-offset-2 ring-offset-background ring-primary' : ''
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => setNewEvent({...newEvent, color: color.value})}
-                  />
-                ))}
-              </div>
-            </div>
+            
+
             
             <Button 
               className="w-full" 
@@ -987,5 +972,3 @@ export function CreateEventSheet({
         )}
       </SheetContent>
     </Sheet>
-  );
-}
