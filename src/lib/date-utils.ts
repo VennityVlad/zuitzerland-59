@@ -7,15 +7,26 @@ import { formatInTimeZone } from 'date-fns-tz';
  * Explicitly parses dates as UTC to prevent double timezone application
  */
 export const formatWithTimezone = (date: Date | string | number, formatStr: string, timezone?: string) => {
-  // Ensure we're working with a Date object
-  const dateObj = typeof date === 'string' ? new Date(date + 'Z') : // Append Z to treat string as UTC
-    typeof date === 'number' ? new Date(date) :
-    date;
+  try {
+    // Ensure we're working with a Date object
+    const dateObj = typeof date === 'string' ? new Date(date + 'Z') : // Append Z to treat string as UTC
+      typeof date === 'number' ? new Date(date) :
+      date;
 
-  if (timezone) {
-    return formatInTimeZone(dateObj, timezone, formatStr);
-  } else {
-    return formatDate(dateObj, formatStr);
+    // Check if date is valid before formatting
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Invalid date provided to formatWithTimezone:', date);
+      return 'Invalid date';
+    }
+
+    if (timezone) {
+      return formatInTimeZone(dateObj, timezone, formatStr);
+    } else {
+      return formatDate(dateObj, formatStr);
+    }
+  } catch (error) {
+    console.error('Error formatting date with timezone:', error);
+    return 'Invalid date';
   }
 };
 
@@ -33,14 +44,25 @@ export const formatTimeRange = (
     return "All day";
   }
 
-  // Explicitly parse dates as UTC by appending 'Z' to ISO strings
-  const start = typeof startDate === 'string' ? new Date(startDate + 'Z') : startDate;
-  const end = typeof endDate === 'string' ? new Date(endDate + 'Z') : endDate;
-  
-  // Use a default timezone if none is provided
-  const safeTimezone = timezone || 'UTC';
-  
-  return `${formatInTimeZone(start, safeTimezone, "h:mm a")} - ${formatInTimeZone(end, safeTimezone, "h:mm a")} (${getReadableTimezoneName(safeTimezone)})`;
+  try {
+    // Explicitly parse dates as UTC by appending 'Z' to ISO strings
+    const start = typeof startDate === 'string' ? new Date(startDate + 'Z') : startDate;
+    const end = typeof endDate === 'string' ? new Date(endDate + 'Z') : endDate;
+    
+    // Check if dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      console.warn('Invalid date provided to formatTimeRange:', { startDate, endDate });
+      return 'Invalid time range';
+    }
+    
+    // Use a default timezone if none is provided
+    const safeTimezone = timezone || 'UTC';
+    
+    return `${formatInTimeZone(start, safeTimezone, "h:mm a")} - ${formatInTimeZone(end, safeTimezone, "h:mm a")} (${getReadableTimezoneName(safeTimezone)})`;
+  } catch (error) {
+    console.error('Error formatting time range:', error);
+    return 'Invalid time range';
+  }
 };
 
 /**
@@ -51,6 +73,11 @@ export const getReadableTimezoneName = (timezone: string | null | undefined): st
   if (!timezone) return 'UTC';
   if (!timezone.includes('/')) return timezone;
   
-  const parts = timezone.split('/');
-  return parts.length > 1 ? parts[1].replace('_', ' ') : timezone;
+  try {
+    const parts = timezone.split('/');
+    return parts.length > 1 ? parts[1].replace('_', ' ') : timezone;
+  } catch (error) {
+    console.error('Error parsing timezone name:', error);
+    return 'UTC';
+  }
 };
