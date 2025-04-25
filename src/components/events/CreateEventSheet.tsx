@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -972,3 +973,5 @@ export function CreateEventSheet({
         )}
       </SheetContent>
     </Sheet>
+  );
+}
