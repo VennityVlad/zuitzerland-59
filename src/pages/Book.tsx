@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import BookingForm from "@/components/BookingForm";
 import AdminBookingForm from "@/components/AdminBookingForm";
@@ -16,6 +17,7 @@ const Book = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const { settings: bookingSettings } = useBookingSettings();
   
+  // Check if user is admin
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (!user?.id) return;
@@ -40,11 +42,13 @@ const Book = () => {
     }
   }, [user?.id]);
 
+  // Fetch user's invoice if they have one
   const { data: userInvoice, isLoading } = useQuery({
     queryKey: ['userInvoice', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
 
+      // First get the profile id for the current user
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id')
@@ -54,6 +58,7 @@ const Book = () => {
       if (profileError) throw profileError;
       if (!profileData) return null;
 
+      // Get the user's invoice
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
@@ -82,7 +87,7 @@ const Book = () => {
           ) : userInvoice ? (
             <UserInvoiceView invoice={userInvoice} />
           ) : (
-            <BookingForm bookingBlockEnabled={bookingSettings?.blockEnabled ?? true} />
+            <BookingForm bookingBlockEnabled={bookingSettings.blockEnabled} />
           )}
         </div>
       </div>

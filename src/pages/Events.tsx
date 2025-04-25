@@ -148,25 +148,15 @@ const Events = () => {
       }
       
       if (selectedDate) {
-        try {
-          const startDate = new Date(event.start_date);
-          const endDate = new Date(event.end_date);
+        const startDate = new Date(event.start_date);
+        const endDate = new Date(event.end_date);
+        
+        const isEventOnSelectedDate = 
+          isWithinInterval(selectedDate, { start: startDate, end: endDate }) ||
+          isSameDay(selectedDate, startDate) || 
+          isSameDay(selectedDate, endDate);
           
-          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            console.warn('Invalid date in event:', event);
-            return false;
-          }
-          
-          const isEventOnSelectedDate = 
-            isWithinInterval(selectedDate, { start: startDate, end: endDate }) ||
-            isSameDay(selectedDate, startDate) || 
-            isSameDay(selectedDate, endDate);
-            
-          if (!isEventOnSelectedDate) {
-            return false;
-          }
-        } catch (error) {
-          console.error('Error filtering events by date:', error);
+        if (!isEventOnSelectedDate) {
           return false;
         }
       }
@@ -319,23 +309,14 @@ const Events = () => {
   };
 
   const formatDateRange = (startDate: string, endDate: string, isAllDay: boolean) => {
-    try {
-      const start = new Date(startDate + 'Z');
-      const end = new Date(endDate + 'Z');
-      
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        return 'Invalid date range';
-      }
-      
-      if (isSameDay(start, end)) {
-        return format(start, "MMM d, yyyy");
-      }
-      
-      return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
-    } catch (error) {
-      console.error('Error formatting date range:', error);
-      return 'Invalid date range';
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (isSameDay(start, end)) {
+      return format(start, "MMM d, yyyy");
     }
+    
+    return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
   };
 
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
@@ -580,165 +561,144 @@ const renderEventsList = (
   }
 
   const eventsByDate = events.reduce((acc, event) => {
-    try {
-      const eventDate = new Date(event.start_date);
-      if (isNaN(eventDate.getTime())) {
-        console.warn('Invalid start_date in event:', event);
-        return acc;
-      }
-      
-      const dateKey = format(eventDate, 'yyyy-MM-dd');
-      if (!acc[dateKey]) acc[dateKey] = [];
-      acc[dateKey].push(event);
-      return acc;
-    } catch (error) {
-      console.error('Error processing event date:', error);
-      return acc;
-    }
+    const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(event);
+    return acc;
   }, {} as Record<string, EventWithProfile[]>);
 
   return (
     <div className="space-y-8">
       {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
-        try {
-          const date = parseISO(dateEvents[0].start_date);
-          if (isNaN(date.getTime())) {
-            console.warn('Invalid date from event:', dateEvents[0]);
-            return null;
-          }
-          
-          return (
-            <div key={dateKey} className="relative">
-              <div className="flex flex-col sm:flex-row">
-                <div className="mr-4 w-full sm:w-20 flex-shrink-0 flex flex-row sm:flex-col items-center mb-4 sm:mb-0">
-                  {formatDateForSidebar(date)}
-                  <div className="hidden sm:block h-full w-0.5 bg-gray-200 mt-2 rounded-full"></div>
-                </div>
-                
-                <div className="flex-1 space-y-4 w-full">
-                  {dateEvents.map((event) => {
-                    const isRSVPed = !!profileId && userRSVPEventIds.includes(event.id);
-                    const rsvpProfiles = rsvpMap[event.id] || [];
-                    const location = event.locations ? 
-                      `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
-                      event.location_text;
+        const date = parseISO(dateEvents[0].start_date);
+        return (
+          <div key={dateKey} className="relative">
+            <div className="flex flex-col sm:flex-row">
+              <div className="mr-4 w-full sm:w-20 flex-shrink-0 flex flex-row sm:flex-col items-center mb-4 sm:mb-0">
+                {formatDateForSidebar(date)}
+                <div className="hidden sm:block h-full w-0.5 bg-gray-200 mt-2 rounded-full"></div>
+              </div>
+              
+              <div className="flex-1 space-y-4 w-full">
+                {dateEvents.map((event) => {
+                  const isRSVPed = !!profileId && userRSVPEventIds.includes(event.id);
+                  const rsvpProfiles = rsvpMap[event.id] || [];
+                  const location = event.locations ? 
+                    `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
+                    event.location_text;
 
-                    return (
-                      <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200 w-full">
-                        <div className="h-1" style={{ backgroundColor: event.color }}></div>
-                        <CardContent className="p-4">
-                          <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                            <Badge className="w-fit" variant="outline">
-                              {formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}
-                            </Badge>
-                          </div>
-                          
-                          <h3 className="text-xl font-bold mb-2 break-words">{event.title}</h3>
-                          
-                          <div className="flex items-center text-sm text-gray-600 mb-3">
-                            <Calendar className="h-4 w-4 mr-2 flex-shrink-0 text-gray-500" />
-                            <span className="truncate">{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
-                          </div>
-                          {event.description && (
-                            <p className="text-sm text-gray-600 mb-4 break-words">{event.description}</p>
-                          )}
-                          <div className="space-y-2 text-sm">
-                            {location && (
-                              <div className="flex items-start">
-                                <MapPin className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
-                                <span className="break-words">{location}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center">
-                              <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
-                              <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
-                            </div>
-                          </div>
-
-                          {event.event_tags && event.event_tags.length > 0 && (
-                            <div className="flex items-start gap-2 mt-4">
-                              <Tag className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                              <div className="flex flex-wrap gap-2">
-                                {event.event_tags.map(tag => (
-                                  <Badge key={tag.tags.id} variant="secondary">
-                                    {tag.tags.name}
-                                  </Badge>
-                                ))}
-                              </div>
+                  return (
+                    <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200 w-full">
+                      <div className="h-1" style={{ backgroundColor: event.color }}></div>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                          <Badge className="w-fit" variant="outline">
+                            {formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}
+                          </Badge>
+                        </div>
+                        
+                        <h3 className="text-xl font-bold mb-2 break-words">{event.title}</h3>
+                        
+                        <div className="flex items-center text-sm text-gray-600 mb-3">
+                          <Calendar className="h-4 w-4 mr-2 flex-shrink-0 text-gray-500" />
+                          <span className="truncate">{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
+                        </div>
+                        {event.description && (
+                          <p className="text-sm text-gray-600 mb-4 break-words">{event.description}</p>
+                        )}
+                        <div className="space-y-2 text-sm">
+                          {location && (
+                            <div className="flex items-start">
+                              <MapPin className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                              <span className="break-words">{location}</span>
                             </div>
                           )}
-
-                          {event.speakers && (
-                            <div className="flex items-start gap-2 mt-4">
-                              <Mic className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                              <div className="text-sm text-gray-600 break-words">
-                                <span className="font-semibold">Speakers:</span> {event.speakers}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex flex-wrap gap-2 mt-4">
-                            {!!profileId && (
-                              <EventRSVPButton
-                                eventId={event.id}
-                                profileId={profileId}
-                                initialRSVP={isRSVPed}
-                                onChange={() => refetchRSVPs()}
-                              />
-                            )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addToCalendar(event)}
-                              className="text-blue-500 border-blue-500 hover:bg-blue-50"
-                            >
-                              <CalendarPlus className="h-4 w-4 mr-2" />
-                              {isMobile ? "" : "Add to Calendar"}
-                            </Button>
-                            {canEditEvent(event) && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditEvent(event)}
-                                  className="text-amber-500 border-amber-500 hover:bg-amber-50"
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  {isMobile ? "" : "Edit"}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(event)}
-                                  className="text-red-500 border-red-500 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {isMobile ? "" : "Delete"}
-                                </Button>
-                              </>
-                            )}
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
+                            <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
                           </div>
-                          {rsvpProfiles.length > 0 && (
-                            <div className="mt-4">
-                              <span className="text-xs text-gray-600 mb-1 block">
-                                Going: {rsvpProfiles.length}
-                              </span>
-                              <EventRSVPAvatars profiles={rsvpProfiles} />
+                        </div>
+
+                        {event.event_tags && event.event_tags.length > 0 && (
+                          <div className="flex items-start gap-2 mt-4">
+                            <Tag className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <div className="flex flex-wrap gap-2">
+                              {event.event_tags.map(tag => (
+                                <Badge key={tag.tags.id} variant="secondary">
+                                  {tag.tags.name}
+                                </Badge>
+                              ))}
                             </div>
+                          </div>
+                        )}
+
+                        {event.speakers && (
+                          <div className="flex items-start gap-2 mt-4">
+                            <Mic className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-gray-600 break-words">
+                              <span className="font-semibold">Speakers:</span> {event.speakers}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {!!profileId && (
+                            <EventRSVPButton
+                              eventId={event.id}
+                              profileId={profileId}
+                              initialRSVP={isRSVPed}
+                              onChange={() => refetchRSVPs()}
+                            />
                           )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addToCalendar(event)}
+                            className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                          >
+                            <CalendarPlus className="h-4 w-4 mr-2" />
+                            {isMobile ? "" : "Add to Calendar"}
+                          </Button>
+                          {canEditEvent(event) && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditEvent(event)}
+                                className="text-amber-500 border-amber-500 hover:bg-amber-50"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                {isMobile ? "" : "Edit"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openDeleteDialog(event)}
+                                className="text-red-500 border-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {isMobile ? "" : "Delete"}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                        {rsvpProfiles.length > 0 && (
+                          <div className="mt-4">
+                            <span className="text-xs text-gray-600 mb-1 block">
+                              Going: {rsvpProfiles.length}
+                            </span>
+                            <EventRSVPAvatars profiles={rsvpProfiles} />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
-          );
-        } catch (error) {
-          console.error('Error rendering event date:', error);
-          return null;
-        }
-      }).filter(Boolean)}
+          </div>
+        );
+      })}
     </div>
   );
 };
