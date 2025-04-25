@@ -1,3 +1,4 @@
+
 import { format, formatDistance, formatRelative, formatDistanceToNow } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
@@ -12,6 +13,16 @@ export const toUTCDate = (dateStr: string, timeStr: string, timezone: string): D
   const fullLocalString = `${dateStr}T${timeStr}`;
   const zonedTime = toZonedTime(new Date(fullLocalString), timezone);
   return zonedTime;
+};
+
+/**
+ * Default date formatting function
+ * @param date The date to format
+ * @param formatStr The format string to use
+ * @returns Formatted date string
+ */
+export const formatDate = (date: Date | string | number, formatStr: string) => {
+  return format(date, formatStr);
 };
 
 /**
