@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
 import { Calendar as CalendarIcon, Clock, Link, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { toZonedTime } from "date-fns-tz";
 
 // UI Component imports
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -539,13 +539,16 @@ export function CreateEventSheet({
         return;
       }
 
-      // Store dates as-is without timezone conversion
-      // This will preserve the selected times without offsets
+      // Convert dates to UTC using the selected timezone
+      const zonedStartDate = toZonedTime(new Date(newEvent.start_date), newEvent.timezone);
+      const zonedEndDate = toZonedTime(new Date(newEvent.end_date), newEvent.timezone);
+
+      // Store dates in UTC format
       const eventData = {
         title: newEvent.title,
         description: newEvent.description || null,
-        start_date: newEvent.start_date,
-        end_date: newEvent.end_date,
+        start_date: format(zonedStartDate, 'yyyy-MM-dd\'T\'HH:mm:ss'),
+        end_date: format(zonedEndDate, 'yyyy-MM-dd\'T\'HH:mm:ss'),
         location_id: useCustomLocation ? null : newEvent.location_id,
         location_text: useCustomLocation ? newEvent.location_text : null,
         color: newEvent.color,
@@ -664,18 +667,21 @@ export function CreateEventSheet({
     const newDate = new Date(currentDate);
     newDate.setHours(hours);
     newDate.setMinutes(minutes);
+
+    // Convert to UTC before storing
+    const zonedTime = toZonedTime(newDate, newEvent.timezone);
     
     if (type === 'start') {
-      const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      const newStartDate = format(zonedTime, 'yyyy-MM-dd\'T\'HH:mm:ss');
       setNewEvent(prev => ({
         ...prev,
         start_date: newStartDate,
-        end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: format(addHours(zonedTime, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     } else {
       setNewEvent(prev => ({
         ...prev,
-        end_date: format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: format(zonedTime, 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     }
   };
@@ -950,48 +956,4 @@ export function CreateEventSheet({
             </div>
 
             <div className="space-y-2">
-              <Label>Event Color</Label>
-              <div className="flex flex-wrap gap-2">
-                {colorOptions.map((color) => (
-                  <div
-                    key={color.value}
-                    className={`h-8 w-8 rounded-full cursor-pointer border-2 ${
-                      newEvent.color === color.value ? 'border-gray-900' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => setNewEvent({...newEvent, color: color.value})}
-                    title={color.label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <Button 
-              className="w-full" 
-              onClick={handleSubmit} 
-              disabled={isSubmitting || (!userProfile && !isEditMode) || !!availabilityValidationError || !!overlapValidationError}
-            >
-              {isSubmitting ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Event" : "Create Event")}
-            </Button>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-interface NewEvent {
-  title: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  av_needs?: string;
-  speakers?: string;
-  link?: string;
-  timezone: string;
-}
+              <Label>Event Color</

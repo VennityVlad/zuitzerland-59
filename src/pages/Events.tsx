@@ -320,7 +320,17 @@ const Events = () => {
   };
 
   const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
-    return formatTimeRange(startDate, endDate, isAllDay, timezone);
+    if (isAllDay) return "All day";
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      console.warn('Invalid date detected:', { startDate, endDate });
+      return 'Invalid date';
+    }
+
+    return formatTimeRange(start, end, isAllDay, timezone);
   };
 
   const currentDate = new Date();

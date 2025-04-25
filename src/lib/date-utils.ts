@@ -1,6 +1,18 @@
+import { format, formatDistance, formatRelative, formatDistanceToNow } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
-import { format as formatDate, formatDistance, formatRelative, formatDistanceToNow } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
+/**
+ * Convert local time to UTC for storage
+ * @param dateStr The date string in local time
+ * @param timeStr The time string in local time
+ * @param timezone The timezone to interpret the local time in
+ * @returns UTC Date object
+ */
+export const toUTCDate = (dateStr: string, timeStr: string, timezone: string): Date => {
+  const fullLocalString = `${dateStr}T${timeStr}`;
+  const zonedTime = toZonedTime(new Date(fullLocalString), timezone);
+  return zonedTime;
+};
 
 /**
  * Helper function to format dates in the application's timezone
