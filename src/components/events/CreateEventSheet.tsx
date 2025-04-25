@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -170,19 +169,6 @@ export function CreateEventSheet({
       resetForm();
     }
   }, [event]);
-
-  // Remove the timezone conversion functions that are causing the offset
-  // const convertToUTC = (dateTimeString: string): string => {
-  //   const cestDate = parseISO(dateTimeString);
-  //   const utcDate = new Date(cestDate.getTime() - 2 * 60 * 60 * 1000);
-  //   return format(utcDate, "yyyy-MM-dd'T'HH:mm:ss");
-  // };
-
-  // const convertToLocal = (utcDateTimeString: string): string => {
-  //   const utcDate = new Date(utcDateTimeString);
-  //   const cestDate = new Date(utcDate.getTime() + 2 * 60 * 60 * 1000);
-  //   return format(cestDate, "yyyy-MM-dd'T'HH:mm:ss");
-  // };
 
   const fetchEventTags = async (eventId: string) => {
     try {
@@ -625,6 +611,33 @@ export function CreateEventSheet({
     }
   };
 
+  const handleTimeChange = (type: 'start' | 'end', timeString: string) => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    
+    const currentDate = type === 'start' 
+      ? parseISO(newEvent.start_date)
+      : parseISO(newEvent.end_date);
+    
+    const newDate = new Date(currentDate);
+    newDate.setHours(hours);
+    newDate.setMinutes(minutes);
+    
+    const formattedDate = format(newDate, "yyyy-MM-dd'T'HH:mm:ss");
+    
+    if (type === 'start') {
+      setNewEvent(prev => ({
+        ...prev,
+        start_date: formattedDate,
+        end_date: format(addHours(newDate, 1), "yyyy-MM-dd'T'HH:mm:ss")
+      }));
+    } else {
+      setNewEvent(prev => ({
+        ...prev,
+        end_date: formattedDate
+      }));
+    }
+  };
+
   const handleDateChange = (type: 'start' | 'end', date: Date | undefined) => {
     if (!date) return;
     
@@ -639,53 +652,20 @@ export function CreateEventSheet({
     newDate.setHours(hours);
     newDate.setMinutes(minutes);
     
+    const formattedDate = format(newDate, "yyyy-MM-dd'T'HH:mm:ss");
+    
     if (type === 'start') {
-      const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
       setNewEvent(prev => ({
         ...prev,
-        start_date: newStartDate,
-        end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
+        start_date: formattedDate,
+        end_date: format(addHours(newDate, 1), "yyyy-MM-dd'T'HH:mm:ss")
       }));
     } else {
       setNewEvent(prev => ({
         ...prev,
-        end_date: format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: formattedDate
       }));
     }
-  };
-
-  const handleTimeChange = (type: 'start' | 'end', timeString: string) => {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    
-    const currentDate = type === 'start' 
-      ? parseISO(newEvent.start_date) 
-      : parseISO(newEvent.end_date);
-    
-    const newDate = new Date(currentDate);
-    newDate.setHours(hours);
-    newDate.setMinutes(minutes);
-    
-    if (type === 'start') {
-      const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
-      setNewEvent(prev => ({
-        ...prev,
-        start_date: newStartDate,
-        end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
-      }));
-    } else {
-      setNewEvent(prev => ({
-        ...prev,
-        end_date: format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
-      }));
-    }
-  };
-
-  const handleLocationChange = (locationId: string) => {
-    setNewEvent({
-      ...newEvent,
-      location_id: locationId,
-      location_text: null
-    });
   };
 
   return (

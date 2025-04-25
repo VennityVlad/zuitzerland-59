@@ -309,8 +309,8 @@ const Events = () => {
   };
 
   const formatDateRange = (startDate: string, endDate: string, isAllDay: boolean) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startDate + 'Z');
+    const end = new Date(endDate + 'Z');
     
     if (isSameDay(start, end)) {
       return format(start, "MMM d, yyyy");

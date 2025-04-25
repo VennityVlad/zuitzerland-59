@@ -4,13 +4,14 @@ import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Helper function to format dates in the application's timezone
- * @param date The date to format
- * @param formatStr The format string to use
- * @param timezone Optional timezone, defaults to the event's own timezone
- * @returns Formatted date string
+ * Explicitly parses dates as UTC to prevent double timezone application
  */
 export const formatWithTimezone = (date: Date | string | number, formatStr: string, timezone?: string) => {
-  const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  // Ensure we're working with a Date object
+  const dateObj = typeof date === 'string' ? new Date(date + 'Z') : // Append Z to treat string as UTC
+    typeof date === 'number' ? new Date(date) :
+    date;
+
   if (timezone) {
     return formatInTimeZone(dateObj, timezone, formatStr);
   } else {
@@ -20,11 +21,7 @@ export const formatWithTimezone = (date: Date | string | number, formatStr: stri
 
 /**
  * Format a time range, respecting the specified timezone
- * @param startDate Start date string
- * @param endDate End date string
- * @param isAllDay Whether this is an all-day event
- * @param timezone The timezone to use for formatting
- * @returns Formatted time string
+ * Handles UTC dates correctly by appending 'Z' to string dates
  */
 export const formatTimeRange = (
   startDate: string | Date, 
@@ -36,16 +33,15 @@ export const formatTimeRange = (
     return "All day";
   }
 
-  const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
-  const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+  // Explicitly parse dates as UTC by appending 'Z' to ISO strings
+  const start = typeof startDate === 'string' ? new Date(startDate + 'Z') : startDate;
+  const end = typeof endDate === 'string' ? new Date(endDate + 'Z') : endDate;
   
   return `${formatInTimeZone(start, timezone, "h:mm a")} - ${formatInTimeZone(end, timezone, "h:mm a")} (${getReadableTimezoneName(timezone)})`;
 };
 
 /**
  * Extract a readable timezone name from a timezone identifier
- * @param timezone The timezone identifier (e.g. "Europe/Zurich")
- * @returns A readable timezone name (e.g. "Zurich")
  */
 export const getReadableTimezoneName = (timezone: string): string => {
   if (!timezone || !timezone.includes('/')) return timezone;
