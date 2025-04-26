@@ -317,9 +317,11 @@ export type Database = {
           end_date: string
           id: string
           is_all_day: boolean | null
+          is_recurring_instance: boolean | null
           link: string | null
           location_id: string | null
           location_text: string | null
+          recurring_pattern_id: string | null
           speakers: string | null
           start_date: string
           timezone: string
@@ -335,9 +337,11 @@ export type Database = {
           end_date: string
           id?: string
           is_all_day?: boolean | null
+          is_recurring_instance?: boolean | null
           link?: string | null
           location_id?: string | null
           location_text?: string | null
+          recurring_pattern_id?: string | null
           speakers?: string | null
           start_date: string
           timezone?: string
@@ -353,9 +357,11 @@ export type Database = {
           end_date?: string
           id?: string
           is_all_day?: boolean | null
+          is_recurring_instance?: boolean | null
           link?: string | null
           location_id?: string | null
           location_text?: string | null
+          recurring_pattern_id?: string | null
           speakers?: string | null
           start_date?: string
           timezone?: string
@@ -382,6 +388,13 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_recurring_pattern_id_fkey"
+            columns: ["recurring_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_event_patterns"
             referencedColumns: ["id"]
           },
         ]
@@ -667,6 +680,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recurring_event_patterns: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          day_of_month: number | null
+          days_of_week: number[] | null
+          end_date: string | null
+          frequency: Database["public"]["Enums"]["event_recurrence_frequency"]
+          id: string
+          interval_count: number
+          month_of_year: number | null
+          start_date: string
+          timezone: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          end_date?: string | null
+          frequency: Database["public"]["Enums"]["event_recurrence_frequency"]
+          id?: string
+          interval_count?: number
+          month_of_year?: number | null
+          start_date: string
+          timezone?: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          end_date?: string | null
+          frequency?: Database["public"]["Enums"]["event_recurrence_frequency"]
+          id?: string
+          interval_count?: number
+          month_of_year?: number | null
+          start_date?: string
+          timezone?: string
+        }
+        Relationships: []
       }
       room_assignments: {
         Row: {
@@ -962,6 +1017,7 @@ export type Database = {
         | "Rejected"
         | "Wait"
         | "borderline"
+      event_recurrence_frequency: "daily" | "weekly" | "monthly" | "yearly"
       invoice_status: "pending" | "paid" | "overdue"
       profile_role: "admin" | "co-designer" | "co-curator" | "attendee"
       room_type:
@@ -1117,6 +1173,7 @@ export const Constants = {
         "Wait",
         "borderline",
       ],
+      event_recurrence_frequency: ["daily", "weekly", "monthly", "yearly"],
       invoice_status: ["pending", "paid", "overdue"],
       profile_role: ["admin", "co-designer", "co-curator", "attendee"],
       room_type: [

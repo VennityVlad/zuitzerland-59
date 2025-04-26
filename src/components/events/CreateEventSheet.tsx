@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { toZonedTime } from "date-fns-tz";
 import { convertToUTC } from "@/lib/date-utils";
+import { RecurrenceSettings } from './RecurrenceSettings';
 
 // UI Component imports
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -47,6 +48,8 @@ interface Event {
   speakers?: string | null;
   link?: string | null;
   timezone: string;
+  recurring_pattern_id: string | null;
+  is_recurring_instance: boolean;
 }
 
 interface Location {
@@ -85,6 +88,8 @@ interface NewEvent {
   speakers?: string | null;
   link?: string | null;
   timezone: string;
+  recurring_pattern_id: string | null;
+  is_recurring_instance: boolean;
 }
 
 const TIME_ZONES = [
@@ -129,6 +134,11 @@ export function CreateEventSheet({
   const [selectedTags, setSelectedTags] = useState<{ id: string; name: string; color: string; }[]>([]);
   const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [locationRequired, setLocationRequired] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState('weekly');
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null);
+  const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
 
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
@@ -143,7 +153,9 @@ export function CreateEventSheet({
     av_needs: "",
     speakers: "",
     link: "",
-    timezone: 'Europe/Zurich'
+    timezone: 'Europe/Zurich',
+    recurring_pattern_id: null,
+    is_recurring_instance: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!event;
@@ -164,7 +176,9 @@ export function CreateEventSheet({
         av_needs: event.av_needs,
         speakers: event.speakers,
         link: event.link,
-        timezone: event.timezone || 'Europe/Zurich'
+        timezone: event.timezone || 'Europe/Zurich',
+        recurring_pattern_id: event.recurring_pattern_id,
+        is_recurring_instance: event.is_recurring_instance
       });
       
       setUseCustomLocation(!!event.location_text);
@@ -349,7 +363,9 @@ export function CreateEventSheet({
       av_needs: "",
       speakers: "",
       link: "",
-      timezone: 'Europe/Zurich'
+      timezone: 'Europe/Zurich',
+      recurring_pattern_id: null,
+      is_recurring_instance: false
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
@@ -569,6 +585,42 @@ export function CreateEventSheet({
         originalTimezone: newEvent.timezone
       });
       
+      let recurringPatternId = null;
+
+      if (isRecurring) {
+        // Create or update recurring pattern
+        const patternData = {
+          frequency: recurrenceFrequency,
+          interval_count: recurrenceInterval,
+          days_of_week: recurrenceFrequency === 'weekly' ? selectedDaysOfWeek : null,
+          start_date: utcStartDate,
+          end_date: recurrenceEndDate ? convertToUTC(recurrenceEndDate, newEvent.timezone) : null,
+          created_by: userProfile?.id,
+          timezone: newEvent.timezone
+        };
+
+        if (event?.recurring_pattern_id) {
+          const { data: pattern, error: patternError } = await supabase
+            .from('recurring_event_patterns')
+            .update(patternData)
+            .eq('id', event.recurring_pattern_id)
+            .select()
+            .single();
+
+          if (patternError) throw patternError;
+          recurringPatternId = pattern.id;
+        } else {
+          const { data: pattern, error: patternError } = await supabase
+            .from('recurring_event_patterns')
+            .insert(patternData)
+            .select()
+            .single();
+
+          if (patternError) throw patternError;
+          recurringPatternId = pattern.id;
+        }
+      }
+
       const eventData = {
         title: newEvent.title,
         description: newEvent.description || null,
@@ -581,7 +633,9 @@ export function CreateEventSheet({
         av_needs: newEvent.av_needs || null,
         speakers: newEvent.speakers || null,
         link: newEvent.link || null,
-        timezone: newEvent.timezone
+        timezone: newEvent.timezone,
+        recurring_pattern_id: recurringPatternId,
+        is_recurring_instance: false
       };
 
       console.log('Event data prepared for database:', eventData);
@@ -1007,6 +1061,19 @@ export function CreateEventSheet({
                   />
                 </div>
               </div>
+
+              <RecurrenceSettings
+                isRecurring={isRecurring}
+                onIsRecurringChange={setIsRecurring}
+                frequency={recurrenceFrequency}
+                onFrequencyChange={setRecurrenceFrequency}
+                intervalCount={recurrenceInterval}
+                onIntervalCountChange={setRecurrenceInterval}
+                endDate={recurrenceEndDate}
+                onEndDateChange={setRecurrenceEndDate}
+                daysOfWeek={selectedDaysOfWeek}
+                onDaysOfWeekChange={setSelectedDaysOfWeek}
+              />
             </div>
 
             <Button 
