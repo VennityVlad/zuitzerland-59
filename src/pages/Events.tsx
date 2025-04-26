@@ -6,7 +6,7 @@ import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar,
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useToast, toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { EventRSVPAvatars } from "@/components/events/EventRSVPAvatars";
@@ -455,7 +455,8 @@ const Events = () => {
                   userRSVPEventIds,
                   profileId,
                   refetchRSVPs,
-                  isMobile
+                  isMobile,
+                  handleShare
                 )}
               </TabsContent>
               <TabsContent value="past" className="space-y-4 mt-4">
@@ -475,7 +476,8 @@ const Events = () => {
                   userRSVPEventIds,
                   profileId,
                   refetchRSVPs,
-                  isMobile
+                  isMobile,
+                  handleShare
                 )}
               </TabsContent>
               <TabsContent value="going" className="space-y-4 mt-4">
@@ -495,7 +497,8 @@ const Events = () => {
                   userRSVPEventIds,
                   profileId,
                   refetchRSVPs,
-                  isMobile
+                  isMobile,
+                  handleShare
                 )}
               </TabsContent>
               <TabsContent value="hosting" className="space-y-4 mt-4">
@@ -515,7 +518,8 @@ const Events = () => {
                   userRSVPEventIds,
                   profileId,
                   refetchRSVPs,
-                  isMobile
+                  isMobile,
+                  handleShare
                 )}
               </TabsContent>
             </Tabs>
@@ -581,7 +585,8 @@ const renderEventsList = (
   userRSVPEventIds: string[],
   profileId: string | undefined,
   refetchRSVPs: () => void,
-  isMobile: boolean
+  isMobile: boolean,
+  handleShare: (event: Event) => void
 ) => {
   if (isLoading || profileLoading) {
     return (
