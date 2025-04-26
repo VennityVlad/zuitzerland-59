@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CalendarDays, LogIn, Share } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
-import { useToast } from "@/components/ui/toast";
+import { useToast } from "@/hooks/use-toast";
 
 const EventPage = () => {
   const { eventId } = useParams();
