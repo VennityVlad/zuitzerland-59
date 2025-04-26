@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -7,14 +6,16 @@ import { usePrivy } from "@privy-io/react-auth";
 import { PageTitle } from "@/components/PageTitle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CalendarDays, LogIn } from "lucide-react";
+import { CalendarDays, LogIn, Share } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
+import { useToast } from "@/components/ui/toast";
 
 const EventPage = () => {
   const { eventId } = useParams();
   const { user, authenticated } = usePrivy();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -64,6 +65,37 @@ const EventPage = () => {
 
   const metaDescription = `${event.title} - ${formatTimeRange(new Date(event.start_date), new Date(event.end_date), event.is_all_day, event.timezone)} ${location ? `at ${location}` : ''}`;
 
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: metaDescription,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link copied",
+          description: "The event link has been copied to your clipboard.",
+        });
+      } catch (err) {
+        console.error('Error copying to clipboard:', err);
+        toast({
+          title: "Error",
+          description: "Failed to copy the link. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <>
       <Helmet>
@@ -98,9 +130,19 @@ const EventPage = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Show full event details for authenticated users */}
-            {/* ... similar to the event card in the Events page, but with more details */}
-            {/* We'll create this in the next iteration if needed */}
+            <Card className="p-6">
+              <div className="flex flex-col gap-4">
+                <h1 className="text-2xl font-bold">{event.title}</h1>
+                <p className="text-gray-600">{event.description}</p>
+                
+                <Button onClick={handleShare} variant="outline" className="w-fit">
+                  <Share className="mr-2 h-4 w-4" />
+                  Share Event
+                </Button>
+                
+                {/* Add more event details as needed */}
+              </div>
+            </Card>
           </div>
         )}
       </div>

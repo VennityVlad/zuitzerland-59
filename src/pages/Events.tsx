@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -583,6 +583,37 @@ const renderEventsList = (
     return acc;
   }, {} as Record<string, EventWithProfile[]>);
 
+  const handleShare = async (event: Event) => {
+    const shareUrl = `${window.location.origin}/events/${event.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: event.description || event.title,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link copied",
+          description: "The event link has been copied to your clipboard.",
+        });
+      } catch (err) {
+        console.error('Error copying to clipboard:', err);
+        toast({
+          title: "Error",
+          description: "Failed to copy the link. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
       {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
@@ -660,6 +691,19 @@ const renderEventsList = (
                         )}
 
                         <div className="flex flex-wrap gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault(); // Prevent navigation when clicking share
+                              handleShare(event);
+                            }}
+                            className="text-gray-500 border-gray-500 hover:bg-gray-50"
+                          >
+                            <Share className="h-4 w-4 mr-2" />
+                            {isMobile ? "" : "Share"}
+                          </Button>
+                          
                           {!!profileId && (
                             <EventRSVPButton
                               eventId={event.id}
