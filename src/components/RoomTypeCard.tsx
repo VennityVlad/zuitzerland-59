@@ -5,18 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-interface RoomType {
-  id: string;
-  code: string;
-  display_name: string;
-  description: string | null;
-  price_range_min: number | null;
-  price_range_max: number | null;
-  min_stay_days: number | null;
-  active: boolean | null;
-  quantity: number;
-}
+import { type RoomType } from "@/types/booking";
 
 interface RoomTypeCardProps {
   roomType: RoomType;
