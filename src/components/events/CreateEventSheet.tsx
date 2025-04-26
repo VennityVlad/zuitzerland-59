@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -149,7 +148,7 @@ export function CreateEventSheet({
     end_date: getInitialEndDate(getInitialStartDate()),
     location_id: null,
     location_text: "",
-    color: "#1a365d", // Keep default color, but we'll modify the form
+    color: "#1a365d",
     is_all_day: false,
     created_by: "",
     av_needs: "",
@@ -555,7 +554,7 @@ export function CreateEventSheet({
         end_date: format(zonedEndDate, 'yyyy-MM-dd\'T\'HH:mm:ss'),
         location_id: useCustomLocation ? null : newEvent.location_id,
         location_text: useCustomLocation ? newEvent.location_text : null,
-        color: "#1a365d", // Always use a default color
+        color: "#1a365d",
         is_all_day: newEvent.is_all_day,
         av_needs: newEvent.av_needs || null,
         speakers: newEvent.speakers || null,
@@ -959,9 +958,6 @@ export function CreateEventSheet({
               </div>
             </div>
 
-            
-
-            
             <Button 
               className="w-full" 
               onClick={handleSubmit}
