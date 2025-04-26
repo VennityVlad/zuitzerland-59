@@ -41,10 +41,13 @@ export const EventCalendar = ({ onSelectDate, className, events = [] }: EventCal
       
       // Reset time part for accurate date comparison
       currentDate.setHours(0, 0, 0, 0);
-      const startDate = new Date(start).setHours(0, 0, 0, 0);
-      const endDate = new Date(end).setHours(0, 0, 0, 0);
       
-      return currentDate >= startDate && currentDate <= endDate;
+      // Convert dates to timestamps for proper comparison
+      const currentTimestamp = currentDate.getTime();
+      const startTimestamp = new Date(start).setHours(0, 0, 0, 0);
+      const endTimestamp = new Date(end).setHours(0, 0, 0, 0);
+      
+      return currentTimestamp >= startTimestamp && currentTimestamp <= endTimestamp;
     });
   };
 
