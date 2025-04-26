@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -33,6 +32,8 @@ import Directory from "./pages/Directory";
 import { useIsMobile } from "./hooks/use-mobile";
 import { usePageTracking } from "./hooks/usePageTracking";
 import AvailabilityPage from "./pages/rooms/AvailabilityPage";
+import { HelmetProvider } from 'react-helmet-async';
+import EventPage from "./pages/events/EventPage";
 
 const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
   usePageTracking();
@@ -300,8 +301,15 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/events/:eventId"
+        element={
+          <ProtectedRoute>
+            <EventPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/404" element={<NotFound />} />
-      {/* Add a catch-all route that renders the NotFound component for any unmatched routes */}
       <Route path="*" element={<Navigate to="/404" />} />
     </Routes>
   );
@@ -384,28 +392,30 @@ const App = () => {
 
   return (
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <PrivyProvider
-        appId={privyAppId}
-        config={{
-          loginMethods: ['email'],
-          appearance: {
-            theme: 'light',
-            accentColor: '#1a365d',
-            logo: '/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png',
-          },
-          embeddedWallets: {
-            createOnLogin: 'users-without-wallets'
-          }
-        }}
-      >
-        <SupabaseAuthProvider>
-          <PageTrackingWrapper>
-            <AppRoutes />
-          </PageTrackingWrapper>
-        </SupabaseAuthProvider>
-      </PrivyProvider>
+      <HelmetProvider>
+        <Toaster />
+        <Sonner />
+        <PrivyProvider
+          appId={privyAppId}
+          config={{
+            loginMethods: ['email'],
+            appearance: {
+              theme: 'light',
+              accentColor: '#1a365d',
+              logo: '/lovable-uploads/2796594c-9800-4554-b79d-a1da8992c369.png',
+            },
+            embeddedWallets: {
+              createOnLogin: 'users-without-wallets'
+            }
+          }}
+        >
+          <SupabaseAuthProvider>
+            <PageTrackingWrapper>
+              <AppRoutes />
+            </PageTrackingWrapper>
+          </SupabaseAuthProvider>
+        </PrivyProvider>
+      </HelmetProvider>
     </TooltipProvider>
   );
 };

@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { Link } from 'react-router-dom';
 
 interface Event {
   id: string;
@@ -612,7 +613,9 @@ const renderEventsList = (
                           </Badge>
                         </div>
                         
-                        <h3 className="text-xl font-bold mb-2 break-words">{event.title}</h3>
+                        <Link to={`/events/${event.id}`} className="hover:underline">
+                          <h3 className="text-xl font-bold mb-2 break-words">{event.title}</h3>
+                        </Link>
                         
                         <div className="flex items-center text-sm text-gray-600 mb-3">
                           <Calendar className="h-4 w-4 mr-2 flex-shrink-0 text-gray-500" />
