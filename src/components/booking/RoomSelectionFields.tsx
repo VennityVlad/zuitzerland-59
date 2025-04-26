@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import {
@@ -90,7 +89,6 @@ const RoomSelectionFields = ({
     staleTime: Infinity
   });
 
-  // Query to get booking counts for each room type
   const { data: roomAvailability } = useQuery({
     queryKey: ['roomAvailability'],
     queryFn: async () => {
@@ -119,8 +117,17 @@ const RoomSelectionFields = ({
     }
   });
 
-  // Handler function that works with both prop patterns
+  const isRoomSoldOut = (roomTypeCode: string) => {
+    if (!roomAvailability || !roomAvailability[roomTypeCode]) return false;
+    const { total, booked } = roomAvailability[roomTypeCode];
+    return total - booked <= 0;
+  };
+
   const handleRoomTypeChange = (value: string) => {
+    if (isRoomSoldOut(value)) {
+      return;
+    }
+
     if (onRoomTypeChange) {
       onRoomTypeChange(value);
     } else if (handleInputChange) {
@@ -177,16 +184,20 @@ const RoomSelectionFields = ({
           <SelectValue placeholder={isRoomTypesLoading ? "Loading room types..." : "Select a room type"} />
         </SelectTrigger>
         <SelectContent>
-          {roomTypes?.map((room) => (
-            <SelectItem 
-              key={room.id} 
-              value={room.id}
-              style={getRoomItemStyles(room.id)}
-              disabled={roomAvailability?.[room.id]?.total - (roomAvailability?.[room.id]?.booked || 0) <= 0}
-            >
-              {room.name}{getRoomAvailabilityDisplay(room.id)}
-            </SelectItem>
-          ))}
+          {roomTypes?.map((room) => {
+            const soldOut = isRoomSoldOut(room.id);
+            return (
+              <SelectItem 
+                key={room.id} 
+                value={room.id}
+                style={getRoomItemStyles(room.id)}
+                disabled={soldOut}
+                className={soldOut ? "opacity-50 cursor-not-allowed" : ""}
+              >
+                {room.name}{getRoomAvailabilityDisplay(room.id)}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>
