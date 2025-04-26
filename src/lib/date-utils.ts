@@ -11,7 +11,9 @@ import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
  */
 export const toUTCDate = (dateStr: string, timeStr: string, timezone: string): Date => {
   const fullLocalString = `${dateStr}T${timeStr}`;
+  console.log('toUTCDate input:', { dateStr, timeStr, timezone, fullLocalString });
   const zonedTime = toZonedTime(new Date(fullLocalString), timezone);
+  console.log('toUTCDate output:', { zonedTime, zonedTimeISO: zonedTime.toISOString() });
   return zonedTime;
 };
 
@@ -85,19 +87,33 @@ export const getReadableTimezoneName = (timezone: string): string => {
  * @returns The UTC date as a string in ISO format
  */
 export const convertToUTC = (date: Date | string, timezone: string): string => {
+  console.log('convertToUTC input:', { 
+    date: typeof date === 'string' ? date : date.toString(), 
+    dateType: typeof date,
+    timezone 
+  });
+
   // First make sure we have a Date object
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  
-  // Get the timezone offset in minutes for the specified timezone
-  // This is the difference between the local time and UTC
-  const localDate = new Date(dateObj);
+  console.log('dateObj created:', { dateObj: dateObj.toString(), dateObjISO: dateObj.toISOString() });
   
   // Format in ISO without the 'Z' which would denote UTC
-  const dateString = localDate.toISOString().slice(0, -1);
+  const dateString = dateObj.toISOString().slice(0, -1);
+  console.log('dateString (ISO without Z):', dateString);
   
   // Create a zoned time from this date string and the target timezone
   const zonedDate = toZonedTime(dateString, timezone);
+  console.log('zonedDate:', { 
+    zonedDate: zonedDate.toString(),
+    zonedDateISO: zonedDate.toISOString(),
+    zonedTimestamp: zonedDate.getTime(),
+    browserTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    targetTimezone: timezone
+  });
   
   // Now convert to UTC ISO string
-  return zonedDate.toISOString();
+  const result = zonedDate.toISOString();
+  console.log('convertToUTC final result:', result);
+  
+  return result;
 };

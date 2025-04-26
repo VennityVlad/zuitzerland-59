@@ -150,6 +150,7 @@ export function CreateEventSheet({
 
   useEffect(() => {
     if (event) {
+      console.log('Editing existing event:', event);
       setNewEvent({
         title: event.title,
         description: event.description || "",
@@ -171,6 +172,12 @@ export function CreateEventSheet({
       if (event.id) {
         fetchEventTags(event.id);
       }
+      
+      console.log('Initialized form with event dates:', {
+        start_date: event.start_date,
+        end_date: event.end_date,
+        timezone: event.timezone || 'Europe/Zurich'
+      });
     } else {
       resetForm();
     }
@@ -320,11 +327,20 @@ export function CreateEventSheet({
   }, [newEvent.location_id, newEvent.start_date, newEvent.end_date]);
 
   const resetForm = () => {
+    const initialStartDate = getInitialStartDate();
+    const initialEndDate = getInitialEndDate(initialStartDate);
+    
+    console.log('Resetting form with initial dates:', {
+      initialStartDate,
+      initialEndDate,
+      timezone: 'Europe/Zurich'
+    });
+    
     setNewEvent({
       title: "",
       description: "",
-      start_date: getInitialStartDate(),
-      end_date: getInitialEndDate(getInitialStartDate()),
+      start_date: initialStartDate,
+      end_date: initialEndDate,
       location_id: null,
       location_text: "",
       color: "#1a365d",
@@ -437,6 +453,13 @@ export function CreateEventSheet({
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
+      console.log('Start of form submission, current form values:', {
+        title: newEvent.title,
+        start_date: newEvent.start_date,
+        end_date: newEvent.end_date,
+        timezone: newEvent.timezone,
+        browserTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      });
       
       if (!newEvent.title) {
         toast({
@@ -531,8 +554,20 @@ export function CreateEventSheet({
         return;
       }
 
+      console.log('Before UTC conversion:', {
+        start_date: newEvent.start_date,
+        end_date: newEvent.end_date,
+        timezone: newEvent.timezone
+      });
+      
       const utcStartDate = convertToUTC(newEvent.start_date, newEvent.timezone);
       const utcEndDate = convertToUTC(newEvent.end_date, newEvent.timezone);
+      
+      console.log('After UTC conversion:', {
+        utcStartDate,
+        utcEndDate,
+        originalTimezone: newEvent.timezone
+      });
       
       const eventData = {
         title: newEvent.title,
@@ -549,6 +584,8 @@ export function CreateEventSheet({
         timezone: newEvent.timezone
       };
 
+      console.log('Event data prepared for database:', eventData);
+
       if (isEditMode) {
         console.log("Updating event:", event.id);
         const { data, error } = await supabase
@@ -562,6 +599,7 @@ export function CreateEventSheet({
           throw error;
         }
 
+        console.log('Event updated successfully:', data);
         if (data) {
           await supabase
             .from('event_tag_relations')
@@ -580,6 +618,11 @@ export function CreateEventSheet({
           }
         }
       } else {
+        console.log('Creating new event with data:', {
+          ...eventData,
+          created_by: userProfile?.id
+        });
+        
         const { data, error } = await supabase
           .from('events')
           .insert({
@@ -589,8 +632,12 @@ export function CreateEventSheet({
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase insert error:", error);
+          throw error;
+        }
 
+        console.log('New event created successfully:', data);
         if (data && selectedTags.length > 0) {
           await supabase
             .from('event_tag_relations')
@@ -632,22 +679,34 @@ export function CreateEventSheet({
     newDate.setHours(hours);
     newDate.setMinutes(minutes);
     
+    console.log(`handleDateChange (${type}):`, {
+      date: date.toString(),
+      currentDate: currentDate.toString(),
+      hours,
+      minutes,
+      newDate: newDate.toString()
+    });
+    
     if (type === 'start') {
       const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      console.log('Setting new start date:', newStartDate);
       setNewEvent(prev => ({
         ...prev,
         start_date: newStartDate,
         end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     } else {
+      const newEndDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      console.log('Setting new end date:', newEndDate);
       setNewEvent(prev => ({
         ...prev,
-        end_date: format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: newEndDate
       }));
     }
   };
 
   const handleTimeChange = (type: 'start' | 'end', timeString: string) => {
+    console.log(`handleTimeChange (${type}):`, { timeString });
     const [hours, minutes] = timeString.split(':').map(Number);
     
     const currentDate = type === 'start' 
@@ -658,19 +717,35 @@ export function CreateEventSheet({
     newDate.setHours(hours);
     newDate.setMinutes(minutes);
 
+    console.log('After setting hours/minutes:', {
+      newDate: newDate.toString(),
+      newDateISO: newDate.toISOString(),
+      timezone: newEvent.timezone
+    });
+
     const zonedTime = toZonedTime(newDate, newEvent.timezone);
+    
+    console.log('After converting to zoned time:', {
+      zonedTime: zonedTime.toString(),
+      zonedTimeISO: zonedTime.toISOString(),
+      timezone: newEvent.timezone,
+      type
+    });
     
     if (type === 'start') {
       const newStartDate = format(zonedTime, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      console.log('Setting new time-adjusted start date:', newStartDate);
       setNewEvent(prev => ({
         ...prev,
         start_date: newStartDate,
         end_date: format(addHours(zonedTime, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     } else {
+      const newEndDate = format(zonedTime, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      console.log('Setting new time-adjusted end date:', newEndDate);
       setNewEvent(prev => ({
         ...prev,
-        end_date: format(zonedTime, 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: newEndDate
       }));
     }
   };
