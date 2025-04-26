@@ -5,6 +5,7 @@ import { Calendar as CalendarIcon, Clock, Link, AlertTriangle } from "lucide-rea
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { toZonedTime } from "date-fns-tz";
+import { convertToUTC } from "@/lib/date-utils";
 
 // UI Component imports
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -85,18 +86,6 @@ interface NewEvent {
   link?: string | null;
   timezone: string;
 }
-
-// Remove color options
-const colorOptions = [
-  { label: "Blue", value: "#1a365d" },
-  { label: "Green", value: "#1C4532" },
-  { label: "Red", value: "#822727" },
-  { label: "Purple", value: "#553C9A" },
-  { label: "Orange", value: "#974820" },
-  { label: "Pink", value: "#97266D" },
-  { label: "Cyan", value: "#0D7490" },
-  { label: "Gray", value: "#1A202C" }
-];
 
 const TIME_ZONES = [
   { value: 'Europe/Zurich', label: 'Central European Time (CEST)' },
@@ -542,16 +531,14 @@ export function CreateEventSheet({
         return;
       }
 
-      // Convert dates to UTC using the selected timezone
-      const zonedStartDate = toZonedTime(new Date(newEvent.start_date), newEvent.timezone);
-      const zonedEndDate = toZonedTime(new Date(newEvent.end_date), newEvent.timezone);
-
-      // Store dates in UTC format
+      const utcStartDate = convertToUTC(newEvent.start_date, newEvent.timezone);
+      const utcEndDate = convertToUTC(newEvent.end_date, newEvent.timezone);
+      
       const eventData = {
         title: newEvent.title,
         description: newEvent.description || null,
-        start_date: format(zonedStartDate, 'yyyy-MM-dd\'T\'HH:mm:ss'),
-        end_date: format(zonedEndDate, 'yyyy-MM-dd\'T\'HH:mm:ss'),
+        start_date: utcStartDate,
+        end_date: utcEndDate,
         location_id: useCustomLocation ? null : newEvent.location_id,
         location_text: useCustomLocation ? newEvent.location_text : null,
         color: "#1a365d",
@@ -671,7 +658,6 @@ export function CreateEventSheet({
     newDate.setHours(hours);
     newDate.setMinutes(minutes);
 
-    // Convert to UTC before storing
     const zonedTime = toZonedTime(newDate, newEvent.timezone);
     
     if (type === 'start') {
@@ -830,7 +816,6 @@ export function CreateEventSheet({
                 )}
               </div>
 
-              {/* Timezone field moved here as its own row */}
               <div className="space-y-2">
                 <Label htmlFor="timezone">Timezone</Label>
                 <Select

@@ -74,3 +74,30 @@ export const getReadableTimezoneName = (timezone: string): string => {
   if (!timezone || !timezone.includes('/')) return timezone;
   return timezone.split('/')[1].replace('_', ' ');
 };
+
+/**
+ * Convert a date from a specific timezone to UTC
+ * This ensures that when a user selects, for example, 2PM in Europe/Zurich,
+ * it's stored as 12PM UTC in the database
+ * 
+ * @param date The date to convert
+ * @param timezone The timezone the date is in
+ * @returns The UTC date as a string in ISO format
+ */
+export const convertToUTC = (date: Date | string, timezone: string): string => {
+  // First make sure we have a Date object
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // Get the timezone offset in minutes for the specified timezone
+  // This is the difference between the local time and UTC
+  const localDate = new Date(dateObj);
+  
+  // Format in ISO without the 'Z' which would denote UTC
+  const dateString = localDate.toISOString().slice(0, -1);
+  
+  // Create a zoned time from this date string and the target timezone
+  const zonedDate = toZonedTime(dateString, timezone);
+  
+  // Now convert to UTC ISO string
+  return zonedDate.toISOString();
+};
