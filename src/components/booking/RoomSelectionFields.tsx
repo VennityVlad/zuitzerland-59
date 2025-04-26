@@ -90,16 +90,66 @@ const RoomSelectionFields = ({
     staleTime: Infinity
   });
 
+  // Query to get booking counts for each room type
+  const { data: roomAvailability } = useQuery({
+    queryKey: ['roomAvailability'],
+    queryFn: async () => {
+      const { data: roomTypesData } = await supabase
+        .from('room_types')
+        .select('code, quantity');
+      
+      if (!roomTypesData) return {};
+
+      const availability: Record<string, { total: number, booked: number }> = {};
+      
+      for (const room of roomTypesData) {
+        const { count } = await supabase
+          .from('invoices')
+          .select('*', { count: 'exact', head: true })
+          .eq('room_type', room.code)
+          .neq('status', 'cancelled');
+
+        availability[room.code] = {
+          total: room.quantity || 0,
+          booked: count || 0
+        };
+      }
+      
+      return availability;
+    }
+  });
+
   // Handler function that works with both prop patterns
   const handleRoomTypeChange = (value: string) => {
     if (onRoomTypeChange) {
       onRoomTypeChange(value);
     } else if (handleInputChange) {
-      // Create a synthetic event object to work with handleInputChange
       handleInputChange({
         target: { name: "roomType", value }
       } as React.ChangeEvent<HTMLInputElement>);
     }
+  };
+
+  const getRoomAvailabilityDisplay = (roomTypeCode: string) => {
+    if (!roomAvailability || !roomAvailability[roomTypeCode]) return '';
+    
+    const { total, booked } = roomAvailability[roomTypeCode];
+    const available = Math.max(0, total - booked);
+
+    if (available === 0) return ' (SOLD OUT)';
+    if (available === 1) return ' (1 LEFT)';
+    return '';
+  };
+
+  const getRoomItemStyles = (roomTypeCode: string) => {
+    if (!roomAvailability || !roomAvailability[roomTypeCode]) return {};
+    
+    const { total, booked } = roomAvailability[roomTypeCode];
+    const available = Math.max(0, total - booked);
+
+    if (available === 0) return { color: 'rgb(239 68 68)' }; // text-red-500
+    if (available === 1) return { color: 'rgb(249 115 22)' }; // text-orange-500
+    return {};
   };
 
   return (
@@ -128,8 +178,13 @@ const RoomSelectionFields = ({
         </SelectTrigger>
         <SelectContent>
           {roomTypes?.map((room) => (
-            <SelectItem key={room.id} value={room.id}>
-              {room.name}
+            <SelectItem 
+              key={room.id} 
+              value={room.id}
+              style={getRoomItemStyles(room.id)}
+              disabled={roomAvailability?.[room.id]?.total - (roomAvailability?.[room.id]?.booked || 0) <= 0}
+            >
+              {room.name}{getRoomAvailabilityDisplay(room.id)}
             </SelectItem>
           ))}
         </SelectContent>

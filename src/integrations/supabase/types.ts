@@ -802,6 +802,7 @@ export type Database = {
           min_stay_days: number | null
           price_range_max: number | null
           price_range_min: number | null
+          quantity: number
           updated_at: string
         }
         Insert: {
@@ -814,6 +815,7 @@ export type Database = {
           min_stay_days?: number | null
           price_range_max?: number | null
           price_range_min?: number | null
+          quantity?: number
           updated_at?: string
         }
         Update: {
@@ -826,6 +828,7 @@ export type Database = {
           min_stay_days?: number | null
           price_range_max?: number | null
           price_range_min?: number | null
+          quantity?: number
           updated_at?: string
         }
         Relationships: []
