@@ -722,26 +722,17 @@ export function CreateEventSheet({
       newDateISO: newDate.toISOString(),
       timezone: newEvent.timezone
     });
-
-    const zonedTime = toZonedTime(newDate, newEvent.timezone);
-    
-    console.log('After converting to zoned time:', {
-      zonedTime: zonedTime.toString(),
-      zonedTimeISO: zonedTime.toISOString(),
-      timezone: newEvent.timezone,
-      type
-    });
     
     if (type === 'start') {
-      const newStartDate = format(zonedTime, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
       console.log('Setting new time-adjusted start date:', newStartDate);
       setNewEvent(prev => ({
         ...prev,
         start_date: newStartDate,
-        end_date: format(addHours(zonedTime, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
+        end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
       }));
     } else {
-      const newEndDate = format(zonedTime, 'yyyy-MM-dd\'T\'HH:mm:ss');
+      const newEndDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
       console.log('Setting new time-adjusted end date:', newEndDate);
       setNewEvent(prev => ({
         ...prev,
