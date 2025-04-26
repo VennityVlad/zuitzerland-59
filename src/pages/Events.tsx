@@ -350,6 +350,37 @@ const Events = () => {
 
   const hasActiveFilters = selectedTags.length > 0 || !!selectedDate;
 
+  const handleShare = async (event: Event) => {
+    const shareUrl = `${window.location.origin}/events/${event.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: event.description || event.title,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link copied",
+          description: "The event link has been copied to your clipboard.",
+        });
+      } catch (err) {
+        console.error('Error copying to clipboard:', err);
+        toast({
+          title: "Error",
+          description: "Failed to copy the link. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -582,37 +613,6 @@ const renderEventsList = (
     acc[dateKey].push(event);
     return acc;
   }, {} as Record<string, EventWithProfile[]>);
-
-  const handleShare = async (event: Event) => {
-    const shareUrl = `${window.location.origin}/events/${event.id}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: event.title,
-          text: event.description || event.title,
-          url: shareUrl,
-        });
-      } catch (err) {
-        console.error('Error sharing:', err);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        toast({
-          title: "Link copied",
-          description: "The event link has been copied to your clipboard.",
-        });
-      } catch (err) {
-        console.error('Error copying to clipboard:', err);
-        toast({
-          title: "Error",
-          description: "Failed to copy the link. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
 
   return (
     <div className="space-y-8">
