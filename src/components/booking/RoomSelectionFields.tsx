@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,14 +26,19 @@ const RoomInfo = () => {
   const { data: roomTypes } = useQuery({
     queryKey: ['roomTypesInfo'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('room_types')
-        .select('*')
-        .eq('active', true)  // Only select active room types
-        .order('price_range_min', { ascending: true });
+      try {
+        const { data, error } = await supabase
+          .from('room_types')
+          .select('*')
+          .eq('active', true)  // Only select active room types
+          .order('price_range_min', { ascending: true });
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error('Error fetching room types info:', error);
+        return [];
+      }
     }
   });
 
@@ -61,21 +67,26 @@ const RoomInfo = () => {
 };
 
 const getRoomTypes = async () => {
-  const { data, error } = await supabase
-    .from('room_types')
-    .select('code, display_name')
-    .eq('active', true)  // Only select active room types
-    .order('price_range_min', { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from('room_types')
+      .select('code, display_name')
+      .eq('active', true)  // Only select active room types
+      .order('price_range_min', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching room types:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching room types:', error);
+      throw error;
+    }
+
+    return data.map(room => ({
+      id: room.code,
+      name: room.display_name
+    })) || [];
+  } catch (error) {
+    console.error('Error in getRoomTypes:', error);
+    return [];
   }
-
-  return data.map(room => ({
-    id: room.code,
-    name: room.display_name
-  }));
 };
 
 const RoomSelectionFields = ({
@@ -86,35 +97,48 @@ const RoomSelectionFields = ({
   const { data: roomTypes, isLoading: isRoomTypesLoading } = useQuery({
     queryKey: ['roomTypes'],
     queryFn: getRoomTypes,
-    staleTime: Infinity
+    staleTime: Infinity,
+    retry: 1
   });
 
   const { data: roomAvailability } = useQuery({
     queryKey: ['roomAvailability'],
     queryFn: async () => {
-      const { data: roomTypesData } = await supabase
-        .from('room_types')
-        .select('code, quantity');
-      
-      if (!roomTypesData) return {};
+      try {
+        const { data: roomTypesData, error: roomTypesError } = await supabase
+          .from('room_types')
+          .select('code, quantity');
+        
+        if (roomTypesError) throw roomTypesError;
+        if (!roomTypesData) return {};
 
-      const availability: Record<string, { total: number, booked: number }> = {};
-      
-      for (const room of roomTypesData) {
-        const { count } = await supabase
-          .from('invoices')
-          .select('*', { count: 'exact', head: true })
-          .eq('room_type', room.code)
-          .neq('status', 'cancelled');
+        const availability: Record<string, { total: number, booked: number }> = {};
+        
+        for (const room of roomTypesData) {
+          const { count, error } = await supabase
+            .from('invoices')
+            .select('*', { count: 'exact', head: true })
+            .eq('room_type', room.code)
+            .neq('status', 'cancelled');
 
-        availability[room.code] = {
-          total: room.quantity || 0,
-          booked: count || 0
-        };
+          if (error) {
+            console.error(`Error fetching bookings for room type ${room.code}:`, error);
+            continue;
+          }
+
+          availability[room.code] = {
+            total: room.quantity || 0,
+            booked: count || 0
+          };
+        }
+        
+        return availability;
+      } catch (error) {
+        console.error('Error fetching room availability:', error);
+        return {};
       }
-      
-      return availability;
-    }
+    },
+    retry: 1
   });
 
   const isRoomSoldOut = (roomTypeCode: string) => {
@@ -177,7 +201,7 @@ const RoomSelectionFields = ({
       </div>
       <Select
         name="roomType"
-        value={formData.roomType}
+        value={formData.roomType || ""}
         onValueChange={handleRoomTypeChange}
       >
         <SelectTrigger className="w-full py-5">

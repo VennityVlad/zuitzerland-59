@@ -20,7 +20,10 @@ const Book = () => {
   // Check if user is admin
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setIsAdmin(false);
+        return;
+      }
 
       try {
         const { data, error } = await supabase
@@ -31,15 +34,14 @@ const Book = () => {
 
         if (error) throw error;
         
-        setIsAdmin(data?.role === 'admin');
+        setIsAdmin(data?.role === 'admin' || false);
       } catch (error) {
         console.error('Error fetching profile:', error);
+        setIsAdmin(false);
       }
     };
 
-    if (user?.id) {
-      checkAdminStatus();
-    }
+    checkAdminStatus();
   }, [user?.id]);
 
   // Fetch user's invoice if they have one
@@ -48,29 +50,36 @@ const Book = () => {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      // First get the profile id for the current user
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('privy_id', user.id)
-        .maybeSingle();
+      try {
+        // First get the profile id for the current user
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('privy_id', user.id)
+          .maybeSingle();
 
-      if (profileError) throw profileError;
-      if (!profileData) return null;
+        if (profileError) throw profileError;
+        if (!profileData) return null;
 
-      // Get the user's invoice
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('profile_id', profileData.id)
-        .neq('status', 'cancelled')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        // Get the user's invoice
+        const { data, error } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('profile_id', profileData.id)
+          .neq('status', 'cancelled')
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-      if (error) throw error;
-      return data && data.length > 0 ? data[0] as Invoice : null;
+        if (error) throw error;
+        return data && data.length > 0 ? data[0] as Invoice : null;
+      } catch (error) {
+        console.error('Error fetching invoice:', error);
+        return null;
+      }
     },
-    enabled: Boolean(user?.id)
+    enabled: Boolean(user?.id),
+    retry: false,
+    refetchOnWindowFocus: false
   });
   
   return (
@@ -87,7 +96,7 @@ const Book = () => {
           ) : userInvoice ? (
             <UserInvoiceView invoice={userInvoice} />
           ) : (
-            <BookingForm bookingBlockEnabled={bookingSettings.blockEnabled} />
+            <BookingForm bookingBlockEnabled={bookingSettings?.blockEnabled ?? true} />
           )}
         </div>
       </div>
