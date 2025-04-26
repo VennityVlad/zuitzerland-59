@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
@@ -492,7 +491,10 @@ const Events = () => {
           
           {!isMobile && (
             <div className="col-span-1 space-y-4">
-              <EventCalendar onSelectDate={setSelectedDate} />
+              <EventCalendar 
+                onSelectDate={setSelectedDate} 
+                events={events || []}
+              />
             </div>
           )}
         </div>

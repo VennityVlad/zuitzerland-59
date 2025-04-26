@@ -1,21 +1,52 @@
 
 import React, { useState } from "react";
-import { format, addMonths, subMonths } from "date-fns";
+import { format, addMonths, subMonths, setMonth, setYear } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+interface Event {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+}
 
 interface EventCalendarProps {
   onSelectDate?: (date: Date | undefined) => void;
   className?: string;
+  events?: Event[];
 }
 
-export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) => {
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+export const EventCalendar = ({ onSelectDate, className, events = [] }: EventCalendarProps) => {
+  // Initialize with May 2025
+  const initialDate = new Date(2025, 4, 1); // Month is 0-based, so 4 is May
+  const [currentMonth, setCurrentMonth] = useState<Date>(initialDate);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const weekDays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
+  const getEventsForDate = (date: Date) => {
+    return events.filter(event => {
+      const start = new Date(event.start_date);
+      const end = new Date(event.end_date);
+      const currentDate = new Date(date);
+      
+      // Reset time part for accurate date comparison
+      currentDate.setHours(0, 0, 0, 0);
+      const startDate = new Date(start).setHours(0, 0, 0, 0);
+      const endDate = new Date(end).setHours(0, 0, 0, 0);
+      
+      return currentDate >= startDate && currentDate <= endDate;
+    });
+  };
 
   const generateCalendarDays = () => {
     const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -114,6 +145,9 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
             );
           }
 
+          const dateEvents = getEventsForDate(date);
+          const hasEvents = dateEvents.length > 0;
+          
           const isSelected = selectedDate && 
             date.getDate() === selectedDate.getDate() &&
             date.getMonth() === selectedDate.getMonth() &&
@@ -125,17 +159,38 @@ export const EventCalendar = ({ onSelectDate, className }: EventCalendarProps) =
             date.getFullYear() === new Date().getFullYear();
 
           return (
-            <button
-              key={date.toISOString()}
-              onClick={() => handleDateSelect(date)}
-              className={cn(
-                "aspect-square p-2 text-sm relative hover:bg-gray-100 rounded-md transition-colors",
-                isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-                isToday && !isSelected && "bg-accent text-accent-foreground",
-              )}
-            >
-              {date.getDate()}
-            </button>
+            <TooltipProvider key={date.toISOString()}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleDateSelect(date)}
+                    className={cn(
+                      "aspect-square p-2 text-sm relative hover:bg-gray-100 rounded-md transition-colors w-full",
+                      isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                      isToday && !isSelected && "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    <span>{date.getDate()}</span>
+                    {hasEvents && (
+                      <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
+                        <div className="h-1 w-1 bg-blue-500 rounded-full" />
+                      </div>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                {hasEvents && (
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      {dateEvents.map(event => (
+                        <div key={event.id} className="text-sm">
+                          {event.title}
+                        </div>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           );
         })}
       </div>
