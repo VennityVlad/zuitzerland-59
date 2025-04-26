@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
@@ -58,6 +59,8 @@ interface Event {
   speakers?: string | null;
   link?: string | null;
   timezone: string;
+  recurring_pattern_id: string | null;
+  is_recurring_instance: boolean;
 }
 
 interface EventWithProfile extends Event {

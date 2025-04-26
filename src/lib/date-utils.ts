@@ -97,10 +97,6 @@ export const convertToUTC = (date: Date | string, timezone: string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   console.log('dateObj created:', { dateObj: dateObj.toString(), dateObjISO: dateObj.toISOString() });
   
-  // The issue is here - we're creating an ISO string and then removing the Z,
-  // which is causing a double conversion. Instead, we should directly use the dateObj
-  // with toZonedTime to get the correct UTC time.
-  
   // Create a zoned time directly from the date object and the target timezone
   const zonedDate = toZonedTime(dateObj, timezone);
   console.log('zonedDate:', { 

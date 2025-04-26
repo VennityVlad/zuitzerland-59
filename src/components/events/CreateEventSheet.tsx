@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { toZonedTime } from "date-fns-tz";
 import { convertToUTC } from "@/lib/date-utils";
-import { RecurrenceSettings } from './RecurrenceSettings';
+import { RecurrenceSettings, RecurrenceFrequency } from './RecurrenceSettings';
 
 // UI Component imports
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -135,7 +135,7 @@ export function CreateEventSheet({
   const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [locationRequired, setLocationRequired] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState('weekly');
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>('weekly');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null);
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
@@ -589,13 +589,21 @@ export function CreateEventSheet({
 
       if (isRecurring) {
         // Create or update recurring pattern
-        const patternData = {
+        const patternData: {
+          frequency: RecurrenceFrequency;
+          interval_count: number;
+          days_of_week: number[] | null;
+          start_date: string;
+          end_date: string | null;
+          created_by: string;
+          timezone: string;
+        } = {
           frequency: recurrenceFrequency,
           interval_count: recurrenceInterval,
           days_of_week: recurrenceFrequency === 'weekly' ? selectedDaysOfWeek : null,
           start_date: utcStartDate,
-          end_date: recurrenceEndDate ? convertToUTC(recurrenceEndDate, newEvent.timezone) : null,
-          created_by: userProfile?.id,
+          end_date: recurrenceEndDate ? convertToUTC(recurrenceEndDate.toISOString(), newEvent.timezone) : null,
+          created_by: userProfile?.id || '',
           timezone: newEvent.timezone
         };
 

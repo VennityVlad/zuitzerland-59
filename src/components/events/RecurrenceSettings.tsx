@@ -10,11 +10,14 @@ import { CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 
+// Define the frequency type to match our database enum
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
 interface RecurrenceSettingsProps {
   isRecurring: boolean;
   onIsRecurringChange: (value: boolean) => void;
-  frequency: string;
-  onFrequencyChange: (value: string) => void;
+  frequency: RecurrenceFrequency;
+  onFrequencyChange: (value: RecurrenceFrequency) => void;
   intervalCount: number;
   onIntervalCountChange: (value: number) => void;
   endDate: Date | null;
@@ -61,7 +64,7 @@ export const RecurrenceSettings: React.FC<RecurrenceSettingsProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Frequency</Label>
-              <Select value={frequency} onValueChange={onFrequencyChange}>
+              <Select value={frequency} onValueChange={(value: RecurrenceFrequency) => onFrequencyChange(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
