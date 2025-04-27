@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -18,6 +19,9 @@ const EventPage = () => {
   const { user, authenticated } = usePrivy();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [userProfileId, setUserProfileId] = useState<string | null>(null);
+  const [userRSVPEventIds, setUserRSVPEventIds] = useState<string[]>([]);
+  const [rsvpMap, setRsvpMap] = useState<Record<string, any[]>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -49,6 +53,139 @@ const EventPage = () => {
       fetchEvent();
     }
   }, [eventId]);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!authenticated || !user) return;
+      
+      try {
+        // Get user profile ID
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("privy_id", user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        if (profileData) {
+          setUserProfileId(profileData.id);
+          
+          // Fetch user RSVPs
+          const { data: rsvpData, error: rsvpError } = await supabase
+            .from("event_rsvps")
+            .select("event_id")
+            .eq("profile_id", profileData.id);
+
+          if (rsvpError) throw rsvpError;
+          setUserRSVPEventIds(rsvpData.map(rsvp => rsvp.event_id));
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [authenticated, user]);
+
+  useEffect(() => {
+    const fetchRSVPs = async () => {
+      if (!eventId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("event_rsvps")
+          .select(`
+            event_id,
+            profiles:profile_id (
+              id, username, avatar_url
+            )
+          `)
+          .eq("event_id", eventId);
+
+        if (error) throw error;
+        
+        // Group profiles by event_id
+        const rsvpsByEvent: Record<string, any[]> = {};
+        data.forEach(rsvp => {
+          if (!rsvpsByEvent[rsvp.event_id]) {
+            rsvpsByEvent[rsvp.event_id] = [];
+          }
+          rsvpsByEvent[rsvp.event_id].push(rsvp.profiles);
+        });
+        
+        setRsvpMap(rsvpsByEvent);
+      } catch (error) {
+        console.error("Error fetching RSVPs:", error);
+      }
+    };
+
+    fetchRSVPs();
+  }, [eventId]);
+
+  const refetchRSVPs = async () => {
+    if (!eventId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("event_rsvps")
+        .select(`
+          event_id,
+          profiles:profile_id (
+            id, username, avatar_url
+          )
+        `)
+        .eq("event_id", eventId);
+
+      if (error) throw error;
+      
+      // Group profiles by event_id
+      const rsvpsByEvent: Record<string, any[]> = {};
+      data.forEach(rsvp => {
+        if (!rsvpsByEvent[rsvp.event_id]) {
+          rsvpsByEvent[rsvp.event_id] = [];
+        }
+        rsvpsByEvent[rsvp.event_id].push(rsvp.profiles);
+      });
+      
+      setRsvpMap(rsvpsByEvent);
+    } catch (error) {
+      console.error("Error fetching RSVPs:", error);
+    }
+  };
+
+  const addToCalendar = (event: any) => {
+    try {
+      // Create start and end dates
+      const start = new Date(event.start_date);
+      const end = new Date(event.end_date);
+      
+      // Format the event details
+      const title = encodeURIComponent(event.title);
+      const details = encodeURIComponent(event.description || '');
+      const location = encodeURIComponent(event.location_text || '');
+      
+      // Format dates for Google Calendar
+      const formatDate = (date: Date) => {
+        return date.toISOString().replace(/-|:|\.\d+/g, '');
+      };
+      
+      const startFormatted = formatDate(start);
+      const endFormatted = formatDate(end);
+      
+      // Create Google Calendar URL
+      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startFormatted}/${endFormatted}&details=${details}&location=${location}`;
+      
+      // Open in new tab
+      window.open(googleCalendarUrl, '_blank');
+    } catch (error) {
+      console.error('Error adding to calendar:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add event to calendar. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -202,10 +339,10 @@ const EventPage = () => {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      {!!profileId && (
+                      {!!userProfileId && (
                         <EventRSVPButton
                           eventId={event.id}
-                          profileId={profileId}
+                          profileId={userProfileId}
                           initialRSVP={userRSVPEventIds.includes(event.id)}
                           onChange={refetchRSVPs}
                         />
