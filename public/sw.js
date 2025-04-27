@@ -9,7 +9,7 @@ self.addEventListener('install', (event) => {
         '/',
         '/index.html',
         '/manifest.json',
-        '/lovable-uploads/e0d26ed3-24a6-4e9e-b24e-37984fc28270.png'
+        '/lovable-uploads/a13503f6-d8ec-41d1-b373-6ab23551b8e4.png'
       ]);
     })
   );
