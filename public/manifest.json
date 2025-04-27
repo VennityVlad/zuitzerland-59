@@ -9,16 +9,16 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "/lovable-uploads/0c29bde7-6469-4b8d-a527-0280076e3e52.png",
+      "src": "/lovable-uploads/e0d26ed3-24a6-4e9e-b24e-37984fc28270.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "/lovable-uploads/0c29bde7-6469-4b8d-a527-0280076e3e52.png",
+      "src": "/lovable-uploads/e0d26ed3-24a6-4e9e-b24e-37984fc28270.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }

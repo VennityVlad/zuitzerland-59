@@ -6,22 +6,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { PageTitle } from "@/components/PageTitle";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { CalendarDays, LogIn, Share, MapPin, User, CalendarPlus } from "lucide-react";
+import { CalendarDays, LogIn, Share } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
 import { useToast } from "@/hooks/use-toast";
-import { EventRSVPButton } from "@/components/events/EventRSVPButton";
-import { EventRSVPAvatars } from "@/components/events/EventRSVPAvatars";
 
 const EventPage = () => {
   const { eventId } = useParams();
   const { user, authenticated } = usePrivy();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [userProfileId, setUserProfileId] = useState<string | null>(null);
-  const [userRSVPEventIds, setUserRSVPEventIds] = useState<string[]>([]);
-  const [rsvpMap, setRsvpMap] = useState<Record<string, any[]>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -53,139 +47,6 @@ const EventPage = () => {
       fetchEvent();
     }
   }, [eventId]);
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!authenticated || !user) return;
-      
-      try {
-        // Get user profile ID
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("privy_id", user.id)
-          .single();
-
-        if (profileError) throw profileError;
-        if (profileData) {
-          setUserProfileId(profileData.id);
-          
-          // Fetch user RSVPs
-          const { data: rsvpData, error: rsvpError } = await supabase
-            .from("event_rsvps")
-            .select("event_id")
-            .eq("profile_id", profileData.id);
-
-          if (rsvpError) throw rsvpError;
-          setUserRSVPEventIds(rsvpData.map(rsvp => rsvp.event_id));
-        }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-      }
-    };
-
-    fetchUserProfile();
-  }, [authenticated, user]);
-
-  useEffect(() => {
-    const fetchRSVPs = async () => {
-      if (!eventId) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from("event_rsvps")
-          .select(`
-            event_id,
-            profiles:profile_id (
-              id, username, avatar_url
-            )
-          `)
-          .eq("event_id", eventId);
-
-        if (error) throw error;
-        
-        // Group profiles by event_id
-        const rsvpsByEvent: Record<string, any[]> = {};
-        data.forEach(rsvp => {
-          if (!rsvpsByEvent[rsvp.event_id]) {
-            rsvpsByEvent[rsvp.event_id] = [];
-          }
-          rsvpsByEvent[rsvp.event_id].push(rsvp.profiles);
-        });
-        
-        setRsvpMap(rsvpsByEvent);
-      } catch (error) {
-        console.error("Error fetching RSVPs:", error);
-      }
-    };
-
-    fetchRSVPs();
-  }, [eventId]);
-
-  const refetchRSVPs = async () => {
-    if (!eventId) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("event_rsvps")
-        .select(`
-          event_id,
-          profiles:profile_id (
-            id, username, avatar_url
-          )
-        `)
-        .eq("event_id", eventId);
-
-      if (error) throw error;
-      
-      // Group profiles by event_id
-      const rsvpsByEvent: Record<string, any[]> = {};
-      data.forEach(rsvp => {
-        if (!rsvpsByEvent[rsvp.event_id]) {
-          rsvpsByEvent[rsvp.event_id] = [];
-        }
-        rsvpsByEvent[rsvp.event_id].push(rsvp.profiles);
-      });
-      
-      setRsvpMap(rsvpsByEvent);
-    } catch (error) {
-      console.error("Error fetching RSVPs:", error);
-    }
-  };
-
-  const addToCalendar = (event: any) => {
-    try {
-      // Create start and end dates
-      const start = new Date(event.start_date);
-      const end = new Date(event.end_date);
-      
-      // Format the event details
-      const title = encodeURIComponent(event.title);
-      const details = encodeURIComponent(event.description || '');
-      const location = encodeURIComponent(event.location_text || '');
-      
-      // Format dates for Google Calendar
-      const formatDate = (date: Date) => {
-        return date.toISOString().replace(/-|:|\.\d+/g, '');
-      };
-      
-      const startFormatted = formatDate(start);
-      const endFormatted = formatDate(end);
-      
-      // Create Google Calendar URL
-      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startFormatted}/${endFormatted}&details=${details}&location=${location}`;
-      
-      // Open in new tab
-      window.open(googleCalendarUrl, '_blank');
-    } catch (error) {
-      console.error('Error adding to calendar:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add event to calendar. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   if (loading) {
     return (
@@ -248,8 +109,14 @@ const EventPage = () => {
         {event.image_url && <meta property="og:image" content={event.image_url} />}
       </Helmet>
 
-      {!authenticated ? (
-        <div className="container py-6 max-w-4xl mx-auto px-4">
+      <div className="container py-6 max-w-4xl mx-auto px-4">
+        <PageTitle 
+          title={event.title}
+          description="Event Details"
+          icon={<CalendarDays className="h-8 w-8" />}
+        />
+
+        {!authenticated ? (
           <Card className="p-6 text-center space-y-4">
             <h2 className="text-xl font-semibold">Sign in to view event details</h2>
             <p className="text-gray-600">
@@ -262,139 +129,24 @@ const EventPage = () => {
               </a>
             </Button>
           </Card>
-        </div>
-      ) : (
-        <div className="min-h-screen bg-gray-50">
-          {event.image_url && (
-            <div className="w-full h-64 md:h-96 relative overflow-hidden">
-              <img
-                src={event.image_url}
-                alt={event.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
-            </div>
-          )}
-          
-          <div className="container max-w-4xl mx-auto px-4 py-8">
-            <div className="space-y-8">
-              <div className={`space-y-4 ${event.image_url ? '-mt-32 relative z-10' : ''}`}>
-                <div className="flex flex-wrap items-start gap-4">
-                  <Badge className="bg-white text-gray-700">
-                    Featured in {event.location_text?.split(',')[1]?.trim() || 'Zurich'}
-                  </Badge>
-                </div>
+        ) : (
+          <div className="space-y-6">
+            <Card className="p-6">
+              <div className="flex flex-col gap-4">
+                <h1 className="text-2xl font-bold">{event.title}</h1>
+                <p className="text-gray-600">{event.description}</p>
                 
-                <h1 className={`text-4xl md:text-5xl font-bold ${event.image_url ? 'text-white' : 'text-gray-900'}`}>
-                  {event.title}
-                </h1>
-
-                <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className={`h-5 w-5 ${event.image_url ? 'text-white' : 'text-gray-600'}`} />
-                    <span className={`${event.image_url ? 'text-white' : 'text-gray-700'}`}>
-                      {formatTimeRange(new Date(event.start_date), new Date(event.end_date), event.is_all_day, event.timezone)}
-                    </span>
-                  </div>
-                  {location && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className={`h-5 w-5 ${event.image_url ? 'text-white' : 'text-gray-600'}`} />
-                      <span className={`${event.image_url ? 'text-white' : 'text-gray-700'}`}>
-                        {location}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                <Button onClick={handleShare} variant="outline" className="w-fit">
+                  <Share className="mr-2 h-4 w-4" />
+                  Share Event
+                </Button>
+                
+                {/* Add more event details as needed */}
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-2 space-y-8">
-                  <Card className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">About Event</h2>
-                    <p className="text-gray-600 whitespace-pre-wrap">{event.description}</p>
-                    
-                    {event.speakers && (
-                      <div className="mt-6">
-                        <h3 className="font-semibold mb-2">Featuring</h3>
-                        <p className="text-gray-600">{event.speakers}</p>
-                      </div>
-                    )}
-                    
-                    {event.location_text && (
-                      <div className="mt-6">
-                        <h3 className="font-semibold mb-2">Location Details</h3>
-                        <p className="text-gray-600">{event.location_text}</p>
-                      </div>
-                    )}
-                  </Card>
-                </div>
-
-                <div className="space-y-4">
-                  <Card className="p-6 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <User className="h-5 w-5 text-gray-600" />
-                      <span className="text-sm font-medium">
-                        Hosted by {event.profiles?.username || "Anonymous"}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      {!!userProfileId && (
-                        <EventRSVPButton
-                          eventId={event.id}
-                          profileId={userProfileId}
-                          initialRSVP={userRSVPEventIds.includes(event.id)}
-                          onChange={refetchRSVPs}
-                        />
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addToCalendar(event)}
-                        className="w-full"
-                      >
-                        <CalendarPlus className="h-4 w-4 mr-2" />
-                        Add to Calendar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleShare}
-                        className="w-full"
-                      >
-                        <Share className="h-4 w-4 mr-2" />
-                        Share Event
-                      </Button>
-                    </div>
-
-                    {rsvpMap[event.id] && rsvpMap[event.id].length > 0 && (
-                      <div>
-                        <span className="text-sm text-gray-600 mb-2 block">
-                          {rsvpMap[event.id].length} people going
-                        </span>
-                        <EventRSVPAvatars profiles={rsvpMap[event.id]} />
-                      </div>
-                    )}
-                  </Card>
-
-                  {event.event_tags && event.event_tags.length > 0 && (
-                    <Card className="p-6">
-                      <h3 className="text-sm font-medium mb-3">Tags</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {event.event_tags.map(tag => (
-                          <Badge key={tag.tags.id} variant="secondary">
-                            {tag.tags.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-                </div>
-              </div>
-            </div>
+            </Card>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 };
