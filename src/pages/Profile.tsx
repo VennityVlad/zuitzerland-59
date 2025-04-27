@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -419,24 +420,38 @@ const Profile = () => {
                   control={form.control}
                   name="opt_in_directory"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Resident Directory
-                        </FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Allow other residents to see your profile information in the directory
-                        </p>
+                    <FormItem className="flex flex-col space-y-4">
+                      <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">
+                            Resident Directory
+                          </FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Allow other residents to see your profile information in the directory
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={(value) => {
+                              field.onChange(value);
+                              updateDirectoryOptIn(value);
+                            }}
+                          />
+                        </FormControl>
                       </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={(value) => {
-                            field.onChange(value);
-                            updateDirectoryOptIn(value);
-                          }}
-                        />
-                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full flex items-center justify-between"
+                        onClick={() => navigate('/privacy')}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          <span>Advanced Privacy Settings</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </FormItem>
                   )}
                 />
