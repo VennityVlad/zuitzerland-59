@@ -622,6 +622,7 @@ export type Database = {
           onboarding_progress: Json | null
           opt_in_directory: boolean | null
           packing_list: Json | null
+          privacy_settings: Json | null
           privy_id: string | null
           role: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid: string | null
@@ -643,6 +644,7 @@ export type Database = {
           onboarding_progress?: Json | null
           opt_in_directory?: boolean | null
           packing_list?: Json | null
+          privacy_settings?: Json | null
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
@@ -664,6 +666,7 @@ export type Database = {
           onboarding_progress?: Json | null
           opt_in_directory?: boolean | null
           packing_list?: Json | null
+          privacy_settings?: Json | null
           privy_id?: string | null
           role?: Database["public"]["Enums"]["profile_role"] | null
           supabase_uid?: string | null
@@ -934,6 +937,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clean_historical_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_auth_context: {
         Args: Record<PropertyKey, never>
         Returns: string
