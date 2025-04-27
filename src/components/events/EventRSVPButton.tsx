@@ -23,6 +23,15 @@ export function EventRSVPButton({
   const { toast } = useToast();
 
   const handleToggleRSVP = async () => {
+    if (!profileId) {
+      toast({ 
+        title: "Error", 
+        description: "Unable to identify your profile. Please refresh the page or sign in again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       if (!isRSVPed) {

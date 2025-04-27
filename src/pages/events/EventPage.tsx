@@ -19,7 +19,32 @@ const EventPage = () => {
   const [loading, setLoading] = useState(true);
   const [rsvps, setRsvps] = useState<any[]>([]);
   const [isRsvped, setIsRsvped] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const { toast } = useToast();
+
+  // Fetch user profile to get the correct UUID for Supabase operations
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("id, privy_id")
+            .eq("privy_id", user.id)
+            .maybeSingle();
+
+          if (error) throw error;
+          if (data) setUserProfile(data);
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
+      }
+    };
+
+    if (authenticated && user) {
+      fetchUserProfile();
+    }
+  }, [user, authenticated]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -58,8 +83,9 @@ const EventPage = () => {
 
         if (error) throw error;
         
-        if (user && data) {
-          const hasRsvped = data.some(rsvp => rsvp.profile_id === user.id);
+        if (userProfile && data) {
+          // Check if the user has RSVPed using the correct UUID from profiles table
+          const hasRsvped = data.some(rsvp => rsvp.profile_id === userProfile.id);
           setIsRsvped(hasRsvped);
         }
         
@@ -72,9 +98,11 @@ const EventPage = () => {
 
     if (eventId) {
       fetchEvent();
-      fetchRsvps();
+      if (userProfile) {
+        fetchRsvps();
+      }
     }
-  }, [eventId, user]);
+  }, [eventId, userProfile]);
 
   const handleShare = async () => {
     try {
@@ -100,7 +128,7 @@ const EventPage = () => {
 
   const handleRsvpChange = (newStatus: boolean) => {
     setIsRsvped(newStatus);
-    if (eventId) {
+    if (eventId && userProfile) {
       supabase
         .from("event_rsvps")
         .select(`
@@ -188,10 +216,10 @@ const EventPage = () => {
                   </div>
                   
                   <div className="flex gap-3">
-                    {user && (
+                    {userProfile && (
                       <EventRSVPButton 
                         eventId={eventId || ''} 
-                        profileId={user.id}
+                        profileId={userProfile.id}
                         initialRSVP={isRsvped}
                         onChange={handleRsvpChange}
                       />
