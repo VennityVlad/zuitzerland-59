@@ -160,7 +160,7 @@ const EventPage = () => {
           </Card>
         </div>
       ) : (
-        <div className="min-h-screen bg-[#1A1F2C] text-white">
+        <div className="min-h-screen bg-white text-foreground">
           <div className="container max-w-4xl mx-auto px-4 py-8">
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -170,9 +170,9 @@ const EventPage = () => {
                 
                 <div className="flex-1 space-y-4">
                   {event.profiles?.username && (
-                    <p className="text-gray-300">Hosted by {event.profiles.username}</p>
+                    <p className="text-gray-500">Hosted by {event.profiles.username}</p>
                   )}
-                  <h1 className="text-4xl font-bold">{event.title}</h1>
+                  <h1 className="text-4xl font-bold text-hotel-navy">{event.title}</h1>
                   
                   <div className="flex flex-wrap gap-4 items-center justify-between">
                     <div className="hidden md:block">
@@ -199,24 +199,24 @@ const EventPage = () => {
 
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-6">
-                  <Card className="bg-white/10 border-0 backdrop-blur-sm p-6">
-                    <div className="prose prose-invert max-w-none">
-                      <p>{event.description}</p>
+                  <Card className="bg-white border p-6">
+                    <div className="prose max-w-none">
+                      <p className="text-gray-700">{event.description}</p>
                     </div>
                   </Card>
 
                   {(event.speakers || event.av_needs) && (
-                    <Card className="bg-white/10 border-0 backdrop-blur-sm p-6 space-y-4">
+                    <Card className="bg-white border p-6 space-y-4">
                       {event.speakers && (
                         <div>
-                          <h3 className="text-lg font-semibold mb-2">Speakers</h3>
-                          <p>{event.speakers}</p>
+                          <h3 className="text-lg font-semibold mb-2 text-hotel-navy">Speakers</h3>
+                          <p className="text-gray-700">{event.speakers}</p>
                         </div>
                       )}
                       {event.av_needs && (
                         <div>
-                          <h3 className="text-lg font-semibold mb-2">AV Requirements</h3>
-                          <p>{event.av_needs}</p>
+                          <h3 className="text-lg font-semibold mb-2 text-hotel-navy">AV Requirements</h3>
+                          <p className="text-gray-700">{event.av_needs}</p>
                         </div>
                       )}
                     </Card>
