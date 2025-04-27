@@ -121,11 +121,35 @@ const EventPage = () => {
     }
   };
 
+  // Safely format the date to prevent crashes with invalid dates
+  const safeFormatDate = (date: string | Date | null | undefined) => {
+    if (!date) return "";
+    try {
+      return format(new Date(date), "EEEE, MMMM d");
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "";
+    }
+  };
+
+  // Safely format time range to prevent crashes with invalid dates
+  const safeFormatTimeRange = (start: string | Date | null | undefined, end: string | Date | null | undefined, isAllDay: boolean, timezone: string) => {
+    if (!start || !end) return "";
+    try {
+      return formatTimeRange(new Date(start), new Date(end), isAllDay, timezone);
+    } catch (error) {
+      console.error("Error formatting time range:", error);
+      return "";
+    }
+  };
+
   const location = event?.locations ? 
     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
     event?.location_text;
 
-  const metaDescription = `${event?.title} - ${formatTimeRange(new Date(event?.start_date), new Date(event?.end_date), event?.is_all_day, event?.timezone)} ${location ? `at ${location}` : ''}`;
+  const metaDescription = event ? 
+    `${event.title} - ${safeFormatTimeRange(event.start_date, event.end_date, event.is_all_day, event.timezone)} ${location ? `at ${location}` : ''}` :
+    "Event details";
 
   if (loading) {
     return (
@@ -139,8 +163,8 @@ const EventPage = () => {
     return <Navigate to="/404" replace />;
   }
 
-  const dateStr = format(new Date(event.start_date), "EEEE, MMMM d");
-  const timeRange = formatTimeRange(new Date(event.start_date), new Date(event.end_date), event.is_all_day, event.timezone);
+  const dateStr = safeFormatDate(event.start_date);
+  const timeRange = safeFormatTimeRange(event.start_date, event.end_date, event.is_all_day, event.timezone);
 
   return (
     <>
@@ -188,10 +212,12 @@ const EventPage = () => {
           <div className="container max-w-4xl mx-auto px-4 py-8 -mt-32 relative z-10">
             <div className="space-y-8">
               <div>
-                <div className="text-sm text-gray-300 flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4" />
-                  {dateStr}
-                </div>
+                {dateStr && (
+                  <div className="text-sm text-gray-300 flex items-center gap-2 mb-2">
+                    <Calendar className="h-4 w-4" />
+                    {dateStr}
+                  </div>
+                )}
                 <h1 className="text-4xl font-bold mb-4">{event.title}</h1>
                 {event.profiles?.username && (
                   <p className="text-gray-300">Hosted by {event.profiles.username}</p>
@@ -201,12 +227,14 @@ const EventPage = () => {
               <Card className="bg-white/10 border-0 backdrop-blur-sm text-white p-6 space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <Clock className="h-5 w-5 mt-1 text-gray-300" />
-                      <div>
-                        <p className="font-medium">{timeRange}</p>
+                    {timeRange && (
+                      <div className="flex items-start gap-3">
+                        <Clock className="h-5 w-5 mt-1 text-gray-300" />
+                        <div>
+                          <p className="font-medium">{timeRange}</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {location && (
                       <div className="flex items-start gap-3">

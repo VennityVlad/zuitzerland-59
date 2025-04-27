@@ -24,7 +24,12 @@ export const toUTCDate = (dateStr: string, timeStr: string, timezone: string): D
  * @returns Formatted date string
  */
 export const formatDate = (date: Date | string | number, formatStr: string) => {
-  return format(date, formatStr);
+  try {
+    return format(date, formatStr);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return '';
+  }
 };
 
 /**
@@ -35,11 +40,22 @@ export const formatDate = (date: Date | string | number, formatStr: string) => {
  * @returns Formatted date string
  */
 export const formatWithTimezone = (date: Date | string | number, formatStr: string, timezone?: string) => {
-  const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-  if (timezone) {
-    return formatInTimeZone(dateObj, timezone, formatStr);
-  } else {
-    return formatDate(dateObj, formatStr);
+  try {
+    const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+    
+    // Check if the date is valid before formatting
+    if (isNaN(dateObj.getTime())) {
+      throw new Error('Invalid date');
+    }
+    
+    if (timezone) {
+      return formatInTimeZone(dateObj, timezone, formatStr);
+    } else {
+      return formatDate(dateObj, formatStr);
+    }
+  } catch (error) {
+    console.error('Error formatting date with timezone:', error);
+    return '';
   }
 };
 
@@ -61,10 +77,20 @@ export const formatTimeRange = (
     return "All day";
   }
 
-  const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
-  const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
-  
-  return `${formatInTimeZone(start, timezone, "h:mm a")} - ${formatInTimeZone(end, timezone, "h:mm a")} (${getReadableTimezoneName(timezone)})`;
+  try {
+    const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+    const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+    
+    // Validate dates before formatting
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new Error('Invalid date');
+    }
+    
+    return `${formatInTimeZone(start, timezone, "h:mm a")} - ${formatInTimeZone(end, timezone, "h:mm a")} (${getReadableTimezoneName(timezone)})`;
+  } catch (error) {
+    console.error('Error formatting time range:', error);
+    return '';
+  }
 };
 
 /**
@@ -93,23 +119,34 @@ export const convertToUTC = (date: Date | string, timezone: string): string => {
     timezone 
   });
 
-  // First make sure we have a Date object
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  console.log('dateObj created:', { dateObj: dateObj.toString(), dateObjISO: dateObj.toISOString() });
-  
-  // Create a zoned time directly from the date object and the target timezone
-  const zonedDate = toZonedTime(dateObj, timezone);
-  console.log('zonedDate:', { 
-    zonedDate: zonedDate.toString(),
-    zonedDateISO: zonedDate.toISOString(),
-    zonedTimestamp: zonedDate.getTime(),
-    browserTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    targetTimezone: timezone
-  });
-  
-  // Now convert to UTC ISO string
-  const result = zonedDate.toISOString();
-  console.log('convertToUTC final result:', result);
-  
-  return result;
+  try {
+    // First make sure we have a Date object
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+      throw new Error('Invalid date');
+    }
+    
+    console.log('dateObj created:', { dateObj: dateObj.toString(), dateObjISO: dateObj.toISOString() });
+    
+    // Create a zoned time directly from the date object and the target timezone
+    const zonedDate = toZonedTime(dateObj, timezone);
+    console.log('zonedDate:', { 
+      zonedDate: zonedDate.toString(),
+      zonedDateISO: zonedDate.toISOString(),
+      zonedTimestamp: zonedDate.getTime(),
+      browserTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      targetTimezone: timezone
+    });
+    
+    // Now convert to UTC ISO string
+    const result = zonedDate.toISOString();
+    console.log('convertToUTC final result:', result);
+    
+    return result;
+  } catch (error) {
+    console.error('Error converting to UTC:', error);
+    return '';
+  }
 };
