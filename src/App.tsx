@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
@@ -34,6 +35,7 @@ import { usePageTracking } from "./hooks/usePageTracking";
 import AvailabilityPage from "./pages/rooms/AvailabilityPage";
 import { HelmetProvider } from 'react-helmet-async';
 import EventPage from "./pages/events/EventPage";
+import PrivacyDashboard from "./pages/PrivacyDashboard";
 
 const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
   usePageTracking();
@@ -306,6 +308,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <EventPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/privacy"
+        element={
+          <ProtectedRoute>
+            <PrivacyDashboard />
           </ProtectedRoute>
         }
       />

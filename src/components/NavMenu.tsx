@@ -29,7 +29,8 @@ import {
   CheckSquare,
   ContactRound,
   BookOpen,
-  UserCog
+  UserCog,
+  Shield
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
