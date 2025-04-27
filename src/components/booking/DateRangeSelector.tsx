@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,9 +14,9 @@ const DATE_RANGES: DateRange[] = [
   {
     id: "block1",
     name: "Block 1",
-    startDate: "2025-05-01",
+    startDate: "2025-05-03",
     endDate: "2025-05-09",
-    description: "Intro Days (May 1-3): Community, Culture, Media, Philosophy & Truth-Seeking\nSwiss Governance & New Societies Days (May 4-9): Democracy, Network States & Start-up Cities"
+    description: "Intro Days (May 3-5): Community, Culture, Media, Philosophy & Truth-Seeking\nSwiss Governance & New Societies Days (May 6-9): Democracy, Network States & Start-up Cities"
   },
   {
     id: "block2",
@@ -62,15 +61,12 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     
     const selectedDateRanges = DATE_RANGES.filter(range => newSelectedRanges.includes(range.id));
     
-    // Extract dates and convert to Date objects for proper comparison
     const startDatesAsObjects = selectedDateRanges.map(range => new Date(range.startDate));
     const endDatesAsObjects = selectedDateRanges.map(range => new Date(range.endDate));
     
-    // Find earliest start date and latest end date by comparing Date objects
     const earliestStartDate = new Date(Math.min(...startDatesAsObjects.map(d => d.getTime())));
     const latestEndDate = new Date(Math.max(...endDatesAsObjects.map(d => d.getTime())));
     
-    // Convert back to string format
     const earliestStart = earliestStartDate.toISOString().split('T')[0];
     const latestEnd = latestEndDate.toISOString().split('T')[0];
     

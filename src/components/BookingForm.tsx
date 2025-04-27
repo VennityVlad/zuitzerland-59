@@ -43,7 +43,7 @@ const BookingForm = ({ bookingBlockEnabled = true }: BookingFormProps) => {
   const [activeTab, setActiveTab] = useState("booking");
   const [contactFieldsComplete, setContactFieldsComplete] = useState(false);
 
-  const minDate = "2025-05-01";
+  const minDate = "2025-05-03";
   const maxDate = "2025-05-26";
 
   const { data: roomTypeDetails } = useQuery({
