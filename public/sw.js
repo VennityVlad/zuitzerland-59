@@ -8,7 +8,8 @@ self.addEventListener('install', (event) => {
       return cache.addAll([
         '/',
         '/index.html',
-        '/manifest.json'
+        '/manifest.json',
+        '/lovable-uploads/e0d26ed3-24a6-4e9e-b24e-37984fc28270.png'
       ]);
     })
   );
