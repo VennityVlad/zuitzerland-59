@@ -8,7 +8,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Calendar, Clock, MapPin, Link, LogIn, Share, Users } from "lucide-react";
-import { formatTimeRange, formatWithTimezone } from "@/lib/date-utils";
+import { formatTimeRange } from "@/lib/date-utils";
 import { useToast } from "@/hooks/use-toast";
 import { EventRSVPAvatars } from "@/components/events/EventRSVPAvatars";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
@@ -125,9 +125,7 @@ const EventPage = () => {
     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
     event?.location_text;
 
-  const metaDescription = event ? 
-    `${event.title} - ${format(new Date(event.start_date), "MMMM d, yyyy")} ${location ? `at ${location}` : ''}` : 
-    '';
+  const metaDescription = `${event?.title} - ${formatTimeRange(new Date(event?.start_date), new Date(event?.end_date), event?.is_all_day, event?.timezone)} ${location ? `at ${location}` : ''}`;
 
   if (loading) {
     return (
@@ -141,30 +139,8 @@ const EventPage = () => {
     return <Navigate to="/404" replace />;
   }
 
-  // Safely parse dates and use the same formatting approach as in Events.tsx
   const dateStr = format(new Date(event.start_date), "EEEE, MMMM d");
-  
-  // Use the same formatting approach as in Events.tsx
-  let timeRange = "";
-  try {
-    const startDate = new Date(event.start_date);
-    const endDate = new Date(event.end_date);
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.warn('Invalid date detected:', { startDate: event.start_date, endDate: event.end_date });
-      timeRange = 'Invalid date';
-    } else {
-      timeRange = formatTimeRange(event.start_date, event.end_date, event.is_all_day, event.timezone);
-    }
-  } catch (error) {
-    console.error("Error formatting time range:", error, { 
-      start_date: event.start_date,
-      end_date: event.end_date,
-      is_all_day: event.is_all_day,
-      timezone: event.timezone
-    });
-    timeRange = "Time information unavailable";
-  }
+  const timeRange = formatTimeRange(new Date(event.start_date), new Date(event.end_date), event.is_all_day, event.timezone);
 
   return (
     <>

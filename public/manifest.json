@@ -4,23 +4,21 @@
   "short_name": "Zuitzerland",
   "description": "Zuitzerland 2025 Attendee App",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
-  "orientation": "portrait",
-  "lang": "en",
-  "id": "/",
   "icons": [
     {
-      "src": "/lovable-uploads/4def9cb9-1f5e-4ef3-952a-0cc0295f0972.png",
+      "src": "/lovable-uploads/e0d26ed3-24a6-4e9e-b24e-37984fc28270.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/lovable-uploads/4def9cb9-1f5e-4ef3-952a-0cc0295f0972.png",
+      "src": "/lovable-uploads/e0d26ed3-24a6-4e9e-b24e-37984fc28270.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
