@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -18,6 +19,8 @@ const EventPage = () => {
   const { user, authenticated } = usePrivy();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [rsvps, setRsvps] = useState<any[]>([]);
+  const [isRsvped, setIsRsvped] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,10 +48,78 @@ const EventPage = () => {
       }
     };
 
+    const fetchRsvps = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("event_rsvps")
+          .select(`
+            profile_id,
+            profiles:profiles(id, username, avatar_url)
+          `)
+          .eq("event_id", eventId);
+
+        if (error) throw error;
+        
+        // Check if current user has RSVPed
+        if (user && data) {
+          const hasRsvped = data.some(rsvp => rsvp.profile_id === user.id);
+          setIsRsvped(hasRsvped);
+        }
+        
+        // Extract profile data for display
+        const profileData = data?.map(rsvp => rsvp.profiles) || [];
+        setRsvps(profileData);
+      } catch (error) {
+        console.error("Error fetching RSVPs:", error);
+      }
+    };
+
     if (eventId) {
       fetchEvent();
+      fetchRsvps();
     }
-  }, [eventId]);
+  }, [eventId, user]);
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: event.title,
+          text: `Check out this event: ${event.title}`,
+          url: window.location.href,
+        });
+      } else {
+        // Fallback for browsers that don't support the Web Share API
+        await navigator.clipboard.writeText(window.location.href);
+        toast({ 
+          title: "Link copied!",
+          description: "Event link copied to clipboard" 
+        });
+      }
+    } catch (error) {
+      console.error("Error sharing:", error);
+    }
+  };
+
+  const handleRsvpChange = (newStatus: boolean) => {
+    setIsRsvped(newStatus);
+    // Refresh RSVPs after change
+    if (eventId) {
+      supabase
+        .from("event_rsvps")
+        .select(`
+          profile_id,
+          profiles:profiles(id, username, avatar_url)
+        `)
+        .eq("event_id", eventId)
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const profileData = data.map(rsvp => rsvp.profiles);
+            setRsvps(profileData);
+          }
+        });
+    }
+  };
 
   const location = event?.locations ? 
     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
@@ -165,7 +236,7 @@ const EventPage = () => {
                     <div className="flex items-start gap-3">
                       <Users className="h-5 w-5 mt-1 text-gray-300" />
                       <div>
-                        <EventRSVPAvatars eventId={event.id} />
+                        <EventRSVPAvatars profiles={rsvps} />
                       </div>
                     </div>
                   </div>
@@ -178,7 +249,14 @@ const EventPage = () => {
                 </div>
 
                 <div className="flex items-center justify-between pt-6 border-t border-white/10">
-                  <EventRSVPButton eventId={event.id} />
+                  {user && (
+                    <EventRSVPButton 
+                      eventId={eventId || ''} 
+                      profileId={user.id}
+                      initialRSVP={isRsvped}
+                      onChange={handleRsvpChange}
+                    />
+                  )}
                   <Button onClick={handleShare} variant="outline" size="sm">
                     <Share className="mr-2 h-4 w-4" />
                     Share Event
