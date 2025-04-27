@@ -352,14 +352,15 @@ const Events = () => {
 
   const handleShare = async (event: Event) => {
     const shareUrl = `${window.location.origin}/events/${event.id}`;
+    const shareData = {
+      title: event.title,
+      text: event.description || event.title,
+      url: shareUrl,
+    };
     
-    if (navigator.share) {
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
       try {
-        await navigator.share({
-          title: event.title,
-          text: event.description || event.title,
-          url: shareUrl,
-        });
+        await navigator.share(shareData);
       } catch (err) {
         console.error('Error sharing:', err);
       }
@@ -696,19 +697,6 @@ const renderEventsList = (
                         )}
 
                         <div className="flex flex-wrap gap-2 mt-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault(); // Prevent navigation when clicking share
-                              handleShare(event);
-                            }}
-                            className="text-gray-500 border-gray-500 hover:bg-gray-50"
-                          >
-                            <Share className="h-4 w-4 mr-2" />
-                            {isMobile ? "" : "Share"}
-                          </Button>
-                          
                           {!!profileId && (
                             <EventRSVPButton
                               eventId={event.id}
@@ -725,6 +713,18 @@ const renderEventsList = (
                           >
                             <CalendarPlus className="h-4 w-4 mr-2" />
                             {isMobile ? "" : "Add to Calendar"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault(); // Prevent navigation when clicking share
+                              handleShare(event);
+                            }}
+                            className="text-gray-500 border-gray-500 hover:bg-gray-50"
+                          >
+                            <Share className="h-4 w-4 mr-2" />
+                            {isMobile ? "" : "Share"}
                           </Button>
                           {canEditEvent(event) && (
                             <>
