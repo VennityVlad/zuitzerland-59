@@ -352,15 +352,14 @@ const Events = () => {
 
   const handleShare = async (event: Event) => {
     const shareUrl = `${window.location.origin}/events/${event.id}`;
-    const shareData = {
-      title: event.title,
-      text: event.description || event.title,
-      url: shareUrl,
-    };
     
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    if (navigator.share && navigator.canShare) {
       try {
-        await navigator.share(shareData);
+        await navigator.share({
+          title: event.title,
+          text: event.description || event.title,
+          url: shareUrl,
+        });
       } catch (err) {
         console.error('Error sharing:', err);
       }

@@ -78,14 +78,16 @@ const EventPage = () => {
 
   const handleShare = async () => {
     try {
+      const eventUrl = window.location.href;
+      
       if (navigator.share) {
         await navigator.share({
           title: event.title,
-          text: `Check out this event: ${event.title}`,
-          url: window.location.href,
+          text: event.description,
+          url: eventUrl,
         });
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(eventUrl);
         toast({ 
           title: "Link copied!",
           description: "Event link copied to clipboard" 
@@ -131,7 +133,10 @@ const EventPage = () => {
     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
     event?.location_text;
 
-  const metaDescription = `${event.title} - ${event.description?.substring(0, 140)}...`;
+  // Create a rich meta description for sharing
+  const metaDescription = event.description 
+    ? (event.description.length > 160 ? `${event.description.substring(0, 157)}...` : event.description)
+    : `Event at ${location} on ${new Date(event.start_date).toLocaleDateString()}`;
 
   return (
     <>
@@ -142,6 +147,10 @@ const EventPage = () => {
         <meta property="og:description" content={metaDescription} />
         <meta property="og:type" content="event" />
         <meta property="og:url" content={window.location.href} />
+        {/* Add event time metadata */}
+        <meta property="event:start_time" content={new Date(event.start_date).toISOString()} />
+        <meta property="event:end_time" content={new Date(event.end_date).toISOString()} />
+        {location && <meta property="event:location" content={location} />}
       </Helmet>
 
       {!authenticated ? (
