@@ -1,7 +1,7 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, Users } from "lucide-react";
+import { Upload, Users, Shield, ChevronRight } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { TeamBadge } from "@/components/TeamBadge";
 import HousingPreferencesButton from "@/components/profile/HousingPreferencesButton";
@@ -29,6 +29,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 const Profile = () => {
   const { user } = usePrivy();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<Record<string, any> | null>(null);
   const [uploading, setUploading] = useState(false);
