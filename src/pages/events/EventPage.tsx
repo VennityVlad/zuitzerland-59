@@ -147,8 +147,8 @@ const EventPage = () => {
       {!authenticated ? (
         <div className="container max-w-4xl mx-auto px-4 py-12">
           <Card className="p-6 text-center space-y-4">
-            <h2 className="text-xl font-semibold">Sign in to view event details</h2>
-            <p className="text-gray-600">
+            <h2 className="text-xl font-semibold text-foreground">Sign in to view event details</h2>
+            <p className="text-muted-foreground">
               This event is only visible to authenticated users. Please sign in to view the complete details.
             </p>
             <Button asChild>
@@ -160,80 +160,82 @@ const EventPage = () => {
           </Card>
         </div>
       ) : (
-        <div className="min-h-screen bg-white text-foreground">
-          <div className="container max-w-4xl mx-auto px-4 py-8">
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-6 items-start">
-                <div className="md:hidden">
-                  <EventDateBadge date={new Date(event.start_date)} />
-                </div>
+        <div className="container max-w-4xl mx-auto px-4 py-8">
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              <div className="md:hidden">
+                <EventDateBadge date={new Date(event.start_date)} />
+              </div>
+              
+              <div className="flex-1 space-y-4">
+                <p className="text-muted-foreground">
+                  {event.profiles?.username && `Hosted by ${event.profiles.username}`}
+                </p>
+                <h1 className="text-3xl font-bold text-foreground">{event.title}</h1>
                 
-                <div className="flex-1 space-y-4">
-                  {event.profiles?.username && (
-                    <p className="text-gray-500">Hosted by {event.profiles.username}</p>
-                  )}
-                  <h1 className="text-4xl font-bold text-hotel-navy">{event.title}</h1>
+                <div className="flex flex-wrap gap-4 items-center justify-between">
+                  <div className="hidden md:block">
+                    <EventDateBadge date={new Date(event.start_date)} />
+                  </div>
                   
-                  <div className="flex flex-wrap gap-4 items-center justify-between">
-                    <div className="hidden md:block">
-                      <EventDateBadge date={new Date(event.start_date)} />
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      {user && (
-                        <EventRSVPButton 
-                          eventId={eventId || ''} 
-                          profileId={user.id}
-                          initialRSVP={isRsvped}
-                          onChange={handleRsvpChange}
-                        />
-                      )}
-                      <Button onClick={handleShare} variant="outline" size="sm">
-                        <Share className="mr-2 h-4 w-4" />
-                        Share
-                      </Button>
-                    </div>
+                  <div className="flex gap-3">
+                    {user && (
+                      <EventRSVPButton 
+                        eventId={eventId || ''} 
+                        profileId={user.id}
+                        initialRSVP={isRsvped}
+                        onChange={handleRsvpChange}
+                      />
+                    )}
+                    <Button onClick={handleShare} variant="outline" size="sm">
+                      <Share className="mr-2 h-4 w-4" />
+                      Share
+                    </Button>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 space-y-6">
-                  <Card className="bg-white border p-6">
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 space-y-6">
+                <Card className="border shadow-sm">
+                  <div className="p-6">
                     <div className="prose max-w-none">
-                      <p className="text-gray-700">{event.description}</p>
+                      <p className="text-muted-foreground">{event.description}</p>
                     </div>
-                  </Card>
+                  </div>
+                </Card>
 
-                  {(event.speakers || event.av_needs) && (
-                    <Card className="bg-white border p-6 space-y-4">
+                {(event.speakers || event.av_needs) && (
+                  <Card className="border shadow-sm">
+                    <div className="p-6 space-y-6">
                       {event.speakers && (
                         <div>
-                          <h3 className="text-lg font-semibold mb-2 text-hotel-navy">Speakers</h3>
-                          <p className="text-gray-700">{event.speakers}</p>
+                          <h3 className="text-lg font-semibold mb-2 text-foreground">Speakers</h3>
+                          <p className="text-muted-foreground">{event.speakers}</p>
                         </div>
                       )}
                       {event.av_needs && (
                         <div>
-                          <h3 className="text-lg font-semibold mb-2 text-hotel-navy">AV Requirements</h3>
-                          <p className="text-gray-700">{event.av_needs}</p>
+                          <h3 className="text-lg font-semibold mb-2 text-foreground">AV Requirements</h3>
+                          <p className="text-muted-foreground">{event.av_needs}</p>
                         </div>
                       )}
-                    </Card>
-                  )}
-                </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
 
-                <div className="md:col-span-1">
-                  <EventDetailsCard
-                    startDate={new Date(event.start_date)}
-                    endDate={new Date(event.end_date)}
-                    isAllDay={event.is_all_day}
-                    timezone={event.timezone}
-                    location={location}
-                    totalRsvps={rsvps.length}
-                    attendees={rsvps}
-                  />
-                </div>
+              <div className="md:col-span-1">
+                <EventDetailsCard
+                  startDate={new Date(event.start_date)}
+                  endDate={new Date(event.end_date)}
+                  isAllDay={event.is_all_day}
+                  timezone={event.timezone}
+                  location={location}
+                  totalRsvps={rsvps.length}
+                  attendees={rsvps}
+                />
               </div>
             </div>
           </div>

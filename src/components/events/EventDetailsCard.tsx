@@ -24,40 +24,41 @@ export const EventDetailsCard = ({
   totalRsvps,
   attendees,
 }: EventDetailsCardProps) => {
-  const dateStr = format(startDate, "EEEE, MMMM d");
-  const timeRange = formatTimeRange(startDate, endDate, isAllDay, timezone);
-
   return (
-    <Card className="bg-white/10 border-0 backdrop-blur-sm p-6 space-y-6">
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
-          <Calendar className="h-5 w-5 mt-1 text-gray-300" />
-          <div>
-            <p className="font-medium text-white">{dateStr}</p>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-3">
-          <Clock className="h-5 w-5 mt-1 text-gray-300" />
-          <div>
-            <p className="font-medium text-white">{timeRange}</p>
-          </div>
-        </div>
-
-        {location && (
+    <Card className="border shadow-sm">
+      <div className="p-6 space-y-6">
+        <div className="space-y-4">
           <div className="flex items-start gap-3">
-            <MapPin className="h-5 w-5 mt-1 text-gray-300" />
+            <Calendar className="h-5 w-5 mt-1 text-muted-foreground" />
             <div>
-              <p className="font-medium text-white">{location}</p>
+              <p className="font-medium text-foreground">{format(startDate, "EEEE, MMMM d")}</p>
             </div>
           </div>
-        )}
 
-        <div className="flex items-start gap-3">
-          <Users className="h-5 w-5 mt-1 text-gray-300" />
-          <div className="space-y-2">
-            <p className="font-medium text-white">{totalRsvps} attending</p>
-            <EventRSVPAvatars profiles={attendees} />
+          <div className="flex items-start gap-3">
+            <Clock className="h-5 w-5 mt-1 text-muted-foreground" />
+            <div>
+              <p className="font-medium text-foreground">
+                {formatTimeRange(startDate, endDate, isAllDay, timezone)}
+              </p>
+            </div>
+          </div>
+
+          {location && (
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 mt-1 text-muted-foreground" />
+              <div>
+                <p className="font-medium text-foreground">{location}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-start gap-3">
+            <Users className="h-5 w-5 mt-1 text-muted-foreground" />
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">{totalRsvps} attending</p>
+              <EventRSVPAvatars profiles={attendees} />
+            </div>
           </div>
         </div>
       </div>
