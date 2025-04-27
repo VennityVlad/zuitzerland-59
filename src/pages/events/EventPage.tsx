@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -22,7 +21,6 @@ const EventPage = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const { toast } = useToast();
 
-  // Fetch user profile to get the correct UUID for Supabase operations
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (user) {
@@ -84,7 +82,6 @@ const EventPage = () => {
         if (error) throw error;
         
         if (userProfile && data) {
-          // Check if the user has RSVPed using the correct UUID from profiles table
           const hasRsvped = data.some(rsvp => rsvp.profile_id === userProfile.id);
           setIsRsvped(hasRsvped);
         }
@@ -145,6 +142,8 @@ const EventPage = () => {
     }
   };
 
+  const isEventInPast = event ? new Date(event.end_date) < new Date() : false;
+
   if (loading) {
     return (
       <div className="container py-12">
@@ -161,7 +160,6 @@ const EventPage = () => {
     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
     event?.location_text;
 
-  // Create a rich meta description for sharing
   const metaDescription = event.description 
     ? (event.description.length > 160 ? `${event.description.substring(0, 157)}...` : event.description)
     : `Event at ${location} on ${new Date(event.start_date).toLocaleDateString()}`;
@@ -175,7 +173,6 @@ const EventPage = () => {
         <meta property="og:description" content={metaDescription} />
         <meta property="og:type" content="event" />
         <meta property="og:url" content={window.location.href} />
-        {/* Add event time metadata */}
         <meta property="event:start_time" content={new Date(event.start_date).toISOString()} />
         <meta property="event:end_time" content={new Date(event.end_date).toISOString()} />
         {location && <meta property="event:location" content={location} />}
@@ -216,7 +213,7 @@ const EventPage = () => {
                   </div>
                   
                   <div className="flex gap-3">
-                    {userProfile && (
+                    {userProfile && !isEventInPast && (
                       <EventRSVPButton 
                         eventId={eventId || ''} 
                         profileId={userProfile.id}

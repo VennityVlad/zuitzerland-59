@@ -696,7 +696,7 @@ const renderEventsList = (
                         )}
 
                         <div className="flex flex-wrap gap-2 mt-4">
-                          {!!profileId && (
+                          {!!profileId && new Date(event.end_date) >= new Date() && (
                             <EventRSVPButton
                               eventId={event.id}
                               profileId={profileId}
