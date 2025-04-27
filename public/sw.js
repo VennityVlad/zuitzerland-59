@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'zuitzerland-v1';
+const CACHE_NAME = 'zuitzerland-v2';
 
 // Add files to cache
 self.addEventListener('install', (event) => {
