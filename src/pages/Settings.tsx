@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Shield, Copy, RefreshCw } from 'lucide-react';
+import { Settings, Shield, Copy, RefreshCw } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,18 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
+import { DisplayCode } from '@/hooks/useDisplayCode';
 
-type DisplayCode = {
-  id: string;
-  code: string;
-  name: string;
-  location_filter?: string | null;
-  tag_filter?: string | null;
-  created_at: string;
-  expires_at?: string | null;
-};
-
-const Settings = () => {
+const SettingsPage = () => {
   const { toast } = useToast();
   const [displayCodes, setDisplayCodes] = useState<DisplayCode[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
@@ -63,12 +55,12 @@ const Settings = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('display_codes')
+        .from('display_codes' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setDisplayCodes(data || []);
+      setDisplayCodes(data as DisplayCode[] || []);
     } catch (error) {
       console.error('Error fetching display codes:', error);
       toast({
@@ -119,7 +111,7 @@ const Settings = () => {
         : null;
       
       const { data, error } = await supabase
-        .from('display_codes')
+        .from('display_codes' as any)
         .insert([
           {
             code,
@@ -158,7 +150,7 @@ const Settings = () => {
   const deleteCode = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('display_codes')
+        .from('display_codes' as any)
         .delete()
         .eq('id', id);
 
@@ -402,4 +394,4 @@ const Settings = () => {
   );
 };
 
-export default Settings;
+export default SettingsPage;

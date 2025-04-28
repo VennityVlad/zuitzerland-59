@@ -27,8 +27,9 @@ export const useDisplayCode = (code: string | null) => {
       }
 
       try {
+        // Use 'from' method with a type cast to handle the display_codes table
         const { data, error: fetchError } = await supabase
-          .from('display_codes')
+          .from('display_codes' as any)
           .select('*')
           .eq('code', code)
           .maybeSingle();
@@ -50,7 +51,7 @@ export const useDisplayCode = (code: string | null) => {
           return;
         }
 
-        setDisplayCode(data);
+        setDisplayCode(data as DisplayCode);
         setIsValid(true);
         setIsLoading(false);
       } catch (err: any) {
