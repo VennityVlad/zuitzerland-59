@@ -27,12 +27,9 @@ export const useDisplayCode = (code: string | null) => {
       }
 
       try {
-        // Use 'from' method with a type cast to handle the display_codes table
+        // Use raw SQL query with custom types instead of the typed client
         const { data, error: fetchError } = await supabase
-          .from('display_codes' as any)
-          .select('*')
-          .eq('code', code)
-          .maybeSingle();
+          .rpc('get_display_code_by_code', { code_param: code });
 
         if (fetchError) {
           throw fetchError;

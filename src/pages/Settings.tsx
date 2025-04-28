@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from 'react';
 import { Settings, Shield, Copy, RefreshCw } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { DisplayCode } from '@/hooks/useDisplayCode';
 
@@ -55,9 +52,7 @@ const SettingsPage = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('display_codes' as any)
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_all_display_codes');
 
       if (error) throw error;
       setDisplayCodes(data as DisplayCode[] || []);
@@ -102,26 +97,20 @@ const SettingsPage = () => {
 
   const generateAccessCode = async () => {
     try {
-      // Generate a short, readable code
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
       
-      // Calculate expiry date if provided
       const expiresAt = newCode.expires_days 
         ? new Date(Date.now() + parseInt(newCode.expires_days) * 24 * 60 * 60 * 1000).toISOString() 
         : null;
       
       const { data, error } = await supabase
-        .from('display_codes' as any)
-        .insert([
-          {
-            code,
-            name: newCode.name,
-            location_filter: newCode.location_filter || null,
-            tag_filter: newCode.tag_filter || null,
-            expires_at: expiresAt
-          }
-        ])
-        .select();
+        .rpc('create_display_code', {
+          code_param: code,
+          name_param: newCode.name,
+          location_filter_param: newCode.location_filter || null,
+          tag_filter_param: newCode.tag_filter || null,
+          expires_at_param: expiresAt
+        });
 
       if (error) throw error;
       
@@ -150,9 +139,7 @@ const SettingsPage = () => {
   const deleteCode = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('display_codes' as any)
-        .delete()
-        .eq('id', id);
+        .rpc('delete_display_code', { id_param: id });
 
       if (error) throw error;
       

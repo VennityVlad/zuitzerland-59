@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, startOfDay, endOfDay, isSameDay } from 'date-fns';
