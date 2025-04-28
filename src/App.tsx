@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
+import SessionValidator from "@/components/SessionValidator";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import SupabaseSignIn from "./pages/SupabaseSignIn";
@@ -59,11 +60,43 @@ const ProtectedRoute = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isPageEnabled, setIsPageEnabled] = useState(true);
   const [hasValidInvoice, setHasValidInvoice] = useState(false);
+  const [isAccessValid, setIsAccessValid] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
   useEffect(() => {
+    const validateAccess = async () => {
+      if (!user?.id || !user?.email) return true;
+      
+      try {
+        const { data, error } = await supabase.functions.invoke("validate-user-access", {
+          body: { email: user.email }
+        });
+        
+        if (error) {
+          console.error("Error validating access:", error);
+          return true; // Default to allowing access if there's an error
+        }
+        
+        if (data && data.revoked) {
+          toast({
+            title: "Access Revoked",
+            description: "Your account access has been revoked.",
+            variant: "destructive",
+          });
+          setIsAccessValid(false);
+          return false;
+        }
+        
+        setIsAccessValid(true);
+        return true;
+      } catch (err) {
+        console.error("Failed to validate access:", err);
+        return true; // Default to allowing access if there's an error
+      }
+    };
+    
     const checkPageAccess = async () => {
       if (!user?.id) {
         setIsLoading(false);
@@ -71,6 +104,13 @@ const ProtectedRoute = ({
       }
 
       try {
+        // First validate user access
+        const valid = await validateAccess();
+        if (!valid) {
+          navigate('/signin');
+          return;
+        }
+      
         if (pageKey) {
           const { data: settingsData, error: settingsError } = await supabase
             .from('settings')
@@ -154,7 +194,7 @@ const ProtectedRoute = ({
     );
   }
   
-  if (!authenticated) {
+  if (!authenticated || !isAccessValid) {
     return <Navigate to="/signin" replace />;
   }
 
@@ -431,6 +471,7 @@ const App = () => {
           }}
         >
           <SupabaseAuthProvider>
+            <SessionValidator />
             <PageTrackingWrapper>
               <AppRoutes />
             </PageTrackingWrapper>

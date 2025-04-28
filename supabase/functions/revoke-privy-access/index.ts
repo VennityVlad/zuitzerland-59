@@ -125,6 +125,35 @@ Deno.serve(async (req) => {
       console.log('User not found in allowlist or already removed');
     }
 
+    // NEW STEP: Add the user to the revoked_users table
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase credentials not configured');
+    }
+    
+    const addToRevokedResponse = await fetch(`${supabaseUrl}/rest/v1/revoked_users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        email: email,
+        privy_id: userId,
+        revoked_at: new Date().toISOString()
+      })
+    });
+    
+    if (!addToRevokedResponse.ok) {
+      console.error('Failed to add user to revoked list:', await addToRevokedResponse.text());
+    } else {
+      console.log(`Added ${email} to revoked_users table`);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -132,7 +161,8 @@ Deno.serve(async (req) => {
         details: {
           userId,
           deletedUser: true,
-          removedFromAllowlist
+          removedFromAllowlist,
+          addedToRevokedList: addToRevokedResponse.ok
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

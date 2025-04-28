@@ -771,6 +771,33 @@ export type Database = {
         }
         Relationships: []
       }
+      revoked_users: {
+        Row: {
+          email: string
+          id: string
+          privy_id: string | null
+          reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          email: string
+          id?: string
+          privy_id?: string | null
+          reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          email?: string
+          id?: string
+          privy_id?: string | null
+          reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: []
+      }
       room_assignment_profiles: {
         Row: {
           created_at: string

@@ -21,6 +21,9 @@ verify_jwt = false
 [functions.revoke-privy-access]
 verify_jwt = true
 
+[functions.validate-user-access]
+verify_jwt = false
+
 [functions.fetch-request-finance-invoice]
 verify_jwt = true
 
