@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,8 @@ import {
   ContactRound,
   BookOpen,
   UserCog,
-  Shield
+  Shield,
+  Settings
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -250,6 +252,11 @@ const NavMenu = () => {
           path: "/availability",
         }
       ]
+    },
+    {
+      label: "Settings",
+      icon: <Settings className="h-5 w-5" />,
+      path: "/settings",
     },
     {
       label: "Reports",

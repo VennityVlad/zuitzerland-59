@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
@@ -36,6 +37,8 @@ import AvailabilityPage from "./pages/rooms/AvailabilityPage";
 import { HelmetProvider } from 'react-helmet-async';
 import EventPage from "./pages/events/EventPage";
 import PrivacyDashboard from "./pages/PrivacyDashboard";
+import Settings from "./pages/Settings";
+import DisplayPage from "./pages/DisplayPage";
 
 const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
   usePageTracking();
@@ -173,8 +176,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/supabase-signin" element={<SupabaseSignIn />} />
-      
       <Route path="/signin" element={<SignIn />} />
+      <Route path="/display" element={<DisplayPage />} />
       <Route
         path="/"
         element={
@@ -236,6 +239,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly={true}>
             <Reports />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <Settings />
           </ProtectedRoute>
         }
       />
