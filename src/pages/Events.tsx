@@ -83,7 +83,7 @@ const Events = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
-  const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin } = usePaidInvoiceStatus(
+  const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin: userIsAdmin } = usePaidInvoiceStatus(
     privyUser?.id || supabaseUser?.id
   );
   
