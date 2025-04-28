@@ -211,6 +211,51 @@ export type Database = {
         }
         Relationships: []
       }
+      display_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          location_filter: string | null
+          name: string
+          tag_filter: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          location_filter?: string | null
+          name: string
+          tag_filter?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          location_filter?: string | null
+          name?: string
+          tag_filter?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "display_codes_location_filter_fkey"
+            columns: ["location_filter"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_codes_tag_filter_fkey"
+            columns: ["tag_filter"]
+            isOneToOne: false
+            referencedRelation: "event_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_rsvps: {
         Row: {
           created_at: string
