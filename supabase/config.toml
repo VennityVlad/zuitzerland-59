@@ -18,9 +18,11 @@ verify_jwt = true
 [functions.add-to-privy-allowlist]
 verify_jwt = false
 
+[functions.revoke-privy-access]
+verify_jwt = true
+
 [functions.fetch-request-finance-invoice]
 verify_jwt = true
 
 [functions.send-guild-invitation]
 verify_jwt = true
-

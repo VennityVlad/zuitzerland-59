@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { MoreHorizontal, Mail, Edit, Trash, UserCheck, AlertCircle } from "lucide-react";
+import { MoreHorizontal, Mail, Edit, Trash, UserCheck, AlertCircle, UserX } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,9 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showRevokeAccessDialog, setShowRevokeAccessDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRevokingAccess, setIsRevokingAccess] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -98,6 +101,43 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
     }
   };
 
+  const handleRevokeAccess = async () => {
+    if (!profile.email) {
+      toast({
+        title: "Error",
+        description: "No email address found for this user",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRevokingAccess(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("revoke-privy-access", {
+        body: { email: profile.email }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Access revoked",
+        description: `${profile.email} has been removed from the allowlist and all sessions have been terminated`,
+      });
+      
+      onRefresh();
+    } catch (error) {
+      console.error('Error revoking access:', error);
+      toast({
+        title: "Error",
+        description: "Failed to revoke user access",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRevokingAccess(false);
+      setShowRevokeAccessDialog(false);
+    }
+  };
+
   return (
     <>
       <Card className="overflow-hidden hover:shadow-md transition-shadow">
@@ -140,6 +180,15 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
                   <Edit className="mr-2 h-4 w-4" />
                   Edit user
                 </DropdownMenuItem>
+                {profile.email && (
+                  <DropdownMenuItem 
+                    onClick={() => setShowRevokeAccessDialog(true)} 
+                    className="text-amber-600"
+                  >
+                    <UserX className="mr-2 h-4 w-4" />
+                    Revoke access
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem 
                   className="text-red-600" 
                   onClick={() => setShowDeleteDialog(true)}
@@ -193,6 +242,28 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
               className="bg-red-500 hover:bg-red-600"
             >
               {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showRevokeAccessDialog} onOpenChange={setShowRevokeAccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke User Access?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove "{profile.email}" from the Privy allowlist and terminate all active sessions.
+              The user will be immediately logged out and will not be able to log back in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRevokingAccess}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRevokeAccess} 
+              disabled={isRevokingAccess}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              {isRevokingAccess ? "Revoking Access..." : "Revoke Access"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
