@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Building, BedDouble, Plus, Minus, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -391,6 +390,307 @@ export function CreateLocationSheet({
     }
   };
 
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0:
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Location Name *</Label>
+              <Input 
+                id="name" 
+                value={newLocation.name}
+                onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
+                placeholder="e.g., Apartment 101, Conference Room A"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="type">Location Type *</Label>
+              <Select
+                value={newLocation.type}
+                onValueChange={(value) => setNewLocation({...newLocation, type: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locationTypes.map(type => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="building">Building</Label>
+                <Input 
+                  id="building" 
+                  value={newLocation.building}
+                  onChange={(e) => setNewLocation({...newLocation, building: e.target.value})}
+                  placeholder="e.g., Main Building"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="floor">Floor</Label>
+                <Input 
+                  id="floor" 
+                  value={newLocation.floor}
+                  onChange={(e) => setNewLocation({...newLocation, floor: e.target.value})}
+                  placeholder="e.g., 1st, Ground"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="max_occupancy">Maximum Occupancy</Label>
+              <Input
+                id="max_occupancy"
+                type="number"
+                value={newLocation.max_occupancy === null ? "" : newLocation.max_occupancy}
+                onChange={(e) => setNewLocation({
+                  ...newLocation, 
+                  max_occupancy: e.target.value ? parseInt(e.target.value) : null
+                })}
+                placeholder="Maximum number of occupants"
+                min="1"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={newLocation.description}
+                onChange={(e) => setNewLocation({...newLocation, description: e.target.value})}
+                placeholder="Describe the location (features, location, etc.)"
+                rows={3}
+              />
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div className="space-y-6">
+            {!isEditing && (
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Bedrooms</h3>
+                <Button 
+                  onClick={addBedroom} 
+                  size="sm" 
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Bedroom
+                </Button>
+              </div>
+            )}
+            
+            {isEditing ? (
+              <div className="text-center py-4 border rounded-md bg-muted/20">
+                <p className="text-muted-foreground">
+                  Bedroom and bed configuration cannot be modified in edit mode to prevent data loss.
+                </p>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Please use the room management interface to manage bedrooms and beds.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {bedrooms.map((bedroom, bedroomIndex) => (
+                  <Card key={bedroomIndex} className="border">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-base">
+                          <div className="flex items-center">
+                            <Building className="h-4 w-4 mr-2 text-muted-foreground" />
+                            {bedroom.name}
+                          </div>
+                        </CardTitle>
+                        <Button 
+                          onClick={() => removeBedroom(bedroomIndex)} 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
+                          <Minus className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`bedroom-name-${bedroomIndex}`}>Bedroom Name *</Label>
+                        <Input 
+                          id={`bedroom-name-${bedroomIndex}`}
+                          value={bedroom.name}
+                          onChange={(e) => updateBedroomField(bedroomIndex, 'name', e.target.value)}
+                          placeholder="e.g., Master Bedroom"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`bedroom-desc-${bedroomIndex}`}>Description</Label>
+                        <Input 
+                          id={`bedroom-desc-${bedroomIndex}`}
+                          value={bedroom.description}
+                          onChange={(e) => updateBedroomField(bedroomIndex, 'description', e.target.value)}
+                          placeholder="Description (optional)"
+                        />
+                      </div>
+                      
+                      <div className="pt-2">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="text-sm font-medium">Beds in this bedroom</h4>
+                          <Button 
+                            onClick={() => addBed(bedroomIndex)} 
+                            size="sm" 
+                            variant="outline"
+                            className="h-7"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Bed
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {bedroom.beds.map((bed, bedIndex) => (
+                            <Card key={bedIndex} className="border p-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center">
+                                  <BedDouble className="h-4 w-4 mr-2 text-muted-foreground" />
+                                  <span className="text-sm font-medium">{bed.name}</span>
+                                </div>
+                                <Button 
+                                  onClick={() => removeBed(bedroomIndex, bedIndex)} 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Minus className="h-3 w-3 text-destructive" />
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label 
+                                    htmlFor={`bed-name-${bedroomIndex}-${bedIndex}`}
+                                    className="text-xs mb-1 block"
+                                  >
+                                    Bed Name *
+                                  </Label>
+                                  <Input 
+                                    id={`bed-name-${bedroomIndex}-${bedIndex}`}
+                                    value={bed.name}
+                                    onChange={(e) => updateBedField(bedroomIndex, bedIndex, 'name', e.target.value)}
+                                    placeholder="e.g., Bed 1"
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <Label 
+                                    htmlFor={`bed-type-${bedroomIndex}-${bedIndex}`}
+                                    className="text-xs mb-1 block"
+                                  >
+                                    Bed Type *
+                                  </Label>
+                                  <Input 
+                                    id={`bed-type-${bedroomIndex}-${bedIndex}`}
+                                    value={bed.bed_type}
+                                    onChange={(e) => updateBedField(bedroomIndex, bedIndex, 'bed_type', e.target.value)}
+                                    placeholder="e.g., Single, Double"
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Location Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Name</p>
+                    <p className="text-sm text-muted-foreground">{newLocation.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Type</p>
+                    <p className="text-sm text-muted-foreground">{newLocation.type}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Building</p>
+                    <p className="text-sm text-muted-foreground">{newLocation.building || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Floor</p>
+                    <p className="text-sm text-muted-foreground">{newLocation.floor || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Max Occupancy</p>
+                    <p className="text-sm text-muted-foreground">{newLocation.max_occupancy || 'N/A'}</p>
+                  </div>
+                </div>
+                {newLocation.description && (
+                  <div className="pt-2">
+                    <p className="text-sm font-medium">Description</p>
+                    <p className="text-sm text-muted-foreground">{newLocation.description}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {!isEditing && newLocation.type === "Apartment" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Bedrooms and Beds</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {bedrooms.map((bedroom, bedroomIndex) => (
+                      <div key={bedroomIndex} className="border-b pb-4 last:border-b-0 last:pb-0">
+                        <h4 className="font-medium">{bedroom.name}</h4>
+                        {bedroom.description && (
+                          <p className="text-sm text-muted-foreground mb-2">{bedroom.description}</p>
+                        )}
+                        <div className="pl-4 mt-2 space-y-1">
+                          {bedroom.beds.map((bed, bedIndex) => (
+                            <div key={bedIndex} className="flex items-center">
+                              <BedDouble className="h-4 w-4 mr-2 text-muted-foreground" />
+                              <span className="text-sm">{bed.name} ({bed.bed_type})</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md md:max-w-lg overflow-y-auto">
@@ -437,302 +737,7 @@ export function CreateLocationSheet({
         </div>
 
         <div className="space-y-6 mt-6">
-          {/* Step 1: Location Details */}
-          {currentStep === 0 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Location Name *</Label>
-                <Input 
-                  id="name" 
-                  value={newLocation.name}
-                  onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
-                  placeholder="e.g., Apartment 101, Conference Room A"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="type">Location Type *</Label>
-                <Select
-                  value={newLocation.type}
-                  onValueChange={(value) => setNewLocation({...newLocation, type: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select location type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locationTypes.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="building">Building</Label>
-                  <Input 
-                    id="building" 
-                    value={newLocation.building}
-                    onChange={(e) => setNewLocation({...newLocation, building: e.target.value})}
-                    placeholder="e.g., Main Building"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="floor">Floor</Label>
-                  <Input 
-                    id="floor" 
-                    value={newLocation.floor}
-                    onChange={(e) => setNewLocation({...newLocation, floor: e.target.value})}
-                    placeholder="e.g., 1st, Ground"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="max_occupancy">Maximum Occupancy</Label>
-                <Input
-                  id="max_occupancy"
-                  type="number"
-                  value={newLocation.max_occupancy === null ? "" : newLocation.max_occupancy}
-                  onChange={(e) => setNewLocation({
-                    ...newLocation, 
-                    max_occupancy: e.target.value ? parseInt(e.target.value) : null
-                  })}
-                  placeholder="Maximum number of occupants"
-                  min="1"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={newLocation.description}
-                  onChange={(e) => setNewLocation({...newLocation, description: e.target.value})}
-                  placeholder="Describe the location (features, location, etc.)"
-                  rows={3}
-                />
-              </div>
-            </div>
-          )}
-          
-          {/* Step 2: Bedrooms and Beds - Only shown for Apartments */}
-          {currentStep === 1 && newLocation.type === "Apartment" && (
-            <div className="space-y-6">
-              {!isEditing && (
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Bedrooms</h3>
-                  <Button 
-                    onClick={addBedroom} 
-                    size="sm" 
-                    variant="outline"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Bedroom
-                  </Button>
-                </div>
-              )}
-              
-              {isEditing ? (
-                <div className="text-center py-4 border rounded-md bg-muted/20">
-                  <p className="text-muted-foreground">
-                    Bedroom and bed configuration cannot be modified in edit mode to prevent data loss.
-                  </p>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Please use the room management interface to manage bedrooms and beds.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {bedrooms.map((bedroom, bedroomIndex) => (
-                    <Card key={bedroomIndex} className="border">
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-base">
-                            <div className="flex items-center">
-                              <Building className="h-4 w-4 mr-2 text-muted-foreground" />
-                              {bedroom.name}
-                            </div>
-                          </CardTitle>
-                          <Button 
-                            onClick={() => removeBedroom(bedroomIndex)} 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                          >
-                            <Minus className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor={`bedroom-name-${bedroomIndex}`}>Bedroom Name *</Label>
-                          <Input 
-                            id={`bedroom-name-${bedroomIndex}`}
-                            value={bedroom.name}
-                            onChange={(e) => updateBedroomField(bedroomIndex, 'name', e.target.value)}
-                            placeholder="e.g., Master Bedroom"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor={`bedroom-desc-${bedroomIndex}`}>Description</Label>
-                          <Input 
-                            id={`bedroom-desc-${bedroomIndex}`}
-                            value={bedroom.description}
-                            onChange={(e) => updateBedroomField(bedroomIndex, 'description', e.target.value)}
-                            placeholder="Description (optional)"
-                          />
-                        </div>
-                        
-                        <div className="pt-2">
-                          <div className="flex justify-between items-center mb-2">
-                            <h4 className="text-sm font-medium">Beds in this bedroom</h4>
-                            <Button 
-                              onClick={() => addBed(bedroomIndex)} 
-                              size="sm" 
-                              variant="outline"
-                              className="h-7"
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add Bed
-                            </Button>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            {bedroom.beds.map((bed, bedIndex) => (
-                              <Card key={bedIndex} className="border p-3">
-                                <div className="flex justify-between items-center mb-2">
-                                  <div className="flex items-center">
-                                    <BedDouble className="h-4 w-4 mr-2 text-muted-foreground" />
-                                    <span className="text-sm font-medium">{bed.name}</span>
-                                  </div>
-                                  <Button 
-                                    onClick={() => removeBed(bedroomIndex, bedIndex)} 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <Minus className="h-3 w-3 text-destructive" />
-                                  </Button>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <Label 
-                                      htmlFor={`bed-name-${bedroomIndex}-${bedIndex}`}
-                                      className="text-xs mb-1 block"
-                                    >
-                                      Bed Name *
-                                    </Label>
-                                    <Input 
-                                      id={`bed-name-${bedroomIndex}-${bedIndex}`}
-                                      value={bed.name}
-                                      onChange={(e) => updateBedField(bedroomIndex, bedIndex, 'name', e.target.value)}
-                                      placeholder="e.g., Bed 1"
-                                      className="h-8 text-sm"
-                                    />
-                                  </div>
-                                  
-                                  <div>
-                                    <Label 
-                                      htmlFor={`bed-type-${bedroomIndex}-${bedIndex}`}
-                                      className="text-xs mb-1 block"
-                                    >
-                                      Bed Type *
-                                    </Label>
-                                    <Input 
-                                      id={`bed-type-${bedroomIndex}-${bedIndex}`}
-                                      value={bed.bed_type}
-                                      onChange={(e) => updateBedField(bedroomIndex, bedIndex, 'bed_type', e.target.value)}
-                                      placeholder="e.g., Single, Double"
-                                      className="h-8 text-sm"
-                                    />
-                                  </div>
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Step 3: Review */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Location Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium">Name</p>
-                      <p className="text-sm text-muted-foreground">{newLocation.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Type</p>
-                      <p className="text-sm text-muted-foreground">{newLocation.type}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Building</p>
-                      <p className="text-sm text-muted-foreground">{newLocation.building || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Floor</p>
-                      <p className="text-sm text-muted-foreground">{newLocation.floor || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Max Occupancy</p>
-                      <p className="text-sm text-muted-foreground">{newLocation.max_occupancy || 'N/A'}</p>
-                    </div>
-                  </div>
-                  {newLocation.description && (
-                    <div className="pt-2">
-                      <p className="text-sm font-medium">Description</p>
-                      <p className="text-sm text-muted-foreground">{newLocation.description}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {!isEditing && newLocation.type === "Apartment" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Bedrooms and Beds</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {bedrooms.map((bedroom, bedroomIndex) => (
-                        <div key={bedroomIndex} className="border-b pb-4 last:border-b-0 last:pb-0">
-                          <h4 className="font-medium">{bedroom.name}</h4>
-                          {bedroom.description && (
-                            <p className="text-sm text-muted-foreground mb-2">{bedroom.description}</p>
-                          )}
-                          <div className="pl-4 mt-2 space-y-1">
-                            {bedroom.beds.map((bed, bedIndex) => (
-                              <div key={bedIndex} className="flex items-center">
-                                <BedDouble className="h-4 w-4 mr-2 text-muted-foreground" />
-                                <span className="text-sm">{bed.name} ({bed.bed_type})</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
+          {renderStepContent()}
         </div>
 
         <SheetFooter className="mt-8 flex-col sm:flex-row gap-2">
