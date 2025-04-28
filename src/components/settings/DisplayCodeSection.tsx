@@ -176,7 +176,7 @@ export const DisplayCodeSection = ({
                   <SelectItem value="30">30 days</SelectItem>
                   <SelectItem value="90">90 days</SelectItem>
                   <SelectItem value="365">1 year</SelectItem>
-                  <SelectItem value="">Never</SelectItem>
+                  <SelectItem value="never">Never</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -191,7 +191,7 @@ export const DisplayCodeSection = ({
                   <SelectValue placeholder="All locations" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All locations</SelectItem>
+                  <SelectItem value="all">All locations</SelectItem>
                   {locations.map((location) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}
@@ -211,7 +211,7 @@ export const DisplayCodeSection = ({
                   <SelectValue placeholder="All event types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All event types</SelectItem>
+                  <SelectItem value="all">All event types</SelectItem>
                   {eventTags.map((tag) => (
                     <SelectItem key={tag.id} value={tag.id}>
                       {tag.name}
