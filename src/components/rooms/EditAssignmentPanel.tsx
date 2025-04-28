@@ -77,9 +77,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   useEffect(() => {
     fetchFormData();
     
-    // Set initial form state when assignment or initialData changes
     if (assignment) {
-      //setSelectedProfileId(assignment.profile_id);
       setSelectedLocationId(assignment.location_id);
       setSelectedBedroomId(assignment.bedroom_id || undefined);
       setSelectedBedId(assignment.bed_id || undefined);
@@ -98,7 +96,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       }
       fetchAssignmentProfiles();
     } else if (initialData) {
-      //setSelectedProfileId(initialData.profileId);
       setSelectedLocationId(initialData.locationId);
       setSelectedBedroomId(initialData.bedroomId);
       setSelectedBedId(initialData.bedId);
@@ -110,7 +107,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   const fetchFormData = async () => {
     setLoading(true);
     try {
-      // Fetch profiles with paid invoices first
       const { data: profilesWithPaidInvoices, error: invoiceError } = await supabase
         .from('invoices')
         .select('profile_id')
@@ -122,14 +118,13 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       const paidProfileIds = profilesWithPaidInvoices
         .map(invoice => invoice.profile_id)
         .filter(Boolean)
-        .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+        .filter((value, index, self) => self.indexOf(value) === index);
       
       let profilesQuery = supabase
         .from('profiles')
         .select('id, full_name, avatar_url, email')
         .order('full_name');
       
-      // If we have a specific profile ID from the assignment, include it regardless
       if (selectedProfileIds && selectedProfileIds.length > 0) {
         selectedProfileIds.forEach(selectedProfileId => {
           if (selectedProfileId && !paidProfileIds.includes(selectedProfileId)) {
@@ -138,7 +133,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
         });
       }
       
-      // Only fetch profiles with paid invoices
       if (paidProfileIds.length > 0) {
         profilesQuery = profilesQuery.in('id', paidProfileIds);
       }
@@ -248,7 +242,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
     
     setSaving(true);
     try {
-      // Format dates correctly for database using local date string format YYYY-MM-DD
       const formattedStartDate = format(startDate, 'yyyy-MM-dd');
       const formattedEndDate = format(endDate, 'yyyy-MM-dd');
       
@@ -263,7 +256,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       
       let assignmentId;
       if (assignment) {
-        // Update existing assignment
         const { error: updateError } = await supabase
           .from('room_assignments')
           .update(assignmentData)
@@ -272,7 +264,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
         if (updateError) throw updateError;
         assignmentId = assignment.id;
       } else {
-        // Create new assignment
         const { data: newAssignment, error: createError } = await supabase
           .from('room_assignments')
           .insert([assignmentData])
@@ -283,16 +274,11 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
         assignmentId = newAssignment.id;
       }
 
-      // Update profile assignments
-      if (assignment) {
-        // Delete existing profile assignments
-        await supabase
-          .from('room_assignment_profiles')
-          .delete()
-          .eq('room_assignment_id', assignmentId);
-      }
+      await supabase
+        .from('room_assignment_profiles')
+        .delete()
+        .eq('room_assignment_id', assignmentId);
 
-      // Insert new profile assignments
       const { error: profileError } = await supabase
         .from('room_assignment_profiles')
         .insert(
@@ -340,7 +326,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       });
       
       setSaving(false);
-      onClose(true); // Pass true to indicate changes were made
+      onClose(true);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -351,14 +337,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
     }
   };
   
-  // Find the selected profile
-  //const selectedProfile = profiles.find(profile => profile.id === selectedProfileId);
-  // Find location and bedroom details for display
-  const selectedLocation = locations.find(loc => loc.id === selectedLocationId);
-  const selectedBedroom = bedrooms.find(bedroom => bedroom.id === selectedBedroomId);
-  const selectedBed = beds.find(bed => bed.id === selectedBedId);
-
-  // Handle the button click event properly
   const handleCancelClick = () => {
     onClose(false);
   };
@@ -380,7 +358,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
         </div>
       ) : (
         <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)]">
-          {/* Profile Selection */}
           <div className="space-y-2">
             <Label>Assigned Profiles</Label>
             <div className="space-y-2">
@@ -435,7 +412,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             </div>
           </div>
           
-          {/* Location Selection */}
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
             <Select
@@ -456,7 +432,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             </Select>
           </div>
           
-          {/* Bedroom Selection */}
           <div className="space-y-2">
             <Label htmlFor="bedroom">Bedroom</Label>
             <Select
@@ -477,7 +452,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             </Select>
           </div>
           
-          {/* Bed Selection */}
           <div className="space-y-2">
             <Label htmlFor="bed">Bed</Label>
             <Select
@@ -498,7 +472,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             </Select>
           </div>
           
-          {/* Date Range Selection */}
           <div className="space-y-2">
             <Label>Date Range</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -561,7 +534,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             </div>
           </div>
           
-          {/* Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea
@@ -573,38 +545,33 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
             />
           </div>
           
-          {/* Action Buttons - Updated layout with Delete button in a separate row */}
-          <div className="flex flex-col space-y-4">
-            {/* Cancel/Update buttons */}
+          <div className="space-y-4 pt-6 border-t">
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
               <Button 
                 variant="outline" 
                 onClick={handleCancelClick} 
                 disabled={saving}
-                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={saveAssignment} 
                 disabled={saving}
-                className="w-full sm:w-auto"
               >
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {assignment ? "Update" : "Create"} Assignment
               </Button>
             </div>
             
-            {/* Delete button in a separate row */}
             {assignment && (
-              <div className="border-t pt-4">
+              <div className="flex">
                 <Button
                   variant="destructive"
                   onClick={deleteAssignment}
                   disabled={saving}
                   className="w-full sm:w-auto"
                 >
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Delete Assignment
                 </Button>
               </div>
