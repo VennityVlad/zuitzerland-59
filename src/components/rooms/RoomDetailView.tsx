@@ -196,79 +196,80 @@ const RoomDetailView = ({ apartment, onUpdate }: RoomDetailViewProps) => {
             <CardTitle className="text-xl">{apartment.name}</CardTitle>
             {getLocationTypeBadge()}
           </div>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="assignments">Assignments</TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
       </CardHeader>
       <CardContent>
-        <TabsContent value="details" className="space-y-6 mt-0">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Building</p>
-              <p>{apartment.building || "N/A"}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Floor</p>
-              <p>{apartment.floor || "N/A"}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Max Occupancy</p>
-              <p>{apartment.max_occupancy || "Not specified"}</p>
-            </div>
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="assignments">Assignments</TabsTrigger>
+          </TabsList>
           
-          {apartment.description && (
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Description</p>
-              <p className="text-sm">{apartment.description}</p>
-            </div>
-          )}
-          
-          {isApartment && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Home className="h-5 w-5 text-primary" />
-                  Bedrooms
-                </h3>
-                <Button size="sm" onClick={() => setAddBedroomDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Bedroom
-                </Button>
+          <TabsContent value="details" className="space-y-6 mt-0">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Building</p>
+                <p>{apartment.building || "N/A"}</p>
               </div>
-              
-              <BedroomList 
-                bedrooms={apartment.bedrooms || []} 
-                onAddBed={(bedroom) => {
-                  setSelectedBedroom(bedroom);
-                  setAddBedDialogOpen(true);
-                }}
-                onDeleteBedroom={handleDeleteBedroom}
-                onDeleteBed={handleDeleteBed}
-              />
-            </div>
-          )}
-          
-          {!isApartment && (
-            <div className="mt-6 p-4 border rounded-md">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-indigo-500" />
-                <h3 className="text-lg font-semibold">Meeting Room</h3>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Floor</p>
+                <p>{apartment.floor || "N/A"}</p>
               </div>
-              <p className="mt-2 text-muted-foreground">
-                This is a meeting room. You can manage room assignments but not add bedrooms or beds.
-              </p>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Max Occupancy</p>
+                <p>{apartment.max_occupancy || "Not specified"}</p>
+              </div>
             </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="assignments" className="mt-0">
-          <RoomAssignments locationId={apartment.id} />
-        </TabsContent>
+            
+            {apartment.description && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Description</p>
+                <p className="text-sm">{apartment.description}</p>
+              </div>
+            )}
+            
+            {isApartment && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Home className="h-5 w-5 text-primary" />
+                    Bedrooms
+                  </h3>
+                  <Button size="sm" onClick={() => setAddBedroomDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Bedroom
+                  </Button>
+                </div>
+                
+                <BedroomList 
+                  bedrooms={apartment.bedrooms || []} 
+                  onAddBed={(bedroom) => {
+                    setSelectedBedroom(bedroom);
+                    setAddBedDialogOpen(true);
+                  }}
+                  onDeleteBedroom={handleDeleteBedroom}
+                  onDeleteBed={handleDeleteBed}
+                />
+              </div>
+            )}
+            
+            {!isApartment && (
+              <div className="mt-6 p-4 border rounded-md">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-indigo-500" />
+                  <h3 className="text-lg font-semibold">Meeting Room</h3>
+                </div>
+                <p className="mt-2 text-muted-foreground">
+                  This is a meeting room. You can manage room assignments but not add bedrooms or beds.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="assignments" className="mt-0">
+            <RoomAssignments locationId={apartment.id} />
+          </TabsContent>
+        </Tabs>
       </CardContent>
       
       {isApartment && (
