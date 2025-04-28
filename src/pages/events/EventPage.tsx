@@ -10,6 +10,7 @@ import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { EventDateBadge } from "@/components/events/EventDateBadge";
 import { EventDetailsCard } from "@/components/events/EventDetailsCard";
 import { Card } from "@/components/ui/card";
+import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -20,6 +21,13 @@ const EventPage = () => {
   const [isRsvped, setIsRsvped] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const { toast } = useToast();
+  
+  const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin } = usePaidInvoiceStatus(
+    user?.id
+  );
+  
+  console.log("EventPage - Auth status:", { authenticated, userId: user?.id });
+  console.log("EventPage - Invoice status:", { hasPaidInvoice, isPaidInvoiceLoading, isAdmin });
 
   useEffect(() => {
     const fetchUserProfile = async () => {

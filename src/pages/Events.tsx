@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
@@ -86,6 +86,17 @@ const Events = () => {
   const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin: userIsAdmin } = usePaidInvoiceStatus(
     privyUser?.id || supabaseUser?.id
   );
+  
+  // Add logging to debug paid invoice status
+  useEffect(() => {
+    console.log("Events page - User info:", { 
+      privyUserId: privyUser?.id,
+      supabaseUserId: supabaseUser?.id,
+      hasPaidInvoice,
+      isPaidInvoiceLoading,
+      userIsAdmin
+    });
+  }, [privyUser?.id, supabaseUser?.id, hasPaidInvoice, isPaidInvoiceLoading, userIsAdmin]);
   
   const { data: userProfile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile"],
@@ -387,6 +398,7 @@ const Events = () => {
   };
 
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
+    console.log("Showing restricted access message - No paid invoice found");
     return (
       <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
