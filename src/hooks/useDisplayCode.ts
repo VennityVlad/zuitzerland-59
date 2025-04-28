@@ -27,9 +27,11 @@ export const useDisplayCode = (code: string | null) => {
       }
 
       try {
-        // Use raw SQL query with custom types instead of the typed client
         const { data, error: fetchError } = await supabase
-          .rpc('get_display_code_by_code', { code_param: code });
+          .from('display_codes')
+          .select('*')
+          .eq('code', code)
+          .maybeSingle();
 
         if (fetchError) {
           throw fetchError;
@@ -48,7 +50,7 @@ export const useDisplayCode = (code: string | null) => {
           return;
         }
 
-        setDisplayCode(data as DisplayCode);
+        setDisplayCode(data);
         setIsValid(true);
         setIsLoading(false);
       } catch (err: any) {

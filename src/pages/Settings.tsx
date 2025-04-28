@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from 'react';
-import { Settings, Shield, Copy, RefreshCw } from 'lucide-react';
+import { Shield, Copy, RefreshCw } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,10 +27,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from '@/lib/utils';
-import { DisplayCode } from '@/hooks/useDisplayCode';
+import { Checkbox } from '@/components/ui/checkbox';
 
-const SettingsPage = () => {
+type DisplayCode = {
+  id: string;
+  code: string;
+  name: string;
+  location_filter?: string | null;
+  tag_filter?: string | null;
+  created_at: string;
+  expires_at?: string | null;
+};
+
+const Settings = () => {
   const { toast } = useToast();
   const [displayCodes, setDisplayCodes] = useState<DisplayCode[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
@@ -52,10 +63,12 @@ const SettingsPage = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .rpc('get_all_display_codes');
+        .from('display_codes')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setDisplayCodes(data as DisplayCode[] || []);
+      setDisplayCodes(data || []);
     } catch (error) {
       console.error('Error fetching display codes:', error);
       toast({
@@ -97,20 +110,26 @@ const SettingsPage = () => {
 
   const generateAccessCode = async () => {
     try {
+      // Generate a short, readable code
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
       
+      // Calculate expiry date if provided
       const expiresAt = newCode.expires_days 
         ? new Date(Date.now() + parseInt(newCode.expires_days) * 24 * 60 * 60 * 1000).toISOString() 
         : null;
       
       const { data, error } = await supabase
-        .rpc('create_display_code', {
-          code_param: code,
-          name_param: newCode.name,
-          location_filter_param: newCode.location_filter || null,
-          tag_filter_param: newCode.tag_filter || null,
-          expires_at_param: expiresAt
-        });
+        .from('display_codes')
+        .insert([
+          {
+            code,
+            name: newCode.name,
+            location_filter: newCode.location_filter || null,
+            tag_filter: newCode.tag_filter || null,
+            expires_at: expiresAt
+          }
+        ])
+        .select();
 
       if (error) throw error;
       
@@ -139,7 +158,9 @@ const SettingsPage = () => {
   const deleteCode = async (id: string) => {
     try {
       const { error } = await supabase
-        .rpc('delete_display_code', { id_param: id });
+        .from('display_codes')
+        .delete()
+        .eq('id', id);
 
       if (error) throw error;
       
@@ -381,4 +402,4 @@ const SettingsPage = () => {
   );
 };
 
-export default SettingsPage;
+export default Settings;
