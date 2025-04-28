@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
-import { useToast, toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { EventRSVPAvatars } from "@/components/events/EventRSVPAvatars";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { PageTitle } from "@/components/PageTitle";
@@ -83,6 +83,10 @@ const Events = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
+  const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin } = usePaidInvoiceStatus(
+    privyUser?.id || supabaseUser?.id
+  );
+  
   const { data: userProfile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
@@ -136,7 +140,8 @@ const Events = () => {
       }
 
       return data as unknown as EventWithProfile[];
-    }
+    },
+    enabled: hasPaidInvoice && !isPaidInvoiceLoading && (!!privyUser?.id || !!supabaseUser?.id)
   });
 
   const filteredEvents = React.useMemo(() => {
@@ -380,6 +385,37 @@ const Events = () => {
       }
     }
   };
+
+  if (!hasPaidInvoice && !isPaidInvoiceLoading) {
+    return (
+      <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <PageTitle 
+            title="Events" 
+            description="View and manage upcoming events" 
+            icon={<CalendarDays className="h-8 w-8" />} 
+          />
+        </div>
+        
+        <Card className="p-8 text-center space-y-6">
+          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+            <CalendarDays className="h-8 w-8 text-gray-500" />
+          </div>
+          <h2 className="text-2xl font-semibold text-foreground">Access Restricted</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            You must have a paid invoice to view the events schedule. Once your payment is confirmed, you'll have full access to all events.
+          </p>
+          <div className="flex justify-center">
+            <Button asChild>
+              <Link to="/invoices">
+                View Invoices
+              </Link>
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
