@@ -27,6 +27,15 @@ import {
 import { DisplayCode } from '@/hooks/useDisplayCode';
 import { cn } from '@/lib/utils';
 
+const EXPIRY_OPTIONS = [
+  { value: "1", label: "1 day" },
+  { value: "7", label: "7 days" },
+  { value: "30", label: "30 days" },
+  { value: "90", label: "90 days" },
+  { value: "365", label: "1 year" },
+  { value: "never", label: "Never" },
+];
+
 export const DisplayCodeSection = ({ 
   displayCodes, 
   locations, 
@@ -41,8 +50,8 @@ export const DisplayCodeSection = ({
   const { toast } = useToast();
   const [newCode, setNewCode] = useState({
     name: '',
-    location_filter: '',
-    tag_filter: '',
+    location_filter: 'all',
+    tag_filter: 'all',
     expires_days: '7'
   });
 
@@ -52,7 +61,7 @@ export const DisplayCodeSection = ({
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
       
       // Calculate expiry date if provided
-      const expiresAt = newCode.expires_days 
+      const expiresAt = newCode.expires_days !== 'never' 
         ? new Date(Date.now() + parseInt(newCode.expires_days) * 24 * 60 * 60 * 1000).toISOString() 
         : null;
       
@@ -62,8 +71,8 @@ export const DisplayCodeSection = ({
           {
             code,
             name: newCode.name,
-            location_filter: newCode.location_filter || null,
-            tag_filter: newCode.tag_filter || null,
+            location_filter: newCode.location_filter !== 'all' ? newCode.location_filter : null,
+            tag_filter: newCode.tag_filter !== 'all' ? newCode.tag_filter : null,
             expires_at: expiresAt
           }
         ]);
@@ -78,8 +87,8 @@ export const DisplayCodeSection = ({
       onDisplayCodesChange();
       setNewCode({
         name: '',
-        location_filter: '',
-        tag_filter: '',
+        location_filter: 'all',
+        tag_filter: 'all',
         expires_days: '7'
       });
     } catch (error) {
@@ -171,12 +180,11 @@ export const DisplayCodeSection = ({
                   <SelectValue placeholder="Select expiration" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 day</SelectItem>
-                  <SelectItem value="7">7 days</SelectItem>
-                  <SelectItem value="30">30 days</SelectItem>
-                  <SelectItem value="90">90 days</SelectItem>
-                  <SelectItem value="365">1 year</SelectItem>
-                  <SelectItem value="never">Never</SelectItem>
+                  {EXPIRY_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
