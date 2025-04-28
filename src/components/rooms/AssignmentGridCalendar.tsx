@@ -121,6 +121,7 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
       const { data: locationsData, error: locationsError } = await supabase
         .from('locations')
         .select('id, name')
+        .eq('type', 'Apartment')
         .order('name');
       
       if (locationsError) {
@@ -197,7 +198,6 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
       
       if (assignmentsError) throw assignmentsError;
 
-      // Transform the data to match the expected format
       const processedAssignments = assignmentsData?.map(assignment => {
         const profiles = assignment.room_assignment_profiles.map((rap: any) => ({
           ...rap.profile,
