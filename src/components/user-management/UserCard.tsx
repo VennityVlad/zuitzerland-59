@@ -121,7 +121,7 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
 
       toast({
         title: "Access revoked",
-        description: `${profile.email} has been removed from the allowlist and all sessions have been terminated`,
+        description: `${profile.email} has been permanently removed from Privy and can no longer access the application`,
       });
       
       onRefresh();
@@ -252,8 +252,9 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke User Access?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove "{profile.email}" from the Privy allowlist and terminate all active sessions.
+              This will permanently delete the user "{profile.email}" from Privy.
               The user will be immediately logged out and will not be able to log back in.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
