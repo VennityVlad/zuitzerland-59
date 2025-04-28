@@ -6,46 +6,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getSettingEnabled } from "@/utils/settingsUtils";
+import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = usePrivy();
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDirectory, setShowDirectory] = useState(false);
-  const [hasPaidInvoice, setHasPaidInvoice] = useState(false);
   const lastScrollY = useRef(0);
   const scrollTimeoutRef = useRef<number | null>(null);
-
+  
+  const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin } = usePaidInvoiceStatus(user?.id);
+  
   useEffect(() => {
-    const checkAccess = async () => {
-      if (!user?.id) return;
-
+    console.log("🧭 BottomNav - User status:", { 
+      userId: user?.id, 
+      hasPaidInvoice, 
+      isAdmin, 
+      isLoading: isPaidInvoiceLoading 
+    });
+    
+    const checkFeatures = async () => {
       try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role, id')
-          .eq('privy_id', user.id)
-          .maybeSingle();
-
-        if (profileError) throw profileError;
-        
-        setIsAdmin(profileData?.role === 'admin');
-
-        if (profileData?.id) {
-          const { data: invoiceData, error: invoiceError } = await supabase
-            .from('invoices')
-            .select('id')
-            .eq('profile_id', profileData.id)
-            .eq('status', 'paid')
-            .maybeSingle();
-
-          if (invoiceError) throw invoiceError;
-          setHasPaidInvoice(!!invoiceData);
-        }
-
         const { data: settingsData, error: settingsError } = await supabase
           .from('settings')
           .select('key, value')
@@ -61,12 +45,12 @@ const BottomNav = () => {
           setShowDirectory(getSettingEnabled(directorySetting));
         }
       } catch (error) {
-        console.error('Error checking access:', error);
+        console.error('Error checking features:', error);
       }
     };
 
-    checkAccess();
-  }, [user?.id]);
+    checkFeatures();
+  }, [user?.id, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -109,7 +93,6 @@ const BottomNav = () => {
     };
   }, []);
 
-  // NavItem for consistent typing
   type NavItem = {
     name: string;
     icon: typeof Calendar;
@@ -117,10 +100,7 @@ const BottomNav = () => {
     showAlways: boolean;
   };
 
-  // --- NAVIGATION STRUCTURE SETUP ---
-
-  // REGULAR (non-admin) user main bar: Book, Events, Onboarding (if enabled), More
-  const nonAdminNavItems: NavItem[] = [
+  const nonAdminWithoutPaidInvoiceItems: NavItem[] = [
     {
       name: "Book",
       icon: CalendarDays,
@@ -133,7 +113,33 @@ const BottomNav = () => {
       path: "/events",
       showAlways: true,
     },
-    // Onboarding only if appropriate
+    {
+      name: "Profile",
+      icon: User,
+      path: "/profile",
+      showAlways: true,
+    },
+    {
+      name: "Logout",
+      icon: LogOut,
+      path: "#logout",
+      showAlways: true,
+    }
+  ];
+
+  const nonAdminWithPaidInvoiceItems: NavItem[] = [
+    {
+      name: "Book",
+      icon: CalendarDays,
+      path: "/book",
+      showAlways: true,
+    },
+    {
+      name: "Events",
+      icon: Calendar,
+      path: "/events",
+      showAlways: true,
+    },
     ...(showOnboarding && hasPaidInvoice
       ? [{
           name: "Onboarding",
@@ -142,7 +148,6 @@ const BottomNav = () => {
           showAlways: true,
         }]
       : []),
-    // "More" icon placeholder, not a real page
     {
       name: "More",
       icon: MoreHorizontal,
@@ -151,7 +156,6 @@ const BottomNav = () => {
     },
   ];
 
-  // More menu for regular user: Profile, Logout
   const moreMenuNavItemsNonAdmin = [
     {
       name: "Profile",
@@ -166,7 +170,6 @@ const BottomNav = () => {
     }
   ];
 
-  // For admin users, keep legacy logic (unchanged)
   const adminItems: NavItem[] = [
     {
       name: "Invoices",
@@ -207,11 +210,13 @@ const BottomNav = () => {
   ];
 
   const handleNavigation = (path: string) => {
-    if (path === "#more") return; // Do nothing, handled by Popover
+    if (path === "#more") return;
+    if (path === "#logout") {
+      logout();
+      return;
+    }
     navigate(path);
   };
-
-  // --- RENDER LOGIC ---
 
   return (
     <div className={cn(
@@ -221,74 +226,96 @@ const BottomNav = () => {
       <div className="grid h-full grid-cols-4">
         {!isAdmin ? (
           <>
-            {/* Main nav: Book, Events, Onboarding, More */}
-            {nonAdminNavItems.slice(0, 3).map((item) => (
-              <button
-                key={item.name}
-                type="button"
-                onClick={() => handleNavigation(item.path)}
-                className={cn(
-                  "inline-flex flex-col items-center justify-center hover:bg-gray-50",
-                  location.pathname === item.path && "bg-primary/10 text-primary"
-                )}
-              >
-                <item.icon className={cn(
-                  "w-6 h-6 mb-1",
-                  location.pathname === item.path ? "text-primary" : "text-gray-500"
-                )} />
-                <span className={cn(
-                  "text-xs",
-                  location.pathname === item.path ? "text-primary" : "text-gray-500"
-                )}>
-                  {item.name}
-                </span>
-              </button>
-            ))}
-            {/* More menu */}
-            <Popover>
-              <PopoverTrigger asChild>
+            {!hasPaidInvoice ? (
+              nonAdminWithoutPaidInvoiceItems.map((item) => (
                 <button
+                  key={item.name}
                   type="button"
-                  className="inline-flex flex-col items-center justify-center hover:bg-gray-50"
-                >
-                  <MoreHorizontal className="w-6 h-6 mb-1 text-gray-500" />
-                  <span className="text-xs text-gray-500">More</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-2 z-[100]">
-                <div className="flex flex-col space-y-1">
-                  {moreMenuNavItemsNonAdmin.map((item) =>
-                    !item.isLogout ? (
-                      <button
-                        key={item.name}
-                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-gray-100"
-                        onClick={() => handleNavigation(item.path)}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        {item.name}
-                      </button>
-                    ) : (
-                      <button
-                        key={item.name}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 rounded-md hover:bg-gray-100"
-                        onClick={item.action}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        {item.name}
-                      </button>
-                    )
+                  onClick={() => handleNavigation(item.path)}
+                  className={cn(
+                    "inline-flex flex-col items-center justify-center hover:bg-gray-50",
+                    location.pathname === item.path && "bg-primary/10 text-primary"
                   )}
-                </div>
-              </PopoverContent>
-            </Popover>
+                >
+                  <item.icon className={cn(
+                    "w-6 h-6 mb-1",
+                    location.pathname === item.path ? "text-primary" : "text-gray-500"
+                  )} />
+                  <span className={cn(
+                    "text-xs",
+                    location.pathname === item.path ? "text-primary" : "text-gray-500"
+                  )}>
+                    {item.name}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <>
+                {nonAdminWithPaidInvoiceItems.slice(0, 3).map((item) => (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={() => handleNavigation(item.path)}
+                    className={cn(
+                      "inline-flex flex-col items-center justify-center hover:bg-gray-50",
+                      location.pathname === item.path && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    <item.icon className={cn(
+                      "w-6 h-6 mb-1",
+                      location.pathname === item.path ? "text-primary" : "text-gray-500"
+                    )} />
+                    <span className={cn(
+                      "text-xs",
+                      location.pathname === item.path ? "text-primary" : "text-gray-500"
+                    )}>
+                      {item.name}
+                    </span>
+                  </button>
+                ))}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex flex-col items-center justify-center hover:bg-gray-50"
+                    >
+                      <MoreHorizontal className="w-6 h-6 mb-1 text-gray-500" />
+                      <span className="text-xs text-gray-500">More</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-48 p-2 z-[100]">
+                    <div className="flex flex-col space-y-1">
+                      {moreMenuNavItemsNonAdmin.map((item) =>
+                        !item.isLogout ? (
+                          <button
+                            key={item.name}
+                            className="flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-gray-100"
+                            onClick={() => handleNavigation(item.path)}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            {item.name}
+                          </button>
+                        ) : (
+                          <button
+                            key={item.name}
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 rounded-md hover:bg-gray-100"
+                            onClick={item.action}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            {item.name}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </>
+            )}
           </>
         ) : (
-          // Legacy Admin bottom nav logic (keep as before)
           <>
             {[
-              // Main bar for admin: Book, Onboarding/Events, Invoices, More (existing logic)
               ...(() => {
-                // legacy logic as before, not the focus here
                 const mainNavItems: NavItem[] = [{
                   name: "Book",
                   icon: CalendarDays,
@@ -317,7 +344,6 @@ const BottomNav = () => {
                     showAlways: true,
                   });
                 }
-                // For admin, still add Invoices, then handle more menu separately
                 mainNavItems.push(adminItems[0]);
                 return mainNavItems.slice(0, 3);
               })()

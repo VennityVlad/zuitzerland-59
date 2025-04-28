@@ -87,9 +87,8 @@ const Events = () => {
     privyUser?.id || supabaseUser?.id
   );
   
-  // Add logging to debug paid invoice status
   useEffect(() => {
-    console.log("Events page - User info:", { 
+    console.log("📜 Events page loaded - User info:", { 
       privyUserId: privyUser?.id,
       supabaseUserId: supabaseUser?.id,
       hasPaidInvoice,
@@ -125,7 +124,7 @@ const Events = () => {
   });
   
   const canManageEvents = userProfile?.role === 'admin' || userProfile?.role === 'co-curator' || userProfile?.role === 'co-designer';
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdminUser = userProfile?.role === 'admin';
   
   const userId = privyUser?.id || supabaseUser?.id || "";
   const profileId = userProfile?.id;
@@ -152,7 +151,7 @@ const Events = () => {
 
       return data as unknown as EventWithProfile[];
     },
-    enabled: hasPaidInvoice && !isPaidInvoiceLoading && (!!privyUser?.id || !!supabaseUser?.id)
+    enabled: !isPaidInvoiceLoading && (!!privyUser?.id || !!supabaseUser?.id)
   });
 
   const filteredEvents = React.useMemo(() => {
@@ -263,7 +262,7 @@ const Events = () => {
   };
 
   const canEditEvent = (event: EventWithProfile) => {
-    if (isAdmin) return true;
+    if (isAdminUser) return true;
     if (event.profiles?.id === profileId) return true;
     return false;
   };
@@ -398,7 +397,7 @@ const Events = () => {
   };
 
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
-    console.log("Showing restricted access message - No paid invoice found");
+    console.log("🚫 Showing restricted access message - No paid invoice found");
     return (
       <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

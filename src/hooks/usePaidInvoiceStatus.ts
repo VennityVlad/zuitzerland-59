@@ -9,9 +9,11 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
 
   useEffect(() => {
     const checkPaidInvoiceStatus = async () => {
-      console.log("Checking paid invoice status for userId:", userId);
+      console.log("⏳ Checking paid invoice status for userId:", userId);
       if (!userId) {
-        console.log("No userId provided, setting hasPaidInvoice to false");
+        console.log("❌ No userId provided, setting hasPaidInvoice to false");
+        setHasPaidInvoice(false);
+        setIsAdmin(false);
         setIsLoading(false);
         return;
       }
@@ -27,18 +29,18 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
           .maybeSingle();
 
         if (profileError) {
-          console.error("Error fetching profile data:", profileError);
+          console.error("❌ Error fetching profile data:", profileError);
           throw profileError;
         }
         
-        console.log("Profile data retrieved:", profileData);
+        console.log("👤 Profile data retrieved:", profileData);
         
         const userIsAdmin = profileData?.role === 'admin';
         setIsAdmin(userIsAdmin);
         
         // If user is admin, they have access regardless of invoice status
         if (userIsAdmin) {
-          console.log("User is admin, granting access regardless of invoice status");
+          console.log("👑 User is admin, granting access regardless of invoice status");
           setHasPaidInvoice(true);
           setIsLoading(false);
           return;
@@ -54,19 +56,19 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
             .maybeSingle();
 
           if (invoiceError) {
-            console.error("Error fetching invoice data:", invoiceError);
+            console.error("❌ Error fetching invoice data:", invoiceError);
             throw invoiceError;
           }
           
-          console.log("Invoice data retrieved:", invoiceData);
+          console.log("📄 Invoice data retrieved:", invoiceData);
           setHasPaidInvoice(!!invoiceData);
-          console.log("Has paid invoice set to:", !!invoiceData);
+          console.log("✅ Has paid invoice set to:", !!invoiceData);
         } else {
-          console.log("No profile ID found, setting hasPaidInvoice to false");
+          console.log("❌ No profile ID found, setting hasPaidInvoice to false");
           setHasPaidInvoice(false);
         }
       } catch (error) {
-        console.error('Error checking paid invoice status:', error);
+        console.error('❌ Error checking paid invoice status:', error);
         setHasPaidInvoice(false); // Explicitly set to false on error
       } finally {
         setIsLoading(false);

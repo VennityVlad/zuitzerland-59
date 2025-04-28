@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
-import { Share, LogIn } from "lucide-react";
+import { Share, LogIn, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { EventDateBadge } from "@/components/events/EventDateBadge";
@@ -26,8 +26,8 @@ const EventPage = () => {
     user?.id
   );
   
-  console.log("EventPage - Auth status:", { authenticated, userId: user?.id });
-  console.log("EventPage - Invoice status:", { hasPaidInvoice, isPaidInvoiceLoading, isAdmin });
+  console.log("🎪 EventPage - Auth status:", { authenticated, userId: user?.id });
+  console.log("🎪 EventPage - Invoice status:", { hasPaidInvoice, isPaidInvoiceLoading, isAdmin });
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -197,6 +197,21 @@ const EventPage = () => {
               <a href="/signin">
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign In
+              </a>
+            </Button>
+          </Card>
+        </div>
+      ) : !hasPaidInvoice && !isPaidInvoiceLoading && !isAdmin ? (
+        <div className="container max-w-4xl mx-auto px-4 py-12">
+          <Card className="p-6 text-center space-y-4">
+            <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
+            <p className="text-muted-foreground">
+              You must have a paid invoice to view event details. Once your payment is confirmed, you'll have full access to all events.
+            </p>
+            <Button asChild>
+              <a href="/invoices">
+                <FileText className="mr-2 h-4 w-4" />
+                View Invoices
               </a>
             </Button>
           </Card>
