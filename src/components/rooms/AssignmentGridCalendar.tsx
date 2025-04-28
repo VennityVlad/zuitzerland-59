@@ -27,14 +27,13 @@ type Profile = {
 
 type Assignment = {
   id: string;
-  profile_id: string;
   location_id: string;
   bedroom_id: string | null;
   bed_id: string | null;
   start_date: string;
   end_date: string;
   notes: string | null;
-  profile: Profile;
+  profiles: Profile[];
 };
 
 type Location = {
@@ -177,46 +176,41 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
         .from('room_assignments')
         .select(`
           id,
-          profile_id,
           location_id,
           bedroom_id,
           bed_id,
           start_date,
           end_date,
           notes,
-          profile:profiles(
-            id,
-            full_name, 
-            avatar_url,
-            email,
-            team_id,
-            housing_preferences,
-            team:teams(id, name, logo_url)
+          room_assignment_profiles!inner (
+            profile:profiles (
+              id,
+              full_name, 
+              avatar_url,
+              email,
+              team_id,
+              housing_preferences,
+              team:teams(id, name, logo_url)
+            )
           )
         `);
       
-      if (assignmentsError) {
-        console.error("Error fetching assignments:", assignmentsError);
-        throw assignmentsError;
-      }
-      
-      console.log("Assignments fetched:", assignmentsData?.length || 0);
-      
+      if (assignmentsError) throw assignmentsError;
+
+      // Transform the data to match the expected format
       const processedAssignments = assignmentsData?.map(assignment => {
-        if (assignment.profile && assignment.profile.team) {
-          const color = generateTeamColor(assignment.profile.team.id);
-          return {
-            ...assignment,
-            profile: {
-              ...assignment.profile,
-              team: {
-                ...assignment.profile.team,
-                color: color
-              }
-            }
-          };
-        }
-        return assignment;
+        const profiles = assignment.room_assignment_profiles.map((rap: any) => ({
+          ...rap.profile,
+          team: rap.profile.team ? {
+            ...rap.profile.team,
+            color: generateTeamColor(rap.profile.team.id)
+          } : null
+        }));
+
+        return {
+          ...assignment,
+          profiles
+        };
       }) as Assignment[];
       
       setAssignments(processedAssignments || []);
@@ -541,6 +535,59 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
     );
   }
 
+  const renderAssignment = (assignment: Assignment, dateIndex: number, dates: Date[]) => {
+    const displayDays = adjustDisplayDaysForAssignment(assignment, dateIndex, dates);
+    const continueBeyondView = isAssignmentContinuingBeyondView(assignment, dateIndex, dates);
+    
+    return (
+      <div 
+        className="absolute top-0 left-0 right-0 bottom-0 m-1 border rounded-md flex flex-col"
+        style={{ 
+          borderColor: assignment.profiles[0]?.team?.color || "#94a3b8",
+          backgroundColor: `${assignment.profiles[0]?.team?.color || "#94a3b8"}10`
+        }}
+        onClick={(e) => handleAssignmentClick(assignment, e)}
+      >
+        <div className="flex-1 px-2 py-1 overflow-y-auto">
+          {assignment.profiles.map((profile, idx) => (
+            <div key={profile.id} className="flex items-center gap-1 mb-1">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={profile.avatar_url || undefined} />
+                <AvatarFallback className="text-[10px]">
+                  {profile.full_name?.charAt(0) || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs truncate">{profile.full_name}</div>
+                {profile.email && (
+                  <div className="text-[10px] text-muted-foreground truncate">
+                    {profile.email}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div 
+          className="absolute left-0 top-0 bottom-0 w-2 flex items-center justify-center cursor-ew-resize"
+          style={{ backgroundColor: `${assignment.profiles[0]?.team?.color || "#94a3b8"}50` }}
+          onMouseDown={(e) => handleResizeStart(e, assignment.id, 'left')}
+        >
+          <ChevronLeft className="h-3 w-3 text-white" />
+        </div>
+        
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-2 flex items-center justify-center cursor-ew-resize"
+          style={{ backgroundColor: `${assignment.profiles[0]?.team?.color || "#94a3b8"}50` }}
+          onMouseDown={(e) => handleResizeStart(e, assignment.id, 'right')}
+        >
+          <ChevronRight className="h-3 w-3 text-white" />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="grid grid-cols-[200px,repeat(7,1fr)] border-b bg-muted/30">
@@ -584,8 +631,6 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
                     
                     if (assignment && isAssignmentStart) {
                       const displayDays = adjustDisplayDaysForAssignment(assignment, dateIndex, dates);
-                      const teamColor = assignment.profile.team?.color || "#94a3b8";
-                      
                       return (
                         <div 
                           key={dateIndex}
@@ -595,85 +640,26 @@ const AssignmentGridCalendar = ({ startDate, onAssignmentChange }: AssignmentGri
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div 
-                                  className="absolute top-0 left-0 right-0 bottom-0 m-1 border rounded-md flex items-center justify-between cursor-pointer"
-                                  style={{ borderColor: teamColor, backgroundColor: `${teamColor}30` }}
-                                  onClick={(e) => handleAssignmentClick(assignment, e)}
-                                >
-                                  <div 
-                                    className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
-                                    style={{ backgroundColor: `${teamColor}50` }}
-                                    onMouseDown={(e) => handleResizeStart(e, assignment.id, 'left')}
-                                  >
-                                    <ChevronLeft className="h-3 w-3 text-white" />
-                                  </div>
-                                  
-                                  <div className="flex-1 px-6 py-1 truncate flex flex-col items-center justify-center">
-                                    <div className="flex items-center gap-1">
-                                      <Avatar className="h-5 w-5 mr-1 flex-shrink-0">
-                                        <AvatarImage src={assignment.profile.avatar_url || undefined} />
-                                        <AvatarFallback className="text-[10px]">
-                                          {assignment.profile.full_name?.charAt(0) || '?'}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <span className="text-xs truncate text-center flex-1">
-                                        {assignment.profile.full_name}
-                                      </span>
-                                    </div>
-                                    {assignment.profile.email && (
-                                      <span className="text-[10px] truncate text-muted-foreground">
-                                        {assignment.profile.email}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  {(!continuesBeyondView) ? (
-                                    <div 
-                                      className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize"
-                                      style={{ backgroundColor: `${teamColor}50` }}
-                                      onMouseDown={(e) => handleResizeStart(e, assignment.id, 'right')}
-                                    >
-                                      <ChevronRight className="h-3 w-3 text-white" />
-                                    </div>
-                                  ) : (
-                                    <div 
-                                      className="absolute right-0 top-0 bottom-0 w-2 flex items-center justify-center"
-                                      style={{ backgroundColor: `${teamColor}50` }}
-                                    >
-                                    </div>
-                                  )}
-                                </div>
+                                {renderAssignment(assignment, dateIndex, dates)}
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="space-y-2 max-w-[300px]">
-                                  <div className="space-y-1">
-                                    <p className="font-semibold">{assignment.profile.full_name}</p>
-                                    <p className="text-xs">{assignment.profile.email}</p>
-                                    {assignment.profile.team && (
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-xs text-muted-foreground">Team:</span>
-                                        <TeamBadge team={assignment.profile.team} size="sm" />
+                                  {assignment.profiles.map(profile => (
+                                    <div key={profile.id} className="space-y-1">
+                                      <p className="font-semibold">{profile.full_name}</p>
+                                      <p className="text-xs">{profile.email}</p>
+                                      {profile.team && (
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-xs text-muted-foreground">Team:</span>
+                                          <TeamBadge team={profile.team} size="sm" />
+                                        </div>
+                                      )}
+                                      <div className="text-xs text-muted-foreground">
+                                        {format(parseISO(assignment.start_date), 'PP')} - {format(parseISO(assignment.end_date), 'PP')}
+                                        {continuesBeyondView && " (continues beyond current view)"}
                                       </div>
-                                    )}
-                                    <div className="text-xs text-muted-foreground">
-                                      {format(parseISO(assignment.start_date), 'PP')} - {format(parseISO(assignment.end_date), 'PP')}
-                                      {continuesBeyondView && " (continues beyond current view)"}
                                     </div>
-                                  </div>
-                                  
-                                  {assignment.profile.housing_preferences && (
-                                    <div className="border-t pt-1">
-                                      <p className="text-xs font-medium mb-1">Housing Preferences:</p>
-                                      {getHousingPreferenceDetails(assignment.profile)}
-                                    </div>
-                                  )}
-                                  
-                                  {assignment.notes && (
-                                    <div className="border-t pt-1">
-                                      <p className="text-xs font-medium">Notes:</p>
-                                      <p className="text-xs">{assignment.notes}</p>
-                                    </div>
-                                  )}
+                                  ))}
                                   
                                   <div className="flex justify-between items-center pt-1 border-t">
                                     <p className="text-xs text-muted-foreground">Drag edges to resize</p>

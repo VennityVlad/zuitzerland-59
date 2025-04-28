@@ -726,6 +726,45 @@ export type Database = {
         }
         Relationships: []
       }
+      room_assignment_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          room_assignment_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          room_assignment_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          room_assignment_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_assignment_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_assignment_profiles_room_assignment_id_fkey"
+            columns: ["room_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "room_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_assignments: {
         Row: {
           bed_id: string | null
@@ -735,7 +774,7 @@ export type Database = {
           id: string
           location_id: string | null
           notes: string | null
-          profile_id: string
+          profile_id: string | null
           start_date: string
           updated_at: string
         }
@@ -747,7 +786,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           notes?: string | null
-          profile_id: string
+          profile_id?: string | null
           start_date: string
           updated_at?: string
         }
@@ -759,7 +798,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           notes?: string | null
-          profile_id?: string
+          profile_id?: string | null
           start_date?: string
           updated_at?: string
         }

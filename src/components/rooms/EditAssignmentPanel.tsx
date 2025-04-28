@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,18 +14,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Assignment = {
   id: string;
-  profile_id: string;
   location_id: string;
   bedroom_id: string | null;
   bed_id: string | null;
   start_date: string;
   end_date: string;
   notes: string | null;
-  profile: {
+  profiles?: {
+    id: string;
     full_name: string | null;
     avatar_url: string | null;
     email: string | null;
-  };
+  }[];
 };
 
 type EditAssignmentPanelProps = {
@@ -50,9 +49,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   const [bedrooms, setBedrooms] = useState<any[]>([]);
   const [beds, setBeds] = useState<any[]>([]);
   
-  const [selectedProfileId, setSelectedProfileId] = useState<string | undefined>(
-    assignment?.profile_id || initialData?.profileId
-  );
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(
     assignment?.location_id || initialData?.locationId
   );
@@ -69,6 +65,10 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
     assignment ? new Date(assignment.end_date) : initialData?.endDate
   );
   const [notes, setNotes] = useState<string>(assignment?.notes || '');
+  const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>(
+    assignment?.profiles?.map(p => p.id) || 
+    (initialData?.profileId ? [initialData.profileId] : [])
+  );
   
   const { toast } = useToast();
   
@@ -79,15 +79,26 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
     
     // Set initial form state when assignment or initialData changes
     if (assignment) {
-      setSelectedProfileId(assignment.profile_id);
+      //setSelectedProfileId(assignment.profile_id);
       setSelectedLocationId(assignment.location_id);
       setSelectedBedroomId(assignment.bedroom_id || undefined);
       setSelectedBedId(assignment.bed_id || undefined);
       setStartDate(new Date(assignment.start_date));
       setEndDate(new Date(assignment.end_date));
       setNotes(assignment.notes || '');
+      const fetchAssignmentProfiles = async () => {
+        const { data: assignmentProfiles } = await supabase
+          .from('room_assignment_profiles')
+          .select('profile_id')
+          .eq('room_assignment_id', assignment.id);
+        
+        if (assignmentProfiles) {
+          setSelectedProfileIds(assignmentProfiles.map(ap => ap.profile_id));
+        }
+      }
+      fetchAssignmentProfiles();
     } else if (initialData) {
-      setSelectedProfileId(initialData.profileId);
+      //setSelectedProfileId(initialData.profileId);
       setSelectedLocationId(initialData.locationId);
       setSelectedBedroomId(initialData.bedroomId);
       setSelectedBedId(initialData.bedId);
@@ -119,8 +130,12 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
         .order('full_name');
       
       // If we have a specific profile ID from the assignment, include it regardless
-      if (selectedProfileId && !paidProfileIds.includes(selectedProfileId)) {
-        paidProfileIds.push(selectedProfileId);
+      if (selectedProfileIds && selectedProfileIds.length > 0) {
+        selectedProfileIds.forEach(selectedProfileId => {
+          if (selectedProfileId && !paidProfileIds.includes(selectedProfileId)) {
+            paidProfileIds.push(selectedProfileId);
+          }
+        });
       }
       
       // Only fetch profiles with paid invoices
@@ -222,11 +237,11 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   };
   
   const saveAssignment = async () => {
-    if (!selectedProfileId || !selectedLocationId || !startDate || !endDate) {
+    if (!selectedProfileIds.length || !selectedLocationId || !startDate || !endDate) {
       toast({
         variant: "destructive",
         title: "Missing information",
-        description: "Please fill out all required fields.",
+        description: "Please fill out all required fields and select at least one profile.",
       });
       return;
     }
@@ -238,7 +253,6 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
       const formattedEndDate = format(endDate, 'yyyy-MM-dd');
       
       const assignmentData = {
-        profile_id: selectedProfileId,
         location_id: selectedLocationId,
         bedroom_id: selectedBedroomId,
         bed_id: selectedBedId,
@@ -247,37 +261,56 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
         notes: notes || null
       };
       
-      console.log("Saving assignment:", assignmentData);
-      
+      let assignmentId;
       if (assignment) {
         // Update existing assignment
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from('room_assignments')
           .update(assignmentData)
           .eq('id', assignment.id);
         
-        if (error) throw error;
-        
-        toast({
-          title: "Assignment updated",
-          description: "The assignment has been updated successfully.",
-        });
+        if (updateError) throw updateError;
+        assignmentId = assignment.id;
       } else {
         // Create new assignment
-        const { error } = await supabase
+        const { data: newAssignment, error: createError } = await supabase
           .from('room_assignments')
-          .insert([assignmentData]);
+          .insert([assignmentData])
+          .select()
+          .single();
         
-        if (error) throw error;
-        
-        toast({
-          title: "Assignment created",
-          description: "The assignment has been created successfully.",
-        });
+        if (createError) throw createError;
+        assignmentId = newAssignment.id;
       }
+
+      // Update profile assignments
+      if (assignment) {
+        // Delete existing profile assignments
+        await supabase
+          .from('room_assignment_profiles')
+          .delete()
+          .eq('room_assignment_id', assignmentId);
+      }
+
+      // Insert new profile assignments
+      const { error: profileError } = await supabase
+        .from('room_assignment_profiles')
+        .insert(
+          selectedProfileIds.map(profileId => ({
+            room_assignment_id: assignmentId,
+            profile_id: profileId
+          }))
+        );
+      
+      if (profileError) throw profileError;
+      
+      toast({
+        title: "Success",
+        description: assignment ? "Assignment updated successfully" : "Assignment created successfully",
+      });
       
       setSaving(false);
-      onClose(true); // Pass true to indicate changes were made
+      onClose(true);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -319,7 +352,7 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
   };
   
   // Find the selected profile
-  const selectedProfile = profiles.find(profile => profile.id === selectedProfileId);
+  //const selectedProfile = profiles.find(profile => profile.id === selectedProfileId);
   // Find location and bedroom details for display
   const selectedLocation = locations.find(loc => loc.id === selectedLocationId);
   const selectedBedroom = bedrooms.find(bedroom => bedroom.id === selectedBedroomId);
@@ -349,46 +382,57 @@ const EditAssignmentPanel = ({ assignment, initialData, onClose }: EditAssignmen
         <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)]">
           {/* Profile Selection */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="profile">Person</Label>
-              {selectedProfile && (
-                <div className="flex items-center gap-2 bg-muted px-2 py-1 rounded">
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={selectedProfile.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {selectedProfile.full_name?.charAt(0) || '?'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{selectedProfile.full_name}</span>
-                  <span className="text-xs text-muted-foreground">{selectedProfile.email}</span>
-                </div>
-              )}
-            </div>
-            <Select
-              value={selectedProfileId}
-              onValueChange={setSelectedProfileId}
-              disabled={!!assignment || profiles.length === 0}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a person" />
-              </SelectTrigger>
-              <SelectContent>
-                {profiles.length === 0 ? (
-                  <div className="p-2 text-center text-sm text-muted-foreground">
-                    No profiles with paid invoices available
-                  </div>
-                ) : (
-                  profiles.map(profile => (
-                    <SelectItem key={profile.id} value={profile.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{profile.full_name}</span>
-                        <span className="text-xs text-muted-foreground">({profile.email})</span>
+            <Label>Assigned Profiles</Label>
+            <div className="space-y-2">
+              {selectedProfileIds.map(profileId => {
+                const profile = profiles.find(p => p.id === profileId);
+                return profile ? (
+                  <div key={profile.id} className="flex items-center justify-between p-2 border rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback>{profile.full_name?.charAt(0) || '?'}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{profile.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{profile.email}</p>
                       </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedProfileIds(prev => prev.filter(id => id !== profile.id))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : null;
+              })}
+              
+              <Select
+                onValueChange={value => {
+                  if (!selectedProfileIds.includes(value)) {
+                    setSelectedProfileIds(prev => [...prev, value]);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add a profile..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles
+                    .filter(profile => !selectedProfileIds.includes(profile.id))
+                    .map(profile => (
+                      <SelectItem key={profile.id} value={profile.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{profile.full_name}</span>
+                          <span className="text-xs text-muted-foreground">({profile.email})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           {/* Location Selection */}
