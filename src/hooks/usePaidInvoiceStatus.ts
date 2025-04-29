@@ -30,11 +30,10 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
           .eq('status', 'paid')
           .maybeSingle();
           
-        // Wait for both requests to complete
-        const [adminResult, invoiceResult] = await Promise.all([
-          adminPromise, 
-          invoicePromise
-        ]);
+        // Wait for both requests to complete - using a simpler structure to avoid type issues
+        const results = await Promise.all([adminPromise, invoicePromise]);
+        const adminResult = results[0];
+        const invoiceResult = results[1];
         
         if (adminResult.error) {
           console.error('Error checking admin status:', adminResult.error);
