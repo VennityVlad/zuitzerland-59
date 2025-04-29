@@ -16,14 +16,14 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
     const checkStatus = async () => {
       try {
         // First check if user is admin (do this in parallel)
-        const adminCheck = supabase
+        const adminPromise = supabase
           .from('profiles')
           .select('role')
           .eq('privy_id', userId)
           .maybeSingle();
           
         // Check if user has paid invoices
-        const invoiceCheck = supabase
+        const invoicePromise = supabase
           .from('invoices')
           .select('status')
           .eq('user_id', userId)
@@ -31,7 +31,10 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
           .maybeSingle();
           
         // Wait for both requests to complete
-        const [adminResult, invoiceResult] = await Promise.all([adminCheck, invoiceCheck]);
+        const [adminResult, invoiceResult] = await Promise.all([
+          adminPromise, 
+          invoicePromise
+        ]);
         
         if (adminResult.error) {
           console.error('Error checking admin status:', adminResult.error);
