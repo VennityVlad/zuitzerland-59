@@ -22,18 +22,32 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
           .eq('privy_id', userId)
           .maybeSingle();
           
-        // Check if user has paid invoices
-        const invoicePromise = supabase
-          .from('invoices')
-          .select('status')
-          .eq('user_id', userId)
-          .eq('status', 'paid')
+        // Check if user has paid invoices - using profile_id instead of user_id
+        // First get the profile id
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('privy_id', userId)
           .maybeSingle();
           
-        // Wait for both requests to complete - using a simpler structure to avoid type issues
-        const results = await Promise.all([adminPromise, invoicePromise]);
-        const adminResult = results[0];
-        const invoiceResult = results[1];
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          return;
+        }
+        
+        // Now check for paid invoices using profile_id
+        const invoicePromise = profileData?.id 
+          ? supabase
+              .from('invoices')
+              .select('status')
+              .eq('profile_id', profileData.id)
+              .eq('status', 'paid')
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null });
+          
+        // Wait for both requests to complete
+        const adminResult = await adminPromise;
+        const invoiceResult = await invoicePromise;
         
         if (adminResult.error) {
           console.error('Error checking admin status:', adminResult.error);
