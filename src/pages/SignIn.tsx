@@ -101,6 +101,31 @@ const SignIn = () => {
         console.log('New profile created successfully');
       }
 
+      // Generate Supabase JWT for the authenticated Privy user
+      try {
+        const response = await fetch("https://cluqnvnxjexrhhgddoxu.supabase.co/functions/v1/generate-supabase-jwt", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdXFudm54amV4cmhoZ2Rkb3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg5MzM0MzQsImV4cCI6MjA1NDUwOTQzNH0.1F5eYt59BKGemUfRHD0bHhlIQ_k1hmSDLh7ixa03w6k`,
+          },
+          body: JSON.stringify({ privyUserId: user.id })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Error generating Supabase JWT:', errorData);
+          // Continue with authentication process even if JWT generation fails
+          // The useAuthenticatedSupabase hook will handle JWT generation later
+        } else {
+          console.log('Successfully generated Supabase JWT');
+          // The JWT is now stored in localStorage via the useAuthenticatedSupabase hook
+        }
+      } catch (jwtError) {
+        console.error('Error calling generate-supabase-jwt function:', jwtError);
+        // Continue with authentication process even if JWT generation fails
+      }
+
       console.log('Auth setup completed successfully');
       setupComplete.current = true;
       

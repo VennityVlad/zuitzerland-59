@@ -1,31 +1,15 @@
 
+project_id = "cluqnvnxjexrhhgddoxu"
+
+[api]
+enabled = true
+
+[db]
+shadow_database_flag = false
+
 [auth]
-enable_signup = true
+enabled = true
 
 [functions]
-[functions.create-invoice]
+[functions.generate-supabase-jwt]
 verify_jwt = false
-
-[functions.create-profile-from-airtable]
-verify_jwt = false
-
-[functions.get-secret]
-verify_jwt = true
-
-[functions.send-email-reminder]
-verify_jwt = true
-
-[functions.add-to-privy-allowlist]
-verify_jwt = false
-
-[functions.revoke-privy-access]
-verify_jwt = true
-
-[functions.validate-user-access]
-verify_jwt = false
-
-[functions.fetch-request-finance-invoice]
-verify_jwt = true
-
-[functions.send-guild-invitation]
-verify_jwt = true

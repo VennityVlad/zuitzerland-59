@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
+import { SupabaseJwtProvider } from "@/components/SupabaseJwtProvider";
 import SessionValidator from "@/components/SessionValidator";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
@@ -470,12 +471,14 @@ const App = () => {
             }
           }}
         >
-          <SupabaseAuthProvider>
-            <SessionValidator />
-            <PageTrackingWrapper>
-              <AppRoutes />
-            </PageTrackingWrapper>
-          </SupabaseAuthProvider>
+          <SupabaseJwtProvider>
+            <SupabaseAuthProvider>
+              <SessionValidator />
+              <PageTrackingWrapper>
+                <AppRoutes />
+              </PageTrackingWrapper>
+            </SupabaseAuthProvider>
+          </SupabaseJwtProvider>
         </PrivyProvider>
       </HelmetProvider>
     </TooltipProvider>
