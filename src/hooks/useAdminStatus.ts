@@ -9,22 +9,23 @@ export const useAdminStatus = (userId: string | undefined) => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (!userId) {
+        setIsAdmin(false);
         setIsLoading(false);
         return;
       }
 
       try {
+        // Use a direct query to the function instead of querying profiles
         const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('privy_id', userId)
-          .maybeSingle();
+          .rpc('get_user_role')
+          .single();
 
         if (error) throw error;
         
-        setIsAdmin(data?.role === 'admin');
+        setIsAdmin(data === 'admin');
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
       } finally {
         setIsLoading(false);
       }

@@ -18,11 +18,13 @@ export const useAuthenticatedSupabase = () => {
   const [jwtData, setJwtData] = useState<JwtData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
 
   const refreshJwt = useCallback(async () => {
     if (!authenticated || !user?.id) {
       setJwtData(null);
+      setIsAuthenticated(false);
       return;
     }
 
@@ -46,10 +48,31 @@ export const useAuthenticatedSupabase = () => {
       console.log("New JWT received, expires at:", new Date(newJwtData.expiresAt).toISOString());
       
       setJwtData(newJwtData);
+      setIsAuthenticated(true);
+      
+      // Update the JWT claims in the backend for reference
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/update-privy-jwt`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ 
+            jwt: newJwtData.jwt, 
+            userId: user.id 
+          })
+        });
+      } catch (updateErr) {
+        console.error("Error updating JWT claims:", updateErr);
+        // Non-fatal error, so we continue
+      }
+      
       return newJwtData;
     } catch (err) {
       console.error("Error refreshing JWT:", err);
       setError((err as Error).message);
+      setIsAuthenticated(false);
       toast({
         title: "Authentication Error",
         description: "Failed to refresh authentication. Please try again.",
@@ -72,6 +95,7 @@ export const useAuthenticatedSupabase = () => {
         const anonClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
         setSupabaseClient(anonClient);
         setJwtData(null);
+        setIsAuthenticated(false);
         setLoading(false);
         return;
       }
@@ -90,14 +114,17 @@ export const useAuthenticatedSupabase = () => {
           });
           
           setSupabaseClient(authClient);
+          setIsAuthenticated(true);
         } else {
           // Fall back to anonymous client if JWT fetch fails
           const anonClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
           setSupabaseClient(anonClient);
+          setIsAuthenticated(false);
         }
       } catch (err) {
         console.error("Error initializing authenticated client:", err);
         setError((err as Error).message);
+        setIsAuthenticated(false);
         
         // Fall back to anonymous client
         const anonClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -143,6 +170,6 @@ export const useAuthenticatedSupabase = () => {
     loading,
     error,
     refreshJwt,
-    isAuthenticated: !!jwtData?.jwt,
+    isAuthenticated,
   };
 };

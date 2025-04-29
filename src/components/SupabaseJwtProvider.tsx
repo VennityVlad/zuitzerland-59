@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useAuthenticatedSupabase } from '@/hooks/useAuthenticatedSupabase';
 import { SupabaseClient } from '@supabase/supabase-js';

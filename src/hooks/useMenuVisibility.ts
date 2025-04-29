@@ -20,15 +20,23 @@ export const useMenuVisibility = (userId: string | undefined) => {
       try {
         setIsLoading(true);
         
+        // Check if user is admin using the security definer function
+        const { data: userRole, error: roleError } = await supabase
+          .rpc('get_user_role')
+          .single();
+
+        if (roleError) throw roleError;
+        
+        setIsAdmin(userRole === 'admin');
+
+        // Get profile id safely for checking invoices
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('role, id')
+          .select('id')
           .eq('privy_id', userId)
           .maybeSingle();
 
         if (profileError) throw profileError;
-        
-        setIsAdmin(profileData?.role === 'admin');
 
         if (profileData?.id) {
           const { data: invoiceData, error: invoiceError } = await supabase

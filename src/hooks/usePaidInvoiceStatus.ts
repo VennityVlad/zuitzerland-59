@@ -21,21 +21,17 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
       try {
         setIsLoading(true);
         
-        // First check if user is an admin - admins always have access
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role, id')
-          .eq('privy_id', userId)
-          .maybeSingle();
+        // First check if user is an admin using the security definer function
+        const { data: userRole, error: roleError } = await supabase
+          .rpc('get_user_role')
+          .single();
 
-        if (profileError) {
-          console.error("❌ Error fetching profile data:", profileError);
-          throw profileError;
+        if (roleError) {
+          console.error("❌ Error fetching user role:", roleError);
+          throw roleError;
         }
         
-        console.log("👤 Profile data retrieved:", profileData);
-        
-        const userIsAdmin = profileData?.role === 'admin';
+        const userIsAdmin = userRole === 'admin';
         setIsAdmin(userIsAdmin);
         
         // If user is admin, they have access regardless of invoice status
@@ -46,12 +42,26 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
           return;
         }
 
+        // Get profile id safely without triggering RLS recursion
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('privy_id', userId)
+          .maybeSingle();
+          
+        if (profileError) {
+          console.error("❌ Error fetching profile data:", profileError);
+          throw profileError;
+        }
+        
+        console.log("👤 Profile data retrieved:", profile);
+
         // If not admin, check for paid invoices
-        if (profileData?.id) {
+        if (profile?.id) {
           const { data: invoiceData, error: invoiceError } = await supabase
             .from('invoices')
             .select('id')
-            .eq('profile_id', profileData.id)
+            .eq('profile_id', profile.id)
             .eq('status', 'paid')
             .maybeSingle();
 
