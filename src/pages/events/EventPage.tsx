@@ -54,7 +54,15 @@ const EventPage = () => {
 
   useEffect(() => {
     const fetchEvent = async () => {
+      // Only fetch event data if user has access (paid invoice or admin)
+      if (!hasPaidInvoice && !isAdmin && !isPaidInvoiceLoading) {
+        console.log("🚫 Skipping event fetch - No access");
+        setLoading(false);
+        return;
+      }
+      
       try {
+        console.log("🔍 Fetching event data with ID:", eventId);
         const { data, error } = await supabase
           .from("events")
           .select(`
@@ -70,6 +78,7 @@ const EventPage = () => {
 
         if (error) throw error;
         setEvent(data);
+        console.log("✅ Event data fetched successfully:", data);
       } catch (error) {
         console.error("Error fetching event:", error);
       } finally {
@@ -101,13 +110,14 @@ const EventPage = () => {
       }
     };
 
-    if (eventId) {
+    // Only proceed if we have determined access status
+    if (eventId && !isPaidInvoiceLoading) {
       fetchEvent();
       if (userProfile) {
         fetchRsvps();
       }
     }
-  }, [eventId, userProfile]);
+  }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
 
   const handleShare = async () => {
     try {
@@ -152,7 +162,15 @@ const EventPage = () => {
 
   const isEventInPast = event ? new Date(event.end_date) < new Date() : false;
 
-  if (loading) {
+  if (isPaidInvoiceLoading) {
+    return (
+      <div className="container py-12">
+        <div className="animate-pulse">Checking access status...</div>
+      </div>
+    );
+  }
+
+  if (loading && (hasPaidInvoice || isAdmin)) {
     return (
       <div className="container py-12">
         <div className="animate-pulse">Loading event...</div>
@@ -160,7 +178,7 @@ const EventPage = () => {
     );
   }
 
-  if (!event) {
+  if (!event && !loading && (hasPaidInvoice || isAdmin)) {
     return <Navigate to="/404" replace />;
   }
 

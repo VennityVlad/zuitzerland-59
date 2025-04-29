@@ -129,9 +129,12 @@ const Events = () => {
   const userId = privyUser?.id || supabaseUser?.id || "";
   const profileId = userProfile?.id;
 
+  // Key change: Only enable the events query if the user has paid invoice or is admin
+  // This prevents fetching events data until we know the user's invoice status
   const { data: events, isLoading, refetch } = useQuery({
     queryKey: ["events", selectedTags, selectedDate],
     queryFn: async () => {
+      console.log("🔍 Fetching events with access granted");
       const { data, error } = await supabase
         .from("events")
         .select(`
@@ -151,7 +154,14 @@ const Events = () => {
 
       return data as unknown as EventWithProfile[];
     },
-    enabled: !isPaidInvoiceLoading && (!!privyUser?.id || !!supabaseUser?.id)
+    // Only fetch events if:
+    // 1. We know the invoice status (not still loading)
+    // 2. The user has a paid invoice or is an admin
+    // 3. The user is authenticated
+    enabled: 
+      !isPaidInvoiceLoading && 
+      (hasPaidInvoice || userIsAdmin) && 
+      (!!privyUser?.id || !!supabaseUser?.id)
   });
 
   const filteredEvents = React.useMemo(() => {
@@ -396,6 +406,7 @@ const Events = () => {
     }
   };
 
+  // Early return for users without paid invoices
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
     console.log("🚫 Showing restricted access message - No paid invoice found");
     return (
@@ -423,6 +434,26 @@ const Events = () => {
               </Link>
             </Button>
           </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show loading state while checking invoice status
+  if (isPaidInvoiceLoading) {
+    console.log("⏳ Showing loading state while checking access status");
+    return (
+      <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <PageTitle 
+            title="Events" 
+            description="View and manage upcoming events" 
+            icon={<CalendarDays className="h-8 w-8" />} 
+          />
+        </div>
+        
+        <Card className="p-8 flex justify-center items-center">
+          <div className="animate-pulse">Checking access status...</div>
         </Card>
       </div>
     );
