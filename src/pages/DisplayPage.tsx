@@ -9,17 +9,6 @@ import { getReadableTimezoneName } from '@/lib/date-utils';
 import { useDisplayCode } from '@/hooks/useDisplayCode';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type DisplayCode = {
-  id: string;
-  code: string;
-  name: string;
-  location_filter?: string | null;
-  tag_filter?: string | null;
-  tag_filters?: string[] | null;
-  created_at: string;
-  expires_at?: string | null;
-};
-
 type Event = {
   id: string;
   title: string;

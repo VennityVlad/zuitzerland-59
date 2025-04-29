@@ -220,6 +220,7 @@ export type Database = {
           location_filter: string | null
           name: string
           tag_filter: string | null
+          tag_filters: string[] | null
         }
         Insert: {
           code: string
@@ -229,6 +230,7 @@ export type Database = {
           location_filter?: string | null
           name: string
           tag_filter?: string | null
+          tag_filters?: string[] | null
         }
         Update: {
           code?: string
@@ -238,6 +240,7 @@ export type Database = {
           location_filter?: string | null
           name?: string
           tag_filter?: string | null
+          tag_filters?: string[] | null
         }
         Relationships: [
           {
