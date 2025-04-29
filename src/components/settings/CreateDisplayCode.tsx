@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { TagFilter } from "@/components/events/TagFilter";
 
 const EXPIRY_OPTIONS = [
   { value: "1", label: "1 day" },
@@ -59,8 +59,8 @@ const CreateDisplayCode = ({ locations, eventTags, onCodeCreated }: CreateDispla
           code,
           name,
           location_filter: locationFilter !== 'all' ? locationFilter : null,
-          tag_filter: tagFilters.length === 1 ? tagFilters[0] : null,
-          tag_filters: tagFilters.length > 1 ? tagFilters : null
+          tag_filters: tagFilters.length > 0 ? tagFilters : null,
+          expires_at: expiresAt
         }]);
 
       if (error) throw error;
@@ -83,12 +83,6 @@ const CreateDisplayCode = ({ locations, eventTags, onCodeCreated }: CreateDispla
       });
     }
   };
-
-  // Convert eventTags to the format expected by MultiSelect
-  const tagOptions = eventTags.map(tag => ({
-    value: tag.id,
-    label: tag.name
-  }));
 
   return (
     <Card>
@@ -125,12 +119,9 @@ const CreateDisplayCode = ({ locations, eventTags, onCodeCreated }: CreateDispla
 
         <div>
           <Label htmlFor="tag-filter">Filter by Event Tags (Optional)</Label>
-          <MultiSelect
-            options={tagOptions}
-            selected={tagFilters}
-            onChange={setTagFilters}
-            placeholder="All event types"
-            className="w-full"
+          <TagFilter
+            selectedTags={tagFilters}
+            onTagsChange={setTagFilters}
           />
         </div>
 
