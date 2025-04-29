@@ -15,13 +15,17 @@ export const useAdminStatus = (userId: string | undefined) => {
       }
 
       try {
-        // Use a direct query to the function instead of querying profiles
+        // Use the updated get_user_role function which now correctly uses privy_id
         const { data, error } = await supabase
           .rpc('get_user_role')
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error checking admin status:', error);
+          throw error;
+        }
         
+        // Set isAdmin based on the returned role
         setIsAdmin(data === 'admin');
       } catch (error) {
         console.error('Error checking admin status:', error);
