@@ -1,6 +1,6 @@
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export const usePaidInvoiceStatus = (userId: string | undefined) => {
   const [hasPaidInvoice, setHasPaidInvoice] = useState<boolean>(false);
@@ -8,84 +8,50 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
-    const checkPaidInvoiceStatus = async () => {
-      console.log("⏳ Checking paid invoice status for userId:", userId);
-      if (!userId) {
-        console.log("❌ No userId provided, setting hasPaidInvoice to false");
-        setHasPaidInvoice(false);
-        setIsAdmin(false);
-        setIsLoading(false);
-        return;
-      }
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
 
+    const checkStatus = async () => {
       try {
-        setIsLoading(true);
-        
-        // First check if user is an admin using the security definer function
-        const { data: userRole, error: roleError } = await supabase
-          .rpc('get_user_role')
-          .single();
-
-        if (roleError) {
-          console.error("❌ Error fetching user role:", roleError);
-          throw roleError;
-        }
-        
-        const userIsAdmin = userRole === 'admin';
-        setIsAdmin(userIsAdmin);
-        
-        // If user is admin, they have access regardless of invoice status
-        if (userIsAdmin) {
-          console.log("👑 User is admin, granting access regardless of invoice status");
-          setHasPaidInvoice(true);
-          setIsLoading(false);
-          return;
-        }
-
-        // Get profile id safely without triggering RLS recursion
-        const { data: profile, error: profileError } = await supabase
+        // First check if user is admin (do this in parallel)
+        const adminCheck = supabase
           .from('profiles')
-          .select('id')
+          .select('role')
           .eq('privy_id', userId)
           .maybeSingle();
           
-        if (profileError) {
-          console.error("❌ Error fetching profile data:", profileError);
-          throw profileError;
+        // Check if user has paid invoices
+        const invoiceCheck = supabase
+          .from('invoices')
+          .select('status')
+          .eq('user_id', userId)
+          .eq('status', 'paid')
+          .maybeSingle();
+          
+        // Wait for both requests to complete
+        const [adminResult, invoiceResult] = await Promise.all([adminCheck, invoiceCheck]);
+        
+        if (adminResult.error) {
+          console.error('Error checking admin status:', adminResult.error);
+        } else {
+          setIsAdmin(adminResult.data?.role === 'admin');
         }
         
-        console.log("👤 Profile data retrieved:", profile);
-
-        // If not admin, check for paid invoices
-        if (profile?.id) {
-          const { data: invoiceData, error: invoiceError } = await supabase
-            .from('invoices')
-            .select('id')
-            .eq('profile_id', profile.id)
-            .eq('status', 'paid')
-            .maybeSingle();
-
-          if (invoiceError) {
-            console.error("❌ Error fetching invoice data:", invoiceError);
-            throw invoiceError;
-          }
-          
-          console.log("📄 Invoice data retrieved:", invoiceData);
-          setHasPaidInvoice(!!invoiceData);
-          console.log("✅ Has paid invoice set to:", !!invoiceData);
+        if (invoiceResult.error) {
+          console.error('Error checking invoice status:', invoiceResult.error);
         } else {
-          console.log("❌ No profile ID found, setting hasPaidInvoice to false");
-          setHasPaidInvoice(false);
+          setHasPaidInvoice(!!invoiceResult.data);
         }
       } catch (error) {
-        console.error('❌ Error checking paid invoice status:', error);
-        setHasPaidInvoice(false); // Explicitly set to false on error
+        console.error('Error in usePaidInvoiceStatus:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkPaidInvoiceStatus();
+    checkStatus();
   }, [userId]);
 
   return { hasPaidInvoice, isLoading, isAdmin };

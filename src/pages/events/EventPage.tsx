@@ -11,6 +11,7 @@ import { EventDateBadge } from "@/components/events/EventDateBadge";
 import { EventDetailsCard } from "@/components/events/EventDetailsCard";
 import { Card } from "@/components/ui/card";
 import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -162,18 +163,25 @@ const EventPage = () => {
 
   const isEventInPast = event ? new Date(event.end_date) < new Date() : false;
 
-  if (isPaidInvoiceLoading) {
+  if (isPaidInvoiceLoading || loading) {
     return (
-      <div className="container py-12">
-        <div className="animate-pulse">Checking access status...</div>
-      </div>
-    );
-  }
-
-  if (loading && (hasPaidInvoice || isAdmin)) {
-    return (
-      <div className="container py-12">
-        <div className="animate-pulse">Loading event...</div>
+      <div className="container py-12 max-w-4xl mx-auto">
+        <Card className="p-6">
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-3/4" />
+            <div className="flex justify-between">
+              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+            <Skeleton className="h-32 w-full" />
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="md:col-span-2">
+                <Skeleton className="h-24 w-full" />
+              </div>
+              <Skeleton className="h-52 w-full" />
+            </div>
+          </div>
+        </Card>
       </div>
     );
   }

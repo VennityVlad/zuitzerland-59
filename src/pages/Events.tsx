@@ -20,6 +20,7 @@ import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 import { TagFilter } from "@/components/events/TagFilter";
 import { EventCalendar } from "@/components/calendar/EventCalendar";
 import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -452,9 +453,26 @@ const Events = () => {
           />
         </div>
         
-        <Card className="p-8 flex justify-center items-center">
-          <div className="animate-pulse">Checking access status...</div>
-        </Card>
+        <div className="space-y-4">
+          <Card className="p-4">
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-1/3" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="col-span-3 space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-36 w-full" />
+              <Skeleton className="h-36 w-full" />
+            </div>
+            <Skeleton className="h-52 w-full" />
+          </div>
+        </div>
       </div>
     );
   }

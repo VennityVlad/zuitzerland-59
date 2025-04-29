@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, startOfDay, endOfDay, isSameDay, addDays } from 'date-fns';
@@ -8,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { getReadableTimezoneName } from '@/lib/date-utils';
 import { useDisplayCode } from '@/hooks/useDisplayCode';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type Event = {
   id: string;
@@ -250,7 +250,7 @@ const DisplayPage = () => {
   if (isLoading) {
     return (
       <div className="bg-gradient-to-r from-purple-500 to-blue-600 min-h-screen flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
+        <img src="/lovable-uploads/bbaac92f-6bd2-42ee-9c5e-539412b87f76.png" alt="Zuitzerland" className="w-40 animate-pulse" />
       </div>
     );
   }
