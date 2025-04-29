@@ -62,6 +62,48 @@ export const useDisplayCode = (code: string | null) => {
 
     setIsLoading(true);
     validateCode();
+    
+    // Subscribe to changes in the display_codes table
+    const channel = supabase
+      .channel('display_codes_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'display_codes',
+          filter: `code=eq.${code}` 
+        }, 
+        (payload) => {
+          console.log('Display code changed:', payload);
+          // If the code was deleted
+          if (payload.eventType === 'DELETE') {
+            setError("This access code has been deleted");
+            setIsValid(false);
+            setDisplayCode(null);
+            return;
+          }
+          
+          // For updates and inserts
+          const updatedCode = payload.new as DisplayCode;
+          
+          // Check if code has expired
+          if (updatedCode.expires_at && new Date(updatedCode.expires_at) < new Date()) {
+            setError("This access code has expired");
+            setIsValid(false);
+            setDisplayCode(null);
+            return;
+          }
+          
+          setDisplayCode(updatedCode);
+          setIsValid(true);
+          setError(null);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [code]);
 
   return {

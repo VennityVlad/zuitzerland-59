@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getReadableTimezoneName } from '@/lib/date-utils';
+import { useDisplayCode } from '@/hooks/useDisplayCode';
+import { toast } from '@/components/ui/use-toast';
 
 type DisplayCode = {
   id: string;
@@ -33,57 +35,10 @@ type Event = {
 const DisplayPage = () => {
   const [searchParams] = useSearchParams();
   const codeParam = searchParams.get('code');
-  const [validCode, setValidCode] = useState<DisplayCode | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
+  const { displayCode, isLoading, error, isValid } = useDisplayCode(codeParam);
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [clockTime, setClockTime] = useState(new Date());
-  
-  // Function to check if the code is valid
-  useEffect(() => {
-    const verifyCode = async () => {
-      if (!codeParam) {
-        setLoadingError("No access code provided");
-        setIsLoading(false);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('display_codes')
-          .select('*')
-          .eq('code', codeParam)
-          .maybeSingle();
-          
-        if (error) throw error;
-        
-        if (!data) {
-          setLoadingError("Invalid access code");
-          setIsLoading(false);
-          return;
-        }
-        
-        // Check if the code has expired
-        if (data.expires_at && new Date(data.expires_at) < new Date()) {
-          setLoadingError("This access code has expired");
-          setIsLoading(false);
-          return;
-        }
-        
-        setValidCode(data);
-        setIsAuthenticated(true);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error verifying code:', error);
-        setLoadingError("Failed to verify access code");
-        setIsLoading(false);
-      }
-    };
-    
-    verifyCode();
-  }, [codeParam]);
   
   // Clock time updater
   useEffect(() => {
@@ -96,7 +51,7 @@ const DisplayPage = () => {
   
   // Load events for the selected day
   useEffect(() => {
-    if (!isAuthenticated || !validCode) return;
+    if (!isValid || !displayCode) return;
     
     const fetchEvents = async () => {
       try {
@@ -116,8 +71,8 @@ const DisplayPage = () => {
           .order('start_date', { ascending: true });
           
         // Add location filter if specified
-        if (validCode.location_filter) {
-          query = query.eq('location_id', validCode.location_filter);
+        if (displayCode.location_filter) {
+          query = query.eq('location_id', displayCode.location_filter);
         }
         
         // Fetch events
@@ -137,8 +92,8 @@ const DisplayPage = () => {
         })
         .filter((event: any) => {
           // If tag filter is set, only include events with that tag
-          if (validCode.tag_filter) {
-            return event.tags.some((tag: any) => tag.id === validCode.tag_filter);
+          if (displayCode.tag_filter) {
+            return event.tags.some((tag: any) => tag.id === displayCode.tag_filter);
           }
           return true;
         });
@@ -150,7 +105,44 @@ const DisplayPage = () => {
     };
     
     fetchEvents();
-  }, [isAuthenticated, validCode, selectedDate]);
+    
+    // Set up real-time subscriptions for events table
+    const eventsChannel = supabase
+      .channel('public:events')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public',
+          table: 'events'
+        }, 
+        (_payload) => {
+          console.log('Events table changed, refreshing data');
+          fetchEvents();
+        }
+      )
+      .subscribe();
+      
+    // Also listen for changes to event tags in case tags are modified
+    const tagsChannel = supabase
+      .channel('public:event_tag_relations')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public',
+          table: 'event_tag_relations'
+        }, 
+        (_payload) => {
+          console.log('Event tags changed, refreshing data');
+          fetchEvents();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(eventsChannel);
+      supabase.removeChannel(tagsChannel);
+    };
+  }, [isValid, displayCode, selectedDate]);
   
   const navigateDay = (direction: 'prev' | 'next') => {
     const newDate = new Date(selectedDate);
@@ -180,13 +172,13 @@ const DisplayPage = () => {
     );
   }
   
-  if (loadingError) {
+  if (error) {
     return (
       <div className="bg-gradient-to-r from-purple-500 to-blue-600 min-h-screen flex flex-col items-center justify-center p-8">
         <img src="/lovable-uploads/bbaac92f-6bd2-42ee-9c5e-539412b87f76.png" alt="Zuitzerland" className="w-64 mb-8" />
         <div className="bg-white/10 backdrop-blur-md rounded-lg p-8 max-w-md w-full border border-white/30">
           <h1 className="text-2xl font-bold text-white mb-4">Access Error</h1>
-          <p className="text-white mb-6">{loadingError}</p>
+          <p className="text-white mb-6">{error}</p>
           <p className="text-white/70 text-sm">
             Please use a valid access code in the URL or contact an administrator for assistance.
           </p>
@@ -242,7 +234,7 @@ const DisplayPage = () => {
           
           {/* Display name */}
           <div className="text-white/70 text-sm mb-6">
-            {validCode?.name} • {getReadableTimezoneName(events[0]?.timezone || 'Europe/Zurich')}
+            {displayCode?.name} • {getReadableTimezoneName(events[0]?.timezone || 'Europe/Zurich')}
           </div>
           
           <div className="overflow-y-auto flex-1 pr-2">
