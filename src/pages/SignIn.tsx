@@ -39,37 +39,6 @@ const SignIn = () => {
         email: user.email.address
       });
 
-      // Generate Supabase JWT for the authenticated Privy user first
-      // This ensures we have a valid token before accessing the database
-      try {
-        console.log('Generating Supabase JWT...');
-        const response = await fetch("https://cluqnvnxjexrhhgddoxu.supabase.co/functions/v1/generate-supabase-jwt", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdXFudm54amV4cmhoZ2Rkb3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg5MzM0MzQsImV4cCI6MjA1NDUwOTQzNH0.1F5eYt59BKGemUfRHD0bHhlIQ_k1hmSDLh7ixa03w6k`,
-          },
-          body: JSON.stringify({ privyUserId: user.id })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Error generating Supabase JWT:', errorData);
-          throw new Error('Failed to generate authentication token');
-        } else {
-          console.log('Successfully generated Supabase JWT');
-        }
-      } catch (jwtError) {
-        console.error('Error calling generate-supabase-jwt function:', jwtError);
-        toast({
-          title: "Authentication Error",
-          description: "Failed to generate authentication token. Please try again.",
-          variant: "destructive",
-        });
-        setIsSettingUpProfile(false);
-        return;
-      }
-
       // Check for existing profile by email
       console.log('Checking for existing profile by email...');
       const { data: existingProfiles, error: profileCheckError } = await supabase
@@ -91,15 +60,17 @@ const SignIn = () => {
 
         // Only update if privy_id is different
         if (existingProfile.privy_id !== user.id.toString()) {
-          // Use a custom edge function to update the profile securely
-          console.log('Updating profile with new Privy ID...');
-          const { error: updateError } = await supabase.functions.invoke('update-profile', {
-            body: { 
-              profileId: existingProfile.id,
-              privyId: user.id.toString(),
-              email: user.email.address
-            }
-          });
+          // Update profile with new Privy ID
+          const updateData = {
+            privy_id: user.id.toString(),
+            email: user.email.address
+          };
+
+          console.log('Updating profile with data:', updateData);
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('id', existingProfile.id);
 
           if (updateError) {
             console.error('Error updating profile:', updateError);
@@ -112,17 +83,16 @@ const SignIn = () => {
         }
       } else {
         // Create new profile if no existing profile found
-        // Use a custom edge function to create the profile securely
         console.log('No existing profile found, creating new profile...');
         const newProfileId = crypto.randomUUID();
-        
-        const { error: createError } = await supabase.functions.invoke('create-profile', {
-          body: {
-            profileId: newProfileId,
-            privyId: user.id.toString(),
-            email: user.email.address
-          }
-        });
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: newProfileId,
+            privy_id: user.id.toString(),
+            email: user.email.address,
+            username: null // This will trigger the generate_username() function
+          });
 
         if (createError) {
           console.error('Error creating profile:', createError);
@@ -131,12 +101,38 @@ const SignIn = () => {
         console.log('New profile created successfully');
       }
 
+      // Generate Supabase JWT for the authenticated Privy user
+      try {
+        const response = await fetch("https://cluqnvnxjexrhhgddoxu.supabase.co/functions/v1/generate-supabase-jwt", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdXFudm54amV4cmhoZ2Rkb3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg5MzM0MzQsImV4cCI6MjA1NDUwOTQzNH0.1F5eYt59BKGemUfRHD0bHhlIQ_k1hmSDLh7ixa03w6k`,
+          },
+          body: JSON.stringify({ privyUserId: user.id })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Error generating Supabase JWT:', errorData);
+          // Continue with authentication process even if JWT generation fails
+          // The useAuthenticatedSupabase hook will handle JWT generation later
+        } else {
+          console.log('Successfully generated Supabase JWT');
+          // The JWT is now stored in localStorage via the useAuthenticatedSupabase hook
+        }
+      } catch (jwtError) {
+        console.error('Error calling generate-supabase-jwt function:', jwtError);
+        // Continue with authentication process even if JWT generation fails
+      }
+
       console.log('Auth setup completed successfully');
       setupComplete.current = true;
       
       // Handle redirects based on URL params
       console.log('Redirecting. Housing preferences param:', redirectToHousingPreferences);
       if (redirectToHousingPreferences) {
+        // Use navigate instead of window.location to ensure we stay within the SPA routing
         navigate("/housing-preferences", { replace: true });
       } else {
         navigate("/", { replace: true });

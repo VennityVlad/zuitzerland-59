@@ -31,7 +31,11 @@ export const useAdminStatus = (userId: string | undefined) => {
       }
     };
 
-    checkAdminStatus();
+    if (userId) {
+      checkAdminStatus();
+    } else {
+      setIsLoading(false);
+    }
   }, [userId]);
 
   return { isAdmin, isLoading };
