@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { getReadableTimezoneName } from '@/lib/date-utils';
 import { useDisplayCode } from '@/hooks/useDisplayCode';
 import { toast } from '@/components/ui/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type DisplayCode = {
   id: string;
@@ -39,6 +40,9 @@ const DisplayPage = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [clockTime, setClockTime] = useState(new Date());
+  const [isScrolling, setIsScrolling] = useState(false);
+  const eventsContainerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   
   // Clock time updater
   useEffect(() => {
@@ -48,6 +52,78 @@ const DisplayPage = () => {
     
     return () => clearInterval(timer);
   }, []);
+  
+  // Auto-scroll logic
+  useEffect(() => {
+    if (!eventsContainerRef.current || events.length === 0) return;
+    
+    // Check if content needs scrolling (content height > container height)
+    const container = scrollRef.current;
+    if (!container) return;
+    
+    const checkOverflow = () => {
+      const hasOverflow = container.scrollHeight > container.clientHeight;
+      setIsScrolling(hasOverflow);
+    };
+    
+    // Check initial overflow after events load
+    const timeoutId = setTimeout(checkOverflow, 500);
+    
+    // Check again if window resizes
+    window.addEventListener('resize', checkOverflow);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', checkOverflow);
+    };
+  }, [events]);
+  
+  // Auto-scrolling animation
+  useEffect(() => {
+    if (!isScrolling || !scrollRef.current) return;
+    
+    const container = scrollRef.current;
+    let animationId: number | null = null;
+    let direction = 1; // 1 for down, -1 for up
+    let position = 0;
+    
+    const scrollSpeed = 0.5; // Pixels per frame
+    const scrollCycleTime = 10000; // Complete cycle in 10 seconds
+    
+    const animate = () => {
+      if (!container) return;
+      
+      // Calculate how far to scroll based on content height
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      
+      if (maxScroll <= 0) {
+        // No need to scroll if content fits
+        return;
+      }
+      
+      position += direction * scrollSpeed;
+      
+      // Change direction when reaching top or bottom
+      if (position >= maxScroll) {
+        position = maxScroll;
+        direction = -1;
+      } else if (position <= 0) {
+        position = 0;
+        direction = 1;
+      }
+      
+      container.scrollTop = position;
+      animationId = requestAnimationFrame(animate);
+    };
+    
+    animationId = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationId !== null) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [isScrolling]);
   
   // Load events for the selected day
   useEffect(() => {
@@ -226,7 +302,7 @@ const DisplayPage = () => {
       </div>
       
       {/* Events List */}
-      <div className="flex-1 px-6 pb-6">
+      <div className="flex-1 px-6 pb-6" ref={eventsContainerRef}>
         <div className="bg-white/10 backdrop-blur-xl rounded-xl border border-white/30 h-full p-6 overflow-hidden flex flex-col">
           <h2 className="text-white text-xl font-semibold mb-4">
             {events.length > 0 ? 'Schedule' : 'No events scheduled'}
@@ -237,63 +313,65 @@ const DisplayPage = () => {
             {displayCode?.name} • {getReadableTimezoneName(events[0]?.timezone || 'Europe/Zurich')}
           </div>
           
-          <div className="overflow-y-auto flex-1 pr-2">
-            {events.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full">
-                <div className="text-white/70 text-lg mb-2">No events scheduled for this day</div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {events.map((event) => (
-                  <div 
-                    key={event.id} 
-                    className="bg-white/20 backdrop-blur-md rounded-lg p-4 border border-white/30"
-                  >
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-white text-xl font-bold">{event.title}</h3>
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4 text-white/70" />
-                        <span className="text-white/90 text-sm">
-                          {formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}
-                        </span>
+          <ScrollArea className="flex-1 pr-2 overflow-hidden">
+            <div ref={scrollRef} className="h-full">
+              {events.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <div className="text-white/70 text-lg mb-2">No events scheduled for this day</div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {events.map((event) => (
+                    <div 
+                      key={event.id} 
+                      className="bg-white/20 backdrop-blur-md rounded-lg p-4 border border-white/30"
+                    >
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-white text-xl font-bold">{event.title}</h3>
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-4 w-4 text-white/70" />
+                          <span className="text-white/90 text-sm">
+                            {formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center mt-2">
-                      {event.location_text && (
-                        <div className="flex items-center text-white/70 text-sm">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {event.location_text}
+                      
+                      <div className="flex items-center mt-2">
+                        {event.location_text && (
+                          <div className="flex items-center text-white/70 text-sm">
+                            <MapPin className="h-4 w-4 mr-1" />
+                            {event.location_text}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Event tags */}
+                      {event.tags && event.tags.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {event.tags.map((tag: any) => (
+                            <span 
+                              key={tag.id}
+                              className="px-2 py-1 rounded-full text-xs text-white"
+                              style={{ backgroundColor: tag.color || '#1a365d' }}
+                            >
+                              {tag.name}
+                            </span>
+                          ))}
                         </div>
                       )}
+                      
+                      {/* Event description - truncated */}
+                      {event.description && (
+                        <p className="text-white/80 mt-2 line-clamp-2 text-sm">
+                          {event.description}
+                        </p>
+                      )}
                     </div>
-                    
-                    {/* Event tags */}
-                    {event.tags && event.tags.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {event.tags.map((tag: any) => (
-                          <span 
-                            key={tag.id}
-                            className="px-2 py-1 rounded-full text-xs text-white"
-                            style={{ backgroundColor: tag.color || '#1a365d' }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Event description - truncated */}
-                    {event.description && (
-                      <p className="text-white/80 mt-2 line-clamp-2 text-sm">
-                        {event.description}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </div>
       </div>
     </div>
