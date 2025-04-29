@@ -99,7 +99,12 @@ const ProtectedRoute = ({
     };
     
     const checkPageAccess = async () => {
-      if (!user?.id) {
+      if (!ready) {
+        setIsLoading(true);
+        return;
+      }
+      
+      if (!authenticated || !user?.id) {
         setIsLoading(false);
         return;
       }
@@ -143,35 +148,47 @@ const ProtectedRoute = ({
           }
         }
 
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role, id')
-          .eq('privy_id', user.id)
-          .maybeSingle();
+        // Only query user role if we have a valid userId
+        if (user?.id) {
+          const { data: userRole, error: roleError } = await supabase
+            .rpc('get_user_role')
+            .maybeSingle();
 
-        if (profileError) throw profileError;
-        
-        setIsAdmin(profileData?.role === 'admin');
-
-        const { data: invoiceData, error: invoiceError } = await supabase
-          .from('invoices')
-          .select('id')
-          .eq('profile_id', profileData?.id)
-          .eq('status', 'paid')
-          .maybeSingle();
-
-        if (invoiceError) throw invoiceError;
-        
-        const hasInvoice = !!invoiceData;
-        setHasValidInvoice(hasInvoice);
-
-        if (!hasInvoice && !adminOnly && pageKey) {
-          toast({
-            variant: "destructive",
-            title: "Access Denied",
-            description: "You need a paid invoice to access this page."
-          });
-          navigate('/book');
+          if (roleError) {
+            console.error("Error fetching user role:", roleError);
+          } else {
+            setIsAdmin(userRole === 'admin');
+          }
+          
+          // Get profile id safely for checking invoices
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('privy_id', user.id)
+            .maybeSingle();
+  
+          if (!profileError && profileData?.id) {
+            const { data: invoiceData, error: invoiceError } = await supabase
+              .from('invoices')
+              .select('id')
+              .eq('profile_id', profileData.id)
+              .eq('status', 'paid')
+              .maybeSingle();
+  
+            if (!invoiceError) {
+              const hasInvoice = !!invoiceData;
+              setHasValidInvoice(hasInvoice);
+  
+              if (!hasInvoice && !adminOnly && pageKey && pageKey !== 'show_onboarding_page') {
+                toast({
+                  variant: "destructive",
+                  title: "Access Denied",
+                  description: "You need a paid invoice to access this page."
+                });
+                navigate('/book');
+              }
+            }
+          }
         }
       } catch (error) {
         console.error('Error checking page access:', error);
@@ -180,12 +197,8 @@ const ProtectedRoute = ({
       }
     };
 
-    if (user?.id) {
-      checkPageAccess();
-    } else {
-      setIsLoading(false);
-    }
-  }, [user?.id, pageKey, navigate, toast, adminOnly]);
+    checkPageAccess();
+  }, [user?.id, pageKey, navigate, toast, adminOnly, authenticated, ready]);
 
   if (!ready || isLoading) {
     return (
