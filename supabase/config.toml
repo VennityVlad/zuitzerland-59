@@ -13,3 +13,4 @@ enabled = true
 [functions]
 [functions.generate-supabase-jwt]
 verify_jwt = false
+

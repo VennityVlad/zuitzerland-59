@@ -50,10 +50,11 @@ Deno.serve(async (req) => {
     
     console.log("Profile found:", profile);
     
-    // Generate a JWT that's compatible with Supabase auth
-    const supabaseJwtSecret = Deno.env.get('SUPABASE_JWT_SECRET');
+    // Get the JWT secret from environment variables
+    // Use JWT_SECRET instead of SUPABASE_JWT_SECRET
+    const supabaseJwtSecret = Deno.env.get('JWT_SECRET');
     if (!supabaseJwtSecret) {
-      throw new Error('SUPABASE_JWT_SECRET environment variable is not set');
+      throw new Error('JWT_SECRET environment variable is not set');
     }
     
     const now = Math.floor(Date.now() / 1000);
