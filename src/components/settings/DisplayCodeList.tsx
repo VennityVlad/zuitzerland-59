@@ -69,6 +69,20 @@ const DisplayCodeList = ({
     return new Date(expiresAt) < new Date();
   };
 
+  const getTagNames = (code: DisplayCode) => {
+    if (code.tag_filters && code.tag_filters.length > 0) {
+      return code.tag_filters
+        .map(tagId => eventTags.find(tag => tag.id === tagId)?.name || 'Unknown')
+        .join(', ');
+    }
+    
+    if (code.tag_filter) {
+      return eventTags.find(t => t.id === code.tag_filter)?.name || 'Unknown';
+    }
+    
+    return null;
+  };
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Existing Display Codes</h3>
@@ -129,10 +143,10 @@ const DisplayCodeList = ({
                     {locations.find(l => l.id === code.location_filter)?.name || 'Unknown'}
                   </span>
                 )}
-                {code.tag_filter && (
+                {(code.tag_filter || (code.tag_filters && code.tag_filters.length > 0)) && (
                   <span>
-                    <span className="font-medium">Event Tag:</span>{' '}
-                    {eventTags.find(t => t.id === code.tag_filter)?.name || 'Unknown'}
+                    <span className="font-medium">Event Tags:</span>{' '}
+                    {getTagNames(code)}
                   </span>
                 )}
               </div>

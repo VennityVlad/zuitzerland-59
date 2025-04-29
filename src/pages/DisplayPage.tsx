@@ -1,13 +1,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { format, startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { format, startOfDay, endOfDay, isSameDay, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getReadableTimezoneName } from '@/lib/date-utils';
 import { useDisplayCode } from '@/hooks/useDisplayCode';
-import { toast } from '@/components/ui/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 type DisplayCode = {
@@ -16,6 +15,7 @@ type DisplayCode = {
   name: string;
   location_filter?: string | null;
   tag_filter?: string | null;
+  tag_filters?: string[] | null;
   created_at: string;
   expires_at?: string | null;
 };
@@ -44,14 +44,24 @@ const DisplayPage = () => {
   const eventsContainerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  // Clock time updater
+  // Clock time updater and date change at midnight
   useEffect(() => {
     const timer = setInterval(() => {
-      setClockTime(new Date());
+      const newTime = new Date();
+      setClockTime(newTime);
+      
+      // Check if we need to change the date (it's a new day)
+      const currentDate = selectedDate;
+      if (newTime.getDate() !== currentDate.getDate() || 
+          newTime.getMonth() !== currentDate.getMonth() || 
+          newTime.getFullYear() !== currentDate.getFullYear()) {
+        console.log("Midnight detected, changing date to today");
+        setSelectedDate(new Date(newTime));
+      }
     }, 1000);
     
     return () => clearInterval(timer);
-  }, []);
+  }, [selectedDate]);
   
   // Auto-scroll logic
   useEffect(() => {
@@ -88,7 +98,6 @@ const DisplayPage = () => {
     let position = 0;
     
     const scrollSpeed = 0.5; // Pixels per frame
-    const scrollCycleTime = 10000; // Complete cycle in 10 seconds
     
     const animate = () => {
       if (!container) return;
@@ -167,10 +176,19 @@ const DisplayPage = () => {
           };
         })
         .filter((event: any) => {
-          // If tag filter is set, only include events with that tag
+          // If we have tag_filters (multiple tags), check if the event has any of these tags
+          if (displayCode.tag_filters && displayCode.tag_filters.length > 0) {
+            return event.tags.some((tag: any) => 
+              displayCode.tag_filters?.includes(tag.id)
+            );
+          }
+          
+          // If we have a single tag_filter, check if the event has this tag
           if (displayCode.tag_filter) {
             return event.tags.some((tag: any) => tag.id === displayCode.tag_filter);
           }
+          
+          // If no tag filters are set, include all events
           return true;
         });
         

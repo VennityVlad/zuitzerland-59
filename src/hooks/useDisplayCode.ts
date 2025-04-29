@@ -8,6 +8,7 @@ export type DisplayCode = {
   name: string;
   location_filter?: string | null;
   tag_filter?: string | null;
+  tag_filters?: string[] | null;
   created_at: string;
   expires_at?: string | null;
 };

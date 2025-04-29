@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 const EXPIRY_OPTIONS = [
   { value: "1", label: "1 day" },
@@ -33,7 +34,7 @@ const CreateDisplayCode = ({ locations, eventTags, onCodeCreated }: CreateDispla
   const { toast } = useToast();
   const [name, setName] = useState('');
   const [locationFilter, setLocationFilter] = useState('all');
-  const [tagFilter, setTagFilter] = useState('all');
+  const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [expiryDays, setExpiryDays] = useState('7');
 
   const generateCode = async () => {
@@ -58,8 +59,8 @@ const CreateDisplayCode = ({ locations, eventTags, onCodeCreated }: CreateDispla
           code,
           name,
           location_filter: locationFilter !== 'all' ? locationFilter : null,
-          tag_filter: tagFilter !== 'all' ? tagFilter : null,
-          expires_at: expiresAt
+          tag_filter: tagFilters.length === 1 ? tagFilters[0] : null,
+          tag_filters: tagFilters.length > 1 ? tagFilters : null
         }]);
 
       if (error) throw error;
@@ -71,7 +72,7 @@ const CreateDisplayCode = ({ locations, eventTags, onCodeCreated }: CreateDispla
 
       setName('');
       setLocationFilter('all');
-      setTagFilter('all');
+      setTagFilters([]);
       setExpiryDays('7');
       onCodeCreated();
     } catch (error: any) {
@@ -82,6 +83,12 @@ const CreateDisplayCode = ({ locations, eventTags, onCodeCreated }: CreateDispla
       });
     }
   };
+
+  // Convert eventTags to the format expected by MultiSelect
+  const tagOptions = eventTags.map(tag => ({
+    value: tag.id,
+    label: tag.name
+  }));
 
   return (
     <Card>
@@ -117,20 +124,14 @@ const CreateDisplayCode = ({ locations, eventTags, onCodeCreated }: CreateDispla
         </div>
 
         <div>
-          <Label htmlFor="tag-filter">Filter by Event Tag (Optional)</Label>
-          <Select value={tagFilter} onValueChange={setTagFilter}>
-            <SelectTrigger id="tag-filter">
-              <SelectValue placeholder="All event types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All event types</SelectItem>
-              {eventTags.map((tag) => (
-                <SelectItem key={tag.id} value={tag.id}>
-                  {tag.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="tag-filter">Filter by Event Tags (Optional)</Label>
+          <MultiSelect
+            options={tagOptions}
+            selected={tagFilters}
+            onChange={setTagFilters}
+            placeholder="All event types"
+            className="w-full"
+          />
         </div>
 
         <div>
