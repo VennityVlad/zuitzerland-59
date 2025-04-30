@@ -529,35 +529,14 @@ const Events = () => {
             <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-4 mb-2">
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                <TabsTrigger value="past">Past</TabsTrigger>
                 <TabsTrigger value="going">Going</TabsTrigger>
                 <TabsTrigger value="hosting">Hosting</TabsTrigger>
+                <TabsTrigger value="past">Past</TabsTrigger>
               </TabsList>
 
               <TabsContent value="upcoming" className="space-y-4 mt-4">
                 {renderEventsList(
                   upcomingEvents,
-                  isLoading,
-                  profileLoading,
-                  canManageEvents,
-                  canEditEvent,
-                  openDeleteDialog,
-                  handleEditEvent,
-                  addToCalendar,
-                  formatDateForSidebar,
-                  formatEventTime,
-                  formatDateRange,
-                  rsvpMap,
-                  userRSVPEventIds,
-                  profileId,
-                  refetchRSVPs,
-                  isMobile,
-                  handleShare
-                )}
-              </TabsContent>
-              <TabsContent value="past" className="space-y-4 mt-4">
-                {renderEventsList(
-                  pastEvents,
                   isLoading,
                   profileLoading,
                   canManageEvents,
@@ -600,6 +579,27 @@ const Events = () => {
               <TabsContent value="hosting" className="space-y-4 mt-4">
                 {renderEventsList(
                   hostingEvents,
+                  isLoading,
+                  profileLoading,
+                  canManageEvents,
+                  canEditEvent,
+                  openDeleteDialog,
+                  handleEditEvent,
+                  addToCalendar,
+                  formatDateForSidebar,
+                  formatEventTime,
+                  formatDateRange,
+                  rsvpMap,
+                  userRSVPEventIds,
+                  profileId,
+                  refetchRSVPs,
+                  isMobile,
+                  handleShare
+                )}
+              </TabsContent>
+              <TabsContent value="past" className="space-y-4 mt-4">
+                {renderEventsList(
+                  pastEvents,
                   isLoading,
                   profileLoading,
                   canManageEvents,
