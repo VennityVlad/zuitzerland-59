@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
@@ -22,6 +22,8 @@ const EventPage = () => {
   const [isRsvped, setIsRsvped] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   
   const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin } = usePaidInvoiceStatus(
     user?.id
@@ -29,6 +31,16 @@ const EventPage = () => {
   
   console.log("🎪 EventPage - Auth status:", { authenticated, userId: user?.id });
   console.log("🎪 EventPage - Invoice status:", { hasPaidInvoice, isPaidInvoiceLoading, isAdmin });
+  console.log("🎪 EventPage - Current path:", location.pathname);
+
+  // Handle unauthenticated users by redirecting to sign in with return path
+  useEffect(() => {
+    if (authenticated === false && !isPaidInvoiceLoading) {
+      // Redirect to signin with the current path as a redirect parameter
+      const currentPath = location.pathname;
+      navigate(`/signin?redirect=${encodeURIComponent(currentPath)}`, { replace: true });
+    }
+  }, [authenticated, isPaidInvoiceLoading, location.pathname, navigate]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -201,7 +213,7 @@ const EventPage = () => {
   return (
     <>
       <Helmet>
-        <title>{event.title} | Zuitzerland</title>
+        <title>{event?.title || "Event"} | Zuitzerland</title>
         <meta name="description" content={metaDescription} />
         <meta property="og:title" content={`${event.title} | Zuitzerland`} />
         <meta property="og:description" content={metaDescription} />
@@ -219,11 +231,12 @@ const EventPage = () => {
             <p className="text-muted-foreground">
               This event is only visible to authenticated users. Please sign in to view the complete details.
             </p>
-            <Button asChild>
-              <a href="/signin">
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign In
-              </a>
+            <Button onClick={() => {
+              // Pass the current URL as a redirect parameter
+              navigate(`/signin?redirect=${encodeURIComponent(location.pathname)}`);
+            }}>
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In
             </Button>
           </Card>
         </div>

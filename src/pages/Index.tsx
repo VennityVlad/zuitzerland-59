@@ -18,6 +18,9 @@ const Index = () => {
     // Check if we have any special redirect parameters
     const housingPrefsParam = searchParams.get('housingPreferences');
     
+    // Capture the intended path if we're coming from a direct URL
+    const redirectPath = location.pathname === '/' ? null : location.pathname;
+    
     const redirectToAppropriateRoute = async () => {
       // If specific housing preferences parameter is set, prioritize that redirect
       if (housingPrefsParam === 'true') {
@@ -26,13 +29,16 @@ const Index = () => {
         return;
       }
       
+      // Handle direct access to event page
+      const isEventPage = redirectPath && redirectPath.startsWith('/events/');
+      
       // If we have an authenticated user, check if they have a paid invoice
       if (user?.id) {
         try {
           // Get user's profile to find their profile ID
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, role')
             .eq('privy_id', user.id)
             .maybeSingle();
 
@@ -53,9 +59,16 @@ const Index = () => {
 
           if (invoiceError) throw invoiceError;
           
-          // User has a paid invoice, redirect to events
-          if (invoiceData) {
-            console.log("Index: User has paid invoice, redirecting to events");
+          const isAdmin = profileData.role === 'admin';
+          
+          // Handle redirects based on invoice status and intended path
+          if ((invoiceData || isAdmin) && isEventPage) {
+            // Redirect to the specific event page if that's where they were trying to go
+            console.log(`Index: User has access, redirecting to specific event page: ${redirectPath}`);
+            navigate(redirectPath, { replace: true });
+          } else if (invoiceData || isAdmin) {
+            // User has a paid invoice or is admin, redirect to events
+            console.log("Index: User has paid invoice or is admin, redirecting to events");
             navigate("/events", { replace: true });
           } else {
             // Default to book page for users without paid invoices
@@ -68,9 +81,14 @@ const Index = () => {
           navigate("/book", { replace: true });
         }
       } else {
-        // Not authenticated, redirect to book page
-        console.log("Index: No authenticated user, redirecting to book");
-        navigate("/book", { replace: true });
+        // Not authenticated, redirect to sign-in with intended destination
+        console.log("Index: No authenticated user, redirecting to signin");
+        if (isEventPage) {
+          // If trying to access a specific event page, include it in the redirect params
+          navigate(`/signin?redirect=${encodeURIComponent(redirectPath)}`, { replace: true });
+        } else {
+          navigate("/signin", { replace: true });
+        }
       }
     };
     

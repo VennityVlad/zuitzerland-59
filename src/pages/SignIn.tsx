@@ -16,15 +16,21 @@ const SignIn = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const redirectToHousingPreferences = searchParams.get('housingPreferences') === 'true';
+  
+  // Get the intended destination from URL params or referrer
+  const intendedPath = searchParams.get('redirect') || 
+                        (location.state && location.state.from) || 
+                        '/';
 
   useEffect(() => {
     // Log the current params for debugging
     console.log('SignIn: URL params:', {
       redirectToHousingPreferences,
+      intendedPath,
       searchParams: Object.fromEntries(searchParams.entries()),
       pathname: location.pathname
     });
-  }, [searchParams, redirectToHousingPreferences, location.pathname]);
+  }, [searchParams, redirectToHousingPreferences, location.pathname, intendedPath]);
 
   const setupAuth = useCallback(async () => {
     if (!user?.email?.address || isSettingUpProfile || setupComplete.current) {
@@ -157,10 +163,18 @@ const SignIn = () => {
         
         // Handle redirects based on URL params and invoice status
         console.log('Redirecting after auth. Housing preferences param:', redirectToHousingPreferences);
+        console.log('Intended path:', intendedPath);
+        
+        // Check if we're trying to go to an event page
+        const isEventPage = intendedPath.startsWith('/events/');
+        
         if (redirectToHousingPreferences) {
           navigate("/housing-preferences", { replace: true });
-        } else if (invoiceData) {
-          // Redirect to events if user has a paid invoice
+        } else if (isEventPage && (invoiceData || profileData.role === 'admin')) {
+          // If trying to access a specific event page and has paid invoice or is admin
+          navigate(intendedPath, { replace: true });
+        } else if (invoiceData || profileData.role === 'admin') {
+          // User has a paid invoice or is admin, redirect to events
           navigate("/events", { replace: true });
         } else {
           navigate("/", { replace: true });
@@ -181,7 +195,7 @@ const SignIn = () => {
     } finally {
       setIsSettingUpProfile(false);
     }
-  }, [user, isSettingUpProfile, toast, navigate, redirectToHousingPreferences]);
+  }, [user, isSettingUpProfile, toast, navigate, redirectToHousingPreferences, intendedPath]);
 
   useEffect(() => {
     if (authenticated && user && !isSettingUpProfile && !setupComplete.current) {
