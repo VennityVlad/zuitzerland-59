@@ -67,28 +67,27 @@ export function unregister() {
 }
 
 // Function to check if a new version is available
-export function checkForUpdates() {
-  return fetch('/version.json', { cache: 'no-store' })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to fetch version info');
-      }
-      return response.json();
-    })
-    .then(data => {
-      const currentVersion = APP_VERSION;
-      const serverVersion = data.version;
-      
-      return {
-        updateAvailable: currentVersion !== serverVersion,
-        currentVersion,
-        serverVersion
-      };
-    })
-    .catch(error => {
-      console.error('Error checking for updates:', error);
-      return { updateAvailable: false, error };
-    });
+export async function checkForUpdates() {
+  try {
+    const response = await fetch('/version.json', { cache: 'no-store' });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch version info');
+    }
+    
+    const data = await response.json();
+    const currentVersion = APP_VERSION;
+    const serverVersion = data.version;
+    
+    return {
+      updateAvailable: currentVersion !== serverVersion,
+      currentVersion,
+      serverVersion
+    };
+  } catch (error) {
+    console.error('Error checking for updates:', error);
+    return { updateAvailable: false, error };
+  }
 }
 
 // Helper to force page refresh
@@ -98,10 +97,11 @@ export function forceRefresh() {
       // First unregister to ensure clean state
       registration.unregister().then(() => {
         // Force reload from server, not from cache
-        window.location.reload(true);
+        window.location.reload();
       });
     });
   } else {
-    window.location.reload(true);
+    // If service worker is not available, just reload
+    window.location.reload();
   }
 }
