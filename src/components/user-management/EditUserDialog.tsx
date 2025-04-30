@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -64,6 +65,18 @@ const EditUserDialog = ({ open, onOpenChange, profile, onUserUpdated }: EditUser
     },
   });
 
+  // Reset form when dialog opens with new profile
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        username: profile.username || "",
+        email: profile.email || "",
+        full_name: profile.full_name || "",
+        role: profile.role,
+      });
+    }
+  }, [form, open, profile]);
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
@@ -84,8 +97,8 @@ const EditUserDialog = ({ open, onOpenChange, profile, onUserUpdated }: EditUser
         description: "The user information has been updated successfully",
       });
       
-      onOpenChange(false);
       onUserUpdated();
+      onOpenChange(false);
     } catch (error) {
       console.error('Error updating user:', error);
       toast({
@@ -98,8 +111,14 @@ const EditUserDialog = ({ open, onOpenChange, profile, onUserUpdated }: EditUser
     }
   };
 
+  const handleClose = () => {
+    // Clean up form state before closing
+    form.reset();
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit User</DialogTitle>

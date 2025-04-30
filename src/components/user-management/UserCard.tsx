@@ -138,6 +138,12 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
     }
   };
 
+  const handleEmailClick = (emailAddress: string) => {
+    // Use mailto: protocol instead of direct window.location manipulation
+    const mailtoLink = `mailto:${emailAddress}`;
+    window.open(mailtoLink, '_blank');
+  };
+
   return (
     <>
       <Card className="overflow-hidden hover:shadow-md transition-shadow">
@@ -171,7 +177,7 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {profile.email && (
-                  <DropdownMenuItem onClick={() => window.location.href = `mailto:${profile.email}`}>
+                  <DropdownMenuItem onClick={() => handleEmailClick(profile.email as string)}>
                     <Mail className="mr-2 h-4 w-4" />
                     Email user
                   </DropdownMenuItem>
@@ -270,12 +276,14 @@ const UserCard = ({ profile, onRefresh }: UserCardProps) => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <EditUserDialog 
-        open={showEditDialog} 
-        onOpenChange={setShowEditDialog} 
-        profile={profile}
-        onUserUpdated={onRefresh}
-      />
+      {showEditDialog && (
+        <EditUserDialog 
+          open={showEditDialog} 
+          onOpenChange={setShowEditDialog} 
+          profile={profile}
+          onUserUpdated={onRefresh}
+        />
+      )}
     </>
   );
 };

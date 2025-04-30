@@ -250,11 +250,13 @@ const UserManagement = () => {
         </>
       )}
 
-      <InviteUserDialog 
-        open={showInviteDialog} 
-        onOpenChange={setShowInviteDialog}
-        onUserInvited={handleRefreshProfiles}
-      />
+      {showInviteDialog && (
+        <InviteUserDialog 
+          open={showInviteDialog} 
+          onOpenChange={setShowInviteDialog}
+          onUserInvited={handleRefreshProfiles}
+        />
+      )}
     </div>
   );
 };
