@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
@@ -13,6 +12,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import { SupabaseJwtProvider } from "@/components/SupabaseJwtProvider";
 import SessionValidator from "@/components/SessionValidator";
+import { UpdateNotification } from "@/components/UpdateNotification";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import SupabaseSignIn from "./pages/SupabaseSignIn";
@@ -460,6 +460,7 @@ const App = () => {
   return (
     <TooltipProvider>
       <HelmetProvider>
+        <UpdateNotification />
         <Toaster />
         <Sonner />
         <PrivyProvider
