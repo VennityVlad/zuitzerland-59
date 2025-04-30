@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -11,17 +12,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, Users, Shield, ChevronRight } from "lucide-react";
+import { Upload, Shield, ChevronRight } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { TeamBadge } from "@/components/TeamBadge";
 import HousingPreferencesButton from "@/components/profile/HousingPreferencesButton";
-import { Switch } from "@/components/ui/switch";
 import { Json } from "@/integrations/supabase/types";
 
 const profileFormSchema = z.object({
   username: z.string().min(3).max(50),
   description: z.string().max(500).optional(),
-  opt_in_directory: z.boolean().default(false),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -40,7 +39,6 @@ const Profile = () => {
     defaultValues: {
       username: "",
       description: "",
-      opt_in_directory: false,
     },
   });
 
@@ -66,7 +64,6 @@ const Profile = () => {
           form.reset({
             username: data.username || "",
             description: data.description || "",
-            opt_in_directory: data.opt_in_directory || false,
           });
         }
       } catch (error) {
@@ -138,69 +135,6 @@ const Profile = () => {
     }
   };
 
-  const updateDirectoryOptIn = async (value: boolean) => {
-    if (!user?.id) return;
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ opt_in_directory: value })
-        .eq('privy_id', user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      const { data: onboardingData } = await supabase
-        .from('profiles')
-        .select('onboarding_progress')
-        .eq('privy_id', user.id)
-        .maybeSingle();
-      
-      if (onboardingData?.onboarding_progress) {
-        const updatedProgress = JSON.parse(JSON.stringify(onboardingData.onboarding_progress));
-        
-        updatedProgress.tasks["8"].completed = value;
-        
-        if (value) {
-          if (!updatedProgress.tasks["8"].completed) {
-            updatedProgress.totalCompleted += 1;
-          }
-        } else {
-          if (updatedProgress.tasks["8"].completed) {
-            updatedProgress.totalCompleted -= 1;
-          }
-        }
-        
-        updatedProgress.lastUpdated = new Date().toISOString();
-        
-        await supabase
-          .from('profiles')
-          .update({ 
-            onboarding_progress: updatedProgress as unknown as Json 
-          })
-          .eq('privy_id', user.id);
-      }
-
-      setProfileData(prev => prev ? { ...prev, opt_in_directory: value } : null);
-      form.setValue("opt_in_directory", value);
-
-      toast({
-        title: "Success",
-        description: value 
-          ? "You've been added to the resident directory" 
-          : "You've been removed from the resident directory",
-      });
-    } catch (error) {
-      console.error('Error updating directory status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update directory status",
-        variant: "destructive",
-      });
-    }
-  };
-
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user?.id) return;
 
@@ -226,7 +160,6 @@ const Profile = () => {
             email: user.email?.address || null,
             username: values.username,
             description: values.description,
-            opt_in_directory: values.opt_in_directory,
           })
           .select()
           .single();
@@ -245,7 +178,6 @@ const Profile = () => {
             username: values.username,
             description: values.description,
             email: user.email?.address || null,
-            opt_in_directory: values.opt_in_directory,
           })
           .eq('privy_id', user.id);
 
@@ -267,35 +199,6 @@ const Profile = () => {
 
         if (updatedProfile) {
           setProfileData(updatedProfile);
-        }
-      }
-
-      if (existingProfile) {
-        const { data: onboardingData } = await supabase
-          .from('profiles')
-          .select('onboarding_progress')
-          .eq('privy_id', user.id)
-          .maybeSingle();
-        
-        if (onboardingData?.onboarding_progress) {
-          const updatedProgress = JSON.parse(JSON.stringify(onboardingData.onboarding_progress));
-          
-          updatedProgress.tasks["8"].completed = values.opt_in_directory;
-          
-          if (values.opt_in_directory && !updatedProgress.tasks["8"].completed) {
-            updatedProgress.totalCompleted += 1;
-          } else if (!values.opt_in_directory && updatedProgress.tasks["8"].completed) {
-            updatedProgress.totalCompleted -= 1;
-          }
-          
-          updatedProgress.lastUpdated = new Date().toISOString();
-          
-          await supabase
-            .from('profiles')
-            .update({ 
-              onboarding_progress: updatedProgress as unknown as Json 
-            })
-            .eq('privy_id', user.id);
         }
       }
 
@@ -417,45 +320,18 @@ const Profile = () => {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="opt_in_directory"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col space-y-4">
-                      <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">
-                            Resident Directory
-                          </FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Allow other residents to see your profile information in the directory
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={(value) => {
-                              field.onChange(value);
-                              updateDirectoryOptIn(value);
-                            }}
-                          />
-                        </FormControl>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full flex items-center justify-between"
-                        onClick={() => navigate('/privacy')}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
-                          <span>Advanced Privacy Settings</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </FormItem>
-                  )}
-                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full flex items-center justify-between"
+                  onClick={() => navigate('/privacy')}
+                >
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span>Privacy Settings</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
 
                 <Button 
                   type="submit" 
