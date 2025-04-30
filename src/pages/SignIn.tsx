@@ -129,12 +129,44 @@ const SignIn = () => {
       console.log('Auth setup completed successfully');
       setupComplete.current = true;
       
-      // Handle redirects based on URL params
-      console.log('Redirecting. Housing preferences param:', redirectToHousingPreferences);
-      if (redirectToHousingPreferences) {
-        // Use navigate instead of window.location to ensure we stay within the SPA routing
-        navigate("/housing-preferences", { replace: true });
-      } else {
+      // After successful login, check if the user has a paid invoice
+      try {
+        // Get user's profile to find their profile ID
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('privy_id', user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+        if (!profileData) {
+          console.log("No profile found, redirecting to root");
+          navigate("/", { replace: true });
+          return;
+        }
+
+        // Check if user has a paid invoice
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('profile_id', profileData.id)
+          .eq('status', 'paid')
+          .maybeSingle();
+
+        if (invoiceError) throw invoiceError;
+        
+        // Handle redirects based on URL params and invoice status
+        console.log('Redirecting after auth. Housing preferences param:', redirectToHousingPreferences);
+        if (redirectToHousingPreferences) {
+          navigate("/housing-preferences", { replace: true });
+        } else if (invoiceData) {
+          // Redirect to events if user has a paid invoice
+          navigate("/events", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      } catch (error) {
+        console.error('Error checking invoice status:', error);
         navigate("/", { replace: true });
       }
 
@@ -161,14 +193,8 @@ const SignIn = () => {
   // If already authenticated and setup is complete, redirect immediately
   useEffect(() => {
     if (authenticated && setupComplete.current && !isSettingUpProfile) {
-      console.log('Already authenticated, checking redirect parameters');
-      if (redirectToHousingPreferences) {
-        console.log('Redirecting to housing preferences');
-        navigate("/housing-preferences", { replace: true });
-      } else {
-        console.log('Redirecting to home');
-        navigate("/", { replace: true });
-      }
+      // This will be handled by the setupAuth function which checks invoice status
+      console.log('Already authenticated, redirecting will be handled by setupAuth');
     }
   }, [authenticated, isSettingUpProfile, navigate, redirectToHousingPreferences]);
 

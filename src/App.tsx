@@ -137,7 +137,12 @@ const ProtectedRoute = ({
             setIsPageEnabled(isEnabled);
             
             if (!isEnabled) {
-              navigate('/book');
+              // Redirect to events for users with paid invoices instead of book
+              if (hasValidInvoice) {
+                navigate('/events');
+              } else {
+                navigate('/book');
+              }
               return;
             }
           }
