@@ -57,11 +57,14 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
+      // Always convert email to lowercase for consistency
+      const normalizedEmail = data.email.toLowerCase();
+      
       // First, check if user already exists
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id')
-        .eq('email', data.email)
+        .eq('email', normalizedEmail)
         .maybeSingle();
 
       if (existingProfile) {
@@ -79,7 +82,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
         .from('profiles')
         .insert({
           id: uuidv4(),
-          email: data.email,
+          email: normalizedEmail, // Use normalized email
           role: data.role || "attendee", // Set to "attendee" as default role
           full_name: data.name,
           username: `user_${Math.floor(Math.random() * 10000)}`
@@ -90,7 +93,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
       // Add user to Privy allowlist
       const { error: privyError } = await supabase.functions.invoke("add-to-privy-allowlist", {
         body: {
-          email: data.email
+          email: normalizedEmail // Use normalized email
         }
       });
 
@@ -107,7 +110,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
       const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
         body: {
           name: data.name,
-          email: data.email,
+          email: normalizedEmail, // Use normalized email
           role: data.role || "attendee"
         }
       });
@@ -119,7 +122,7 @@ const InviteUserDialog = ({ open, onOpenChange, onUserInvited }: InviteUserDialo
 
       toast({
         title: "User invited",
-        description: `Invitation has been sent to ${data.email}`,
+        description: `Invitation has been sent to ${normalizedEmail}`,
       });
       
       form.reset();

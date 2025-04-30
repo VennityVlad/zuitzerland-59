@@ -36,11 +36,14 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Always normalize email to lowercase before checking
+    const normalizedEmail = requestData.email.toLowerCase();
+    
     // Check if profile already exists
     const { data: existingProfile, error: checkError } = await supabaseClient
       .from('profiles')
       .select('id')
-      .eq('email', requestData.email)
+      .eq('email', normalizedEmail)
       .maybeSingle();
 
     if (checkError) {
@@ -58,12 +61,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create new profile
+    // Create new profile with normalized email
     const { data, error } = await supabaseClient
       .from('profiles')
       .insert({
         id: crypto.randomUUID(),
-        email: requestData.email,
+        email: normalizedEmail,
         role: requestData.role || null,
       })
       .select()
