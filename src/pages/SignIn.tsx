@@ -140,7 +140,7 @@ const SignIn = () => {
         // Get user's profile to find their profile ID
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, role')
           .eq('privy_id', user.id)
           .maybeSingle();
 
@@ -170,10 +170,10 @@ const SignIn = () => {
         
         if (redirectToHousingPreferences) {
           navigate("/housing-preferences", { replace: true });
-        } else if (isEventPage && (invoiceData || profileData.role === 'admin')) {
+        } else if (isEventPage && (invoiceData || profileData?.role === 'admin')) {
           // If trying to access a specific event page and has paid invoice or is admin
           navigate(intendedPath, { replace: true });
-        } else if (invoiceData || profileData.role === 'admin') {
+        } else if (invoiceData || profileData?.role === 'admin') {
           // User has a paid invoice or is admin, redirect to events
           navigate("/events", { replace: true });
         } else {

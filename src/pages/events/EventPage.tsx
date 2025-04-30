@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -22,7 +23,7 @@ const EventPage = () => {
   const [isRsvped, setIsRsvped] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const { toast } = useToast();
-  const location = useLocation();
+  const locationData = useLocation();
   const navigate = useNavigate();
   
   const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin } = usePaidInvoiceStatus(
@@ -31,16 +32,16 @@ const EventPage = () => {
   
   console.log("🎪 EventPage - Auth status:", { authenticated, userId: user?.id });
   console.log("🎪 EventPage - Invoice status:", { hasPaidInvoice, isPaidInvoiceLoading, isAdmin });
-  console.log("🎪 EventPage - Current path:", location.pathname);
+  console.log("🎪 EventPage - Current path:", locationData.pathname);
 
   // Handle unauthenticated users by redirecting to sign in with return path
   useEffect(() => {
     if (authenticated === false && !isPaidInvoiceLoading) {
       // Redirect to signin with the current path as a redirect parameter
-      const currentPath = location.pathname;
+      const currentPath = locationData.pathname;
       navigate(`/signin?redirect=${encodeURIComponent(currentPath)}`, { replace: true });
     }
-  }, [authenticated, isPaidInvoiceLoading, location.pathname, navigate]);
+  }, [authenticated, isPaidInvoiceLoading, locationData.pathname, navigate]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -202,26 +203,26 @@ const EventPage = () => {
     return <Navigate to="/404" replace />;
   }
 
-  const location = event?.locations ? 
+  const eventLocation = event?.locations ? 
     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
     event?.location_text;
 
-  const metaDescription = event.description 
+  const metaDescription = event?.description 
     ? (event.description.length > 160 ? `${event.description.substring(0, 157)}...` : event.description)
-    : `Event at ${location} on ${new Date(event.start_date).toLocaleDateString()}`;
+    : `Event at ${eventLocation} on ${new Date(event?.start_date).toLocaleDateString()}`;
 
   return (
     <>
       <Helmet>
         <title>{event?.title || "Event"} | Zuitzerland</title>
         <meta name="description" content={metaDescription} />
-        <meta property="og:title" content={`${event.title} | Zuitzerland`} />
+        <meta property="og:title" content={`${event?.title} | Zuitzerland`} />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:type" content="event" />
         <meta property="og:url" content={window.location.href} />
-        <meta property="event:start_time" content={new Date(event.start_date).toISOString()} />
-        <meta property="event:end_time" content={new Date(event.end_date).toISOString()} />
-        {location && <meta property="event:location" content={location} />}
+        {event?.start_date && <meta property="event:start_time" content={new Date(event.start_date).toISOString()} />}
+        {event?.end_date && <meta property="event:end_time" content={new Date(event.end_date).toISOString()} />}
+        {eventLocation && <meta property="event:location" content={eventLocation} />}
       </Helmet>
 
       {!authenticated ? (
@@ -233,7 +234,7 @@ const EventPage = () => {
             </p>
             <Button onClick={() => {
               // Pass the current URL as a redirect parameter
-              navigate(`/signin?redirect=${encodeURIComponent(location.pathname)}`);
+              navigate(`/signin?redirect=${encodeURIComponent(locationData.pathname)}`);
             }}>
               <LogIn className="mr-2 h-4 w-4" />
               Sign In
@@ -260,18 +261,18 @@ const EventPage = () => {
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row gap-6 items-start">
               <div className="md:hidden">
-                <EventDateBadge date={new Date(event.start_date)} />
+                <EventDateBadge date={new Date(event?.start_date)} />
               </div>
               
               <div className="flex-1 space-y-4">
                 <p className="text-muted-foreground">
-                  {event.profiles?.username && `Hosted by ${event.profiles.username}`}
+                  {event?.profiles?.username && `Hosted by ${event.profiles.username}`}
                 </p>
-                <h1 className="text-3xl font-bold text-foreground">{event.title}</h1>
+                <h1 className="text-3xl font-bold text-foreground">{event?.title}</h1>
                 
                 <div className="flex flex-wrap gap-4 items-center justify-between">
                   <div className="hidden md:block">
-                    <EventDateBadge date={new Date(event.start_date)} />
+                    <EventDateBadge date={new Date(event?.start_date)} />
                   </div>
                   
                   <div className="flex gap-3">
@@ -297,21 +298,21 @@ const EventPage = () => {
                 <Card className="border shadow-sm">
                   <div className="p-6">
                     <div className="prose max-w-none">
-                      <p className="text-muted-foreground">{event.description}</p>
+                      <p className="text-muted-foreground">{event?.description}</p>
                     </div>
                   </div>
                 </Card>
 
-                {(event.speakers || event.av_needs) && (
+                {(event?.speakers || event?.av_needs) && (
                   <Card className="border shadow-sm">
                     <div className="p-6 space-y-6">
-                      {event.speakers && (
+                      {event?.speakers && (
                         <div>
                           <h3 className="text-lg font-semibold mb-2 text-foreground">Speakers</h3>
                           <p className="text-muted-foreground">{event.speakers}</p>
                         </div>
                       )}
-                      {event.av_needs && (
+                      {event?.av_needs && (
                         <div>
                           <h3 className="text-lg font-semibold mb-2 text-foreground">AV Requirements</h3>
                           <p className="text-muted-foreground">{event.av_needs}</p>
@@ -324,11 +325,11 @@ const EventPage = () => {
 
               <div className="md:col-span-1">
                 <EventDetailsCard
-                  startDate={new Date(event.start_date)}
-                  endDate={new Date(event.end_date)}
-                  isAllDay={event.is_all_day}
-                  timezone={event.timezone}
-                  location={location}
+                  startDate={event?.start_date ? new Date(event.start_date) : new Date()}
+                  endDate={event?.end_date ? new Date(event.end_date) : new Date()}
+                  isAllDay={event?.is_all_day ?? false}
+                  timezone={event?.timezone ?? "Europe/Zurich"}
+                  location={eventLocation ?? ""}
                   totalRsvps={rsvps.length}
                   attendees={rsvps}
                 />
