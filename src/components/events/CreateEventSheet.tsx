@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
-import { Calendar as CalendarIcon, Clock, Link, AlertTriangle } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Link, AlertTriangle, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { toZonedTime } from "date-fns-tz";
@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { TagSelector } from "@/components/events/TagSelector";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 
 // Type definitions
 interface CreateEventSheetProps {
@@ -50,6 +51,8 @@ interface Event {
   timezone: string;
   recurring_pattern_id: string | null;
   is_recurring_instance: boolean;
+  meerkat_enabled?: boolean;
+  meerkat_url?: string;
 }
 
 interface Location {
@@ -90,6 +93,7 @@ interface NewEvent {
   timezone: string;
   recurring_pattern_id: string | null;
   is_recurring_instance: boolean;
+  meerkat_enabled?: boolean;
 }
 
 const TIME_ZONES = [
@@ -155,8 +159,14 @@ export function CreateEventSheet({
     link: "",
     timezone: 'Europe/Zurich',
     recurring_pattern_id: null,
-    is_recurring_instance: false
+    is_recurring_instance: false,
+    meerkat_enabled: false
   });
+  
+  // New state for Meerkat integration
+  const [isCreatingMeerkatEvent, setIsCreatingMeerkatEvent] = useState(false);
+  const [meerkatUrl, setMeerkatUrl] = useState<string | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!event;
 
@@ -178,10 +188,15 @@ export function CreateEventSheet({
         link: event.link,
         timezone: event.timezone || 'Europe/Zurich',
         recurring_pattern_id: event.recurring_pattern_id,
-        is_recurring_instance: event.is_recurring_instance
+        is_recurring_instance: event.is_recurring_instance,
+        meerkat_enabled: event.meerkat_enabled || false
       });
       
       setUseCustomLocation(!!event.location_text);
+      
+      if (event.meerkat_url) {
+        setMeerkatUrl(event.meerkat_url);
+      }
       
       if (event.id) {
         fetchEventTags(event.id);
@@ -365,11 +380,13 @@ export function CreateEventSheet({
       link: "",
       timezone: 'Europe/Zurich',
       recurring_pattern_id: null,
-      is_recurring_instance: false
+      is_recurring_instance: false,
+      meerkat_enabled: false
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
     setUseCustomLocation(false);
+    setMeerkatUrl(null);
   };
 
   const validateLocationAvailability = (availabilities: Availability[]) => {
@@ -463,6 +480,41 @@ export function CreateEventSheet({
       return true;
     } catch {
       return false;
+    }
+  };
+
+  const handleCreateMeerkatEvent = async (eventId: string) => {
+    try {
+      setIsCreatingMeerkatEvent(true);
+      
+      const { data, error } = await supabase.functions.invoke('create-meerkat-event', {
+        body: { eventId }
+      });
+      
+      if (error) {
+        throw new Error(`Failed to create Meerkat event: ${error.message}`);
+      }
+      
+      if (data.success) {
+        setMeerkatUrl(data.meerkatUrl);
+        toast({
+          title: "Meerkat Q&A created",
+          description: "Successfully created Q&A session for this event",
+        });
+        return data.meerkatUrl;
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (error) {
+      console.error('Error creating Meerkat event:', error);
+      toast({
+        title: "Error",
+        description: `Failed to create Meerkat Q&A: ${error.message}`,
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsCreatingMeerkatEvent(false);
     }
   };
 
@@ -643,10 +695,14 @@ export function CreateEventSheet({
         link: newEvent.link || null,
         timezone: newEvent.timezone,
         recurring_pattern_id: recurringPatternId,
-        is_recurring_instance: false
+        is_recurring_instance: false,
+        meerkat_enabled: newEvent.meerkat_enabled
       };
 
       console.log('Event data prepared for database:', eventData);
+
+      let eventId = "";
+      let meerkatUrlToSave = null;
 
       if (isEditMode) {
         console.log("Updating event:", event.id);
@@ -660,36 +716,33 @@ export function CreateEventSheet({
           console.error("Supabase update error:", error);
           throw error;
         }
-
-        console.log('Event updated successfully:', data);
-        if (data) {
+        
+        eventId = event.id;
+        
+        // Handle tag updates for existing event
+        if (selectedTags.length > 0) {
           await supabase
             .from('event_tag_relations')
             .delete()
             .eq('event_id', event.id);
 
-          if (selectedTags.length > 0) {
-            await supabase
-              .from('event_tag_relations')
-              .insert(
-                selectedTags.map(tag => ({
-                  event_id: event.id,
-                  tag_id: tag.id
-                }))
-              );
-          }
+          await supabase
+            .from('event_tag_relations')
+            .insert(
+              selectedTags.map(tag => ({
+                event_id: event.id,
+                tag_id: tag.id
+              }))
+            );
         }
       } else {
-        console.log('Creating new event with data:', {
-          ...eventData,
-          created_by: userProfile?.id
-        });
-        
+        // Create a new event
+        console.log("Creating new event");
         const { data, error } = await supabase
           .from('events')
           .insert({
             ...eventData,
-            created_by: userProfile?.id
+            created_by: userProfile?.id || "",
           })
           .select()
           .single();
@@ -698,9 +751,12 @@ export function CreateEventSheet({
           console.error("Supabase insert error:", error);
           throw error;
         }
-
-        console.log('New event created successfully:', data);
-        if (data && selectedTags.length > 0) {
+        
+        console.log("Event created:", data);
+        eventId = data.id;
+        
+        // Insert tags for new event
+        if (selectedTags.length > 0) {
           await supabase
             .from('event_tag_relations')
             .insert(
@@ -711,15 +767,26 @@ export function CreateEventSheet({
             );
         }
       }
+
+      // Create Meerkat Q&A session if enabled
+      if (newEvent.meerkat_enabled && !meerkatUrl) {
+        meerkatUrlToSave = await handleCreateMeerkatEvent(eventId);
+      }
+
+      toast({
+        title: isEditMode ? "Event updated" : "Event created",
+        description: isEditMode 
+          ? "Your event has been updated successfully"
+          : "Your event has been created successfully",
+      });
       
-      resetForm();
       onOpenChange(false);
       onSuccess();
     } catch (error) {
       console.error('Error saving event:', error);
       toast({
         title: "Error",
-        description: "Failed to save event: " + (error instanceof Error ? error.message : "Unknown error"),
+        description: `Failed to save event: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -813,286 +880,283 @@ export function CreateEventSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md md:max-w-lg h-full flex flex-col">
-        <SheetHeader className="mb-6 flex-shrink-0">
-          <SheetTitle>{isEditMode ? "Edit Event" : "Create New Event"}</SheetTitle>
+      <SheetContent className="w-full max-w-4xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{isEditMode ? "Edit Event" : "Create Event"}</SheetTitle>
           <SheetDescription>
-            {isEditMode ? "Update the details of this event" : "Fill in the details to create a new event"}
+            {isEditMode
+              ? "Update the details of your event."
+              : "Add a new event to your calendar."}
           </SheetDescription>
         </SheetHeader>
 
-        {isLoadingProfile ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-pulse">Loading user profile...</div>
-          </div>
-        ) : !userProfile && !isEditMode ? (
-          <div className="text-center py-8">
-            <p className="text-red-500">
-              User profile not found. Please complete your profile setup before creating events.
-            </p>
-          </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto space-y-6 pb-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Event Title</Label>
-                <Input 
-                  id="title" 
-                  value={newEvent.title}
-                  onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                  placeholder="Team Meeting"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea 
-                  id="description" 
-                  value={newEvent.description}
-                  onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                  placeholder="Details about the event..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is-all-day"
-                  checked={newEvent.is_all_day}
-                  onCheckedChange={(checked) => setNewEvent({...newEvent, is_all_day: checked})}
-                />
-                <Label htmlFor="is-all-day">All day event</Label>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {newEvent.start_date ? format(parseISO(newEvent.start_date), 'MMM d, yyyy') : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={newEvent.start_date ? parseISO(newEvent.start_date) : undefined}
-                        onSelect={(date) => handleDateChange('start', date)}
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {!newEvent.is_all_day && (
-                  <div className="space-y-2">
-                    <Label htmlFor="start-time">Start Time</Label>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <Input 
-                        id="start-time" 
-                        type="time"
-                        value={format(parseISO(newEvent.start_date), 'HH:mm')}
-                        onChange={(e) => handleTimeChange('start', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>End Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
-                        onSelect={(date) => handleDateChange('end', date)}
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {!newEvent.is_all_day && (
-                  <div className="space-y-2">
-                    <Label htmlFor="end-time">End Time</Label>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <Input 
-                        id="end-time" 
-                        type="time"
-                        value={format(parseISO(newEvent.end_date), 'HH:mm')}
-                        onChange={(e) => handleTimeChange('end', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Select
-                  value={newEvent.timezone}
-                  onValueChange={(value) => setNewEvent({ ...newEvent, timezone: value })}
-                >
-                  <SelectTrigger id="timezone">
-                    <SelectValue placeholder="Select timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIME_ZONES.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Location <span className="text-red-500">*</span></Label>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={useCustomLocation}
-                      onCheckedChange={setUseCustomLocation}
-                    />
-                    <Label>Use custom location</Label>
-                  </div>
-
-                  {useCustomLocation ? (
-                    <Input
-                      value={newEvent.location_text || ''}
-                      onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value, location_id: null})}
-                      placeholder="Enter custom location..."
-                      required
-                    />
-                  ) : (
-                    <>
-                      <Select
-                        value={newEvent.location_id || ''}
-                        onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locations.map((location) => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
-                              {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      {overlapValidationError && (
-                        <Alert variant="destructive" className="mt-2">
-                          <AlertTriangle className="h-4 w-4" />
-                          <AlertDescription className="ml-2">
-                            {overlapValidationError}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <TagSelector
-                  selectedTags={selectedTags}
-                  onTagsChange={setSelectedTags}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>A/V Needs</Label>
-                <Textarea 
-                  value={newEvent.av_needs}
-                  onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
-                  placeholder="Any specific A/V requirements (e.g., projector, microphone)"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2 mt-4">
-                <Label>Speakers</Label>
-                <Textarea 
-                  value={newEvent.speakers}
-                  onChange={(e) => setNewEvent({...newEvent, speakers: e.target.value})}
-                  placeholder="List of speakers for this event"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="link">Event Link (Optional)</Label>
-                <div className="flex items-center space-x-2">
-                  <Link className="h-4 w-4 text-gray-500" />
-                  <Input
-                    id="link"
-                    type="url"
-                    value={newEvent.link || ''}
-                    onChange={(e) => {
-                      const url = e.target.value;
-                      setNewEvent({...newEvent, link: url});
-                    }}
-                    onBlur={(e) => {
-                      const url = e.target.value;
-                      if (url && !validateUrl(url)) {
-                        toast({
-                          title: "Invalid URL",
-                          description: "Please enter a valid URL including http:// or https://",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    placeholder="https://example.com"
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              <RecurrenceSettings
-                isRecurring={isRecurring}
-                onIsRecurringChange={setIsRecurring}
-                frequency={recurrenceFrequency}
-                onFrequencyChange={setRecurrenceFrequency}
-                intervalCount={recurrenceInterval}
-                onIntervalCountChange={setRecurrenceInterval}
-                endDate={recurrenceEndDate}
-                onEndDateChange={setRecurrenceEndDate}
-                daysOfWeek={selectedDaysOfWeek}
-                onDaysOfWeekChange={setSelectedDaysOfWeek}
+        <div className="py-6 space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Event Title</Label>
+              <Input 
+                id="title" 
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                placeholder="Team Meeting"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea 
+                id="description" 
+                value={newEvent.description}
+                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                placeholder="Details about the event..."
+                rows={3}
               />
             </div>
 
-            <Button 
-              className="w-full" 
-              onClick={handleSubmit}
-              disabled={isSubmitting || (!userProfile && !isEditMode)}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is-all-day"
+                checked={newEvent.is_all_day}
+                onCheckedChange={(checked) => setNewEvent({...newEvent, is_all_day: checked})}
+              />
+              <Label htmlFor="is-all-day">All day event</Label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newEvent.start_date ? format(parseISO(newEvent.start_date), 'MMM d, yyyy') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={newEvent.start_date ? parseISO(newEvent.start_date) : undefined}
+                      onSelect={(date) => handleDateChange('start', date)}
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {!newEvent.is_all_day && (
+                <div className="space-y-2">
+                  <Label htmlFor="start-time">Start Time</Label>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <Input 
+                      id="start-time" 
+                      type="time"
+                      value={format(parseISO(newEvent.start_date), 'HH:mm')}
+                      onChange={(e) => handleTimeChange('start', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
+                      onSelect={(date) => handleDateChange('end', date)}
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {!newEvent.is_all_day && (
+                <div className="space-y-2">
+                  <Label htmlFor="end-time">End Time</Label>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <Input 
+                      id="end-time" 
+                      type="time"
+                      value={format(parseISO(newEvent.end_date), 'HH:mm')}
+                      onChange={(e) => handleTimeChange('end', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select
+                value={newEvent.timezone}
+                onValueChange={(value) => setNewEvent({ ...newEvent, timezone: value })}
+              >
+                <SelectTrigger id="timezone">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_ZONES.map((tz) => (
+                    <SelectItem key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Location <span className="text-red-500">*</span></Label>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={useCustomLocation}
+                    onCheckedChange={setUseCustomLocation}
+                  />
+                  <Label>Use custom location</Label>
+                </div>
+
+                {useCustomLocation ? (
+                  <Input
+                    value={newEvent.location_text || ''}
+                    onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value, location_id: null})}
+                    placeholder="Enter custom location..."
+                    required
+                  />
+                ) : (
+                  <>
+                    <Select
+                      value={newEvent.location_id || ''}
+                      onValueChange={(value) => setNewEvent({...newEvent, location_id: value, location_text: null})}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name}
+                            {location.building && ` (${location.building}${location.floor ? `, Floor ${location.floor}` : ""})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {overlapValidationError && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription className="ml-2">
+                          {overlapValidationError}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <TagSelector
+                selectedTags={selectedTags}
+                onTagsChange={setSelectedTags}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>A/V Needs</Label>
+              <Textarea 
+                value={newEvent.av_needs}
+                onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
+                placeholder="Any specific A/V requirements (e.g., projector, microphone)"
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2 mt-4">
+              <Label>Speakers</Label>
+              <Textarea 
+                id="speakers"
+                placeholder="Names of speakers (optional)"
+                value={newEvent.speakers || ""}
+                onChange={(e) => setNewEvent({ ...newEvent, speakers: e.target.value })}
+                className="resize-none"
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="link">Event Link (Optional)</Label>
+              <div className="flex items-center space-x-2">
+                <Link className="h-4 w-4 text-gray-500" />
+                <Input
+                  id="link"
+                  type="url"
+                  value={newEvent.link || ''}
+                  onChange={(e) => {
+                    const url = e.target.value;
+                    setNewEvent({...newEvent, link: url});
+                  }}
+                  onBlur={(e) => {
+                    const url = e.target.value;
+                    if (url && !validateUrl(url)) {
+                      toast({
+                        title: "Invalid URL",
+                        description: "Please enter a valid URL including http:// or https://",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  placeholder="https://example.com"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <RecurrenceSettings
+              isRecurring={isRecurring}
+              onIsRecurringChange={setIsRecurring}
+              frequency={recurrenceFrequency}
+              onFrequencyChange={setRecurrenceFrequency}
+              intervalCount={recurrenceInterval}
+              onIntervalCountChange={setRecurrenceInterval}
+              endDate={recurrenceEndDate}
+              onEndDateChange={setRecurrenceEndDate}
+              daysOfWeek={selectedDaysOfWeek}
+              onDaysOfWeekChange={setSelectedDaysOfWeek}
+            />
+          </div>
+
+          <div className="pt-4 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
             >
-              {isSubmitting ? "Saving..." : isEditMode ? "Update Event" : "Create Event"}
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : isEditMode ? "Update" : "Create"}
             </Button>
           </div>
-        )}
+        </div>
       </SheetContent>
     </Sheet>
   );

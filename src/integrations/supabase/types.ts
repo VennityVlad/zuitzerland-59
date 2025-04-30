@@ -369,6 +369,10 @@ export type Database = {
           link: string | null
           location_id: string | null
           location_text: string | null
+          meerkat_enabled: boolean | null
+          meerkat_status: string | null
+          meerkat_uid: string | null
+          meerkat_url: string | null
           recurring_pattern_id: string | null
           speakers: string | null
           start_date: string
@@ -389,6 +393,10 @@ export type Database = {
           link?: string | null
           location_id?: string | null
           location_text?: string | null
+          meerkat_enabled?: boolean | null
+          meerkat_status?: string | null
+          meerkat_uid?: string | null
+          meerkat_url?: string | null
           recurring_pattern_id?: string | null
           speakers?: string | null
           start_date: string
@@ -409,6 +417,10 @@ export type Database = {
           link?: string | null
           location_id?: string | null
           location_text?: string | null
+          meerkat_enabled?: boolean | null
+          meerkat_status?: string | null
+          meerkat_uid?: string | null
+          meerkat_url?: string | null
           recurring_pattern_id?: string | null
           speakers?: string | null
           start_date?: string

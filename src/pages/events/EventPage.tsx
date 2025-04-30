@@ -1,11 +1,10 @@
-
 import { useEffect, useState } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
-import { Share, LogIn, FileText } from "lucide-react";
+import { Share, LogIn, FileText, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { EventDateBadge } from "@/components/events/EventDateBadge";
@@ -302,6 +301,33 @@ const EventPage = () => {
                     </div>
                   </div>
                 </Card>
+
+                {/* Meerkat Q&A Section */}
+                {event?.meerkat_enabled && event?.meerkat_url && (
+                  <Card className="border shadow-sm border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <MessageSquare className="h-5 w-5 text-blue-500" />
+                        <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-400">
+                          Interactive Q&A Available
+                        </h3>
+                      </div>
+                      <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">
+                        This event has an interactive Q&A session. Join the conversation, ask questions, and participate in polls.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="bg-white dark:bg-blue-900 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300"
+                        asChild
+                      >
+                        <a href={event.meerkat_url} target="_blank" rel="noopener noreferrer">
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          Open Q&A Session
+                        </a>
+                      </Button>
+                    </div>
+                  </Card>
+                )}
 
                 {(event?.speakers || event?.av_needs) && (
                   <Card className="border shadow-sm">
