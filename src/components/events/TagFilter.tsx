@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +16,14 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface TagFilterProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
+  visibleTagIds?: string[];
 }
 
-export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
+export const TagFilter = ({ selectedTags, onTagsChange, visibleTagIds }: TagFilterProps) => {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  const { data: tags, isLoading } = useQuery({
+  const { data: allTags, isLoading } = useQuery({
     queryKey: ["event-tags"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,6 +34,12 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
       return data;
     },
   });
+
+  // Filter tags based on visibleTagIds if provided
+  const tags = React.useMemo(() => {
+    if (!visibleTagIds || !allTags) return allTags;
+    return allTags.filter(tag => visibleTagIds.includes(tag.id));
+  }, [allTags, visibleTagIds]);
 
   const toggleTag = (tagId: string) => {
     if (selectedTags.includes(tagId)) {
@@ -51,6 +58,16 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
     setOpen(false);
   };
 
+  // Clean up selected tags that are no longer in the visible tag list
+  useEffect(() => {
+    if (visibleTagIds && selectedTags.length > 0) {
+      const validSelectedTags = selectedTags.filter(id => visibleTagIds.includes(id));
+      if (validSelectedTags.length !== selectedTags.length) {
+        onTagsChange(validSelectedTags);
+      }
+    }
+  }, [visibleTagIds, selectedTags, onTagsChange]);
+
   const selectedCount = selectedTags.length;
 
   return (
@@ -62,6 +79,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
               variant="outline"
               size="sm"
               className="h-9 border-dashed flex-shrink-0"
+              disabled={!tags || tags.length === 0}
             >
               <ChevronDownIcon className="mr-2 h-4 w-4" />
               Filter by tag
@@ -137,7 +155,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
       {selectedTags.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {selectedTags.map((tagId) => {
-            const tag = tags?.find((t) => t.id === tagId);
+            const tag = allTags?.find((t) => t.id === tagId);
             if (!tag) return null;
             return (
               <Badge

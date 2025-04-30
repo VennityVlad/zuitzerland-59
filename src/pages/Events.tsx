@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
+import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,7 +76,7 @@ const Events = () => {
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("upcoming");
+  const [activeTab, setActiveTab] = useState<string>("today");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { user: privyUser } = usePrivy();
@@ -363,11 +363,51 @@ const Events = () => {
   };
 
   const currentDate = new Date();
+  
+  // Events categorized by tab filter types
+  const todayEvents = filteredEvents.filter(event => {
+    const startDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
+    return isToday(startDate) || isToday(endDate) || 
+      (isBefore(startDate, currentDate) && isBefore(currentDate, endDate));
+  });
+  
   const upcomingEvents = filteredEvents.filter(event => new Date(event.end_date) >= currentDate) || [];
   const pastEvents = filteredEvents.filter(event => new Date(event.end_date) < currentDate) || [];
-  
   const rsvpedEvents = filteredEvents.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
   const hostingEvents = filteredEvents.filter(event => event.created_by === profileId) || [];
+  const allEvents = filteredEvents;
+
+  // Extract unique tag IDs for each event category
+  const getUniqueTagIdsForEvents = (eventsList: EventWithProfile[]) => {
+    const tagIds = new Set<string>();
+    eventsList.forEach(event => {
+      event.event_tags?.forEach(tag => {
+        tagIds.add(tag.tags.id);
+      });
+    });
+    return Array.from(tagIds);
+  };
+
+  const todayTagIds = getUniqueTagIdsForEvents(todayEvents);
+  const goingTagIds = getUniqueTagIdsForEvents(rsvpedEvents);
+  const hostingTagIds = getUniqueTagIdsForEvents(hostingEvents);
+  const allTagIds = getUniqueTagIdsForEvents(allEvents);
+  const pastTagIds = getUniqueTagIdsForEvents(pastEvents);
+
+  // Get visible tag IDs based on the active tab
+  const getVisibleTagIds = () => {
+    switch (activeTab) {
+      case 'today': return todayTagIds;
+      case 'going': return goingTagIds;
+      case 'hosting': return hostingTagIds;
+      case 'all': return allTagIds;
+      case 'past': return pastTagIds;
+      default: return allTagIds;
+    }
+  };
+
+  const visibleTagIds = getVisibleTagIds();
 
   const clearFilters = () => {
     setSelectedTags([]);
@@ -503,7 +543,8 @@ const Events = () => {
           <div className="overflow-x-auto pb-2">
             <TagFilter 
               selectedTags={selectedTags} 
-              onTagsChange={setSelectedTags} 
+              onTagsChange={setSelectedTags}
+              visibleTagIds={visibleTagIds}
             />
           </div>
           
@@ -526,17 +567,18 @@ const Events = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="col-span-1 md:col-span-3">
-            <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4 mb-2">
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+            <Tabs defaultValue="today" className="w-full" onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-5 mb-2">
+                <TabsTrigger value="today">Today</TabsTrigger>
                 <TabsTrigger value="going">Going</TabsTrigger>
                 <TabsTrigger value="hosting">Hosting</TabsTrigger>
+                <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="past">Past</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="upcoming" className="space-y-4 mt-4">
+              <TabsContent value="today" className="space-y-4 mt-4">
                 {renderEventsList(
-                  upcomingEvents,
+                  todayEvents,
                   isLoading,
                   profileLoading,
                   canManageEvents,
@@ -579,6 +621,27 @@ const Events = () => {
               <TabsContent value="hosting" className="space-y-4 mt-4">
                 {renderEventsList(
                   hostingEvents,
+                  isLoading,
+                  profileLoading,
+                  canManageEvents,
+                  canEditEvent,
+                  openDeleteDialog,
+                  handleEditEvent,
+                  addToCalendar,
+                  formatDateForSidebar,
+                  formatEventTime,
+                  formatDateRange,
+                  rsvpMap,
+                  userRSVPEventIds,
+                  profileId,
+                  refetchRSVPs,
+                  isMobile,
+                  handleShare
+                )}
+              </TabsContent>
+              <TabsContent value="all" className="space-y-4 mt-4">
+                {renderEventsList(
+                  allEvents,
                   isLoading,
                   profileLoading,
                   canManageEvents,
