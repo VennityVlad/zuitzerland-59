@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { PageTitle } from "@/components/PageTitle";
 import { PrivacySettingsCard } from "@/components/privacy/PrivacySettingsCard";
+import { Json } from "@/integrations/supabase/types";
 
 type PrivacySettings = {
   event_rsvp_visibility: 'private' | 'public';
@@ -38,10 +39,22 @@ const PrivacyDashboard = () => {
         const visibilitySetting = data.opt_in_directory ? 'basic' : 'none';
         setDirectoryVisibility(visibilitySetting);
         
-        // Get other settings from privacy_settings JSON
-        let settings = data.privacy_settings || {...defaultPrivacySettings};
-        
-        setPrivacySettings(settings);
+        // Extract the privacy settings from JSON and ensure it conforms to our type
+        if (data.privacy_settings) {
+          // Extract the keys we need and provide defaults for missing values
+          const extractedSettings: PrivacySettings = {
+            event_rsvp_visibility: 
+              (data.privacy_settings.event_rsvp_visibility as 'private' | 'public') || 
+              defaultPrivacySettings.event_rsvp_visibility,
+            booking_info_retention_days: 
+              (data.privacy_settings.booking_info_retention_days as number) || 
+              defaultPrivacySettings.booking_info_retention_days
+          };
+          
+          setPrivacySettings(extractedSettings);
+        } else {
+          setPrivacySettings({...defaultPrivacySettings});
+        }
       } catch (error) {
         console.error('Error fetching privacy settings:', error);
       } finally {
