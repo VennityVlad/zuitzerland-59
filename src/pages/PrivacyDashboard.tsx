@@ -6,13 +6,11 @@ import { PageTitle } from "@/components/PageTitle";
 import { PrivacySettingsCard } from "@/components/privacy/PrivacySettingsCard";
 
 type PrivacySettings = {
-  directory_visibility: 'none' | 'basic' | 'full';
   event_rsvp_visibility: 'private' | 'public';
   booking_info_retention_days: number;
 };
 
 const defaultPrivacySettings: PrivacySettings = {
-  directory_visibility: 'none',
   event_rsvp_visibility: 'private',
   booking_info_retention_days: 90,
 };
@@ -20,6 +18,7 @@ const defaultPrivacySettings: PrivacySettings = {
 const PrivacyDashboard = () => {
   const { user, authenticated } = usePrivy();
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>(defaultPrivacySettings);
+  const [directoryVisibility, setDirectoryVisibility] = useState<'none' | 'basic' | 'full'>('none');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,12 +34,12 @@ const PrivacyDashboard = () => {
 
         if (error) throw error;
         
-        // Convert legacy opt_in_directory to directory_visibility if needed
-        let settings = data.privacy_settings || {...defaultPrivacySettings};
+        // Set directory visibility based on opt_in_directory boolean
+        const visibilitySetting = data.opt_in_directory ? 'basic' : 'none';
+        setDirectoryVisibility(visibilitySetting);
         
-        if (data.opt_in_directory !== null && settings.directory_visibility === 'none') {
-          settings.directory_visibility = data.opt_in_directory ? 'basic' : 'none';
-        }
+        // Get other settings from privacy_settings JSON
+        let settings = data.privacy_settings || {...defaultPrivacySettings};
         
         setPrivacySettings(settings);
       } catch (error) {
@@ -86,7 +85,11 @@ const PrivacyDashboard = () => {
         <div className="space-y-8">
           <PrivacySettingsCard
             initialSettings={privacySettings}
-            onUpdate={setPrivacySettings}
+            initialDirectoryVisibility={directoryVisibility}
+            onUpdate={(settings, visibility) => {
+              setPrivacySettings(settings);
+              setDirectoryVisibility(visibility);
+            }}
           />
         </div>
       </div>

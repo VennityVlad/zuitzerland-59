@@ -20,19 +20,21 @@ import { CalendarCheck } from "lucide-react";
 import { Clock } from "lucide-react";
 
 type PrivacySettings = {
-  directory_visibility: 'none' | 'basic' | 'full';
   event_rsvp_visibility: 'private' | 'public';
   booking_info_retention_days: number;
 };
 
 export const PrivacySettingsCard = ({ 
   initialSettings,
+  initialDirectoryVisibility,
   onUpdate
 }: { 
   initialSettings: PrivacySettings;
-  onUpdate: (settings: PrivacySettings) => void;
+  initialDirectoryVisibility: 'none' | 'basic' | 'full';
+  onUpdate: (settings: PrivacySettings, directoryVisibility: 'none' | 'basic' | 'full') => void;
 }) => {
   const [settings, setSettings] = useState<PrivacySettings>(initialSettings);
+  const [directoryVisibility, setDirectoryVisibility] = useState<'none' | 'basic' | 'full'>(initialDirectoryVisibility);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const { user } = usePrivy();
@@ -42,8 +44,8 @@ export const PrivacySettingsCard = ({
     
     setIsSaving(true);
     try {
-      // Determine opt_in_directory value based on directory_visibility
-      const optInDirectory = settings.directory_visibility !== 'none';
+      // Convert directory visibility to opt_in_directory boolean
+      const optInDirectory = directoryVisibility !== 'none';
 
       const { error } = await supabase
         .from('profiles')
@@ -55,7 +57,7 @@ export const PrivacySettingsCard = ({
 
       if (error) throw error;
 
-      onUpdate(settings);
+      onUpdate(settings, directoryVisibility);
       toast({
         title: "Settings saved",
         description: "Your privacy preferences have been updated",
@@ -87,9 +89,9 @@ export const PrivacySettingsCard = ({
             <div className="space-y-2 flex-1">
               <Label>Directory Visibility</Label>
               <Select
-                value={settings.directory_visibility}
+                value={directoryVisibility}
                 onValueChange={(value: 'none' | 'basic' | 'full') => 
-                  setSettings(s => ({ ...s, directory_visibility: value }))
+                  setDirectoryVisibility(value)
                 }
               >
                 <SelectTrigger>
