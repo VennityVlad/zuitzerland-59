@@ -1,3 +1,4 @@
+
 import { useLocation, useNavigate } from "react-router-dom";
 import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal, CheckSquare, ContactRound } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -102,15 +103,15 @@ const BottomNav = () => {
 
   const nonAdminWithoutPaidInvoiceItems: NavItem[] = [
     {
-      name: "Book",
-      icon: CalendarDays,
-      path: "/book",
-      showAlways: true,
-    },
-    {
       name: "Events",
       icon: Calendar,
       path: "/events",
+      showAlways: true,
+    },
+    {
+      name: "Book",
+      icon: CalendarDays,
+      path: "/book",
       showAlways: true,
     },
     {
@@ -129,15 +130,15 @@ const BottomNav = () => {
 
   const nonAdminWithPaidInvoiceItems: NavItem[] = [
     {
-      name: "Book",
-      icon: CalendarDays,
-      path: "/book",
-      showAlways: true,
-    },
-    {
       name: "Events",
       icon: Calendar,
       path: "/events",
+      showAlways: true,
+    },
+    {
+      name: "Book",
+      icon: CalendarDays,
+      path: "/book",
       showAlways: true,
     },
     ...(showOnboarding && hasPaidInvoice
@@ -317,6 +318,11 @@ const BottomNav = () => {
             {[
               ...(() => {
                 const mainNavItems: NavItem[] = [{
+                  name: "Events",
+                  icon: Calendar,
+                  path: "/events",
+                  showAlways: true,
+                }, {
                   name: "Book",
                   icon: CalendarDays,
                   path: "/book",
@@ -330,12 +336,6 @@ const BottomNav = () => {
                     showAlways: true,
                   });
                 }
-                mainNavItems.push({
-                  name: "Events",
-                  icon: Calendar,
-                  path: "/events",
-                  showAlways: true,
-                });
                 if (showDirectory && hasPaidInvoice) {
                   mainNavItems.push({
                     name: "Directory",

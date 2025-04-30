@@ -152,6 +152,11 @@ const NavMenu = () => {
 
   const regularMenuItems: MenuItem[] = [
     {
+      label: "Events",
+      icon: <Calendar className="h-5 w-5" />,
+      path: "/events",
+    },
+    {
       label: "Book",
       icon: <CalendarDays className="h-5 w-5" />,
       path: "/book",
@@ -161,11 +166,6 @@ const NavMenu = () => {
       icon: <CheckSquare className="h-5 w-5" />,
       path: "/onboarding",
     }] : []),
-    {
-      label: "Events",
-      icon: <Calendar className="h-5 w-5" />,
-      path: "/events",
-    },
     ...(showDirectory && hasPaidInvoice ? [{
       label: "Directory",
       icon: <ContactRound className="h-5 w-5" />,
