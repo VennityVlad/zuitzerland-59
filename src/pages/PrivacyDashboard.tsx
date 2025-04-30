@@ -5,9 +5,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageTitle } from "@/components/PageTitle";
 import { PrivacySettingsCard } from "@/components/privacy/PrivacySettingsCard";
 
+type PrivacySettings = {
+  directory_visibility: 'none' | 'basic' | 'full';
+  event_rsvp_visibility: 'private' | 'public';
+  booking_info_retention_days: number;
+};
+
+const defaultPrivacySettings: PrivacySettings = {
+  directory_visibility: 'none',
+  event_rsvp_visibility: 'private',
+  booking_info_retention_days: 90,
+};
+
 const PrivacyDashboard = () => {
   const { user, authenticated } = usePrivy();
-  const [privacySettings, setPrivacySettings] = useState(null);
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>(defaultPrivacySettings);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,12 +29,20 @@ const PrivacyDashboard = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('privacy_settings')
+          .select('privacy_settings, opt_in_directory')
           .eq('privy_id', user.id)
           .single();
 
         if (error) throw error;
-        setPrivacySettings(data.privacy_settings);
+        
+        // Convert legacy opt_in_directory to directory_visibility if needed
+        let settings = data.privacy_settings || {...defaultPrivacySettings};
+        
+        if (data.opt_in_directory !== null && settings.directory_visibility === 'none') {
+          settings.directory_visibility = data.opt_in_directory ? 'basic' : 'none';
+        }
+        
+        setPrivacySettings(settings);
       } catch (error) {
         console.error('Error fetching privacy settings:', error);
       } finally {
@@ -32,6 +52,8 @@ const PrivacyDashboard = () => {
 
     if (authenticated && user) {
       fetchPrivacySettings();
+    } else {
+      setLoading(false);
     }
   }, [user, authenticated]);
 
@@ -62,12 +84,10 @@ const PrivacyDashboard = () => {
       
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <div className="space-y-8">
-          {privacySettings && (
-            <PrivacySettingsCard
-              initialSettings={privacySettings}
-              onUpdate={setPrivacySettings}
-            />
-          )}
+          <PrivacySettingsCard
+            initialSettings={privacySettings}
+            onUpdate={setPrivacySettings}
+          />
         </div>
       </div>
     </div>
