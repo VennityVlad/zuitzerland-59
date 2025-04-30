@@ -93,7 +93,7 @@ const EventPage = () => {
           .from("event_rsvps")
           .select(`
             profile_id,
-            profiles:profiles(id, username, avatar_url)
+            profiles:profiles(id, username, avatar_url, privacy_settings)
           `)
           .eq("event_id", eventId);
 
