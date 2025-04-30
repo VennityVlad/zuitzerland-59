@@ -40,15 +40,20 @@ const PrivacyDashboard = () => {
         setDirectoryVisibility(visibilitySetting);
         
         // Extract the privacy settings from JSON and ensure it conforms to our type
-        if (data.privacy_settings) {
+        if (data.privacy_settings && typeof data.privacy_settings === 'object' && !Array.isArray(data.privacy_settings)) {
+          // Safely extract the values we need
+          const settings = data.privacy_settings as Record<string, Json>;
+          
           // Extract the keys we need and provide defaults for missing values
           const extractedSettings: PrivacySettings = {
             event_rsvp_visibility: 
-              (data.privacy_settings.event_rsvp_visibility as 'private' | 'public') || 
-              defaultPrivacySettings.event_rsvp_visibility,
+              (settings.event_rsvp_visibility === 'private' || settings.event_rsvp_visibility === 'public') 
+                ? settings.event_rsvp_visibility 
+                : defaultPrivacySettings.event_rsvp_visibility,
             booking_info_retention_days: 
-              (data.privacy_settings.booking_info_retention_days as number) || 
-              defaultPrivacySettings.booking_info_retention_days
+              typeof settings.booking_info_retention_days === 'number'
+                ? settings.booking_info_retention_days
+                : defaultPrivacySettings.booking_info_retention_days
           };
           
           setPrivacySettings(extractedSettings);
