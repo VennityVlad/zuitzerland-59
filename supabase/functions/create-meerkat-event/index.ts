@@ -82,6 +82,24 @@ serve(async (req) => {
       submissionType = "panel"
     }
     
+    // Process speakers field to ensure it's an array
+    let speakersArray = []
+    if (event.speakers) {
+      // If speakers is a string, convert to array with one element
+      if (typeof event.speakers === 'string') {
+        // Split speakers by comma if it contains commas
+        if (event.speakers.includes(',')) {
+          speakersArray = event.speakers.split(',').map(speaker => speaker.trim()).filter(Boolean)
+        } else {
+          speakersArray = [event.speakers.trim()]
+        }
+      } 
+      // If it's already an array, use as is
+      else if (Array.isArray(event.speakers)) {
+        speakersArray = event.speakers
+      }
+    }
+    
     // Create event payload for Meerkat API
     const payload = {
       uid: meerkatUID,
@@ -91,7 +109,7 @@ serve(async (req) => {
       end: event.end_date,
       description: event.description || undefined,
       abstract: event.description || undefined,
-      speaker: event.speakers || undefined
+      speakers: speakersArray  // Always provide as array
     }
     
     console.log('Sending payload to Meerkat API:', payload)
