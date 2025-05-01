@@ -15,11 +15,13 @@ interface EventRSVPAvatarsProps {
   profiles: RSVPProfile[];
   maxVisible?: number;
   eventId?: string; // Added eventId prop to match usage
+  rsvps?: RSVPProfile[]; // Add rsvps prop to match usage in Events.tsx
 }
 
-export function EventRSVPAvatars({ profiles, maxVisible = 5 }: EventRSVPAvatarsProps) {
-  const profilesToShow = profiles.slice(0, maxVisible);
-  const othersCount = profiles.length - profilesToShow.length;
+export function EventRSVPAvatars({ profiles, maxVisible = 5, rsvps }: EventRSVPAvatarsProps) {
+  // Use rsvps if provided, otherwise fall back to profiles
+  const profilesToShow = (rsvps || profiles).slice(0, maxVisible);
+  const othersCount = (rsvps || profiles).length - profilesToShow.length;
 
   return (
     <div className="flex items-center -space-x-2 mt-2">
