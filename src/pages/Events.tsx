@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn, Apple, MoreHorizontal } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -32,17 +32,6 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover";
-import { 
-  TooltipProvider,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from "@/components/ui/tooltip";
 
 interface Event {
   id: string;
@@ -528,280 +517,6 @@ const Events = () => {
     );
   }
 
-  const generateGoogleCalendarUrl = (event: Event) => {
-    const startDate = new Date(event.start_date);
-    const endDate = new Date(event.end_date);
-    
-    // Format dates in the format expected by Google Calendar
-    const formatGoogleDate = (date: Date) => {
-      return date.toISOString().replace(/-|:|\.\d+/g, '');
-    };
-    
-    const googleStart = formatGoogleDate(startDate);
-    const googleEnd = formatGoogleDate(endDate);
-    
-    // Create the URL with the necessary parameters
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: event.title,
-      dates: `${googleStart}/${googleEnd}`,
-      details: event.description || '',
-      location: event.location_text || event.locations?.name || '',
-    });
-    
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
-  };
-
-  const generateAppleCalendarData = (event: Event) => {
-    const startDate = new Date(event.start_date);
-    const endDate = new Date(event.end_date);
-    
-    const formatICalDate = (date: Date) => {
-      return date.toISOString().replace(/-|:|\.\d+/g, '').substring(0, 15) + 'Z';
-    };
-    
-    const icalStart = formatICalDate(startDate);
-    const icalEnd = formatICalDate(endDate);
-    
-    const icalContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Zuitzerland//Calendar App//EN',
-      'BEGIN:VEVENT',
-      `UID:${event.id}@zuitzerland.app`,
-      `DTSTAMP:${formatICalDate(new Date())}`,
-      `DTSTART:${icalStart}`,
-      `DTEND:${icalEnd}`,
-      `SUMMARY:${event.title}`,
-      event.description ? `DESCRIPTION:${event.description}` : '',
-      event.location_text || event.locations?.name ? `LOCATION:${event.location_text || event.locations?.name}` : '',
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].filter(Boolean).join('\r\n');
-    
-    return icalContent;
-  };
-
-  const downloadAppleCalendar = (event: Event) => {
-    const icalContent = generateAppleCalendarData(event);
-    
-    const blob = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
-    
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${event.title.replace(/\s+/g, '-')}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Calendar Event Created",
-      description: "The calendar file has been downloaded. Open it to add to your calendar app.",
-    });
-  };
-
-  const renderEventsList = (
-    events: EventWithProfile[], 
-    isLoading: boolean, 
-    profileLoading: boolean,
-    canManageEvents: boolean,
-    canEditEvent: (event: EventWithProfile) => boolean,
-    openDeleteDialog: (event: Event) => void,
-    handleEditEvent: (event: Event) => void,
-    addToCalendar: (event: Event) => void,
-    formatDateForSidebar: (date: Date) => JSX.Element,
-    formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
-    formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
-    rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
-    userRSVPEventIds: string[],
-    profileId: string | undefined,
-    refetchRSVPs: () => void,
-    isMobile: boolean,
-    handleShare: (event: Event) => void,
-    generateGoogleCalendarUrl: (event: Event) => string,
-    generateAppleCalendarData: (event: Event) => string,
-    downloadAppleCalendar: (event: Event) => void
-  ) => {
-    if (isLoading || profileLoading) {
-      return (
-        <div className="flex justify-center py-8">
-          <div className="animate-pulse">Loading events...</div>
-        </div>
-      );
-    }
-    if (!events || events.length === 0) {
-      return (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
-          <CalendarDays className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-medium">No events found</h3>
-          <p className="mt-2 text-sm text-gray-500">
-            {canManageEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
-          </p>
-          {canManageEvents && (
-            <Button className="mt-4" onClick={() => {}}>
-              <Plus className="mr-2 h-4 w-4" /> Create Event
-            </Button>
-          )}
-        </div>
-      );
-    }
-
-    const eventsByDate = events.reduce((acc, event) => {
-      const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
-      if (!acc[dateKey]) acc[dateKey] = [];
-      acc[dateKey].push(event);
-      return acc;
-    }, {} as Record<string, EventWithProfile[]>);
-
-    return (
-      <div className="space-y-8">
-        {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
-          const date = parseISO(dateEvents[0].start_date);
-          return (
-            <div key={dateKey} className="space-y-4">
-              {formatDateForSidebar(date)}
-              <div className="space-y-4">
-                {dateEvents.map((event) => (
-                  <Card key={event.id} className={`overflow-hidden ${event.color ? `border-l-4 border-l-[${event.color}]` : ''}`}>
-                    <CardContent className="p-4">
-                      <div className="flex flex-col space-y-4">
-                        <div className="flex justify-between items-start">
-                          <h3 className="text-lg font-semibold">{event.title}</h3>
-                          <div className="flex items-center space-x-2">
-                            {canEditEvent(event) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditEvent(event)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                            )}
-                            {canEditEvent(event) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDeleteDialog(event)}
-                                className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            )}
-                            
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <CalendarPlus className="h-4 w-4" />
-                                  <span className="sr-only">Add to Calendar</span>
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-56 p-2">
-                                <div className="space-y-2">
-                                  <h4 className="text-sm font-medium">Add to Calendar</h4>
-                                  <div className="flex flex-col gap-2">
-                                    <a 
-                                      href={generateGoogleCalendarUrl(event)} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 transition-colors"
-                                    >
-                                      <Calendar className="h-4 w-4" />
-                                      <span>Google Calendar</span>
-                                    </a>
-                                    <button 
-                                      onClick={() => downloadAppleCalendar(event)}
-                                      className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 transition-colors text-left"
-                                    >
-                                      <Apple className="h-4 w-4" />
-                                      <span>Apple Calendar</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleShare(event)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Share className="h-4 w-4" />
-                              <span className="sr-only">Share</span>
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            <span>{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
-                            <span>•</span>
-                            <span>{formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}</span>
-                          </div>
-                          
-                          {(event.location_text || event.locations?.name) && (
-                            <div className="flex items-center mt-1">
-                              <MapPin className="h-4 w-4 mr-1" />
-                              <span className="truncate">
-                                {event.location_text || event.locations?.name}
-                                {event.locations?.building && ` (${event.locations.building}${event.locations.floor ? `, ${event.locations.floor}` : ''})`}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {(event.speakers && event.speakers?.length > 0) && (
-                            <div className="flex items-center mt-1">
-                              <Mic className="h-4 w-4 mr-1" />
-                              <span>{event.speakers}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {event.description && (
-                          <p className="text-sm mt-2">{event.description}</p>
-                        )}
-                        
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {event.event_tags?.map((tag) => (
-                            <Badge variant="secondary" key={tag.tags.id}>
-                              <Tag className="mr-1 h-3 w-3" />
-                              {tag.tags.name}
-                            </Badge>
-                          ))}
-                        </div>
-                        
-                        <div className="flex justify-between items-center mt-2">
-                          <EventRSVPAvatars 
-                            eventId={event.id} 
-                            rsvps={rsvpMap[event.id] || []} 
-                          />
-                          <EventRSVPButton 
-                            eventId={event.id}
-                            profileId={profileId}
-                            isAttending={userRSVPEventIds.includes(event.id)}
-                            onUpdate={refetchRSVPs}
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -879,10 +594,7 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare,
-                  generateGoogleCalendarUrl,
-                  generateAppleCalendarData,
-                  downloadAppleCalendar
+                  handleShare
                 )}
               </TabsContent>
               <TabsContent value="going" className="space-y-4 mt-4">
@@ -903,10 +615,7 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare,
-                  generateGoogleCalendarUrl,
-                  generateAppleCalendarData,
-                  downloadAppleCalendar
+                  handleShare
                 )}
               </TabsContent>
               <TabsContent value="hosting" className="space-y-4 mt-4">
@@ -927,10 +636,7 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare,
-                  generateGoogleCalendarUrl,
-                  generateAppleCalendarData,
-                  downloadAppleCalendar
+                  handleShare
                 )}
               </TabsContent>
               <TabsContent value="all" className="space-y-4 mt-4">
@@ -951,10 +657,7 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare,
-                  generateGoogleCalendarUrl,
-                  generateAppleCalendarData,
-                  downloadAppleCalendar
+                  handleShare
                 )}
               </TabsContent>
               <TabsContent value="past" className="space-y-4 mt-4">
@@ -975,10 +678,7 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare,
-                  generateGoogleCalendarUrl,
-                  generateAppleCalendarData,
-                  downloadAppleCalendar
+                  handleShare
                 )}
               </TabsContent>
             </Tabs>
@@ -1024,6 +724,206 @@ const Events = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+};
+
+const renderEventsList = (
+  events: EventWithProfile[], 
+  isLoading: boolean, 
+  profileLoading: boolean,
+  canManageEvents: boolean,
+  canEditEvent: (event: EventWithProfile) => boolean,
+  openDeleteDialog: (event: Event) => void,
+  handleEditEvent: (event: Event) => void,
+  addToCalendar: (event: Event) => void,
+  formatDateForSidebar: (date: Date) => JSX.Element,
+  formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
+  formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
+  rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
+  userRSVPEventIds: string[],
+  profileId: string | undefined,
+  refetchRSVPs: () => void,
+  isMobile: boolean,
+  handleShare: (event: Event) => void
+) => {
+  if (isLoading || profileLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-pulse">Loading events...</div>
+      </div>
+    );
+  }
+  if (!events || events.length === 0) {
+    return (
+      <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
+        <CalendarDays className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-4 text-lg font-medium">No events found</h3>
+        <p className="mt-2 text-sm text-gray-500">
+          {canManageEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
+        </p>
+        {canManageEvents && (
+          <Button className="mt-4" onClick={() => {}}>
+            <Plus className="mr-2 h-4 w-4" /> Create Event
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  const eventsByDate = events.reduce((acc, event) => {
+    const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(event);
+    return acc;
+  }, {} as Record<string, EventWithProfile[]>);
+
+  return (
+    <div className="space-y-8">
+      {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
+        const date = parseISO(dateEvents[0].start_date);
+        return (
+          <div key={dateKey} className="relative">
+            <div className="flex flex-col sm:flex-row">
+              <div className="mr-4 w-full sm:w-20 flex-shrink-0 flex flex-row sm:flex-col items-center mb-4 sm:mb-0">
+                {formatDateForSidebar(date)}
+                <div className="hidden sm:block h-full w-0.5 bg-gray-200 mt-2 rounded-full"></div>
+              </div>
+              
+              <div className="flex-1 space-y-4 w-full">
+                {dateEvents.map((event) => {
+                  const isRSVPed = !!profileId && userRSVPEventIds.includes(event.id);
+                  const rsvpProfiles = rsvpMap[event.id] || [];
+                  const location = event.locations ? 
+                    `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
+                    event.location_text;
+
+                  return (
+                    <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200 w-full">
+                      <div className="h-1" style={{ backgroundColor: event.color }}></div>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                          <Badge className="w-fit" variant="outline">
+                            {formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}
+                          </Badge>
+                        </div>
+                        
+                        <Link to={`/events/${event.id}`} className="hover:underline">
+                          <h3 className="text-xl font-bold mb-2 break-words">{event.title}</h3>
+                        </Link>
+                        
+                        <div className="flex items-center text-sm text-gray-600 mb-3">
+                          <Calendar className="h-4 w-4 mr-2 flex-shrink-0 text-gray-500" />
+                          <span className="truncate">{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
+                        </div>
+                        {event.description && (
+                          <p className="text-sm text-gray-600 mb-4 break-words">{event.description}</p>
+                        )}
+                        <div className="space-y-2 text-sm">
+                          {location && (
+                            <div className="flex items-start">
+                              <MapPin className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                              <span className="break-words">{location}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
+                            <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
+                          </div>
+                        </div>
+
+                        {event.event_tags && event.event_tags.length > 0 && (
+                          <div className="flex items-start gap-2 mt-4">
+                            <Tag className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <div className="flex flex-wrap gap-2">
+                              {event.event_tags.map(tag => (
+                                <Badge key={tag.tags.id} variant="secondary">
+                                  {tag.tags.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {event.speakers && (
+                          <div className="flex items-start gap-2 mt-4">
+                            <Mic className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-gray-600 break-words">
+                              <span className="font-semibold">Speakers:</span> {event.speakers}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {!!profileId && new Date(event.end_date) >= new Date() && (
+                            <EventRSVPButton
+                              eventId={event.id}
+                              profileId={profileId}
+                              initialRSVP={isRSVPed}
+                              onChange={() => refetchRSVPs()}
+                            />
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addToCalendar(event)}
+                            className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                          >
+                            <CalendarPlus className="h-4 w-4 mr-2" />
+                            {isMobile ? "" : "Add to Calendar"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault(); // Prevent navigation when clicking share
+                              handleShare(event);
+                            }}
+                            className="text-gray-500 border-gray-500 hover:bg-gray-50"
+                          >
+                            <Share className="h-4 w-4 mr-2" />
+                            {isMobile ? "" : "Share"}
+                          </Button>
+                          {canEditEvent(event) && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditEvent(event)}
+                                className="text-amber-500 border-amber-500 hover:bg-amber-50"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                {isMobile ? "" : "Edit"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openDeleteDialog(event)}
+                                className="text-red-500 border-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {isMobile ? "" : "Delete"}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                        {rsvpProfiles.length > 0 && (
+                          <div className="mt-4">
+                            <span className="text-xs text-gray-600 mb-1 block">
+                              Going: {rsvpProfiles.length}
+                            </span>
+                            <EventRSVPAvatars profiles={rsvpProfiles} />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
