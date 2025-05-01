@@ -45,7 +45,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Network first, falling back to cache
+  // Only cache GET requests as the Cache API doesn't support other methods
+  if (event.request.method !== 'GET') {
+    return fetch(event.request);
+  }
+
+  // Network first, falling back to cache for GET requests
   event.respondWith(
     fetch(event.request)
       .then(response => {
