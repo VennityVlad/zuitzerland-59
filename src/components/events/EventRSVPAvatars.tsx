@@ -14,6 +14,7 @@ interface RSVPProfile {
 interface EventRSVPAvatarsProps {
   profiles: RSVPProfile[];
   maxVisible?: number;
+  eventId?: string; // Added eventId prop to match usage
 }
 
 export function EventRSVPAvatars({ profiles, maxVisible = 5 }: EventRSVPAvatarsProps) {
