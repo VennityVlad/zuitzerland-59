@@ -848,4 +848,77 @@ const renderEventsList = (
 
                         {event.speakers && (
                           <div className="flex items-start gap-2 mt-4">
-                            <Mic className="h-4 w-4 text
+                            <Mic className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-gray-600 break-words">
+                              <span className="font-semibold">Speakers:</span> {event.speakers}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {!!profileId && new Date(event.end_date) >= new Date() && (
+                            <EventRSVPButton
+                              eventId={event.id}
+                              profileId={profileId}
+                              initialRSVP={isRSVPed}
+                              onChange={() => refetchRSVPs()}
+                            />
+                          )}
+                          <CalendarOptionsPopover event={event} />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault(); // Prevent navigation when clicking share
+                              handleShare(event);
+                            }}
+                            className="text-gray-500 border-gray-500 hover:bg-gray-50"
+                          >
+                            <Share className="h-4 w-4 mr-2" />
+                            {isMobile ? "" : "Share"}
+                          </Button>
+                          {canEditEvent(event) && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditEvent(event)}
+                                className="text-amber-500 border-amber-500 hover:bg-amber-50"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                {isMobile ? "" : "Edit"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openDeleteDialog(event)}
+                                className="text-red-500 border-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {isMobile ? "" : "Delete"}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                        {rsvpProfiles.length > 0 && (
+                          <div className="mt-4">
+                            <span className="text-xs text-gray-600 mb-1 block">
+                              Going: {rsvpProfiles.length}
+                            </span>
+                            <EventRSVPAvatars eventId={event.id} rsvps={rsvpProfiles} />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export default Events;
