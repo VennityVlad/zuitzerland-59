@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -139,6 +138,8 @@ export function CreateEventSheet({
   const [selectedTags, setSelectedTags] = useState<{ id: string; name: string; color: string; }[]>([]);
   const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [locationRequired, setLocationRequired] = useState(false);
+  
+  // Recurring event states
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>('weekly');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
@@ -199,6 +200,11 @@ export function CreateEventSheet({
         setMeerkatUrl(event.meerkat_url);
       }
       
+      if (event.recurring_pattern_id) {
+        setIsRecurring(true);
+        fetchRecurringPattern(event.recurring_pattern_id);
+      }
+      
       if (event.id) {
         fetchEventTags(event.id);
       }
@@ -212,6 +218,28 @@ export function CreateEventSheet({
       resetForm();
     }
   }, [event]);
+
+  // Add the function to fetch recurring pattern details
+  const fetchRecurringPattern = async (patternId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('recurring_event_patterns')
+        .select('*')
+        .eq('id', patternId)
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setRecurrenceFrequency(data.frequency as RecurrenceFrequency);
+        setRecurrenceInterval(data.interval_count);
+        setSelectedDaysOfWeek(data.days_of_week || []);
+        setRecurrenceEndDate(data.end_date ? new Date(data.end_date) : null);
+      }
+    } catch (error) {
+      console.error("Error fetching recurring pattern:", error);
+    }
+  };
 
   const fetchEventTags = async (eventId: string) => {
     try {
@@ -388,6 +416,13 @@ export function CreateEventSheet({
     setAvailabilityValidationError(null);
     setUseCustomLocation(false);
     setMeerkatUrl(null);
+    
+    // Reset recurrence state
+    setIsRecurring(false);
+    setRecurrenceFrequency('weekly');
+    setRecurrenceInterval(1);
+    setRecurrenceEndDate(null);
+    setSelectedDaysOfWeek([]);
   };
 
   const validateLocationAvailability = (availabilities: Availability[]) => {
@@ -1116,6 +1151,23 @@ export function CreateEventSheet({
                 onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
                 placeholder="Any specific A/V requirements (e.g., projector, microphone)"
                 rows={2}
+              />
+            </div>
+
+            {/* Recurring Event Options */}
+            <div className="border-t pt-4">
+              <h3 className="text-md font-medium mb-4">Recurring Event Options</h3>
+              <RecurrenceSettings
+                isRecurring={isRecurring}
+                onIsRecurringChange={setIsRecurring}
+                frequency={recurrenceFrequency}
+                onFrequencyChange={setRecurrenceFrequency}
+                intervalCount={recurrenceInterval}
+                onIntervalCountChange={setRecurrenceInterval}
+                endDate={recurrenceEndDate}
+                onEndDateChange={setRecurrenceEndDate}
+                daysOfWeek={selectedDaysOfWeek}
+                onDaysOfWeekChange={setSelectedDaysOfWeek}
               />
             </div>
 
