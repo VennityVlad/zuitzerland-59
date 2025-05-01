@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn } from "lucide-react";
+import { CalendarDays, Plus, Trash2, CalendarPlus, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn, Apple, MoreHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -32,6 +32,17 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import { 
+  TooltipProvider,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 
 interface Event {
   id: string;
@@ -517,6 +528,78 @@ const Events = () => {
     );
   }
 
+  const generateGoogleCalendarUrl = (event: Event) => {
+    const startDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
+    
+    // Format dates in the format expected by Google Calendar
+    const formatGoogleDate = (date: Date) => {
+      return date.toISOString().replace(/-|:|\.\d+/g, '');
+    };
+    
+    const googleStart = formatGoogleDate(startDate);
+    const googleEnd = formatGoogleDate(endDate);
+    
+    // Create the URL with the necessary parameters
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: event.title,
+      dates: `${googleStart}/${googleEnd}`,
+      details: event.description || '',
+      location: event.location_text || event.locations?.name || '',
+    });
+    
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  };
+
+  const generateAppleCalendarData = (event: Event) => {
+    const startDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
+    
+    const formatICalDate = (date: Date) => {
+      return date.toISOString().replace(/-|:|\.\d+/g, '').substring(0, 15) + 'Z';
+    };
+    
+    const icalStart = formatICalDate(startDate);
+    const icalEnd = formatICalDate(endDate);
+    
+    const icalContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Zuitzerland//Calendar App//EN',
+      'BEGIN:VEVENT',
+      `UID:${event.id}@zuitzerland.app`,
+      `DTSTAMP:${formatICalDate(new Date())}`,
+      `DTSTART:${icalStart}`,
+      `DTEND:${icalEnd}`,
+      `SUMMARY:${event.title}`,
+      event.description ? `DESCRIPTION:${event.description}` : '',
+      event.location_text || event.locations?.name ? `LOCATION:${event.location_text || event.locations?.name}` : '',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].filter(Boolean).join('\r\n');
+    
+    return icalContent;
+  };
+
+  const downloadAppleCalendar = (event: Event) => {
+    const icalContent = generateAppleCalendarData(event);
+    
+    const blob = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${event.title.replace(/\s+/g, '-')}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Calendar Event Created",
+      description: "The calendar file has been downloaded. Open it to add to your calendar app.",
+    });
+  };
+
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -594,7 +677,10 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare
+                  handleShare,
+                  generateGoogleCalendarUrl,
+                  generateAppleCalendarData,
+                  downloadAppleCalendar
                 )}
               </TabsContent>
               <TabsContent value="going" className="space-y-4 mt-4">
@@ -615,7 +701,10 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare
+                  handleShare,
+                  generateGoogleCalendarUrl,
+                  generateAppleCalendarData,
+                  downloadAppleCalendar
                 )}
               </TabsContent>
               <TabsContent value="hosting" className="space-y-4 mt-4">
@@ -636,7 +725,10 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare
+                  handleShare,
+                  generateGoogleCalendarUrl,
+                  generateAppleCalendarData,
+                  downloadAppleCalendar
                 )}
               </TabsContent>
               <TabsContent value="all" className="space-y-4 mt-4">
@@ -657,7 +749,10 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare
+                  handleShare,
+                  generateGoogleCalendarUrl,
+                  generateAppleCalendarData,
+                  downloadAppleCalendar
                 )}
               </TabsContent>
               <TabsContent value="past" className="space-y-4 mt-4">
@@ -678,7 +773,10 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare
+                  handleShare,
+                  generateGoogleCalendarUrl,
+                  generateAppleCalendarData,
+                  downloadAppleCalendar
                 )}
               </TabsContent>
             </Tabs>
@@ -745,7 +843,10 @@ const renderEventsList = (
   profileId: string | undefined,
   refetchRSVPs: () => void,
   isMobile: boolean,
-  handleShare: (event: Event) => void
+  handleShare: (event: Event) => void,
+  generateGoogleCalendarUrl: (event: Event) => string,
+  generateAppleCalendarData: (event: Event) => string,
+  downloadAppleCalendar: (event: Event) => void
 ) => {
   if (isLoading || profileLoading) {
     return (
@@ -783,149 +884,4 @@ const renderEventsList = (
       {Object.entries(eventsByDate).map(([dateKey, dateEvents]) => {
         const date = parseISO(dateEvents[0].start_date);
         return (
-          <div key={dateKey} className="relative">
-            <div className="flex flex-col sm:flex-row">
-              <div className="mr-4 w-full sm:w-20 flex-shrink-0 flex flex-row sm:flex-col items-center mb-4 sm:mb-0">
-                {formatDateForSidebar(date)}
-                <div className="hidden sm:block h-full w-0.5 bg-gray-200 mt-2 rounded-full"></div>
-              </div>
-              
-              <div className="flex-1 space-y-4 w-full">
-                {dateEvents.map((event) => {
-                  const isRSVPed = !!profileId && userRSVPEventIds.includes(event.id);
-                  const rsvpProfiles = rsvpMap[event.id] || [];
-                  const location = event.locations ? 
-                    `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
-                    event.location_text;
-
-                  return (
-                    <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200 w-full">
-                      <div className="h-1" style={{ backgroundColor: event.color }}></div>
-                      <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                          <Badge className="w-fit" variant="outline">
-                            {formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}
-                          </Badge>
-                        </div>
-                        
-                        <Link to={`/events/${event.id}`} className="hover:underline">
-                          <h3 className="text-xl font-bold mb-2 break-words">{event.title}</h3>
-                        </Link>
-                        
-                        <div className="flex items-center text-sm text-gray-600 mb-3">
-                          <Calendar className="h-4 w-4 mr-2 flex-shrink-0 text-gray-500" />
-                          <span className="truncate">{formatDateRange(event.start_date, event.end_date, event.is_all_day)}</span>
-                        </div>
-                        {event.description && (
-                          <p className="text-sm text-gray-600 mb-4 break-words">{event.description}</p>
-                        )}
-                        <div className="space-y-2 text-sm">
-                          {location && (
-                            <div className="flex items-start">
-                              <MapPin className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
-                              <span className="break-words">{location}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
-                            <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
-                          </div>
-                        </div>
-
-                        {event.event_tags && event.event_tags.length > 0 && (
-                          <div className="flex items-start gap-2 mt-4">
-                            <Tag className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                            <div className="flex flex-wrap gap-2">
-                              {event.event_tags.map(tag => (
-                                <Badge key={tag.tags.id} variant="secondary">
-                                  {tag.tags.name}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {event.speakers && (
-                          <div className="flex items-start gap-2 mt-4">
-                            <Mic className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm text-gray-600 break-words">
-                              <span className="font-semibold">Speakers:</span> {event.speakers}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          {!!profileId && new Date(event.end_date) >= new Date() && (
-                            <EventRSVPButton
-                              eventId={event.id}
-                              profileId={profileId}
-                              initialRSVP={isRSVPed}
-                              onChange={() => refetchRSVPs()}
-                            />
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => addToCalendar(event)}
-                            className="text-blue-500 border-blue-500 hover:bg-blue-50"
-                          >
-                            <CalendarPlus className="h-4 w-4 mr-2" />
-                            {isMobile ? "" : "Add to Calendar"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault(); // Prevent navigation when clicking share
-                              handleShare(event);
-                            }}
-                            className="text-gray-500 border-gray-500 hover:bg-gray-50"
-                          >
-                            <Share className="h-4 w-4 mr-2" />
-                            {isMobile ? "" : "Share"}
-                          </Button>
-                          {canEditEvent(event) && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditEvent(event)}
-                                className="text-amber-500 border-amber-500 hover:bg-amber-50"
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                {isMobile ? "" : "Edit"}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openDeleteDialog(event)}
-                                className="text-red-500 border-red-500 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {isMobile ? "" : "Delete"}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                        {rsvpProfiles.length > 0 && (
-                          <div className="mt-4">
-                            <span className="text-xs text-gray-600 mb-1 block">
-                              Going: {rsvpProfiles.length}
-                            </span>
-                            <EventRSVPAvatars profiles={rsvpProfiles} />
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-export default Events;
+          <div key={dateKey} className="
