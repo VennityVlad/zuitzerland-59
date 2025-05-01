@@ -21,4 +21,12 @@ export default defineConfig(({ mode }) => ({
     },
   },
   base: '/', // Root-relative paths for better compatibility
+  define: {
+    // Add environment variables
+    'process.env.NODE_ENV': JSON.stringify(mode),
+    'process.env.IS_LOVABLE_PREVIEW': JSON.stringify(
+      process.env.LOVABLE_PREVIEW === 'true' || 
+      process.env.NODE_ENV === 'development'
+    ),
+  },
 }));

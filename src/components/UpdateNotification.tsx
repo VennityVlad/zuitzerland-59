@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { toast } from "sonner";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { RefreshCw, AlertCircle, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkForUpdates, forceRefresh } from '@/serviceWorkerRegistration';
 
@@ -10,6 +10,7 @@ const CHECK_INTERVAL = 30 * 60 * 1000;
 
 export function UpdateNotification() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [isPreviewEnv, setIsPreviewEnv] = useState(false);
 
   const handleRefresh = () => {
     forceRefresh();
@@ -19,6 +20,11 @@ export function UpdateNotification() {
     // Check for updates on load
     const checkForUpdate = async () => {
       const result = await checkForUpdates();
+      if (result.previewEnvironment) {
+        setIsPreviewEnv(true);
+        return;
+      }
+      
       if (result.updateAvailable) {
         setUpdateAvailable(true);
       }
@@ -33,18 +39,21 @@ export function UpdateNotification() {
     
     document.addEventListener('appUpdateAvailable', handleUpdateFound);
     
-    // Set up periodic checks
-    const intervalId = setInterval(checkForUpdate, CHECK_INTERVAL);
+    // Set up periodic checks (only if not in preview)
+    let intervalId: number | undefined;
+    if (!isPreviewEnv) {
+      intervalId = window.setInterval(checkForUpdate, CHECK_INTERVAL);
+    }
     
     return () => {
       document.removeEventListener('appUpdateAvailable', handleUpdateFound);
-      clearInterval(intervalId);
+      if (intervalId) clearInterval(intervalId);
     };
-  }, []);
+  }, [isPreviewEnv]);
   
   useEffect(() => {
-    // Show toast when update is available
-    if (updateAvailable) {
+    // Show toast when update is available (only if not in preview)
+    if (updateAvailable && !isPreviewEnv) {
       toast.custom(
         (id) => (
           <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4">
@@ -89,7 +98,12 @@ export function UpdateNotification() {
         }
       );
     }
-  }, [updateAvailable]);
+
+    // In preview environments, we can optionally show a developer indicator
+    if (isPreviewEnv && process.env.NODE_ENV === 'development') {
+      console.log('Running in Lovable preview environment - service worker disabled');
+    }
+  }, [updateAvailable, isPreviewEnv]);
 
   return null; // This is a non-visual component
 }
