@@ -12,13 +12,13 @@ interface RSVPProfile {
 }
 
 interface EventRSVPAvatarsProps {
-  profiles: RSVPProfile[];
+  profiles?: RSVPProfile[]; // Made profiles optional when rsvps is provided
   maxVisible?: number;
-  eventId?: string; // Added eventId prop to match usage
-  rsvps?: RSVPProfile[]; // Add rsvps prop to match usage in Events.tsx
+  eventId?: string;
+  rsvps?: RSVPProfile[];
 }
 
-export function EventRSVPAvatars({ profiles, maxVisible = 5, rsvps }: EventRSVPAvatarsProps) {
+export function EventRSVPAvatars({ profiles = [], maxVisible = 5, rsvps }: EventRSVPAvatarsProps) {
   // Use rsvps if provided, otherwise fall back to profiles
   const profilesToShow = (rsvps || profiles).slice(0, maxVisible);
   const othersCount = (rsvps || profiles).length - profilesToShow.length;
