@@ -864,7 +864,7 @@ const renderEventsList = (
                               onChange={() => refetchRSVPs()}
                             />
                           )}
-                          <CalendarOptionsPopover event={event} />
+                          <CalendarOptionsPopover event={event} isMobile={isMobile} />
                           <Button
                             variant="outline"
                             size="sm"
@@ -905,7 +905,7 @@ const renderEventsList = (
                             <span className="text-xs text-gray-600 mb-1 block">
                               Going: {rsvpProfiles.length}
                             </span>
-                            <EventRSVPAvatars eventId={event.id} rsvps={rsvpProfiles} />
+                            <EventRSVPAvatars profiles={rsvpProfiles} />
                           </div>
                         )}
                       </CardContent>
