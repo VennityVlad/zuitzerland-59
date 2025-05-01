@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday } from "date-fns";
@@ -864,7 +865,15 @@ const renderEventsList = (
                               onChange={() => refetchRSVPs()}
                             />
                           )}
-                          <CalendarOptionsPopover event={event} isMobile={isMobile} />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addToCalendar(event)}
+                            className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                          >
+                            <CalendarPlus className="h-4 w-4 mr-2" />
+                            {isMobile ? "" : "Add to Calendar"}
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
