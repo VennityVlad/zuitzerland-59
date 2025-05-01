@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -974,4 +975,219 @@ export function CreateEventSheet({
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
                     </Button>
-                  </
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
+                      onSelect={(date) => handleDateChange('end', date)}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {!newEvent.is_all_day && (
+                <div className="space-y-2">
+                  <Label htmlFor="end-time">End Time</Label>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <Input 
+                      id="end-time" 
+                      type="time"
+                      value={format(parseISO(newEvent.end_date), 'HH:mm')}
+                      onChange={(e) => handleTimeChange('end', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select 
+                value={newEvent.timezone} 
+                onValueChange={(value) => setNewEvent({...newEvent, timezone: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_ZONES.map(tz => (
+                    <SelectItem key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Location</Label>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="custom-location" className="text-sm text-muted-foreground">
+                    Use custom location
+                  </Label>
+                  <Switch 
+                    id="custom-location" 
+                    checked={useCustomLocation} 
+                    onCheckedChange={setUseCustomLocation} 
+                  />
+                </div>
+              </div>
+              
+              {useCustomLocation ? (
+                <Input 
+                  placeholder="Custom location (e.g., Online, Café, etc.)" 
+                  value={newEvent.location_text || ''} 
+                  onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value})}
+                />
+              ) : (
+                <div className="space-y-2">
+                  <Select value={newEvent.location_id || ''} onValueChange={handleLocationChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {isLoadingLocations ? (
+                        <div className="flex justify-center p-2">
+                          <Spinner size="sm" />
+                        </div>
+                      ) : (
+                        locations.map(location => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name} {location.building && `(${location.building}${location.floor ? `, Floor ${location.floor}` : ''})`}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  
+                  {availabilityValidationError && (
+                    <p className="text-sm text-red-500">{availabilityValidationError}</p>
+                  )}
+                  
+                  {overlapValidationError && (
+                    <p className="text-sm text-red-500">{overlapValidationError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Event Tags</Label>
+              <TagSelector 
+                selectedTags={selectedTags} 
+                onTagsChange={setSelectedTags} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Event URL (Optional)</Label>
+              <div className="flex items-center space-x-2">
+                <Link className="h-4 w-4 text-gray-500" />
+                <Input 
+                  value={newEvent.link || ''}
+                  onChange={(e) => setNewEvent({...newEvent, link: e.target.value})}
+                  placeholder="https://example.com/meeting"
+                />
+              </div>
+              {newEvent.link && !validateUrl(newEvent.link) && (
+                <p className="text-sm text-red-500">Please enter a valid URL</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>List of Speakers</Label>
+              <Textarea 
+                value={newEvent.speakers || ''}
+                onChange={(e) => setNewEvent({...newEvent, speakers: e.target.value})}
+                placeholder="Names of speakers (if applicable)"
+                rows={2}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>A/V Needs</Label>
+              <Textarea 
+                value={newEvent.av_needs || ''}
+                onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
+                placeholder="Any specific A/V requirements (e.g., projector, microphone)"
+                rows={2}
+              />
+            </div>
+
+            {/* Meerkat Q&A Toggle Section */}
+            <div className="space-y-4 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="meerkat-toggle" className="text-md font-medium">
+                    Add Meerkat Q&A Session
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enable interactive Q&A for your event
+                  </p>
+                </div>
+                <Switch 
+                  id="meerkat-toggle" 
+                  checked={newEvent.meerkat_enabled} 
+                  onCheckedChange={(checked) => setNewEvent({...newEvent, meerkat_enabled: checked})} 
+                />
+              </div>
+              
+              {newEvent.meerkat_enabled && (
+                <div>
+                  {isCreatingMeerkatEvent ? (
+                    <div className="flex items-center space-x-2 text-blue-500">
+                      <Spinner size="xs" className="border-current border-r-transparent" />
+                      <span>Creating Meerkat Q&A session...</span>
+                    </div>
+                  ) : meerkatUrl ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-green-500">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>Meerkat Q&A session created!</span>
+                      </div>
+                      <Input 
+                        value={meerkatUrl}
+                        readOnly
+                        className="bg-muted"
+                      />
+                    </div>
+                  ) : isEditMode ? (
+                    <div className="flex items-center space-x-2 text-amber-500">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>Q&A session will be created when you save</span>
+                    </div>
+                  ) : null}
+                  
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    This will create a Meerkat Q&A session for your event, enabling participants to ask questions and interact during the session.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    {isEditMode ? "Saving..." : "Creating..."}
+                  </>
+                ) : (
+                  isEditMode ? "Save Changes" : "Create Event"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
