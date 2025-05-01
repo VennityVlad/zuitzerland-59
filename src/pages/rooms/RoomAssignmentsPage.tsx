@@ -11,6 +11,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { format, addWeeks, subWeeks } from "date-fns";
 import AssignmentGridCalendar from "@/components/rooms/AssignmentGridCalendar";
 import PeopleSidebar from "@/components/rooms/PeopleSidebar";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const RoomAssignmentsPage = () => {
   // Set default start date to May 1, 2025
@@ -61,6 +62,13 @@ const RoomAssignmentsPage = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  // Handler for date picker
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setCurrentWeek(date);
+    }
+  };
+
   if (loading || !ready || isAdminLoading) {
     return (
       <div className="container py-6 space-y-6">
@@ -93,9 +101,12 @@ const RoomAssignmentsPage = () => {
           <h2 className="text-2xl font-bold">Room Assignments</h2>
           
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="icon" onClick={() => setCurrentWeek(new Date(2025, 4, 1))}>
-              <Calendar className="h-4 w-4" />
-            </Button>
+            <DatePicker 
+              date={currentWeek} 
+              onDateChange={handleDateChange}
+              placeholder="Select date"
+              className="w-[200px]"
+            />
             <Button variant="outline" size="icon" onClick={() => navigateWeek("prev")}>
               <ChevronLeft className="h-4 w-4" />
             </Button>

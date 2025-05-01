@@ -20,7 +20,7 @@ interface Event {
 }
 
 interface EventCalendarProps {
-  onSelectDate?: (date: Date | undefined) => void;
+  onSelectDate?: (date: Date | undefined, shouldSwitchTab?: boolean) => void;
   className?: string;
   events?: Event[];
 }
@@ -87,10 +87,10 @@ export const EventCalendar = ({ onSelectDate, className, events = [] }: EventCal
         date.getMonth() === selectedDate.getMonth() &&
         date.getFullYear() === selectedDate.getFullYear()) {
       setSelectedDate(undefined);
-      if (onSelectDate) onSelectDate(undefined);
+      if (onSelectDate) onSelectDate(undefined, false);
     } else {
       setSelectedDate(date);
-      if (onSelectDate) onSelectDate(date);
+      if (onSelectDate) onSelectDate(date, true);
     }
   };
 

@@ -448,6 +448,15 @@ const Events = () => {
     }
   };
 
+  // Handle date selection with tab switching
+  const handleDateSelection = (date: Date | undefined, shouldSwitchTab: boolean = false) => {
+    setSelectedDate(date);
+    // If a date is selected and we should switch tabs, activate the "all" tab
+    if (date && shouldSwitchTab) {
+      setActiveTab("all");
+    }
+  };
+
   // Early return for users without paid invoices
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
     console.log("🚫 Showing restricted access message - No paid invoice found");
@@ -568,7 +577,7 @@ const Events = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="col-span-1 md:col-span-3">
-            <Tabs defaultValue="today" className="w-full" onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-5 mb-2">
                 <TabsTrigger value="today">Today</TabsTrigger>
                 <TabsTrigger value="going">Going</TabsTrigger>
@@ -688,7 +697,7 @@ const Events = () => {
           {!isMobile && (
             <div className="col-span-1 space-y-4">
               <EventCalendar 
-                onSelectDate={setSelectedDate} 
+                onSelectDate={handleDateSelection} 
                 events={events || []}
               />
             </div>

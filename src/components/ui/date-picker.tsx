@@ -26,8 +26,18 @@ export function DatePicker({
   fromDate,
   toDate
 }: DatePickerProps) {
+  const [open, setOpen] = React.useState(false);
+
+  const handleSelect = (selectedDate: Date | undefined) => {
+    onDateChange(selectedDate);
+    if (selectedDate) {
+      // Close the popover when a date is selected
+      setTimeout(() => setOpen(false), 200);
+    }
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
@@ -46,7 +56,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           selected={date}
-          onSelect={onDateChange}
+          onSelect={handleSelect}
           disabled={(calendarDate) => {
             if (fromDate && calendarDate < fromDate) return true;
             if (toDate && calendarDate > toDate) return true;
