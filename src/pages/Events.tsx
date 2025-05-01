@@ -309,24 +309,6 @@ const Events = () => {
     return icalContent;
   };
 
-  const addToCalendar = (event: Event) => {
-    const icalContent = generateICalEvent(event);
-    
-    const blob = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
-    
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${event.title.replace(/\s+/g, '-')}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Calendar Event Created",
-      description: "The calendar file has been downloaded. Open it to add to your calendar app.",
-    });
-  };
-
   const TIME_ZONE = "Europe/Zurich";
 
   const formatDateForSidebar = (date: Date) => {
@@ -595,7 +577,6 @@ const Events = () => {
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
-                  addToCalendar,
                   formatDateForSidebar,
                   formatEventTime,
                   formatDateRange,
@@ -616,7 +597,6 @@ const Events = () => {
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
-                  addToCalendar,
                   formatDateForSidebar,
                   formatEventTime,
                   formatDateRange,
@@ -637,7 +617,6 @@ const Events = () => {
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
-                  addToCalendar,
                   formatDateForSidebar,
                   formatEventTime,
                   formatDateRange,
@@ -658,7 +637,6 @@ const Events = () => {
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
-                  addToCalendar,
                   formatDateForSidebar,
                   formatEventTime,
                   formatDateRange,
@@ -679,7 +657,6 @@ const Events = () => {
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
-                  addToCalendar,
                   formatDateForSidebar,
                   formatEventTime,
                   formatDateRange,
@@ -746,7 +723,6 @@ const renderEventsList = (
   canEditEvent: (event: EventWithProfile) => boolean,
   openDeleteDialog: (event: Event) => void,
   handleEditEvent: (event: Event) => void,
-  addToCalendar: (event: Event) => void,
   formatDateForSidebar: (date: Date) => JSX.Element,
   formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
   formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
@@ -873,15 +849,8 @@ const renderEventsList = (
                               onChange={() => refetchRSVPs()}
                             />
                           )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => addToCalendar(event)}
-                            className="text-blue-500 border-blue-500 hover:bg-blue-50"
-                          >
-                            <CalendarPlus className="h-4 w-4 mr-2" />
-                            {isMobile ? "" : "Add to Calendar"}
-                          </Button>
+                          {/* Replace the Add to Calendar button with CalendarOptionsPopover */}
+                          <CalendarOptionsPopover event={event} isMobile={isMobile} />
                           <Button
                             variant="outline"
                             size="sm"

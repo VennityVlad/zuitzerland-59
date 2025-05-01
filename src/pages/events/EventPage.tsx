@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -9,9 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { EventDateBadge } from "@/components/events/EventDateBadge";
 import { EventDetailsCard } from "@/components/events/EventDetailsCard";
+import { CalendarOptionsPopover } from "@/components/events/CalendarOptionsPopover";
 import { Card } from "@/components/ui/card";
 import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -24,6 +27,7 @@ const EventPage = () => {
   const { toast } = useToast();
   const locationData = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const { hasPaidInvoice, isLoading: isPaidInvoiceLoading, isAdmin } = usePaidInvoiceStatus(
     user?.id
@@ -282,6 +286,9 @@ const EventPage = () => {
                         initialRSVP={isRsvped}
                         onChange={handleRsvpChange}
                       />
+                    )}
+                    {event && (
+                      <CalendarOptionsPopover event={event} isMobile={isMobile} />
                     )}
                     <Button onClick={handleShare} variant="outline" size="sm">
                       <Share className="mr-2 h-4 w-4" />
