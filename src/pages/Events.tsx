@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn, CalendarPlus } from "lucide-react";
+import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn, CalendarPlus, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -33,6 +33,7 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
+import { EventSearchModal } from "@/components/events/EventSearchModal";
 
 interface Event {
   id: string;
@@ -80,6 +81,7 @@ const Events = () => {
   const [activeTab, setActiveTab] = useState<string>("today");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const { user: privyUser } = usePrivy();
   const { user: supabaseUser } = useSupabaseAuth();
   const { toast } = useToast();
@@ -515,17 +517,56 @@ const Events = () => {
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-3xl font-bold tracking-tight text-hotel-navy">Events</h1>
-        {canCreateEvents && (
-          <Button 
-            onClick={() => {
-              setEventToEdit(null);
-              setCreateEventOpen(true);
-            }}
-            className="w-full sm:w-auto"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Create Event
-          </Button>
-        )}
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+          {/* Mobile view - Search button on right, Create Event on left */}
+          <div className="sm:hidden flex justify-between w-full">
+            {canCreateEvents && (
+              <Button 
+                onClick={() => {
+                  setEventToEdit(null);
+                  setCreateEventOpen(true);
+                }}
+                className="flex-shrink-0"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Create Event
+              </Button>
+            )}
+            
+            <Button 
+              variant="outline"
+              size="icon"
+              onClick={() => setSearchModalOpen(true)}
+              className="ml-auto"
+            >
+              <Search className="h-4 w-4" />
+              <span className="sr-only">Search events</span>
+            </Button>
+          </div>
+          
+          {/* Desktop view - Search button on left of Create Event */}
+          <div className="hidden sm:flex items-center gap-2">
+            <Button 
+              variant="outline"
+              size="icon"
+              onClick={() => setSearchModalOpen(true)}
+            >
+              <Search className="h-4 w-4" />
+              <span className="sr-only">Search events</span>
+            </Button>
+            
+            {canCreateEvents && (
+              <Button 
+                onClick={() => {
+                  setEventToEdit(null);
+                  setCreateEventOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" /> Create Event
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
       <Separator />
 
@@ -688,7 +729,13 @@ const Events = () => {
         userId={privyUser?.id || supabaseUser?.id || ''}
         profileId={userProfile?.id}
         event={eventToEdit}
-        userProfileData={userProfile}  // Pass the userProfile from state
+        userProfileData={userProfile}
+      />
+
+      <EventSearchModal 
+        open={searchModalOpen}
+        onOpenChange={setSearchModalOpen}
+        events={events || []}
       />
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
