@@ -85,16 +85,25 @@ serve(async (req) => {
     // Process speakers field - use as string rather than array
     let speakersString = event.speakers || ''
     
-    // Create event payload for Meerkat API
-    const payload = {
+    // Create event payload for Meerkat API by only including non-null fields
+    const basePayload = {
       uid: meerkatUID,
       title: event.title,
       submissionType: submissionType,
       start: event.start_date,
       end: event.end_date,
-      description: event.description || undefined,
-      abstract: event.description || undefined,
-      speakers: speakersString  // Pass as string instead of array
+    }
+    
+    // Add optional fields only if they exist and aren't null/undefined
+    const payload = { ...basePayload }
+    
+    if (event.description) {
+      payload.description = event.description
+      payload.abstract = event.description // Using description for abstract too if available
+    }
+    
+    if (speakersString) {
+      payload.speakers = speakersString
     }
     
     console.log('Sending payload to Meerkat API:', payload)
