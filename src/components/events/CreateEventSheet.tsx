@@ -273,18 +273,45 @@ export function CreateEventSheet({
       try {
         setIsLoadingLocations(true);
         
-        // Use our new server-side function to get only bookable locations
+        if (!userProfile) {
+          console.log("User profile not available yet");
+          return;
+        }
+        
+        console.log("Fetching locations with userProfile:", userProfile);
+        
+        // Fetch ALL locations of type 'Meeting Room'
         const { data, error } = await supabase
-          .rpc('get_bookable_locations')
+          .from('locations')
+          .select('*')
+          .eq('type', 'Meeting Room')
           .order('name');
         
         if (error) {
-          console.error("Error fetching bookable locations:", error);
+          console.error("Error fetching locations:", error);
           throw error;
         }
         
-        console.log("Available locations for booking:", data?.length);
-        setLocations(data || []);
+        // Apply role-based filtering purely on the client side
+        const userRole = userProfile.role || 'attendee';
+        console.log("Current user role for filtering:", userRole);
+        
+        // First check if user is an admin, co-curator, or co-designer
+        const isAdminRole = userRole === 'admin' || userRole === 'co-curator' || userRole === 'co-designer';
+        
+        let filteredLocations;
+        if (isAdminRole) {
+          // Admin roles can book any location, regardless of anyone_can_book setting
+          console.log("User has admin permissions, showing all locations");
+          filteredLocations = data || [];
+        } else {
+          // Non-admin roles can only book locations with anyone_can_book = true
+          console.log("User is not admin, filtering by anyone_can_book");
+          filteredLocations = (data || []).filter(location => location.anyone_can_book === true);
+        }
+        
+        console.log("Available locations after filtering:", filteredLocations.length);
+        setLocations(filteredLocations);
       } catch (error) {
         console.error("Error fetching locations:", error);
         toast({
@@ -297,10 +324,10 @@ export function CreateEventSheet({
       }
     };
     
-    if (open) {
+    if (open && userProfile) {
       fetchLocations();
     }
-  }, [open, toast]);
+  }, [open, toast, userProfile]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
