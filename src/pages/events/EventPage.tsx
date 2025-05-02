@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -52,7 +51,7 @@ const EventPage = () => {
         try {
           const { data, error } = await supabase
             .from("profiles")
-            .select("id, privy_id")
+            .select("id, privy_id, role")  // Added role to the selection
             .eq("privy_id", user.id)
             .maybeSingle();
 

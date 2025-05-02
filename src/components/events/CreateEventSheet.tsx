@@ -31,6 +31,7 @@ interface CreateEventSheetProps {
   userId: string;
   profileId?: string;
   event?: Event | null;
+  userProfileData?: { id: string; role?: string };  // New prop to receive user profile data
 }
 
 interface Event {
@@ -125,7 +126,8 @@ export function CreateEventSheet({
   onSuccess, 
   userId, 
   profileId, 
-  event 
+  event,
+  userProfileData 
 }: CreateEventSheetProps) {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
@@ -333,6 +335,16 @@ export function CreateEventSheet({
     const fetchUserProfile = async () => {
       if (!user && !userId) return;
       
+      // If the userProfileData prop is provided, use it instead of fetching
+      if (userProfileData) {
+        console.log("Using provided userProfileData:", userProfileData);
+        setUserProfile(userProfileData);
+        if (!isEditMode) {
+          setNewEvent(prev => ({ ...prev, created_by: userProfileData.id }));
+        }
+        return;
+      }
+      
       if (profileId) {
         setUserProfile({ id: profileId });
         if (!isEditMode) {
@@ -388,7 +400,7 @@ export function CreateEventSheet({
     };
     
     fetchUserProfile();
-  }, [user, userId, profileId, toast, isEditMode]);
+  }, [user, userId, profileId, toast, isEditMode, userProfileData]);
 
   useEffect(() => {
     const fetchLocationAvailability = async () => {

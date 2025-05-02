@@ -73,7 +73,7 @@ interface EventWithProfile extends Event {
 }
 
 const Events = () => {
-  const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [createEventOpen, setIsCreateEventOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -273,7 +273,7 @@ const Events = () => {
 
   const handleEditEvent = (event: Event) => {
     setEventToEdit(event);
-    setCreateEventOpen(true);
+    setIsCreateEventOpen(true);
   };
 
   const canEditEvent = (event: EventWithProfile) => {
@@ -524,7 +524,7 @@ const Events = () => {
           <Button 
             onClick={() => {
               setEventToEdit(null);
-              setCreateEventOpen(true);
+              setIsCreateEventOpen(true);
             }}
             className="w-full sm:w-auto"
           >
@@ -686,12 +686,11 @@ const Events = () => {
       </div>
 
       <CreateEventSheet
-        open={createEventOpen}
-        onOpenChange={setCreateEventOpen}
-        onSuccess={handleCreateEventSuccess}
-        userId={userId}
-        event={eventToEdit}
-        profileId={profileId}
+        open={isCreateEventOpen}
+        onOpenChange={setIsCreateEventOpen}
+        onSuccess={handleEventCreated}
+        userId={user?.id || ''}
+        userProfileData={userProfile}  // Pass the userProfile from state
       />
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
