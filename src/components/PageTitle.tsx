@@ -18,7 +18,7 @@ export const PageTitle = ({ title, description, actions, icon }: PageTitleProps)
         <div className="flex items-center gap-3">
           {icon && <div className="text-primary">{icon}</div>}
           <div>
-            <h1 className="text-2xl font-semibold text-hotel-navy">{title}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-hotel-navy">{title}</h1>
             {description && <p className="text-gray-500 mt-1">{description}</p>}
           </div>
         </div>

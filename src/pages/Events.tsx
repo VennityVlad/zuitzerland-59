@@ -448,7 +448,7 @@ const Events = () => {
     return (
       <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-hotel-navy">Events</h1>
           <Button asChild>
             <Link to="/invoices">
               View Invoices
@@ -483,7 +483,7 @@ const Events = () => {
     return (
       <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-hotel-navy">Events</h1>
         </div>
         <Separator />
         
@@ -514,7 +514,7 @@ const Events = () => {
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold tracking-tight">Events</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-hotel-navy">Events</h1>
         {canCreateEvents && (
           <Button 
             onClick={() => {
