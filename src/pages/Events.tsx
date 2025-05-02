@@ -73,7 +73,7 @@ interface EventWithProfile extends Event {
 }
 
 const Events = () => {
-  const [createEventOpen, setIsCreateEventOpen] = useState(false);
+  const [createEventOpen, setCreateEventOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -273,7 +273,7 @@ const Events = () => {
 
   const handleEditEvent = (event: Event) => {
     setEventToEdit(event);
-    setIsCreateEventOpen(true);
+    setCreateEventOpen(true);
   };
 
   const canEditEvent = (event: EventWithProfile) => {
@@ -524,7 +524,7 @@ const Events = () => {
           <Button 
             onClick={() => {
               setEventToEdit(null);
-              setIsCreateEventOpen(true);
+              setCreateEventOpen(true);
             }}
             className="w-full sm:w-auto"
           >
@@ -686,10 +686,12 @@ const Events = () => {
       </div>
 
       <CreateEventSheet
-        open={isCreateEventOpen}
-        onOpenChange={setIsCreateEventOpen}
-        onSuccess={handleEventCreated}
-        userId={user?.id || ''}
+        open={createEventOpen}
+        onOpenChange={setCreateEventOpen}
+        onSuccess={handleCreateEventSuccess}
+        userId={privyUser?.id || supabaseUser?.id || ''}
+        profileId={userProfile?.id}
+        event={eventToEdit}
         userProfileData={userProfile}  // Pass the userProfile from state
       />
 
