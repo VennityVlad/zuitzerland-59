@@ -364,7 +364,9 @@ export type Database = {
           description: string | null
           end_date: string
           id: string
+          instance_date: string | null
           is_all_day: boolean | null
+          is_exception: boolean | null
           is_recurring_instance: boolean | null
           link: string | null
           location_id: string | null
@@ -373,6 +375,8 @@ export type Database = {
           meerkat_status: string | null
           meerkat_uid: string | null
           meerkat_url: string | null
+          original_start_date: string | null
+          parent_event_id: string | null
           recurring_pattern_id: string | null
           speakers: string | null
           start_date: string
@@ -388,7 +392,9 @@ export type Database = {
           description?: string | null
           end_date: string
           id?: string
+          instance_date?: string | null
           is_all_day?: boolean | null
+          is_exception?: boolean | null
           is_recurring_instance?: boolean | null
           link?: string | null
           location_id?: string | null
@@ -397,6 +403,8 @@ export type Database = {
           meerkat_status?: string | null
           meerkat_uid?: string | null
           meerkat_url?: string | null
+          original_start_date?: string | null
+          parent_event_id?: string | null
           recurring_pattern_id?: string | null
           speakers?: string | null
           start_date: string
@@ -412,7 +420,9 @@ export type Database = {
           description?: string | null
           end_date?: string
           id?: string
+          instance_date?: string | null
           is_all_day?: boolean | null
+          is_exception?: boolean | null
           is_recurring_instance?: boolean | null
           link?: string | null
           location_id?: string | null
@@ -421,6 +431,8 @@ export type Database = {
           meerkat_status?: string | null
           meerkat_uid?: string | null
           meerkat_url?: string | null
+          original_start_date?: string | null
+          parent_event_id?: string | null
           recurring_pattern_id?: string | null
           speakers?: string | null
           start_date?: string
@@ -448,6 +460,13 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_parent_event_id_fkey"
+            columns: ["parent_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
           {
@@ -747,6 +766,44 @@ export type Database = {
           },
         ]
       }
+      recurring_event_exceptions: {
+        Row: {
+          created_at: string | null
+          exception_date: string
+          id: string
+          is_cancelled: boolean | null
+          reason: string | null
+          recurring_pattern_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          exception_date: string
+          id?: string
+          is_cancelled?: boolean | null
+          reason?: string | null
+          recurring_pattern_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          exception_date?: string
+          id?: string
+          is_cancelled?: boolean | null
+          reason?: string | null
+          recurring_pattern_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_event_exceptions_recurring_pattern_id_fkey"
+            columns: ["recurring_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_event_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_event_patterns: {
         Row: {
           created_at: string | null
@@ -787,7 +844,15 @@ export type Database = {
           start_date?: string
           timezone?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "recurring_event_patterns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       revoked_users: {
         Row: {
@@ -1072,6 +1137,19 @@ export type Database = {
       }
       clean_historical_data: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      generate_recurring_event_instances: {
+        Args: {
+          parent_event_id: string
+          pattern_id: string
+          pattern_frequency: string
+          pattern_interval_count: number
+          pattern_days_of_week: number[]
+          pattern_start_date: string
+          pattern_end_date: string
+          event_timezone?: string
+        }
         Returns: undefined
       }
       get_auth_context: {
