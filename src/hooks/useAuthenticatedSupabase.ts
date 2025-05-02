@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { usePrivy } from '@privy-io/react-auth';
@@ -39,9 +40,8 @@ export const useAuthenticatedSupabase = () => {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response from JWT service:", errorText);
-        throw new Error(`Failed to refresh JWT: ${response.status} ${errorText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to refresh JWT');
       }
 
       const newJwtData = await response.json();
@@ -52,7 +52,7 @@ export const useAuthenticatedSupabase = () => {
       
       // Update the JWT claims in the backend for reference
       try {
-        const updateResponse = await fetch(`${SUPABASE_URL}/functions/v1/update-privy-jwt`, {
+        await fetch(`${SUPABASE_URL}/functions/v1/update-privy-jwt`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -63,11 +63,6 @@ export const useAuthenticatedSupabase = () => {
             userId: user.id 
           })
         });
-        
-        if (!updateResponse.ok) {
-          const errorText = await updateResponse.text();
-          console.error("Error updating JWT claims:", errorText);
-        }
       } catch (updateErr) {
         console.error("Error updating JWT claims:", updateErr);
         // Non-fatal error, so we continue

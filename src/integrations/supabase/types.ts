@@ -787,15 +787,7 @@ export type Database = {
           start_date?: string
           timezone?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "recurring_event_patterns_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       revoked_users: {
         Row: {
