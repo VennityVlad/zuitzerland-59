@@ -515,36 +515,24 @@ const Events = () => {
 
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-3xl font-bold tracking-tight text-hotel-navy">Events</h1>
         
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
-          {/* Mobile view - Search button on right, Create Event on left */}
-          <div className="sm:hidden flex justify-between w-full">
-            {canCreateEvents && (
-              <Button 
-                onClick={() => {
-                  setEventToEdit(null);
-                  setCreateEventOpen(true);
-                }}
-                className="flex-shrink-0"
-              >
-                <Plus className="mr-2 h-4 w-4" /> Create Event
-              </Button>
-            )}
-            
+        {/* Modified mobile layout: Search on the right of the title, Create Event below */}
+        <div className="flex items-center gap-2">
+          {/* Mobile view - Search button on right of title */}
+          <div className="sm:hidden">
             <Button 
               variant="outline"
               size="icon"
               onClick={() => setSearchModalOpen(true)}
-              className="ml-auto"
             >
               <Search className="h-4 w-4" />
               <span className="sr-only">Search events</span>
             </Button>
           </div>
           
-          {/* Desktop view - Search button on left of Create Event */}
+          {/* Desktop view - Search button and Create Event button */}
           <div className="hidden sm:flex items-center gap-2">
             <Button 
               variant="outline"
@@ -568,7 +556,23 @@ const Events = () => {
           </div>
         </div>
       </div>
-      <Separator />
+      
+      {/* Mobile only - Create Event button on its own line */}
+      {canCreateEvents && (
+        <div className="sm:hidden w-full mt-3">
+          <Button 
+            onClick={() => {
+              setEventToEdit(null);
+              setCreateEventOpen(true);
+            }}
+            className="w-full"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Create Event
+          </Button>
+        </div>
+      )}
+      
+      <Separator className="mt-3" />
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
