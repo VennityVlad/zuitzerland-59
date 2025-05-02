@@ -280,19 +280,36 @@ export function CreateEventSheet({
         
         console.log("Fetching locations with userProfile:", userProfile);
         
-        // Using RPC function that checks permissions on the server side
-        const { data: accessibleLocations, error } = await supabase.rpc(
-          'get_bookable_locations_for_user', 
-          { user_role: userProfile.role || 'attendee' }
-        );
+        // Using a traditional query instead of RPC function to retrieve accessible locations
+        const { data, error } = await supabase
+          .from('locations')
+          .select('*')
+          .eq('type', 'Meeting Room')
+          .order('name');
         
         if (error) {
           console.error("Error fetching locations:", error);
           throw error;
         }
         
-        console.log("Fetched accessible locations:", accessibleLocations);
-        setLocations(accessibleLocations || []);
+        // Filter locations based on user role on the client side
+        const filteredLocations = data?.filter(location => {
+          const userRole = userProfile.role || 'attendee';
+          const isAdmin = userRole === 'admin';
+          const isCoCurator = userRole === 'co-curator';
+          const isCoDesigner = userRole === 'co-designer';
+          
+          // Admins, co-curators, and co-designers can book any location
+          if (isAdmin || isCoCurator || isCoDesigner) {
+            return true;
+          }
+          
+          // Other users can only book locations with anyone_can_book = true
+          return location.anyone_can_book;
+        });
+        
+        console.log("Fetched accessible locations:", filteredLocations);
+        setLocations(filteredLocations || []);
       } catch (error) {
         console.error("Error fetching locations:", error);
         toast({
