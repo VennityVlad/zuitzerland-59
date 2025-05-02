@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -280,7 +281,7 @@ export function CreateEventSheet({
         
         console.log("Fetching locations with userProfile:", userProfile);
         
-        // Using a traditional query instead of RPC function to retrieve accessible locations
+        // Fetch ALL locations of type 'Meeting Room'
         const { data, error } = await supabase
           .from('locations')
           .select('*')
@@ -292,23 +293,26 @@ export function CreateEventSheet({
           throw error;
         }
         
-        // Filter locations based on user role on the client side
-        const filteredLocations = data?.filter(location => {
-          const userRole = userProfile.role || 'attendee';
-          console.log("Filtering with user role:", userRole);
-          
-          // Admins, co-curators, and co-designers can book any location
-          if (userRole === 'admin' || userRole === 'co-curator' || userRole === 'co-designer') {
-            console.log("User has admin/co-curator/co-designer role, allowing all locations");
-            return true;
-          }
-          
-          // Other users can only book locations with anyone_can_book = true
-          return location.anyone_can_book;
-        });
+        // Apply role-based filtering purely on the client side
+        const userRole = userProfile.role || 'attendee';
+        console.log("Current user role for filtering:", userRole);
         
-        console.log("Fetched accessible locations:", filteredLocations);
-        setLocations(filteredLocations || []);
+        // First check if user is an admin, co-curator, or co-designer
+        const isAdminRole = userRole === 'admin' || userRole === 'co-curator' || userRole === 'co-designer';
+        
+        let filteredLocations;
+        if (isAdminRole) {
+          // Admin roles can book any location, regardless of anyone_can_book setting
+          console.log("User has admin permissions, showing all locations");
+          filteredLocations = data || [];
+        } else {
+          // Non-admin roles can only book locations with anyone_can_book = true
+          console.log("User is not admin, filtering by anyone_can_book");
+          filteredLocations = (data || []).filter(location => location.anyone_can_book === true);
+        }
+        
+        console.log("Available locations after filtering:", filteredLocations.length);
+        setLocations(filteredLocations);
       } catch (error) {
         console.error("Error fetching locations:", error);
         toast({
