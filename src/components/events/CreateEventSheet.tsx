@@ -295,12 +295,11 @@ export function CreateEventSheet({
         // Filter locations based on user role on the client side
         const filteredLocations = data?.filter(location => {
           const userRole = userProfile.role || 'attendee';
-          const isAdmin = userRole === 'admin';
-          const isCoCurator = userRole === 'co-curator';
-          const isCoDesigner = userRole === 'co-designer';
+          console.log("Filtering with user role:", userRole);
           
           // Admins, co-curators, and co-designers can book any location
-          if (isAdmin || isCoCurator || isCoDesigner) {
+          if (userRole === 'admin' || userRole === 'co-curator' || userRole === 'co-designer') {
+            console.log("User has admin/co-curator/co-designer role, allowing all locations");
             return true;
           }
           
