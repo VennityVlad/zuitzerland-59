@@ -12,7 +12,6 @@ import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { EventRSVPAvatars } from "@/components/events/EventRSVPAvatars";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { CalendarOptionsPopover } from "@/components/events/CalendarOptionsPopover";
-import { PageTitle } from "@/components/PageTitle";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import { TagFilter } from "@/components/events/TagFilter";
 import { EventCalendar } from "@/components/calendar/EventCalendar";
 import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -448,12 +448,14 @@ const Events = () => {
     return (
       <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <PageTitle 
-            title="Events" 
-            description="View and manage upcoming events" 
-            icon={<CalendarDays className="h-8 w-8" />} 
-          />
+          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
+          <Button asChild>
+            <Link to="/invoices">
+              View Invoices
+            </Link>
+          </Button>
         </div>
+        <Separator />
         
         <Card className="p-8 text-center space-y-6">
           <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
@@ -481,12 +483,9 @@ const Events = () => {
     return (
       <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <PageTitle 
-            title="Events" 
-            description="View and manage upcoming events" 
-            icon={<CalendarDays className="h-8 w-8" />} 
-          />
+          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
         </div>
+        <Separator />
         
         <div className="space-y-4">
           <Card className="p-4">
@@ -515,11 +514,7 @@ const Events = () => {
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <PageTitle 
-          title="Events" 
-          description="View and manage upcoming events" 
-          icon={<CalendarDays className="h-8 w-8" />} 
-        />
+        <h1 className="text-3xl font-bold tracking-tight">Events</h1>
         {canCreateEvents && (
           <Button 
             onClick={() => {
@@ -532,6 +527,7 @@ const Events = () => {
           </Button>
         )}
       </div>
+      <Separator />
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
