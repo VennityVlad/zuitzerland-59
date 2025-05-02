@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,8 +57,38 @@ const AvailabilityControls = ({
   const [includeWeekend, setIncludeWeekend] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<"office" | "full" | "custom" | "unavailable">("office");
+  const [anyoneCanBook, setAnyoneCanBook] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   
   const { toast } = useToast();
+
+  // Fetch the location to get the current "anyone_can_book" state
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        setIsLoadingLocation(true);
+        const { data, error } = await supabase
+          .from('locations')
+          .select('anyone_can_book')
+          .eq('id', locationId)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setAnyoneCanBook(data.anyone_can_book);
+        }
+      } catch (error: any) {
+        console.error("Error fetching location:", error);
+      } finally {
+        setIsLoadingLocation(false);
+      }
+    };
+    
+    if (locationId) {
+      fetchLocation();
+    }
+  }, [locationId]);
 
   const applyTemplate = async () => {
     if (!locationId) return;
@@ -149,6 +180,34 @@ const AvailabilityControls = ({
     }
   };
 
+  const updateAnyoneCanBook = async (value: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('locations')
+        .update({ anyone_can_book: value })
+        .eq('id', locationId);
+      
+      if (error) throw error;
+      
+      setAnyoneCanBook(value);
+      
+      toast({
+        title: "Setting updated",
+        description: value 
+          ? "This location can now be booked by anyone" 
+          : "This location is now restricted to admins, co-curators, and co-designers",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error updating setting",
+        description: error.message,
+      });
+      // Revert the UI switch to the previous state
+      setAnyoneCanBook(!value);
+    }
+  };
+
   const onTemplateChange = (value: string) => {
     setSelectedTemplate(value as "office" | "full" | "custom" | "unavailable");
     
@@ -179,6 +238,23 @@ const AvailabilityControls = ({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
+          <div className="flex items-center justify-between space-x-2 p-4 rounded-md border bg-muted/50">
+            <div>
+              <Label htmlFor="anyone-can-book" className="text-base font-medium">
+                Anyone can book
+              </Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                Allow all users to book this location
+              </p>
+            </div>
+            <Switch 
+              id="anyone-can-book" 
+              checked={anyoneCanBook} 
+              onCheckedChange={updateAnyoneCanBook}
+              disabled={isLoadingLocation}
+            />
+          </div>
+
           <div>
             <Label htmlFor="template">Availability Template</Label>
             <Select value={selectedTemplate} onValueChange={onTemplateChange}>

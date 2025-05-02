@@ -592,6 +592,7 @@ export type Database = {
       }
       locations: {
         Row: {
+          anyone_can_book: boolean
           building: string | null
           created_at: string
           description: string | null
@@ -603,6 +604,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          anyone_can_book?: boolean
           building?: string | null
           created_at?: string
           description?: string | null
@@ -614,6 +616,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          anyone_can_book?: boolean
           building?: string | null
           created_at?: string
           description?: string | null
@@ -1063,6 +1066,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_book_location: {
+        Args: { location_id: string; user_role: string }
+        Returns: boolean
+      }
       clean_historical_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined

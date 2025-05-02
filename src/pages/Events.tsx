@@ -125,7 +125,10 @@ const Events = () => {
     enabled: !!(privyUser?.id || supabaseUser?.id)
   });
   
-  const canManageEvents = userProfile?.role === 'admin' || userProfile?.role === 'co-curator' || userProfile?.role === 'co-designer';
+  // Allow any user with a profile to create events
+  const canCreateEvents = !!userProfile?.id;
+  
+  // Admin users can edit/delete any event
   const isAdminUser = userProfile?.role === 'admin';
   
   const userId = privyUser?.id || supabaseUser?.id || "";
@@ -517,7 +520,7 @@ const Events = () => {
           description="View and manage upcoming events" 
           icon={<CalendarDays className="h-8 w-8" />} 
         />
-        {canManageEvents && (
+        {canCreateEvents && (
           <Button 
             onClick={() => {
               setEventToEdit(null);
@@ -573,7 +576,7 @@ const Events = () => {
                   todayEvents,
                   isLoading,
                   profileLoading,
-                  canManageEvents,
+                  canCreateEvents,
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
@@ -593,7 +596,7 @@ const Events = () => {
                   rsvpedEvents,
                   isLoading,
                   profileLoading,
-                  canManageEvents,
+                  canCreateEvents,
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
@@ -613,7 +616,7 @@ const Events = () => {
                   hostingEvents,
                   isLoading,
                   profileLoading,
-                  canManageEvents,
+                  canCreateEvents,
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
@@ -633,7 +636,7 @@ const Events = () => {
                   allEvents,
                   isLoading,
                   profileLoading,
-                  canManageEvents,
+                  canCreateEvents,
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
@@ -653,7 +656,7 @@ const Events = () => {
                   pastEvents,
                   isLoading,
                   profileLoading,
-                  canManageEvents,
+                  canCreateEvents,
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
@@ -719,7 +722,7 @@ const renderEventsList = (
   events: EventWithProfile[], 
   isLoading: boolean, 
   profileLoading: boolean,
-  canManageEvents: boolean,
+  canCreateEvents: boolean,
   canEditEvent: (event: EventWithProfile) => boolean,
   openDeleteDialog: (event: Event) => void,
   handleEditEvent: (event: Event) => void,
@@ -746,9 +749,9 @@ const renderEventsList = (
         <CalendarDays className="mx-auto h-12 w-12 text-gray-400" />
         <h3 className="mt-4 text-lg font-medium">No events found</h3>
         <p className="mt-2 text-sm text-gray-500">
-          {canManageEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
+          {canCreateEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
         </p>
-        {canManageEvents && (
+        {canCreateEvents && (
           <Button className="mt-4" onClick={() => {}}>
             <Plus className="mr-2 h-4 w-4" /> Create Event
           </Button>

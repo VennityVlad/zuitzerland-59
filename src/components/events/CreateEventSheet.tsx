@@ -65,6 +65,7 @@ interface Location {
   max_occupancy?: number | null;
   created_at: string;
   updated_at: string;
+  anyone_can_book: boolean;
 }
 
 interface Availability {
@@ -128,7 +129,7 @@ export function CreateEventSheet({
 }: CreateEventSheetProps) {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
-  const [userProfile, setUserProfile] = useState<{ id: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ id: string; role?: string } | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
@@ -271,14 +272,45 @@ export function CreateEventSheet({
     const fetchLocations = async () => {
       try {
         setIsLoadingLocations(true);
-        const { data, error } = await supabase
-          .from('locations')
-          .select('*')
-          .eq('type', 'Meeting Room')
-          .order('name');
+        
+        // If user has a role, fetch locations based on booking permissions
+        if (userProfile?.role) {
+          let { data, error } = await supabase
+            .from('locations')
+            .select('*')
+            .eq('type', 'Meeting Room')
+            .order('name');
+            
+          if (error) throw error;
           
-        if (error) throw error;
-        setLocations(data || []);
+          // Filter locations based on role/anyone_can_book property
+          const filteredLocations = data?.filter(location => {
+            const userRole = userProfile.role || '';
+            const isAdmin = userRole === 'admin';
+            const isCoCurator = userRole === 'co-curator';
+            const isCoDesigner = userRole === 'co-designer';
+            
+            // Admins, co-curators, and co-designers can book any location
+            if (isAdmin || isCoCurator || isCoDesigner) {
+              return true;
+            }
+            
+            // Other users can only book locations with anyone_can_book = true
+            return location.anyone_can_book;
+          });
+          
+          setLocations(filteredLocations || []);
+        } else {
+          // If no role, just load all locations
+          let { data, error } = await supabase
+            .from('locations')
+            .select('*')
+            .eq('type', 'Meeting Room')
+            .order('name');
+            
+          if (error) throw error;
+          setLocations(data || []);
+        }
       } catch (error) {
         console.error("Error fetching locations:", error);
         toast({
@@ -294,7 +326,7 @@ export function CreateEventSheet({
     if (open) {
       fetchLocations();
     }
-  }, [open, toast]);
+  }, [open, toast, userProfile?.role]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -316,14 +348,14 @@ export function CreateEventSheet({
         if (userId.startsWith('did:privy:')) {
           ({ data, error } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, role')
             .filter('privy_id', 'eq', userId)
             .single());
         } 
         else if (user?.id) {
           ({ data, error } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, role')
             .filter('auth_user_id', 'eq', user.id)
             .single());
         }
