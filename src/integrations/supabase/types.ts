@@ -1143,7 +1143,7 @@ export type Database = {
         Args: {
           parent_event_id: string
           pattern_id: string
-          pattern_frequency: string
+          pattern_frequency: Database["public"]["Enums"]["event_recurrence_frequency"]
           pattern_interval_count: number
           pattern_days_of_week: number[]
           pattern_start_date: string
