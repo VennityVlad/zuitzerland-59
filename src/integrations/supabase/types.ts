@@ -1156,6 +1156,36 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_bookable_locations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          building: string
+          floor: string
+          type: string
+          description: string
+          max_occupancy: number
+          created_at: string
+          updated_at: string
+          anyone_can_book: boolean
+        }[]
+      }
+      get_bookable_locations_for_user: {
+        Args: { user_role: string }
+        Returns: {
+          id: string
+          name: string
+          building: string
+          floor: string
+          type: string
+          description: string
+          max_occupancy: number
+          created_at: string
+          updated_at: string
+          anyone_can_book: boolean
+        }[]
+      }
       get_invoice_status_distribution: {
         Args: { time_filter?: string }
         Returns: {

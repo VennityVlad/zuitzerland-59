@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -274,45 +273,18 @@ export function CreateEventSheet({
       try {
         setIsLoadingLocations(true);
         
-        if (!userProfile) {
-          console.log("User profile not available yet");
-          return;
-        }
-        
-        console.log("Fetching locations with userProfile:", userProfile);
-        
-        // Fetch ALL locations of type 'Meeting Room'
+        // Use our new server-side function to get only bookable locations
         const { data, error } = await supabase
-          .from('locations')
-          .select('*')
-          .eq('type', 'Meeting Room')
+          .rpc('get_bookable_locations')
           .order('name');
         
         if (error) {
-          console.error("Error fetching locations:", error);
+          console.error("Error fetching bookable locations:", error);
           throw error;
         }
         
-        // Apply role-based filtering purely on the client side
-        const userRole = userProfile.role || 'attendee';
-        console.log("Current user role for filtering:", userRole);
-        
-        // First check if user is an admin, co-curator, or co-designer
-        const isAdminRole = userRole === 'admin' || userRole === 'co-curator' || userRole === 'co-designer';
-        
-        let filteredLocations;
-        if (isAdminRole) {
-          // Admin roles can book any location, regardless of anyone_can_book setting
-          console.log("User has admin permissions, showing all locations");
-          filteredLocations = data || [];
-        } else {
-          // Non-admin roles can only book locations with anyone_can_book = true
-          console.log("User is not admin, filtering by anyone_can_book");
-          filteredLocations = (data || []).filter(location => location.anyone_can_book === true);
-        }
-        
-        console.log("Available locations after filtering:", filteredLocations.length);
-        setLocations(filteredLocations);
+        console.log("Available locations for booking:", data?.length);
+        setLocations(data || []);
       } catch (error) {
         console.error("Error fetching locations:", error);
         toast({
@@ -325,10 +297,10 @@ export function CreateEventSheet({
       }
     };
     
-    if (open && userProfile) {
+    if (open) {
       fetchLocations();
     }
-  }, [open, toast, userProfile]);
+  }, [open, toast]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -575,7 +547,7 @@ export function CreateEventSheet({
       } else {
         throw new Error(data.error || 'Unknown error');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating Meerkat event:', error);
       toast({
         title: "Error",
@@ -711,15 +683,7 @@ export function CreateEventSheet({
 
       if (isRecurring) {
         // Create or update recurring pattern
-        const patternData: {
-          frequency: RecurrenceFrequency;
-          interval_count: number;
-          days_of_week: number[] | null;
-          start_date: string;
-          end_date: string | null;
-          created_by: string;
-          timezone: string;
-        } = {
+        const patternData = {
           frequency: recurrenceFrequency,
           interval_count: recurrenceInterval,
           days_of_week: recurrenceFrequency === 'weekly' ? selectedDaysOfWeek : null,
@@ -852,7 +816,7 @@ export function CreateEventSheet({
       
       onOpenChange(false);
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving event:', error);
       toast({
         title: "Error",
