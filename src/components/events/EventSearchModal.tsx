@@ -85,12 +85,7 @@ export const EventSearchModal = ({ open, onOpenChange, events }: EventSearchModa
         <DialogHeader className="pb-4">
           <div className="flex items-center justify-between">
             <DialogTitle>Search Events</DialogTitle>
-            <DialogClose asChild>
-              <Button variant="ghost" size="icon">
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
-            </DialogClose>
+            {/* Removed the duplicate close button here */}
           </div>
         </DialogHeader>
         
