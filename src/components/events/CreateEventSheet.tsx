@@ -1,1279 +1,562 @@
-
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
-import { Calendar as CalendarIcon, Clock, Link, AlertTriangle, MessageSquare } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
-import { toZonedTime } from "date-fns-tz";
-import { convertToUTC } from "@/lib/date-utils";
-import { RecurrenceSettings, RecurrenceFrequency } from './RecurrenceSettings';
-
-// UI Component imports
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { TagSelector } from "@/components/events/TagSelector";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { RecurrenceSettings, RecurrenceFrequency } from "@/components/events/RecurrenceSettings";
+import { useToast } from "@/hooks/use-toast";
+import { useAuthenticatedSupabase } from "@/hooks/useAuthenticatedSupabase";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { usePrivy } from "@privy-io/react-auth";
 
-// Type definitions
+const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+const convertToUTC = (date: Date, time: string, timezone: string) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  const localDate = new Date(date);
+  localDate.setHours(hours, minutes, 0, 0);
+
+  const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+  return utcDate.toISOString();
+};
+
+const formSchema = z.object({
+  title: z.string().min(2, {
+    message: "Title must be at least 2 characters.",
+  }),
+  description: z.string().optional(),
+  startDate: z.date(),
+  startTime: z.string().default("12:00"),
+  endDate: z.date(),
+  endTime: z.string().default("13:00"),
+  isAllDay: z.boolean().default(false),
+  locationId: z.string().optional(),
+  locationText: z.string().optional(),
+  isRecurring: z.boolean().default(false),
+  recurringFrequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']).default('weekly'),
+  recurringInterval: z.number().min(1).default(1),
+  recurringEndDate: z.date().optional(),
+  recurringDays: z.array(z.number()).optional(),
+  color: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  meerkatEnabled: z.boolean().default(false),
+  link: z.string().optional(),
+  speakers: z.string().optional(),
+  avNeeds: z.string().optional()
+});
+
 interface CreateEventSheetProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-  userId: string;
-  profileId?: string;
-  event?: Event | null;
+  setOpen: (open: boolean) => void;
+  locations: { id: string; name: string }[];
+  tags: { id: string; name: string }[];
+  onEventCreated?: () => void;
 }
 
-interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  tags?: { id: string; name: string; color: string; }[];
-  av_needs?: string | null;
-  speakers?: string | null;
-  link?: string | null;
-  timezone: string;
-  recurring_pattern_id: string | null;
-  is_recurring_instance: boolean;
-  meerkat_enabled?: boolean;
-  meerkat_url?: string;
-}
-
-interface Location {
-  id: string;
-  name: string;
-  building: string | null;
-  floor: string | null;
-  type: string;
-  description?: string | null;
-  max_occupancy?: number | null;
-  created_at: string;
-  updated_at: string;
-  anyone_can_book: boolean;
-}
-
-interface Availability {
-  id: string;
-  location_id: string;
-  start_time: string;
-  end_time: string;
-  is_available: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface NewEvent {
-  title: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  av_needs?: string | null;
-  speakers?: string | null;
-  link?: string | null;
-  timezone: string;
-  recurring_pattern_id: string | null;
-  is_recurring_instance: boolean;
-  meerkat_enabled?: boolean;
-}
-
-const TIME_ZONES = [
-  { value: 'Europe/Zurich', label: 'Central European Time (CEST)' },
-  { value: 'Europe/London', label: 'British Time (BST)' },
-  { value: 'America/New_York', label: 'Eastern Time (ET)' },
-  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-  { value: 'Asia/Singapore', label: 'Singapore Time (SGT)' },
-  { value: 'Asia/Tokyo', label: 'Japan Time (JST)' },
-  { value: 'Australia/Sydney', label: 'Australian Eastern Time (AET)' },
-];
-
-const getInitialStartDate = () => {
-  const now = new Date();
-  const nextHour = startOfHour(addHours(now, 1));
-  return format(nextHour, "yyyy-MM-dd'T'HH:mm:ss");
-};
-
-const getInitialEndDate = (startDate: string) => {
-  const start = parseISO(startDate);
-  const end = addHours(start, 1);
-  return format(end, "yyyy-MM-dd'T'HH:mm:ss");
-};
-
-export function CreateEventSheet({ 
-  open, 
-  onOpenChange, 
-  onSuccess, 
-  userId, 
-  profileId, 
-  event 
-}: CreateEventSheetProps) {
+export function CreateEventSheet({ open, setOpen, locations, tags, onEventCreated }: CreateEventSheetProps) {
   const { toast } = useToast();
-  const { user } = useSupabaseAuth();
-  const [userProfile, setUserProfile] = useState<{ id: string; role?: string } | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
-  const [locationAvailabilities, setLocationAvailabilities] = useState<Availability[]>([]);
-  const [availabilityValidationError, setAvailabilityValidationError] = useState<string | null>(null);
-  const [overlapValidationError, setOverlapValidationError] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<{ id: string; name: string; color: string; }[]>([]);
-  const [useCustomLocation, setUseCustomLocation] = useState(false);
-  const [locationRequired, setLocationRequired] = useState(false);
-  
-  // Recurring event states
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>('weekly');
-  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null);
-  const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
-
-  const [newEvent, setNewEvent] = useState<NewEvent>({
-    title: "",
-    description: "",
-    start_date: getInitialStartDate(),
-    end_date: getInitialEndDate(getInitialStartDate()),
-    location_id: null,
-    location_text: "",
-    color: "#1a365d",
-    is_all_day: false,
-    created_by: "",
-    av_needs: "",
-    speakers: "",
-    link: "",
-    timezone: 'Europe/Zurich',
-    recurring_pattern_id: null,
-    is_recurring_instance: false,
-    meerkat_enabled: false
-  });
-  
-  // New state for Meerkat integration
-  const [isCreatingMeerkatEvent, setIsCreatingMeerkatEvent] = useState(false);
-  const [meerkatUrl, setMeerkatUrl] = useState<string | null>(null);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isEditMode = !!event;
+  const { supabase } = useAuthenticatedSupabase();
+  const [userProfile, setUserProfile] = useState<{ id: string } | null>(null);
+  const { user } = usePrivy();
 
   useEffect(() => {
-    if (event) {
-      console.log('Editing existing event:', event);
-      setNewEvent({
-        title: event.title,
-        description: event.description || "",
-        start_date: event.start_date,
-        end_date: event.end_date,
-        location_id: event.location_id,
-        location_text: event.location_text || "",
-        color: event.color,
-        is_all_day: event.is_all_day,
-        created_by: event.created_by,
-        av_needs: event.av_needs,
-        speakers: event.speakers,
-        link: event.link,
-        timezone: event.timezone || 'Europe/Zurich',
-        recurring_pattern_id: event.recurring_pattern_id,
-        is_recurring_instance: event.is_recurring_instance,
-        meerkat_enabled: event.meerkat_enabled || false
-      });
+    const fetchProfile = async () => {
+      if (!supabase || !user?.id) return;
       
-      setUseCustomLocation(!!event.location_text);
-      
-      if (event.meerkat_url) {
-        setMeerkatUrl(event.meerkat_url);
-      }
-      
-      if (event.recurring_pattern_id) {
-        setIsRecurring(true);
-        fetchRecurringPattern(event.recurring_pattern_id);
-      }
-      
-      if (event.id) {
-        fetchEventTags(event.id);
-      }
-      
-      console.log('Initialized form with event dates:', {
-        start_date: event.start_date,
-        end_date: event.end_date,
-        timezone: event.timezone || 'Europe/Zurich'
-      });
-    } else {
-      resetForm();
-    }
-  }, [event]);
-
-  // Add the function to fetch recurring pattern details
-  const fetchRecurringPattern = async (patternId: string) => {
-    try {
       const { data, error } = await supabase
-        .from('recurring_event_patterns')
-        .select('*')
-        .eq('id', patternId)
+        .from('profiles')
+        .select('id')
+        .eq('privy_id', user.id)
         .single();
       
-      if (error) throw error;
-      
-      if (data) {
-        setRecurrenceFrequency(data.frequency as RecurrenceFrequency);
-        setRecurrenceInterval(data.interval_count);
-        setSelectedDaysOfWeek(data.days_of_week || []);
-        setRecurrenceEndDate(data.end_date ? new Date(data.end_date) : null);
-      }
-    } catch (error) {
-      console.error("Error fetching recurring pattern:", error);
-    }
-  };
-
-  const fetchEventTags = async (eventId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('event_tag_relations')
-        .select(`
-          tag_id,
-          event_tags (id, name, color)
-        `)
-        .eq('event_id', eventId);
-      
-      if (error) throw error;
-      
-      if (data) {
-        const tags = data.map(item => ({
-          id: item.event_tags.id,
-          name: item.event_tags.name,
-          color: item.event_tags.color || "#1a365d"
-        }));
-        
-        setSelectedTags(tags);
-      }
-    } catch (error) {
-      console.error("Error fetching event tags:", error);
-    }
-  };
-
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        setIsLoadingLocations(true);
-        
-        if (!userProfile) {
-          console.log("User profile not available yet");
-          return;
-        }
-        
-        console.log("Fetching locations with userProfile:", userProfile);
-        
-        // Fetch ALL locations of type 'Meeting Room'
-        const { data, error } = await supabase
-          .from('locations')
-          .select('*')
-          .eq('type', 'Meeting Room')
-          .order('name');
-        
-        if (error) {
-          console.error("Error fetching locations:", error);
-          throw error;
-        }
-        
-        // Apply role-based filtering purely on the client side
-        const userRole = userProfile.role || 'attendee';
-        console.log("Current user role for filtering:", userRole);
-        
-        // First check if user is an admin, co-curator, or co-designer
-        const isAdminRole = userRole === 'admin' || userRole === 'co-curator' || userRole === 'co-designer';
-        
-        let filteredLocations;
-        if (isAdminRole) {
-          // Admin roles can book any location, regardless of anyone_can_book setting
-          console.log("User has admin permissions, showing all locations");
-          filteredLocations = data || [];
-        } else {
-          // Non-admin roles can only book locations with anyone_can_book = true
-          console.log("User is not admin, filtering by anyone_can_book");
-          filteredLocations = (data || []).filter(location => location.anyone_can_book === true);
-        }
-        
-        console.log("Available locations after filtering:", filteredLocations.length);
-        setLocations(filteredLocations);
-      } catch (error) {
-        console.error("Error fetching locations:", error);
+      if (error) {
+        console.error("Error fetching profile:", error);
         toast({
           title: "Error",
-          description: "Failed to load meeting rooms",
+          description: "Failed to load user profile.",
           variant: "destructive",
         });
-      } finally {
-        setIsLoadingLocations(false);
+      } else if (data) {
+        setUserProfile(data);
       }
     };
     
-    if (open && userProfile) {
-      fetchLocations();
-    }
-  }, [open, toast, userProfile]);
+    fetchProfile();
+  }, [supabase, user?.id, toast]);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!user && !userId) return;
-      
-      if (profileId) {
-        setUserProfile({ id: profileId });
-        if (!isEditMode) {
-          setNewEvent(prev => ({ ...prev, created_by: profileId }));
-        }
-        return;
-      }
-      
-      try {
-        setIsLoadingProfile(true);
-        
-        let { data, error } = { data: null, error: null };
-        
-        if (userId.startsWith('did:privy:')) {
-          ({ data, error } = await supabase
-            .from('profiles')
-            .select('id, role')
-            .filter('privy_id', 'eq', userId)
-            .single());
-        } 
-        else if (user?.id) {
-          ({ data, error } = await supabase
-            .from('profiles')
-            .select('id, role')
-            .filter('auth_user_id', 'eq', user.id)
-            .single());
-        }
-        
-        if (error) {
-          console.error("Error fetching user profile:", error);
-          throw error;
-        }
-        
-        if (data) {
-          console.log("Found user profile:", data);
-          setUserProfile(data);
-          
-          if (!isEditMode) {
-            setNewEvent(prev => ({ ...prev, created_by: data.id }));
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "User profile not found. Please complete your profile setup first.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch user profile:", error);
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    };
-    
-    fetchUserProfile();
-  }, [user, userId, profileId, toast, isEditMode]);
-
-  useEffect(() => {
-    const fetchLocationAvailability = async () => {
-      if (!newEvent.location_id) {
-        setLocationAvailabilities([]);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('location_availability')
-          .select('*')
-          .eq('location_id', newEvent.location_id);
-        
-        if (error) throw error;
-        
-        setLocationAvailabilities(data || []);
-        validateLocationAvailability(data || []);
-      } catch (error) {
-        console.error("Error fetching location availability:", error);
-      }
-    };
-    
-    if (newEvent.location_id) {
-      fetchLocationAvailability();
-    }
-  }, [newEvent.location_id, newEvent.start_date, newEvent.end_date]);
-
-  const resetForm = () => {
-    const initialStartDate = getInitialStartDate();
-    const initialEndDate = getInitialEndDate(initialStartDate);
-    
-    console.log('Resetting form with initial dates:', {
-      initialStartDate,
-      initialEndDate,
-      timezone: 'Europe/Zurich'
-    });
-    
-    setNewEvent({
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
       title: "",
       description: "",
-      start_date: initialStartDate,
-      end_date: initialEndDate,
-      location_id: null,
-      location_text: "",
-      color: "#1a365d",
-      is_all_day: false,
-      created_by: userProfile?.id || "",
-      av_needs: "",
-      speakers: "",
-      link: "",
-      timezone: 'Europe/Zurich',
-      recurring_pattern_id: null,
-      is_recurring_instance: false,
-      meerkat_enabled: false
-    });
-    setSelectedTags([]);
-    setAvailabilityValidationError(null);
-    setUseCustomLocation(false);
-    setMeerkatUrl(null);
-    
-    // Reset recurrence state
-    setIsRecurring(false);
-    setRecurrenceFrequency('weekly');
-    setRecurrenceInterval(1);
-    setRecurrenceEndDate(null);
-    setSelectedDaysOfWeek([]);
-  };
+      startDate: new Date(),
+      startTime: "12:00",
+      endDate: new Date(),
+      endTime: "13:00",
+      isAllDay: false,
+      locationId: locations.length > 0 ? locations[0].id : "none",
+      isRecurring: false,
+      recurringFrequency: 'weekly',
+      recurringInterval: 1,
+      recurringDays: [],
+      color: null,
+      tags: [],
+      meerkatEnabled: false
+    },
+  });
 
-  const validateLocationAvailability = (availabilities: Availability[]) => {
-    if (!newEvent.location_id || availabilities.length === 0) {
-      setAvailabilityValidationError(null);
-      return true;
-    }
-    
-    const eventStart = new Date(newEvent.start_date);
-    const eventEnd = new Date(newEvent.end_date);
-    
-    const conflicts = availabilities.filter(period => {
-      if (period.is_available) return false;
-      
-      const periodStart = new Date(period.start_time);
-      const periodEnd = new Date(period.end_time);
-      
-      return (
-        (eventStart >= periodStart && eventStart < periodEnd) ||
-        (eventEnd > periodStart && eventEnd <= periodEnd) ||
-        (eventStart <= periodStart && eventEnd >= periodEnd)
-      );
-    });
-    
-    if (conflicts.length > 0) {
-      setAvailabilityValidationError("Selected location is not available during this time period");
-      return false;
-    } else {
-      setAvailabilityValidationError(null);
-      return true;
-    }
-  };
-
-  const checkForEventOverlap = async () => {
-    if (!newEvent.location_id) {
-      setOverlapValidationError(null);
-      return true;
-    }
-    const start = new Date(newEvent.start_date);
-    const end = new Date(newEvent.end_date);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      setOverlapValidationError(null);
-      return true;
-    }
-    let query = supabase
-      .from('events')
-      .select('id, title, start_date, end_date')
-      .eq('location_id', newEvent.location_id);
-
-    if (isEditMode && event) {
-      query = query.neq('id', event.id);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error("Error checking overlaps:", error);
-      setOverlapValidationError("Error checking overlapping events");
-      return false;
-    }
-    
-    const overlaps = (data || []).find((e) => {
-      return (
-        new Date(e.start_date) < end &&
-        new Date(e.end_date) > start
-      );
-    });
-    
-    if (overlaps) {
-      setOverlapValidationError(
-        `Room already booked for this time (conflict with "${overlaps.title}")`
-      );
-      return false;
-    }
-    
-    setOverlapValidationError(null);
-    return true;
-  };
-
-  useEffect(() => {
-    if (newEvent.location_id && newEvent.start_date && newEvent.end_date) {
-      checkForEventOverlap();
-    } else {
-      setOverlapValidationError(null);
-    }
-  }, [newEvent.location_id, newEvent.start_date, newEvent.end_date, isEditMode, event]);
-
-  const validateUrl = (url: string): boolean => {
-    if (!url) return true; // Allow empty URLs
+  // Update the handleSubmit function to correctly handle recurring event creation
+  const handleSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const handleCreateMeerkatEvent = async (eventId: string) => {
-    try {
-      setIsCreatingMeerkatEvent(true);
+      console.log("Start of form submission, current form values:", data);
       
-      const { data, error } = await supabase.functions.invoke('create-meerkat-event', {
-        body: { eventId }
-      });
+      // Clone the data to avoid mutation
+      const formData = { ...data };
       
-      if (error) {
-        throw new Error(`Failed to create Meerkat event: ${error.message}`);
-      }
+      // Convert local dates to UTC
+      console.log("Before UTC conversion:", formData);
+      formData.startDate = convertToUTC(formData.startDate, formData.startTime, timezone);
+      formData.endDate = convertToUTC(formData.endDate, formData.endTime, timezone);
+      console.log("After UTC conversion:", formData);
       
-      if (data.success) {
-        setMeerkatUrl(data.meerkatUrl);
-        toast({
-          title: "Meerkat Q&A created",
-          description: "Successfully created Q&A session for this event",
-        });
-        return data.meerkatUrl;
-      } else {
-        throw new Error(data.error || 'Unknown error');
-      }
-    } catch (error) {
-      console.error('Error creating Meerkat event:', error);
-      toast({
-        title: "Error",
-        description: `Failed to create Meerkat Q&A: ${error.message}`,
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsCreatingMeerkatEvent(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    try {
-      setIsSubmitting(true);
-      console.log('Start of form submission, current form values:', {
-        title: newEvent.title,
-        start_date: newEvent.start_date,
-        end_date: newEvent.end_date,
-        timezone: newEvent.timezone,
-        browserTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      });
+      let recurring_pattern_id = null;
       
-      if (!newEvent.title) {
-        toast({
-          title: "Error",
-          description: "Event title is required",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (useCustomLocation && !newEvent.location_text) {
-        toast({
-          title: "Error",
-          description: "Please enter a custom location",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (!useCustomLocation && !newEvent.location_id) {
-        toast({
-          title: "Error",
-          description: "Please select a location",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (newEvent.link && !validateUrl(newEvent.link)) {
-        toast({
-          title: "Error",
-          description: "Please enter a valid URL",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (!userProfile?.id && !isEditMode) {
-        toast({
-          title: "Error",
-          description: "User profile not found. Please complete your profile setup.",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      const startDate = new Date(newEvent.start_date);
-      const endDate = new Date(newEvent.end_date);
-      
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        toast({
-          title: "Error",
-          description: "Invalid date format",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      if (startDate > endDate) {
-        toast({
-          title: "Error",
-          description: "End date must be after start date",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      if (!validateLocationAvailability(locationAvailabilities)) {
-        toast({
-          title: "Error",
-          description: availabilityValidationError || "Location is not available during selected time",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (!await checkForEventOverlap()) {
-        toast({
-          title: "Room is already booked",
-          description: overlapValidationError || "There is an overlapping event for this room.",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      console.log('Before UTC conversion:', {
-        start_date: newEvent.start_date,
-        end_date: newEvent.end_date,
-        timezone: newEvent.timezone
-      });
-      
-      const utcStartDate = convertToUTC(newEvent.start_date, newEvent.timezone);
-      const utcEndDate = convertToUTC(newEvent.end_date, newEvent.timezone);
-      
-      console.log('After UTC conversion:', {
-        utcStartDate,
-        utcEndDate,
-        originalTimezone: newEvent.timezone
-      });
-      
-      let recurringPatternId = null;
-
-      if (isRecurring) {
-        // Create or update recurring pattern
-        const patternData: {
-          frequency: RecurrenceFrequency;
-          interval_count: number;
-          days_of_week: number[] | null;
-          start_date: string;
-          end_date: string | null;
-          created_by: string;
-          timezone: string;
-        } = {
-          frequency: recurrenceFrequency,
-          interval_count: recurrenceInterval,
-          days_of_week: recurrenceFrequency === 'weekly' ? selectedDaysOfWeek : null,
-          start_date: utcStartDate,
-          end_date: recurrenceEndDate ? convertToUTC(recurrenceEndDate.toISOString(), newEvent.timezone) : null,
-          created_by: userProfile?.id || '',
-          timezone: newEvent.timezone
-        };
-
-        if (event?.recurring_pattern_id) {
-          const { data: pattern, error: patternError } = await supabase
-            .from('recurring_event_patterns')
-            .update(patternData)
-            .eq('id', event.recurring_pattern_id)
-            .select()
-            .single();
-
-          if (patternError) throw patternError;
-          recurringPatternId = pattern.id;
-        } else {
-          const { data: pattern, error: patternError } = await supabase
-            .from('recurring_event_patterns')
-            .insert(patternData)
-            .select()
-            .single();
-
-          if (patternError) throw patternError;
-          recurringPatternId = pattern.id;
-        }
-      }
-
-      const eventData = {
-        title: newEvent.title,
-        description: newEvent.description || null,
-        start_date: utcStartDate,
-        end_date: utcEndDate,
-        location_id: useCustomLocation ? null : newEvent.location_id,
-        location_text: useCustomLocation ? newEvent.location_text : null,
-        color: "#1a365d",
-        is_all_day: newEvent.is_all_day,
-        av_needs: newEvent.av_needs || null,
-        speakers: newEvent.speakers || null,
-        link: newEvent.link || null,
-        timezone: newEvent.timezone,
-        recurring_pattern_id: recurringPatternId,
-        is_recurring_instance: false,
-        meerkat_enabled: newEvent.meerkat_enabled
-      };
-
-      console.log('Event data prepared for database:', eventData);
-
-      let eventId = "";
-      let meerkatUrlToSave = null;
-
-      if (isEditMode) {
-        console.log("Updating event:", event.id);
-        const { data, error } = await supabase
-          .from('events')
-          .update(eventData)
-          .eq('id', event.id)
-          .select();
-
-        if (error) {
-          console.error("Supabase update error:", error);
-          throw error;
+      // Handle recurring event pattern if isRecurring is true
+      if (formData.isRecurring) {
+        // Make sure we have the current user's profile ID
+        if (!userProfile?.id) {
+          throw new Error("User profile ID is required for creating recurring events");
         }
         
-        eventId = event.id;
-        
-        // Handle tag updates for existing event
-        if (selectedTags.length > 0) {
-          await supabase
-            .from('event_tag_relations')
-            .delete()
-            .eq('event_id', event.id);
-
-          await supabase
-            .from('event_tag_relations')
-            .insert(
-              selectedTags.map(tag => ({
-                event_id: event.id,
-                tag_id: tag.id
-              }))
-            );
+        // Convert end date to UTC if provided
+        let endDateUTC = null;
+        if (formData.recurringEndDate) {
+          // Set time to end of day for the end date
+          const endOfDay = new Date(formData.recurringEndDate);
+          endOfDay.setHours(23, 59, 59, 999);
+          endDateUTC = convertToUTC(endOfDay, "23:59", timezone);
+          console.log("Recurring end date (UTC):", endDateUTC);
         }
-      } else {
-        // Create a new event
-        console.log("Creating new event");
-        const { data, error } = await supabase
-          .from('events')
+        
+        // Create the recurring pattern
+        const { data: patternData, error: patternError } = await supabase
+          .from('recurring_event_patterns')
           .insert({
-            ...eventData,
-            created_by: userProfile?.id || "",
+            created_by: userProfile.id, // Use the profile ID, not the auth user ID
+            frequency: formData.recurringFrequency,
+            interval_count: formData.recurringInterval,
+            days_of_week: formData.recurringFrequency === 'weekly' ? formData.recurringDays : null,
+            start_date: formData.startDate,
+            end_date: endDateUTC,
+            timezone: timezone
           })
           .select()
           .single();
-
-        if (error) {
-          console.error("Supabase insert error:", error);
-          throw error;
+        
+        if (patternError) {
+          console.error("Error creating recurring pattern:", patternError);
+          throw patternError;
         }
         
-        console.log("Event created:", data);
-        eventId = data.id;
+        recurring_pattern_id = patternData.id;
+        console.log("Created recurring pattern with ID:", recurring_pattern_id);
+      }
+      
+      // Create the event
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .insert({
+          title: formData.title,
+          description: formData.description,
+          start_date: formData.startDate,
+          end_date: formData.endDate,
+          is_all_day: formData.isAllDay,
+          created_by: userProfile.id, // Use the profile ID
+          location_id: formData.locationId === "none" ? null : formData.locationId,
+          location_text: formData.locationText,
+          recurring_pattern_id: recurring_pattern_id,
+          color: formData.color,
+          timezone: timezone,
+          meerkat_enabled: formData.meerkatEnabled,
+          link: formData.link,
+          speakers: formData.speakers,
+          av_needs: formData.avNeeds
+        })
+        .select();
+      
+      if (eventError) {
+        console.error("Error saving event:", eventError);
+        throw eventError;
+      }
+      
+      // Add event tags if selected
+      if (formData.tags && formData.tags.length > 0 && eventData && eventData[0]) {
+        const eventId = eventData[0].id;
         
-        // Insert tags for new event
-        if (selectedTags.length > 0) {
-          await supabase
+        for (const tagId of formData.tags) {
+          const { error: tagError } = await supabase
             .from('event_tag_relations')
-            .insert(
-              selectedTags.map(tag => ({
-                event_id: data.id,
-                tag_id: tag.id
-              }))
-            );
+            .insert({
+              event_id: eventId,
+              tag_id: tagId
+            });
+          
+          if (tagError) {
+            console.error("Error adding tag relation:", tagError);
+            // Continue with other tags even if one fails
+          }
         }
       }
-
-      // Create Meerkat Q&A session if enabled
-      if (newEvent.meerkat_enabled && !meerkatUrl) {
-        meerkatUrlToSave = await handleCreateMeerkatEvent(eventId);
-      }
-
+      
       toast({
-        title: isEditMode ? "Event updated" : "Event created",
-        description: isEditMode 
-          ? "Your event has been updated successfully"
-          : "Your event has been created successfully",
+        title: "Event Created",
+        description: `Successfully created "${formData.title}"`,
       });
       
-      onOpenChange(false);
-      onSuccess();
+      // Close the sheet and refresh events
+      setOpen(false);
+      
+      if (onEventCreated) {
+        onEventCreated();
+      }
     } catch (error) {
-      console.error('Error saving event:', error);
+      console.error("Error saving event:", error);
       toast({
         title: "Error",
-        description: `Failed to save event: ${error.message}`,
+        description: "There was a problem creating your event.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
-  };
-
-  const handleDateChange = (type: 'start' | 'end', date: Date | undefined) => {
-    if (!date) return;
-    
-    const currentDate = type === 'start' 
-      ? parseISO(newEvent.start_date)
-      : parseISO(newEvent.end_date);
-    
-    const hours = currentDate.getHours();
-    const minutes = currentDate.getMinutes();
-    
-    const newDate = new Date(date);
-    newDate.setHours(hours);
-    newDate.setMinutes(minutes);
-    
-    console.log(`handleDateChange (${type}):`, {
-      date: date.toString(),
-      currentDate: currentDate.toString(),
-      hours,
-      minutes,
-      newDate: newDate.toString()
-    });
-    
-    if (type === 'start') {
-      const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
-      console.log('Setting new start date:', newStartDate);
-      setNewEvent(prev => ({
-        ...prev,
-        start_date: newStartDate,
-        end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
-      }));
-    } else {
-      const newEndDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
-      console.log('Setting new end date:', newEndDate);
-      setNewEvent(prev => ({
-        ...prev,
-        end_date: newEndDate
-      }));
-    }
-  };
-
-  const handleTimeChange = (type: 'start' | 'end', timeString: string) => {
-    console.log(`handleTimeChange (${type}):`, { timeString });
-    const [hours, minutes] = timeString.split(':').map(Number);
-    
-    const currentDate = type === 'start' 
-      ? parseISO(newEvent.start_date) 
-      : parseISO(newEvent.end_date);
-    
-    const newDate = new Date(currentDate);
-    newDate.setHours(hours);
-    newDate.setMinutes(minutes);
-
-    console.log('After setting hours/minutes:', {
-      newDate: newDate.toString(),
-      newDateISO: newDate.toISOString(),
-      timezone: newEvent.timezone
-    });
-    
-    if (type === 'start') {
-      const newStartDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
-      console.log('Setting new time-adjusted start date:', newStartDate);
-      setNewEvent(prev => ({
-        ...prev,
-        start_date: newStartDate,
-        end_date: format(addHours(newDate, 1), 'yyyy-MM-dd\'T\'HH:mm:ss')
-      }));
-    } else {
-      const newEndDate = format(newDate, 'yyyy-MM-dd\'T\'HH:mm:ss');
-      console.log('Setting new time-adjusted end date:', newEndDate);
-      setNewEvent(prev => ({
-        ...prev,
-        end_date: newEndDate
-      }));
-    }
-  };
-
-  const handleLocationChange = (locationId: string) => {
-    setNewEvent({
-      ...newEvent,
-      location_id: locationId,
-      location_text: null
-    });
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full max-w-4xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{isEditMode ? "Edit Event" : "Create Event"}</SheetTitle>
-          <SheetDescription>
-            {isEditMode
-              ? "Update the details of your event."
-              : "Add a new event to your calendar."}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="py-6 space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Event Title</Label>
-              <Input 
-                id="title" 
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                placeholder="Team Meeting"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea 
-                id="description" 
-                value={newEvent.description}
-                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                placeholder="Details about the event..."
-                rows={3}
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is-all-day"
-                checked={newEvent.is_all_day}
-                onCheckedChange={(checked) => setNewEvent({...newEvent, is_all_day: checked})}
-              />
-              <Label htmlFor="is-all-day">All day event</Label>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input placeholder="Event title" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Write a description for your event"
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Start Date</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.start_date ? format(parseISO(newEvent.start_date), 'MMM d, yyyy') : <span>Pick a date</span>}
-                    </Button>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={
+                          "w-full pl-3 text-left font-normal" +
+                          (field.value ? " text-foreground" : " text-muted-foreground")
+                        }
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={newEvent.start_date ? parseISO(newEvent.start_date) : undefined}
-                      onSelect={(date) => handleDateChange('start', date)}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {!newEvent.is_all_day && (
-                <div className="space-y-2">
-                  <Label htmlFor="start-time">Start Time</Label>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <Input 
-                      id="start-time" 
-                      type="time"
-                      value={format(parseISO(newEvent.start_date), 'HH:mm')}
-                      onChange={(e) => handleTimeChange('start', e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.end_date ? format(parseISO(newEvent.end_date), 'MMM d, yyyy') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newEvent.end_date ? parseISO(newEvent.end_date) : undefined}
-                      onSelect={(date) => handleDateChange('end', date)}
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date()}
                       initialFocus
-                      className="p-3 pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
-
-              {!newEvent.is_all_day && (
-                <div className="space-y-2">
-                  <Label htmlFor="end-time">End Time</Label>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <Input 
-                      id="end-time" 
-                      type="time"
-                      value={format(parseISO(newEvent.end_date), 'HH:mm')}
-                      onChange={(e) => handleTimeChange('end', e.target.value)}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="startTime"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Start Time</FormLabel>
+                <FormControl>
+                  <Input type="time" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="endDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>End Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={
+                          "w-full pl-3 text-left font-normal" +
+                          (field.value ? " text-foreground" : " text-muted-foreground")
+                        }
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
                     />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
-              <Select 
-                value={newEvent.timezone} 
-                onValueChange={(value) => setNewEvent({...newEvent, timezone: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select timezone" />
-                </SelectTrigger>
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="endTime"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>End Time</FormLabel>
+                <FormControl>
+                  <Input type="time" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="isAllDay"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-md border px-3 py-2">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">All Day</FormLabel>
+                <FormDescription>
+                  Is this an all day event?
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="locationId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Location</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a location" />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
-                  {TIME_ZONES.map(tz => (
-                    <SelectItem key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </SelectItem>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>
                   ))}
+                  <SelectItem value="none">No Location</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Location</Label>
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="custom-location" className="text-sm text-muted-foreground">
-                    Use custom location
-                  </Label>
-                  <Switch 
-                    id="custom-location" 
-                    checked={useCustomLocation} 
-                    onCheckedChange={setUseCustomLocation} 
-                  />
-                </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {form.getValues("locationId") === "none" && (
+          <FormField
+            control={form.control}
+            name="locationText"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location Text</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter location" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        <FormField
+          control={form.control}
+          name="color"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Color</FormLabel>
+              <FormControl>
+                <Input type="color" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="tags"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tags</FormLabel>
+              <MultiSelect
+                options={tags.map(tag => ({ label: tag.name, value: tag.id }))}
+                value={field.value}
+                onChange={field.onChange}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <RecurrenceSettings
+          isRecurring={form.watch("isRecurring")}
+          onIsRecurringChange={(value: boolean) => form.setValue("isRecurring", value)}
+          frequency={form.watch("recurringFrequency")}
+          onFrequencyChange={(value: RecurrenceFrequency) => form.setValue("recurringFrequency", value)}
+          intervalCount={form.watch("recurringInterval")}
+          onIntervalCountChange={(value: number) => form.setValue("recurringInterval", value)}
+          endDate={form.watch("recurringEndDate")}
+          onEndDateChange={(date: Date | null) => form.setValue("recurringEndDate", date)}
+          daysOfWeek={form.watch("recurringDays") || []}
+          onDaysOfWeekChange={(days: number[]) => form.setValue("recurringDays", days)}
+        />
+        <FormField
+          control={form.control}
+          name="meerkatEnabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-md border px-3 py-2">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Enable Meerkat</FormLabel>
+                <FormDescription>
+                  Enable Meerkat for this event?
+                </FormDescription>
               </div>
-              
-              {useCustomLocation ? (
-                <Input 
-                  placeholder="Custom location (e.g., Online, Café, etc.)" 
-                  value={newEvent.location_text || ''} 
-                  onChange={(e) => setNewEvent({...newEvent, location_text: e.target.value})}
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
                 />
-              ) : (
-                <div className="space-y-2">
-                  <Select value={newEvent.location_id || ''} onValueChange={handleLocationChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isLoadingLocations ? (
-                        <div className="flex justify-center p-2">
-                          <Spinner size="sm" />
-                        </div>
-                      ) : (
-                        locations.map(location => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name} {location.building && `(${location.building}${location.floor ? `, Floor ${location.floor}` : ''})`}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  
-                  {availabilityValidationError && (
-                    <p className="text-sm text-red-500">{availabilityValidationError}</p>
-                  )}
-                  
-                  {overlapValidationError && (
-                    <p className="text-sm text-red-500">{overlapValidationError}</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Event Tags</Label>
-              <TagSelector 
-                selectedTags={selectedTags} 
-                onTagsChange={setSelectedTags} 
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Event URL (Optional)</Label>
-              <div className="flex items-center space-x-2">
-                <Link className="h-4 w-4 text-gray-500" />
-                <Input 
-                  value={newEvent.link || ''}
-                  onChange={(e) => setNewEvent({...newEvent, link: e.target.value})}
-                  placeholder="https://example.com/meeting"
-                />
-              </div>
-              {newEvent.link && !validateUrl(newEvent.link) && (
-                <p className="text-sm text-red-500">Please enter a valid URL</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>List of Speakers</Label>
-              <Textarea 
-                value={newEvent.speakers || ''}
-                onChange={(e) => setNewEvent({...newEvent, speakers: e.target.value})}
-                placeholder="Names of speakers (if applicable)"
-                rows={2}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>A/V Needs</Label>
-              <Textarea 
-                value={newEvent.av_needs || ''}
-                onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
-                placeholder="Any specific A/V requirements (e.g., projector, microphone)"
-                rows={2}
-              />
-            </div>
-
-            {/* Recurring Event Options */}
-            <div className="border-t pt-4">
-              <h3 className="text-md font-medium mb-4">Recurring Event Options</h3>
-              <RecurrenceSettings
-                isRecurring={isRecurring}
-                onIsRecurringChange={setIsRecurring}
-                frequency={recurrenceFrequency}
-                onFrequencyChange={setRecurrenceFrequency}
-                intervalCount={recurrenceInterval}
-                onIntervalCountChange={setRecurrenceInterval}
-                endDate={recurrenceEndDate}
-                onEndDateChange={setRecurrenceEndDate}
-                daysOfWeek={selectedDaysOfWeek}
-                onDaysOfWeekChange={setSelectedDaysOfWeek}
-              />
-            </div>
-
-            {/* Meerkat Q&A Toggle Section */}
-            <div className="space-y-4 border-t pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="meerkat-toggle" className="text-md font-medium">
-                    Add Meerkat Q&A Session
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enable interactive Q&A for your event
-                  </p>
-                </div>
-                <Switch 
-                  id="meerkat-toggle" 
-                  checked={newEvent.meerkat_enabled} 
-                  onCheckedChange={(checked) => setNewEvent({...newEvent, meerkat_enabled: checked})} 
-                />
-              </div>
-              
-              {newEvent.meerkat_enabled && (
-                <div>
-                  {isCreatingMeerkatEvent ? (
-                    <div className="flex items-center space-x-2 text-blue-500">
-                      <Spinner size="xs" className="border-current border-r-transparent" />
-                      <span>Creating Meerkat Q&A session...</span>
-                    </div>
-                  ) : meerkatUrl ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-green-500">
-                        <MessageSquare className="h-4 w-4" />
-                        <span>Meerkat Q&A session created!</span>
-                      </div>
-                      <Input 
-                        value={meerkatUrl}
-                        readOnly
-                        className="bg-muted"
-                      />
-                    </div>
-                  ) : isEditMode ? (
-                    <div className="flex items-center space-x-2 text-amber-500">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span>Q&A session will be created when you save</span>
-                    </div>
-                  ) : null}
-                  
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    This will create a Meerkat Q&A session for your event, enabling participants to ask questions and interact during the session.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-4 flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Spinner size="sm" className="mr-2" />
-                    {isEditMode ? "Saving..." : "Creating..."}
-                  </>
-                ) : (
-                  isEditMode ? "Save Changes" : "Create Event"
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="link"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Link</FormLabel>
+              <FormControl>
+                <Input placeholder="Event link" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="speakers"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Speakers</FormLabel>
+              <FormControl>
+                <Input placeholder="Event speakers" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="avNeeds"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>AV Needs</FormLabel>
+              <FormControl>
+                <Input placeholder="Event AV Needs" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Submit</Button>
+      </form>
+    </Form>
   );
 }
