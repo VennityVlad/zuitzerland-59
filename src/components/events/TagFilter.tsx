@@ -16,10 +16,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface TagFilterProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
-  visibleTagIds?: string[];
 }
 
-export const TagFilter = ({ selectedTags, onTagsChange, visibleTagIds }: TagFilterProps) => {
+export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -34,12 +33,6 @@ export const TagFilter = ({ selectedTags, onTagsChange, visibleTagIds }: TagFilt
       return data;
     },
   });
-
-  // Filter tags based on visibleTagIds if provided
-  const tags = React.useMemo(() => {
-    if (!visibleTagIds || !allTags) return allTags;
-    return allTags.filter(tag => visibleTagIds.includes(tag.id));
-  }, [allTags, visibleTagIds]);
 
   const toggleTag = (tagId: string) => {
     if (selectedTags.includes(tagId)) {
@@ -58,16 +51,6 @@ export const TagFilter = ({ selectedTags, onTagsChange, visibleTagIds }: TagFilt
     setOpen(false);
   };
 
-  // Clean up selected tags that are no longer in the visible tag list
-  useEffect(() => {
-    if (visibleTagIds && selectedTags.length > 0) {
-      const validSelectedTags = selectedTags.filter(id => visibleTagIds.includes(id));
-      if (validSelectedTags.length !== selectedTags.length) {
-        onTagsChange(validSelectedTags);
-      }
-    }
-  }, [visibleTagIds, selectedTags, onTagsChange]);
-
   const selectedCount = selectedTags.length;
 
   return (
@@ -79,7 +62,7 @@ export const TagFilter = ({ selectedTags, onTagsChange, visibleTagIds }: TagFilt
               variant="outline"
               size="sm"
               className="h-9 border-dashed flex-shrink-0"
-              disabled={!tags || tags.length === 0}
+              disabled={!allTags || allTags.length === 0}
             >
               <ChevronDownIcon className="mr-2 h-4 w-4" />
               Filter by tag
@@ -115,14 +98,14 @@ export const TagFilter = ({ selectedTags, onTagsChange, visibleTagIds }: TagFilt
                 <div className="flex items-center justify-center p-4">
                   <p className="text-sm text-muted-foreground">Loading...</p>
                 </div>
-              ) : !tags || tags.length === 0 ? (
+              ) : !allTags || allTags.length === 0 ? (
                 <div className="flex items-center justify-center p-4">
                   <p className="text-sm text-muted-foreground">No tags found</p>
                 </div>
               ) : (
                 <ScrollArea className="h-60">
                   <div className="space-y-2">
-                    {tags.map((tag) => (
+                    {allTags.map((tag) => (
                       <div
                         key={tag.id}
                         className="flex items-center space-x-2"

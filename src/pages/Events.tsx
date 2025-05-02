@@ -513,6 +513,14 @@ const Events = () => {
     );
   }
 
+  const handleTagsChange = (tags: string[]) => {
+    setSelectedTags(tags);
+    // When tags are selected, switch to "all" tab to show all filtered events
+    if (tags.length > 0) {
+      setActiveTab("all");
+    }
+  };
+
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex items-center justify-between gap-3">
@@ -579,8 +587,7 @@ const Events = () => {
           <div className="overflow-x-auto pb-2">
             <TagFilter 
               selectedTags={selectedTags} 
-              onTagsChange={setSelectedTags}
-              visibleTagIds={visibleTagIds}
+              onTagsChange={handleTagsChange}
             />
           </div>
           
