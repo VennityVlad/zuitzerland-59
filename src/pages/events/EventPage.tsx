@@ -135,6 +135,18 @@ const EventPage = () => {
     }
   }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
 
+  // Check if the current user is the creator of the event
+  const isEventCreator = event && userProfile && event.created_by === userProfile.id;
+
+  // Generate the appropriate Meerkat URL based on user role
+  const getMeerkatUrl = () => {
+    if (!event?.meerkat_url) return '';
+    
+    // If the user is the event creator, show the original meerkat URL (for hosts)
+    // Otherwise, add "/remote" to the URL for attendees
+    return isEventCreator ? event.meerkat_url : `${event.meerkat_url}/remote`;
+  };
+
   const handleShare = async () => {
     try {
       const eventUrl = window.location.href;
@@ -308,7 +320,7 @@ const EventPage = () => {
                   </div>
                 </Card>
 
-                {/* Meerkat Q&A Section */}
+                {/* Meerkat Q&A Section with conditional URL */}
                 {event?.meerkat_enabled && event?.meerkat_url && (
                   <Card className="border shadow-sm border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
                     <div className="p-6">
@@ -326,9 +338,9 @@ const EventPage = () => {
                         className="bg-white dark:bg-blue-900 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300"
                         asChild
                       >
-                        <a href={event.meerkat_url} target="_blank" rel="noopener noreferrer">
+                        <a href={getMeerkatUrl()} target="_blank" rel="noopener noreferrer">
                           <MessageSquare className="mr-2 h-4 w-4" />
-                          Open Q&A Session
+                          {isEventCreator ? "Open Q&A Host Session" : "Open Q&A Session"}
                         </a>
                       </Button>
                     </div>
