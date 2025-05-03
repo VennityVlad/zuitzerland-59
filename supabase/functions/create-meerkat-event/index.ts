@@ -106,24 +106,44 @@ serve(async (req) => {
       payload.speakers = speakersString
     }
     
-    console.log('Sending payload to Meerkat API:', payload)
+    // IMPORTANT FIX: Wrap the payload in an array as required by the Meerkat API
+    const meerkatPayload = [payload]
     
-    // Make request to Meerkat API
+    console.log('Sending payload to Meerkat API:', meerkatPayload)
+    
+    // Ensure the conference ID is treated as an integer
+    const conferenceId = parseInt(MEERKAT_CONFERENCE_ID)
+    if (isNaN(conferenceId)) {
+      throw new Error(`Invalid conference ID: ${MEERKAT_CONFERENCE_ID}`)
+    }
+    
+    // Make request to Meerkat API with improved error handling
     const meerkatResponse = await fetch(
-      `${MEERKAT_API_BASE}/conferences/${MEERKAT_CONFERENCE_ID}/events`,
+      `${MEERKAT_API_BASE}/conferences/${conferenceId}/events`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${MEERKAT_AUTH_SECRET}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(meerkatPayload)
       }
     )
     
-    const meerkatData = await meerkatResponse.json()
+    // Get the raw response text first for better debugging
+    const responseText = await meerkatResponse.text()
+    
+    // Try to parse as JSON if possible
+    let meerkatData
+    try {
+      meerkatData = JSON.parse(responseText)
+    } catch (e) {
+      console.error('Failed to parse Meerkat API response as JSON:', responseText)
+      throw new Error(`Meerkat API returned non-JSON response: ${responseText}`)
+    }
     
     if (!meerkatResponse.ok) {
+      console.error('Meerkat API error response:', meerkatData)
       throw new Error(`Meerkat API error: ${JSON.stringify(meerkatData)}`)
     }
     
