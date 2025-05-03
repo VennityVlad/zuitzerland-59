@@ -28,7 +28,17 @@ export default function ZuLinkApps() {
   const [filter, setFilter] = useState("all");
   const { authenticatedSupabase, isAuthenticated } = useSupabaseJwt();
   const { toast } = useToast();
-  const userId = authenticatedSupabase?.auth.user()?.id;
+  
+  // Fix: Get user ID from session instead of accessing .user directly
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (authenticatedSupabase) {
+      authenticatedSupabase.auth.getSession().then(({ data }) => {
+        setUserId(data.session?.user.id);
+      });
+    }
+  }, [authenticatedSupabase]);
+  
   const { isAdmin } = useAdminStatus(userId);
   const { hasPaidInvoice, isLoading: isInvoiceLoading } = usePaidInvoiceStatus(userId);
 

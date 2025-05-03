@@ -255,8 +255,8 @@ const NavMenu = () => {
     },
     {
       label: "ZuLink Apps",
-      href: "/zulink-apps",
-      icon: <AppWindow className="h-5 w-5" />, // Use appropriate icon
+      path: "/zulink-apps", // Changed from href to path to match the MenuItem type
+      icon: <AppWindow className="h-5 w-5" />,
     },
     {
       label: "Settings",

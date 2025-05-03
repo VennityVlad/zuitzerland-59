@@ -107,7 +107,8 @@ export function AppCard({
   };
 
   const isPending = status === 'pending';
-  const isOwner = authenticatedSupabase?.auth.user()?.id === createdBy;
+  // Fix: Use authenticatedSupabase.auth.getUser() instead of accessing .user directly
+  const isOwner = authenticatedSupabase?.auth.getSession().then(({ data }) => data.session?.user.id === createdBy);
 
   return (
     <Card className="overflow-hidden flex flex-col h-full">
