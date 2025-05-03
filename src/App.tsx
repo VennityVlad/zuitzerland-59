@@ -41,6 +41,7 @@ import EventPage from "./pages/events/EventPage";
 import PrivacyDashboard from "./pages/PrivacyDashboard";
 import Settings from "./pages/Settings";
 import DisplayPage from "./pages/DisplayPage";
+import ZuLinkApps from "./pages/ZuLinkApps";
 
 const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
   usePageTracking();
@@ -378,6 +379,7 @@ function AppRoutes() {
       />
       <Route path="/404" element={<NotFound />} />
       <Route path="*" element={<Navigate to="/404" />} />
+      <Route path="/zulink-apps" element={<ZuLinkApps />} />
     </Routes>
   );
 }

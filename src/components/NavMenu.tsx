@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,8 @@ import {
   BookOpen,
   UserCog,
   Shield,
-  Settings
+  Settings,
+  AppWindow // Add ZuLink Apps import to the list of imports if using icons
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -252,6 +252,11 @@ const NavMenu = () => {
           path: "/availability",
         }
       ]
+    },
+    {
+      label: "ZuLink Apps",
+      href: "/zulink-apps",
+      icon: <AppWindow className="h-5 w-5" />, // Use appropriate icon
     },
     {
       label: "Settings",
