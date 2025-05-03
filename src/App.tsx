@@ -274,6 +274,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/zulink-apps"
+        element={
+          <ProtectedRoute>
+            <ZuLinkApps />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/invoices"
         element={
           <ProtectedRoute adminOnly={true}>
@@ -379,7 +387,6 @@ function AppRoutes() {
       />
       <Route path="/404" element={<NotFound />} />
       <Route path="*" element={<Navigate to="/404" />} />
-      <Route path="/zulink-apps" element={<ZuLinkApps />} />
     </Routes>
   );
 }
