@@ -106,7 +106,7 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
 
     if (status === 'limited') {
       return (
-        <Badge variant="warning" className="ml-2 bg-amber-500 hover:bg-amber-600">
+        <Badge variant="secondary" className="ml-2 bg-amber-500 hover:bg-amber-600">
           Limited Capacity
         </Badge>
       );
