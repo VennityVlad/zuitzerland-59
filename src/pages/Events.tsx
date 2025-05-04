@@ -585,8 +585,16 @@ const Events = () => {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
-          <div className="overflow-x-auto pb-2 flex items-center gap-2">
-            {/* Mobile Calendar Button */}
+          <div className="flex items-center justify-between gap-2">
+            {/* TagFilter (on the left) */}
+            <div className="flex-grow overflow-x-auto">
+              <TagFilter 
+                selectedTags={selectedTags} 
+                onTagsChange={handleTagsChange}
+              />
+            </div>
+            
+            {/* Mobile Calendar Button (on the right) */}
             {isMobile && (
               <div className="flex-shrink-0">
                 <MobileCalendarDialog 
@@ -596,14 +604,6 @@ const Events = () => {
                 />
               </div>
             )}
-            
-            {/* TagFilter (already exists) */}
-            <div className="flex-grow overflow-x-auto">
-              <TagFilter 
-                selectedTags={selectedTags} 
-                onTagsChange={handleTagsChange}
-              />
-            </div>
           </div>
           
           {hasActiveFilters && (
