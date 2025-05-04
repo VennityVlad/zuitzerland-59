@@ -1,0 +1,612 @@
+
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
+import { usePrivy } from "@privy-io/react-auth";
+import { AlertTriangle, Camera, Upload } from "lucide-react";
+
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+
+// Form validation schema
+const issueSchema = z.object({
+  category: z.enum(['technical', 'interpersonal', 'safety', 'resource', 'feedback', 'other']),
+  title: z.string().min(5, 'Please provide a brief description').max(100, 'Title is too long'),
+  details: z.string().optional(),
+  location: z.enum(['common_areas', 'tent_cabin', 'event_venue', 'not_sure', 'other']).optional(),
+  location_detail: z.string().optional(),
+  severity: z.enum(['minor', 'moderate', 'urgent']).optional(),
+  is_anonymous: z.boolean().default(false),
+  contact_name: z.string().optional(),
+  contact_email: z.string().email().optional(),
+  contact_telegram: z.string().optional(),
+  contact_preferred_method: z.string().optional(),
+  contact_preferred_time: z.string().optional(),
+});
+
+type IssueFormValues = z.infer<typeof issueSchema>;
+
+const IssueReportForm = () => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = usePrivy();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
+
+  const form = useForm<IssueFormValues>({
+    resolver: zodResolver(issueSchema),
+    defaultValues: {
+      category: undefined,
+      title: "",
+      details: "",
+      location: undefined,
+      location_detail: "",
+      severity: undefined,
+      is_anonymous: false,
+      contact_name: "",
+      contact_email: "",
+      contact_telegram: "",
+      contact_preferred_method: "",
+      contact_preferred_time: "",
+    },
+  });
+
+  const isAnonymous = form.watch("is_anonymous");
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setAttachments((prev) => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
+  const categoryLabels: Record<string, string> = {
+    technical: "Technical Issue",
+    interpersonal: "Interpersonal Conflict",
+    safety: "Harassment or Safety Concern",
+    resource: "Resource Issue",
+    feedback: "Feedback/Suggestion",
+    other: "Other",
+  };
+
+  const locationLabels: Record<string, string> = {
+    common_areas: "Common Areas",
+    tent_cabin: "Tent/Cabin",
+    event_venue: "Event Venue",
+    not_sure: "Not Sure",
+    other: "Other",
+  };
+
+  const severityLabels: Record<string, string> = {
+    minor: "Minor (FYI or annoyance)",
+    moderate: "Moderate (needs attention)",
+    urgent: "Urgent (safety or major issue)",
+  };
+
+  const onSubmit = async (data: IssueFormValues) => {
+    setIsSubmitting(true);
+
+    try {
+      // Prepare contact info
+      const contact_info = isAnonymous 
+        ? null
+        : {
+            name: data.contact_name,
+            email: data.contact_email,
+            telegram: data.contact_telegram,
+            preferred_contact_method: data.contact_preferred_method,
+            preferred_contact_time: data.contact_preferred_time,
+          };
+      
+      // Insert the issue report
+      const { data: issueData, error: issueError } = await supabase
+        .from("issue_reports")
+        .insert({
+          category: data.category,
+          title: data.title,
+          details: data.details,
+          location: data.location,
+          location_detail: data.location_detail,
+          severity: data.severity,
+          is_anonymous: data.is_anonymous,
+          reporter_id: isAnonymous ? null : user?.id, 
+          contact_info
+        })
+        .select();
+
+      if (issueError) throw issueError;
+      
+      const issueId = issueData[0].id;
+      const trackingCode = issueData[0].tracking_code;
+
+      // Upload attachments if any
+      if (attachments.length > 0) {
+        for (const file of attachments) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${uuidv4()}.${fileExt}`;
+          const filePath = `issue_attachments/${issueId}/${fileName}`;
+          
+          const { error: uploadError } = await supabase
+            .storage
+            .from('issue_attachments')
+            .upload(filePath, file);
+          
+          if (uploadError) throw uploadError;
+          
+          // Record attachment in the database
+          const { error: attachmentError } = await supabase
+            .from("issue_attachments")
+            .insert({
+              issue_id: issueId,
+              file_path: filePath,
+              file_type: file.type,
+            });
+          
+          if (attachmentError) throw attachmentError;
+        }
+      }
+      
+      toast({
+        title: "Issue reported successfully",
+        description: `Your tracking code: ${trackingCode}`,
+      });
+      
+      // Navigate to the confirmation page
+      navigate(`/issues/confirmation/${trackingCode}`);
+      
+    } catch (error) {
+      console.error("Error submitting issue:", error);
+      toast({
+        title: "Error reporting issue",
+        description: "There was a problem submitting your report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>Report an Issue or Incident</CardTitle>
+        <CardDescription>
+          Use this form to report technical problems, interpersonal conflicts, 
+          safety concerns, or provide feedback.
+        </CardDescription>
+      </CardHeader>
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="space-y-6">
+            {/* Category */}
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel className="font-medium">
+                    Category <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select issue type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(categoryLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Title */}
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-medium">
+                    Brief Description <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. Wi-Fi down in Zone A"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Short summary of the issue (100 chars max)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Details */}
+            <FormField
+              control={form.control}
+              name="details"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-medium">Details</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Please provide more context about the issue..."
+                      className="min-h-32"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Include any relevant information, context, timeline, etc.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Location */}
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="font-medium">Location</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Where did this happen?" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.entries(locationLabels).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Location Detail */}
+              <FormField
+                control={form.control}
+                name="location_detail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium">Location Details</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. Room 302, Main Hall"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Severity */}
+            <FormField
+              control={form.control}
+              name="severity"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel className="font-medium">Severity Level</FormLabel>
+                  <div className="flex flex-wrap gap-3">
+                    {Object.entries(severityLabels).map(([value, label]) => (
+                      <div key={value} className="flex items-center">
+                        <Button
+                          type="button"
+                          variant={field.value === value ? "default" : "outline"}
+                          className={`flex items-center gap-2 ${
+                            field.value === value ? "" : "border-gray-300"
+                          }`}
+                          onClick={() => field.onChange(value)}
+                        >
+                          {value === "urgent" && <AlertTriangle className="h-4 w-4 text-red-500" />}
+                          {label}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* File Attachments */}
+            <div className="space-y-3">
+              <FormLabel className="font-medium">Attachments</FormLabel>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => document.getElementById("file-upload")?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload File
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => document.getElementById("photo-upload")?.click()}
+                      >
+                        <Camera className="h-4 w-4" />
+                        Take Photo
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Use your device camera</TooltipContent>
+                  </Tooltip>
+                </div>
+
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                />
+                <input
+                  id="photo-upload"
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  capture="environment"
+                />
+
+                {/* Display attached files */}
+                {attachments.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {attachments.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-muted p-2 rounded"
+                      >
+                        <span className="text-sm truncate max-w-[80%]">
+                          {file.name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeAttachment(index)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <FormDescription>
+                Upload images, documents, or other evidence (optional)
+              </FormDescription>
+            </div>
+
+            {/* Anonymous Reporting */}
+            <FormField
+              control={form.control}
+              name="is_anonymous"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="font-medium">Anonymous Reporting</FormLabel>
+                    <FormDescription>
+                      Submit this report anonymously without your personal information
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            {/* Contact Information (only if not anonymous) */}
+            {!isAnonymous && (
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium">Contact Information</h3>
+                  <Badge variant="outline">Optional</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Provide your details if you'd like us to follow up with you
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Contact Name */}
+                  <FormField
+                    control={form.control}
+                    name="contact_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Contact Email */}
+                  <FormField
+                    control={form.control}
+                    name="contact_email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="Your email address"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Contact Telegram */}
+                  <FormField
+                    control={form.control}
+                    name="contact_telegram"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telegram</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="@username"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Preferred Contact Method */}
+                  <FormField
+                    control={form.control}
+                    name="contact_preferred_method"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preferred Contact Method</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="How should we contact you?" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="email">Email</SelectItem>
+                            <SelectItem value="telegram">Telegram</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Preferred Contact Time */}
+                  <FormField
+                    control={form.control}
+                    name="contact_preferred_time"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Preferred Contact Time</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. Mornings, Afternoons, etc."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+          
+          <CardFooter className="flex justify-between">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => navigate(-1)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Submit Report"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
+  );
+};
+
+export default IssueReportForm;

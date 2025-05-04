@@ -42,6 +42,11 @@ import PrivacyDashboard from "./pages/PrivacyDashboard";
 import Settings from "./pages/Settings";
 import DisplayPage from "./pages/DisplayPage";
 import ZuLinkApps from "./pages/ZuLinkApps";
+import IssueReporting from "./pages/IssueReporting";
+import IssueTracking from "./pages/IssueTracking";
+import IssueConfirmationPage from "./pages/IssueConfirmationPage";
+import IssueListPage from "./pages/IssueListPage";
+import IssueDetailPage from "./pages/IssueDetailPage";
 
 const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
   usePageTracking();
@@ -387,6 +392,11 @@ function AppRoutes() {
       />
       <Route path="/404" element={<NotFound />} />
       <Route path="*" element={<Navigate to="/404" />} />
+      <Route path="/issues/report" element={<IssueReporting />} />
+      <Route path="/issues/track" element={<IssueTracking />} />
+      <Route path="/issues/confirmation/:trackingCode" element={<IssueConfirmationPage />} />
+      <Route path="/issues" element={<IssueListPage />} />
+      <Route path="/issues/:id" element={<IssueDetailPage />} />
     </Routes>
   );
 }

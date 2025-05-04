@@ -1,6 +1,5 @@
-
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal, CheckSquare, ContactRound } from "lucide-react";
+import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal, CheckSquare, ContactRound, AlertOctagon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -149,6 +148,11 @@ const BottomNav = () => {
           showAlways: true,
         }]
       : []),
+    {
+      name: "Report",
+      icon: <AlertOctagon className="h-5 w-5" />,
+      path: "/issues/report",
+    },
     {
       name: "More",
       icon: MoreHorizontal,

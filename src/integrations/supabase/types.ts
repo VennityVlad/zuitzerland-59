@@ -571,6 +571,130 @@ export type Database = {
           },
         ]
       }
+      issue_attachments: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_type: string
+          id: string
+          issue_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_type: string
+          id?: string
+          issue_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_type?: string
+          id?: string
+          issue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_attachments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issue_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issue_comments: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          is_anonymous: boolean
+          issue_id: string
+          profile_id: string | null
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean
+          issue_id: string
+          profile_id?: string | null
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean
+          issue_id?: string
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_comments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issue_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issue_reports: {
+        Row: {
+          assignee_id: string | null
+          category: Database["public"]["Enums"]["issue_category"]
+          contact_info: Json | null
+          created_at: string
+          details: string | null
+          id: string
+          is_anonymous: boolean
+          location: Database["public"]["Enums"]["issue_location"] | null
+          location_detail: string | null
+          reporter_id: string | null
+          severity: Database["public"]["Enums"]["issue_severity"] | null
+          status: Database["public"]["Enums"]["issue_status"]
+          tags: string[] | null
+          title: string
+          tracking_code: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          category: Database["public"]["Enums"]["issue_category"]
+          contact_info?: Json | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          is_anonymous?: boolean
+          location?: Database["public"]["Enums"]["issue_location"] | null
+          location_detail?: string | null
+          reporter_id?: string | null
+          severity?: Database["public"]["Enums"]["issue_severity"] | null
+          status?: Database["public"]["Enums"]["issue_status"]
+          tags?: string[] | null
+          title: string
+          tracking_code: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          category?: Database["public"]["Enums"]["issue_category"]
+          contact_info?: Json | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          is_anonymous?: boolean
+          location?: Database["public"]["Enums"]["issue_location"] | null
+          location_detail?: string | null
+          reporter_id?: string | null
+          severity?: Database["public"]["Enums"]["issue_severity"] | null
+          status?: Database["public"]["Enums"]["issue_status"]
+          tags?: string[] | null
+          title?: string
+          tracking_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       location_availability: {
         Row: {
           created_at: string
@@ -1331,6 +1455,26 @@ export type Database = {
         | "borderline"
       event_recurrence_frequency: "daily" | "weekly" | "monthly" | "yearly"
       invoice_status: "pending" | "paid" | "overdue"
+      issue_category:
+        | "technical"
+        | "interpersonal"
+        | "safety"
+        | "resource"
+        | "feedback"
+        | "other"
+      issue_location:
+        | "common_areas"
+        | "tent_cabin"
+        | "event_venue"
+        | "not_sure"
+        | "other"
+      issue_severity: "minor" | "moderate" | "urgent"
+      issue_status:
+        | "submitted"
+        | "in_review"
+        | "in_progress"
+        | "resolved"
+        | "closed"
       profile_role: "admin" | "co-designer" | "co-curator" | "attendee"
       room_type:
         | "hotel_room_queen"
@@ -1487,6 +1631,29 @@ export const Constants = {
       ],
       event_recurrence_frequency: ["daily", "weekly", "monthly", "yearly"],
       invoice_status: ["pending", "paid", "overdue"],
+      issue_category: [
+        "technical",
+        "interpersonal",
+        "safety",
+        "resource",
+        "feedback",
+        "other",
+      ],
+      issue_location: [
+        "common_areas",
+        "tent_cabin",
+        "event_venue",
+        "not_sure",
+        "other",
+      ],
+      issue_severity: ["minor", "moderate", "urgent"],
+      issue_status: [
+        "submitted",
+        "in_review",
+        "in_progress",
+        "resolved",
+        "closed",
+      ],
       profile_role: ["admin", "co-designer", "co-curator", "attendee"],
       room_type: [
         "hotel_room_queen",

@@ -32,7 +32,8 @@ import {
   UserCog,
   Shield,
   Settings,
-  AppWindow // Add ZuLink Apps import to the list of imports if using icons
+  AppWindow, // Add ZuLink Apps import to the list of imports if using icons
+  AlertOctagon // Add AlertOctagon import to the list of imports if using icons
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -161,6 +162,11 @@ const NavMenu = () => {
       icon: <CalendarDays className="h-5 w-5" />,
       path: "/book",
     },
+    {
+      label: "Report Issue",
+      icon: <AlertOctagon className="h-5 w-5" />,
+      path: "/issues/report",
+    },
     ...(showOnboarding && hasPaidInvoice ? [{
       label: "Onboarding",
       icon: <CheckSquare className="h-5 w-5" />,
@@ -196,6 +202,11 @@ const NavMenu = () => {
           path: "/discounts",
         }
       ]
+    },
+    {
+      label: "Issue Reports",
+      icon: <AlertOctagon className="h-5 w-5" />,
+      path: "/issues",
     },
     {
       label: "User Management",
