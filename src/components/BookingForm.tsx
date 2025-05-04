@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
+import { useAllPrices } from "@/hooks/usePrices";
 
 interface BookingFormProps {
   bookingBlockEnabled?: boolean;
@@ -21,6 +22,9 @@ interface BookingFormProps {
 
 const BookingForm = ({ bookingBlockEnabled = true }: BookingFormProps) => {
   const { toast } = useToast();
+  // Fetch all prices at component mount
+  const { data: allPriceData } = useAllPrices();
+  
   const {
     formData,
     isLoading,
@@ -35,6 +39,7 @@ const BookingForm = ({ bookingBlockEnabled = true }: BookingFormProps) => {
     handleSubmit,
     handleCountryChange,
     handlePaymentTypeChange,
+    setPriceData,
   } = useBookingForm();
 
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -45,6 +50,13 @@ const BookingForm = ({ bookingBlockEnabled = true }: BookingFormProps) => {
 
   const minDate = "2025-05-03";
   const maxDate = "2025-05-26";
+
+  // Pass all price data to the booking form hook
+  useEffect(() => {
+    if (allPriceData && allPriceData.length > 0) {
+      setPriceData(allPriceData);
+    }
+  }, [allPriceData, setPriceData]);
 
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', formData.roomType],

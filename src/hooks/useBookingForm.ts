@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { format, addDays, differenceInDays, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { BookingFormData } from "@/types/booking";
+import type { BookingFormData, PriceData } from "@/types/booking";
 import { useNavigate } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +22,8 @@ export const useBookingForm = () => {
   const [discountName, setDiscountName] = useState<string | null>(null);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [discountMonth, setDiscountMonth] = useState<string | null>(null);
+  const [allPriceData, setAllPriceData] = useState<PriceData[]>([]);
+  
   const [formData, setFormData] = useState<BookingFormData>({
     firstName: "",
     lastName: "",
@@ -36,6 +38,12 @@ export const useBookingForm = () => {
     price: 0,
     paymentType: "fiat", // Default to fiat
   });
+
+  // Function to set price data from the component
+  const setPriceData = (priceData: PriceData[]) => {
+    console.log("Setting all price data:", priceData);
+    setAllPriceData(priceData);
+  };
 
   const { data: userProfile } = useQuery({
     queryKey: ['userProfile', user?.id],
@@ -90,6 +98,40 @@ export const useBookingForm = () => {
       return 0;
     }
 
+    // Use cached price data if available
+    if (allPriceData && allPriceData.length > 0) {
+      console.log('Using cached price data for calculation');
+      
+      // Filter price data for this room type
+      const roomPrices = allPriceData.filter(price => price.room_code === roomType);
+      console.log('Available prices for room type:', roomPrices);
+      
+      if (roomPrices.length === 0) {
+        console.log('No cached prices found for room type:', roomType);
+        // Fall back to database query
+      } else {
+        // Find the price with the highest duration that's less than or equal to the stay duration
+        const applicablePrices = roomPrices
+          .filter(price => price.duration <= days)
+          .sort((a, b) => b.duration - a.duration);
+        
+        if (applicablePrices.length > 0) {
+          const applicablePrice = applicablePrices[0];
+          console.log('Found applicable price from cache:', applicablePrice);
+          
+          const totalPrice = applicablePrice.price * days;
+          console.log('Calculated total price from cache:', { 
+            dailyRate: applicablePrice.price,
+            days,
+            totalPrice 
+          });
+          
+          return totalPrice;
+        }
+      }
+    }
+
+    // If we couldn't calculate from cache, query the database
     try {
       const { data: roomData, error: roomError } = await supabase
         .from('room_types')
@@ -124,10 +166,10 @@ export const useBookingForm = () => {
       }
 
       const applicablePrice = prices[0];
-      console.log('Found applicable price:', applicablePrice);
+      console.log('Found applicable price from database:', applicablePrice);
       
       const totalPrice = applicablePrice.price * days;
-      console.log('Calculated total price:', { 
+      console.log('Calculated total price from database:', { 
         dailyRate: applicablePrice.price,
         days,
         totalPrice 
@@ -347,6 +389,12 @@ export const useBookingForm = () => {
           newData.checkout &&
           newData.roomType
         ) {
+          console.log('Recalculating price after input change:', {
+            checkin: newData.checkin,
+            checkout: newData.checkout,
+            roomType: newData.roomType
+          });
+
           const basePrice = await calculatePrice(
             newData.checkin,
             newData.checkout,
@@ -359,6 +407,12 @@ export const useBookingForm = () => {
           setDiscountName(name);
           setDiscountPercentage(percentage || 0);
           setDiscountMonth(month);
+          
+          console.log('Updated price information:', {
+            basePrice,
+            discount: amount,
+            finalPrice: basePrice - amount
+          });
           
           newData.price = basePrice;
         }
@@ -596,5 +650,6 @@ export const useBookingForm = () => {
     handleCountryChange,
     handlePaymentTypeChange,
     calculateTaxAmount,
+    setPriceData,
   };
 };

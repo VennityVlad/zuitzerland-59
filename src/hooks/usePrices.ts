@@ -27,3 +27,21 @@ export const usePrices = (date: string) => {
     enabled: Boolean(date),
   });
 };
+
+// Add a new hook to fetch all prices at once
+export const useAllPrices = () => {
+  return useQuery({
+    queryKey: ["allPrices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("prices")
+        .select("*");
+
+      if (error) {
+        throw error;
+      }
+
+      return data as PriceData[];
+    },
+  });
+};

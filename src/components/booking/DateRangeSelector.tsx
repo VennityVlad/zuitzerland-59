@@ -3,6 +3,7 @@ import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 interface DateRange {
   id: string;
@@ -49,6 +50,11 @@ interface DateRangeSelectorProps {
 const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
   const [selectedRanges, setSelectedRanges] = React.useState<string[]>([]);
 
+  React.useEffect(() => {
+    // Log all date ranges for debugging
+    console.log('Available date ranges:', DATE_RANGES);
+  }, []);
+
   const handleCheckboxChange = (rangeId: string, checked: boolean) => {
     console.log('Checkbox change:', rangeId, checked);
     let newSelectedRanges: string[];
@@ -68,6 +74,12 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     }
     
     const selectedDateRanges = DATE_RANGES.filter(range => newSelectedRanges.includes(range.id));
+    console.log('Selected date range objects:', selectedDateRanges);
+
+    if (selectedDateRanges.length === 0) {
+      onDateRangeChange("", "");
+      return;
+    }
     
     const startDatesAsObjects = selectedDateRanges.map(range => new Date(range.startDate));
     const endDatesAsObjects = selectedDateRanges.map(range => new Date(range.endDate));
@@ -75,8 +87,8 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     const earliestStartDate = new Date(Math.min(...startDatesAsObjects.map(d => d.getTime())));
     const latestEndDate = new Date(Math.max(...endDatesAsObjects.map(d => d.getTime())));
     
-    const earliestStart = earliestStartDate.toISOString().split('T')[0];
-    const latestEnd = latestEndDate.toISOString().split('T')[0];
+    const earliestStart = format(earliestStartDate, 'yyyy-MM-dd');
+    const latestEnd = format(latestEndDate, 'yyyy-MM-dd');
     
     console.log('Calculated date range:', {
       earliestStart,

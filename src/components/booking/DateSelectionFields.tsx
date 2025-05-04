@@ -1,4 +1,3 @@
-
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +10,7 @@ import { differenceInDays, parse, format } from "date-fns";
 import { EventCalendar } from "@/components/calendar/EventCalendar";
 import { useBookingSettings } from "@/hooks/useBookingSettings";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useEffect } from "react";
 
 interface DateSelectionFieldsProps {
   formData: BookingFormData;
@@ -27,51 +27,89 @@ const DateSelectionFields = ({
 }: DateSelectionFieldsProps) => {
   const { settings, isLoading: settingsLoading } = useBookingSettings();
 
+  useEffect(() => {
+    console.log('DateSelectionFields current form data:', { 
+      checkin: formData.checkin, 
+      checkout: formData.checkout 
+    });
+  }, [formData.checkin, formData.checkout]);
+
   const handleDateRangeChange = (startDate: string, endDate: string) => {
-    handleInputChange({
-      target: { name: "checkin", value: startDate }
-    } as React.ChangeEvent<HTMLInputElement>);
+    console.log('Date range changed to:', { startDate, endDate });
     
-    handleInputChange({
-      target: { name: "checkout", value: endDate }
-    } as React.ChangeEvent<HTMLInputElement>);
+    // Ensure we properly format and validate the dates
+    if (!startDate || !endDate) {
+      console.log('Empty date range received');
+      return;
+    }
+
+    try {
+      // Validate that they are proper dates
+      const parsedStartDate = parse(startDate, 'yyyy-MM-dd', new Date());
+      const parsedEndDate = parse(endDate, 'yyyy-MM-dd', new Date());
+      
+      const formattedStartDate = format(parsedStartDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(parsedEndDate, 'yyyy-MM-dd');
+      
+      console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
+      
+      handleInputChange({
+        target: { name: "checkin", value: formattedStartDate }
+      } as React.ChangeEvent<HTMLInputElement>);
+      
+      handleInputChange({
+        target: { name: "checkout", value: formattedEndDate }
+      } as React.ChangeEvent<HTMLInputElement>);
+    } catch (error) {
+      console.error('Error processing dates:', error);
+    }
   };
 
   const handleCalendarSelect = (date: Date | undefined) => {
     if (!date) return;
     
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    
-    if (!formData.checkin) {
-      // Set as check-in date if none is set
-      handleInputChange({
-        target: { name: "checkin", value: formattedDate }
-      } as React.ChangeEvent<HTMLInputElement>);
-    } else if (!formData.checkout && formattedDate > formData.checkin) {
-      // Set as check-out date if check-in is already set and selected date is after check-in
-      handleInputChange({
-        target: { name: "checkout", value: formattedDate }
-      } as React.ChangeEvent<HTMLInputElement>);
-    } else {
-      // Otherwise, reset and set as new check-in date
-      handleInputChange({
-        target: { name: "checkin", value: formattedDate }
-      } as React.ChangeEvent<HTMLInputElement>);
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
       
-      handleInputChange({
-        target: { name: "checkout", value: "" }
-      } as React.ChangeEvent<HTMLInputElement>);
+      if (!formData.checkin) {
+        // Set as check-in date if none is set
+        handleInputChange({
+          target: { name: "checkin", value: formattedDate }
+        } as React.ChangeEvent<HTMLInputElement>);
+      } else if (!formData.checkout && formattedDate > formData.checkin) {
+        // Set as check-out date if check-in is already set and selected date is after check-in
+        handleInputChange({
+          target: { name: "checkout", value: formattedDate }
+        } as React.ChangeEvent<HTMLInputElement>);
+      } else {
+        // Otherwise, reset and set as new check-in date
+        handleInputChange({
+          target: { name: "checkin", value: formattedDate }
+        } as React.ChangeEvent<HTMLInputElement>);
+        
+        handleInputChange({
+          target: { name: "checkout", value: "" }
+        } as React.ChangeEvent<HTMLInputElement>);
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
     }
   };
 
   const handleDatePickerChange = (field: 'checkin' | 'checkout', date?: Date) => {
     if (!date) return;
     
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    
-    handleInputChange({
-      target: { name: field, value: formattedDate }
-    } as React.ChangeEvent<HTMLInputElement>);
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      
+      console.log(`Setting ${field} date:`, formattedDate);
+      
+      handleInputChange({
+        target: { name: field, value: formattedDate }
+      } as React.ChangeEvent<HTMLInputElement>);
+    } catch (error) {
+      console.error('Error formatting date picker date:', error);
+    }
   };
 
   const { data: roomTypeDetails } = useQuery({
@@ -96,17 +134,35 @@ const DateSelectionFields = ({
       return true; // Don't show warning if we don't have all the data
     }
 
-    const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
-    const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
-    const days = differenceInDays(endDate, startDate);
+    try {
+      const startDate = parse(formData.checkin, 'yyyy-MM-dd', new Date());
+      const endDate = parse(formData.checkout, 'yyyy-MM-dd', new Date());
+      const days = differenceInDays(endDate, startDate);
+      
+      console.log('Minimum stay check:', {
+        checkin: formData.checkin,
+        checkout: formData.checkout,
+        days,
+        minRequired: roomTypeDetails.min_stay_days,
+        meets: days >= (roomTypeDetails.min_stay_days || 0)
+      });
 
-    return days >= (roomTypeDetails.min_stay_days || 0);
+      return days >= (roomTypeDetails.min_stay_days || 0);
+    } catch (error) {
+      console.error('Error calculating stay duration:', error);
+      return true;
+    }
   };
 
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return '';
-    const date = parse(dateStr, 'yyyy-MM-dd', new Date());
-    return format(date, 'MMMM d, yyyy');
+    try {
+      const date = parse(dateStr, 'yyyy-MM-dd', new Date());
+      return format(date, 'MMMM d, yyyy');
+    } catch (error) {
+      console.error('Error formatting display date:', error);
+      return dateStr;
+    }
   };
 
   const showMinStayWarning = formData.checkin && 
