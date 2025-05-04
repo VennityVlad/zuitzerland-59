@@ -1,6 +1,8 @@
+
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface DateRange {
   id: string;
@@ -8,6 +10,8 @@ interface DateRange {
   startDate: string;
   endDate: string;
   description: string;
+  status?: "sold-out" | "limited" | "available";
+  contactEmail?: string;
 }
 
 const DATE_RANGES: DateRange[] = [
@@ -16,21 +20,25 @@ const DATE_RANGES: DateRange[] = [
     name: "Block 1",
     startDate: "2025-05-03",
     endDate: "2025-05-09",
-    description: "Intro Days (May 3-5): Community, Culture, Media, Philosophy & Truth-Seeking\nSwiss Governance & New Societies Days (May 6-9): Democracy, Network States & Start-up Cities"
+    description: "Intro Days (May 3-5): Community, Culture, Media, Philosophy & Truth-Seeking\nSwiss Governance & New Societies Days (May 6-9): Democracy, Network States & Start-up Cities",
+    status: "sold-out"
   },
   {
     id: "block2",
     name: "Block 2",
     startDate: "2025-05-10",
     endDate: "2025-05-17",
-    description: "Cypherpunk Days: Frontier Tech - Ethereum, Biotech, AI x Crypto\nSolarpunk Days: Living Design Week"
+    description: "Cypherpunk Days: Frontier Tech - Ethereum, Biotech, AI x Crypto\nSolarpunk Days: Living Design Week",
+    status: "limited",
+    contactEmail: "team@zuitzerland.ch"
   },
   {
     id: "block3",
     name: "Block 3",
     startDate: "2025-05-18",
     endDate: "2025-05-26",
-    description: "Build Week (May 19-23): Hackathon and Govathon\nZuitzerland Summit 2025 (May 24-26)"
+    description: "Build Week (May 19-23): Hackathon and Govathon\nZuitzerland Summit 2025 (May 24-26)",
+    status: "available"
   }
 ];
 
@@ -85,6 +93,90 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     return `${day}/${month}`;
   };
 
+  const renderStatusBadge = (status?: string) => {
+    if (!status || status === 'available') return null;
+
+    if (status === 'sold-out') {
+      return (
+        <Badge variant="destructive" className="ml-2">
+          Sold Out
+        </Badge>
+      );
+    }
+
+    if (status === 'limited') {
+      return (
+        <Badge variant="warning" className="ml-2 bg-amber-500 hover:bg-amber-600">
+          Limited Capacity
+        </Badge>
+      );
+    }
+  };
+
+  const renderDateRangeItem = (range: DateRange) => {
+    const isDisabled = range.status === 'sold-out' || range.status === 'limited';
+    const containerClasses = `flex items-start space-x-3 p-3 rounded-lg border ${
+      isDisabled 
+        ? 'border-gray-200 bg-gray-50' 
+        : 'border-gray-200 hover:border-purple-500 transition-colors'
+    }`;
+
+    const handleEmailClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (range.contactEmail) {
+        window.location.href = `mailto:${range.contactEmail}?subject=Request to Book ${range.name}`;
+      }
+    };
+    
+    return (
+      <Tooltip key={range.id}>
+        <div className={containerClasses}>
+          <TooltipTrigger asChild>
+            <div className="flex items-center space-x-3 flex-1">
+              <Checkbox
+                id={range.id}
+                checked={selectedRanges.includes(range.id)}
+                onCheckedChange={(checked) => handleCheckboxChange(range.id, checked as boolean)}
+                disabled={isDisabled}
+                className="h-5 w-5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+              />
+              <div className="flex justify-between items-center w-full">
+                <label
+                  htmlFor={isDisabled ? undefined : range.id}
+                  className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed flex-1 ${
+                    isDisabled ? 'text-gray-500' : 'cursor-pointer text-gray-900'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <span className="font-semibold">{range.name}</span>
+                    <span className="text-sm text-gray-600 font-medium ml-4">
+                      {formatDateEuropean(range.startDate)} - {formatDateEuropean(range.endDate)}
+                    </span>
+                    {range.status === 'limited' && range.contactEmail ? (
+                      <a 
+                        href={`mailto:${range.contactEmail}?subject=Request to Book ${range.name}`}
+                        onClick={handleEmailClick}
+                        className="ml-2 text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {renderStatusBadge(range.status)}
+                      </a>
+                    ) : (
+                      renderStatusBadge(range.status)
+                    )}
+                  </div>
+                </label>
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-sm whitespace-pre-line">
+            <p className="text-sm">{range.description}</p>
+          </TooltipContent>
+        </div>
+      </Tooltip>
+    );
+  };
+
   return (
     <div className="space-y-4 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
       <div className="border-b pb-4">
@@ -94,36 +186,7 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
       
       <TooltipProvider>
         <div className="space-y-3">
-          {DATE_RANGES.map((range) => (
-            <Tooltip key={range.id}>
-              <div className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 hover:border-purple-500 transition-colors">
-                <TooltipTrigger asChild>
-                  <div className="flex items-center space-x-3 flex-1">
-                    <Checkbox
-                      id={range.id}
-                      checked={selectedRanges.includes(range.id)}
-                      onCheckedChange={(checked) => handleCheckboxChange(range.id, checked as boolean)}
-                      className="h-5 w-5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                    />
-                    <div className="flex justify-between items-center w-full">
-                      <label
-                        htmlFor={range.id}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                      >
-                        <span className="font-semibold text-gray-900">{range.name}</span>
-                        <span className="text-sm text-gray-600 font-medium ml-4">
-                          {formatDateEuropean(range.startDate)} - {formatDateEuropean(range.endDate)}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-sm whitespace-pre-line">
-                  <p className="text-sm">{range.description}</p>
-                </TooltipContent>
-              </div>
-            </Tooltip>
-          ))}
+          {DATE_RANGES.map(range => renderDateRangeItem(range))}
         </div>
       </TooltipProvider>
     </div>
