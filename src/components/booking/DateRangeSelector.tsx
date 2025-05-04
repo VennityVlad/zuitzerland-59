@@ -113,25 +113,32 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
     }
   };
 
+  const handleEmailClick = (e: React.MouseEvent, email: string, blockName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.location.href = `mailto:${email}?subject=Request to Book ${blockName}`;
+  };
+
   const renderDateRangeItem = (range: DateRange) => {
     const isDisabled = range.status === 'sold-out' || range.status === 'limited';
+    const isLimitedWithEmail = range.status === 'limited' && range.contactEmail;
+    
     const containerClasses = `flex items-start space-x-3 p-3 rounded-lg border ${
       isDisabled 
         ? 'border-gray-200 bg-gray-50' 
         : 'border-gray-200 hover:border-purple-500 transition-colors'
-    }`;
+    } ${isLimitedWithEmail ? 'cursor-pointer' : ''}`;
 
-    const handleEmailClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (range.contactEmail) {
-        window.location.href = `mailto:${range.contactEmail}?subject=Request to Book ${range.name}`;
-      }
+    const containerProps: React.HTMLAttributes<HTMLDivElement> = {
+      className: containerClasses,
+      ...(isLimitedWithEmail ? {
+        onClick: (e) => handleEmailClick(e, range.contactEmail!, range.name)
+      } : {})
     };
     
     return (
       <Tooltip key={range.id}>
-        <div className={containerClasses}>
+        <div {...containerProps}>
           <TooltipTrigger asChild>
             <div className="flex items-center space-x-3 flex-1">
               <Checkbox
@@ -140,6 +147,7 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
                 onCheckedChange={(checked) => handleCheckboxChange(range.id, checked as boolean)}
                 disabled={isDisabled}
                 className="h-5 w-5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                onClick={(e) => e.stopPropagation()} // Prevent container click when clicking checkbox
               />
               <div className="flex justify-between items-center w-full">
                 <label
@@ -153,17 +161,7 @@ const DateRangeSelector = ({ onDateRangeChange }: DateRangeSelectorProps) => {
                     <span className="text-sm text-gray-600 font-medium ml-4">
                       {formatDateEuropean(range.startDate)} - {formatDateEuropean(range.endDate)}
                     </span>
-                    {range.status === 'limited' && range.contactEmail ? (
-                      <a 
-                        href={`mailto:${range.contactEmail}?subject=Request to Book ${range.name}`}
-                        onClick={handleEmailClick}
-                        className="ml-2 text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        {renderStatusBadge(range.status)}
-                      </a>
-                    ) : (
-                      renderStatusBadge(range.status)
-                    )}
+                    {renderStatusBadge(range.status)}
                   </div>
                 </label>
               </div>
