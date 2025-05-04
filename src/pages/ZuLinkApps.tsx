@@ -8,7 +8,11 @@ import { CreateAppSheet } from "@/components/zulink/CreateAppSheet";
 import { AppCard } from "@/components/zulink/AppCard";
 import { AppsFilter } from "@/components/zulink/AppsFilter";
 import { useToast } from "@/hooks/use-toast";
-import { AppWindow, Loader2 } from "lucide-react";
+import { AppWindow, Loader2, CalendarDays } from "lucide-react";
+import { EventCalendar } from "@/components/calendar/EventCalendar";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AppData {
   id: string;
@@ -26,8 +30,11 @@ export default function ZuLinkApps() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const { authenticatedSupabase, isAuthenticated } = useSupabaseJwt();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   // Fix: Get user ID from session instead of accessing .user directly
   const [userId, setUserId] = useState<string | undefined>(undefined);
@@ -75,23 +82,40 @@ export default function ZuLinkApps() {
     }
   }, [isAuthenticated, authenticatedSupabase]);
 
+  const handleDateSelection = (date: Date | undefined) => {
+    setSelectedDate(date);
+    setCalendarOpen(false);
+  };
+
   const filteredApps = useMemo(() => {
     if (!apps || !userId) return [];
 
+    let filtered = [...apps];
+
+    // Apply date filtering if a date is selected
+    if (selectedDate) {
+      const dateString = selectedDate.toISOString().split('T')[0];
+      filtered = filtered.filter(app => {
+        const appDate = new Date(app.created_at).toISOString().split('T')[0];
+        return appDate === dateString;
+      });
+    }
+
+    // Then apply status/owner filtering
     switch (filter) {
       case "pending":
-        return apps.filter(app => app.status === "pending");
+        return filtered.filter(app => app.status === "pending");
       case "my":
-        return apps.filter(app => app.created_by === userId);
+        return filtered.filter(app => app.created_by === userId);
       default:
         // For "all", regular users see only approved apps, admins see all
         return isAdmin 
-          ? apps 
-          : apps.filter(app => 
+          ? filtered 
+          : filtered.filter(app => 
               app.status === "approved" || app.created_by === userId
             );
     }
-  }, [apps, filter, isAdmin, userId]);
+  }, [apps, filter, isAdmin, userId, selectedDate]);
 
   const pendingAppsCount = useMemo(() => {
     return apps.filter(app => app.status === "pending").length;
@@ -101,6 +125,10 @@ export default function ZuLinkApps() {
     if (!userId) return 0;
     return apps.filter(app => app.created_by === userId).length;
   }, [apps, userId]);
+
+  const clearDateFilter = () => {
+    setSelectedDate(undefined);
+  };
 
   if (!isAuthenticated) {
     return (
@@ -125,13 +153,42 @@ export default function ZuLinkApps() {
       />
 
       <div className="container py-6">
-        <AppsFilter 
-          onFilterChange={setFilter}
-          filter={filter}
-          isAdmin={isAdmin}
-          pendingCount={pendingAppsCount}
-          myAppsCount={myAppsCount}
-        />
+        <div className="flex items-center gap-2 mb-4">
+          {isMobile && (
+            <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <CalendarDays className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <EventCalendar 
+                  onSelectDate={handleDateSelection}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
+          
+          <AppsFilter 
+            onFilterChange={setFilter}
+            filter={filter}
+            isAdmin={isAdmin}
+            pendingCount={pendingAppsCount}
+            myAppsCount={myAppsCount}
+          />
+        </div>
+
+        {selectedDate && (
+          <div className="mb-4 p-2 bg-muted rounded-md flex items-center justify-between">
+            <div className="flex items-center">
+              <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Filtered by date: {selectedDate.toLocaleDateString()}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={clearDateFilter}>
+              Clear
+            </Button>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center items-center py-12">
@@ -159,6 +216,7 @@ export default function ZuLinkApps() {
             <h3 className="text-xl font-medium text-gray-500 mb-2">
               {filter === "pending" ? "No pending apps found" : 
                filter === "my" ? "You haven't submitted any apps yet" : 
+               selectedDate ? "No apps found for this date" :
                "No apps available"}
             </h3>
             <p className="text-gray-400">
@@ -178,6 +236,15 @@ export default function ZuLinkApps() {
           </div>
         )}
       </div>
+
+      {!isMobile && (
+        <div className="hidden md:block md:col-span-1 md:w-64 fixed right-8 top-32">
+          <EventCalendar 
+            onSelectDate={handleDateSelection}
+            className="sticky top-24"
+          />
+        </div>
+      )}
     </div>
   );
 }
