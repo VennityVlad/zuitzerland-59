@@ -23,9 +23,15 @@ interface EventCalendarProps {
   onSelectDate?: (date: Date | undefined, shouldSwitchTab?: boolean) => void;
   className?: string;
   events?: Event[];
+  hideTitle?: boolean; // Add this prop to hide the title
 }
 
-export const EventCalendar = ({ onSelectDate, className, events = [] }: EventCalendarProps) => {
+export const EventCalendar = ({ 
+  onSelectDate, 
+  className, 
+  events = [],
+  hideTitle = false // Default to showing the title
+}: EventCalendarProps) => {
   // Initialize with May 2025
   const initialDate = new Date(2025, 4, 1); // Month is 0-based, so 4 is May
   const [currentMonth, setCurrentMonth] = useState<Date>(initialDate);
@@ -106,7 +112,8 @@ export const EventCalendar = ({ onSelectDate, className, events = [] }: EventCal
 
   return (
     <Card className={cn("bg-white p-4", className)}>
-      <h4 className="text-lg font-semibold text-gray-900 mb-4">Event Calendar</h4>
+      {/* Only render the title if hideTitle is false */}
+      {!hideTitle && <h4 className="text-lg font-semibold text-gray-900 mb-4">Event Calendar</h4>}
       
       <div className="flex items-center justify-between mb-4">
         <Button 

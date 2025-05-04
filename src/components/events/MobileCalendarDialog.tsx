@@ -56,6 +56,7 @@ export const MobileCalendarDialog = ({
             onSelectDate={handleDateSelect}
             events={events}
             className="min-h-[320px] p-0 border-0 shadow-none"
+            hideTitle={true} // Add this prop to hide the title in the EventCalendar
           />
           
           {selectedDate && (
