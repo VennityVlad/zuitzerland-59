@@ -606,7 +606,7 @@ const IssueDetail = () => {
                 <div className="flex gap-3 items-center">
                   <Select
                     value={status}
-                    onValueChange={setStatus}
+                    onValueChange={(value: IssueStatus) => setStatus(value)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select status" />

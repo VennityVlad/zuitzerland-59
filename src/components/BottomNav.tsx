@@ -94,9 +94,10 @@ const BottomNav = () => {
     };
   }, []);
 
+  // Fixed the type definition to handle icons properly
   type NavItem = {
     name: string;
-    icon: typeof Calendar | React.ReactNode;
+    icon: typeof Calendar | typeof AlertOctagon | typeof CalendarDays | typeof User | typeof LogOut | typeof MoreHorizontal | typeof CheckSquare | typeof ContactRound | typeof FileText | typeof BarChart | typeof Building | typeof Users | typeof Layers | typeof Percent;
     path: string;
     showAlways?: boolean;
   };
@@ -244,6 +245,7 @@ const BottomNav = () => {
                     location.pathname === item.path && "bg-primary/10 text-primary"
                   )}
                 >
+                  {/* Fixed icon rendering */}
                   <item.icon className={cn(
                     "w-6 h-6 mb-1",
                     location.pathname === item.path ? "text-primary" : "text-gray-500"
@@ -268,6 +270,7 @@ const BottomNav = () => {
                       location.pathname === item.path && "bg-primary/10 text-primary"
                     )}
                   >
+                    {/* Fixed icon rendering */}
                     <item.icon className={cn(
                       "w-6 h-6 mb-1",
                       location.pathname === item.path ? "text-primary" : "text-gray-500"
@@ -363,6 +366,7 @@ const BottomNav = () => {
                   location.pathname === item.path && "bg-primary/10 text-primary"
                 )}
               >
+                {/* Fixed icon rendering */}
                 <item.icon className={cn(
                   "w-6 h-6 mb-1",
                   location.pathname === item.path ? "text-primary" : "text-gray-500"

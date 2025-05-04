@@ -132,7 +132,7 @@ const IssueReportForm = () => {
 
     try {
       // Prepare contact info
-      const contact_info = isAnonymous 
+      const contact_info = data.is_anonymous 
         ? null
         : {
             name: data.contact_name,
@@ -142,7 +142,7 @@ const IssueReportForm = () => {
             preferred_contact_time: data.contact_preferred_time,
           };
       
-      // Insert the issue report - we don't need to provide tracking_code as the trigger will generate it
+      // Insert the issue report - no tracking_code needed, database trigger will generate it
       const { data: issueData, error: issueError } = await supabase
         .from("issue_reports")
         .insert({
@@ -153,7 +153,7 @@ const IssueReportForm = () => {
           location_detail: data.location_detail,
           severity: data.severity,
           is_anonymous: data.is_anonymous,
-          reporter_id: isAnonymous ? null : user?.id, 
+          reporter_id: data.is_anonymous ? null : user?.id, 
           contact_info
         })
         .select();
