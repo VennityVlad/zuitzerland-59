@@ -12,6 +12,7 @@ import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { EventRSVPAvatars } from "@/components/events/EventRSVPAvatars";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { CalendarOptionsPopover } from "@/components/events/CalendarOptionsPopover";
+import { MobileCalendarDialog } from "@/components/events/MobileCalendarDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -584,11 +585,25 @@ const Events = () => {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
-          <div className="overflow-x-auto pb-2">
-            <TagFilter 
-              selectedTags={selectedTags} 
-              onTagsChange={handleTagsChange}
-            />
+          <div className="overflow-x-auto pb-2 flex items-center gap-2">
+            {/* Mobile Calendar Button */}
+            {isMobile && (
+              <div className="flex-shrink-0">
+                <MobileCalendarDialog 
+                  events={events || []} 
+                  onSelectDate={handleDateSelection}
+                  selectedDate={selectedDate}
+                />
+              </div>
+            )}
+            
+            {/* TagFilter (already exists) */}
+            <div className="flex-grow overflow-x-auto">
+              <TagFilter 
+                selectedTags={selectedTags} 
+                onTagsChange={handleTagsChange}
+              />
+            </div>
           </div>
           
           {hasActiveFilters && (
