@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { IssueReport } from "@/types/issue";
+import { IssueReport, IssueStatus } from "@/types/issue";
 import { 
   AlertCircle, Clock, CheckCircle, RotateCw, XCircle, ChevronLeft,
   Search, User, AlertTriangle, MapPin, FileText, MessageSquare, 
@@ -136,7 +135,7 @@ const IssueDetail = () => {
   const [issue, setIssue] = useState<IssueReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<IssueStatus>("submitted");
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<any[]>([]);
   const [attachments, setAttachments] = useState<any[]>([]);
@@ -222,7 +221,7 @@ const IssueDetail = () => {
       const { error } = await supabase
         .from("issue_reports")
         .update({ 
-          status,
+          status: status as IssueStatus,
           updated_at: new Date().toISOString()
         })
         .eq("id", issue.id);
@@ -231,7 +230,7 @@ const IssueDetail = () => {
       
       setIssue({
         ...issue,
-        status,
+        status: status as IssueStatus,
         updated_at: new Date().toISOString()
       });
       
@@ -491,6 +490,7 @@ const IssueDetail = () => {
                     {attachments.map((attachment) => {
                       const fileName = attachment.file_path.split('/').pop();
                       const isImage = attachment.file_type.startsWith('image/');
+                      const publicUrl = supabase.storage.from('issue_attachments').getPublicUrl(attachment.file_path).data.publicUrl;
                       
                       return (
                         <Card 
@@ -501,7 +501,7 @@ const IssueDetail = () => {
                           {isImage ? (
                             <div className="aspect-video bg-gray-100 flex items-center justify-center overflow-hidden">
                               <img 
-                                src={`${supabase.storageUrl}/object/public/issue_attachments/${attachment.file_path}`}
+                                src={publicUrl}
                                 alt="Attachment preview"
                                 className="object-cover w-full h-full"
                               />

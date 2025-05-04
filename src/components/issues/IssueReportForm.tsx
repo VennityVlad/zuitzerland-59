@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -143,7 +142,7 @@ const IssueReportForm = () => {
             preferred_contact_time: data.contact_preferred_time,
           };
       
-      // Insert the issue report
+      // Insert the issue report - we don't need to provide tracking_code as the trigger will generate it
       const { data: issueData, error: issueError } = await supabase
         .from("issue_reports")
         .insert({

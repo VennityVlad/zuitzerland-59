@@ -1,3 +1,4 @@
+
 import { useLocation, useNavigate } from "react-router-dom";
 import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal, CheckSquare, ContactRound, AlertOctagon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -95,9 +96,9 @@ const BottomNav = () => {
 
   type NavItem = {
     name: string;
-    icon: typeof Calendar;
+    icon: typeof Calendar | React.ReactNode;
     path: string;
-    showAlways: boolean;
+    showAlways?: boolean;
   };
 
   const nonAdminWithoutPaidInvoiceItems: NavItem[] = [
@@ -150,8 +151,9 @@ const BottomNav = () => {
       : []),
     {
       name: "Report",
-      icon: <AlertOctagon className="h-5 w-5" />,
+      icon: AlertOctagon,
       path: "/issues/report",
+      showAlways: true,
     },
     {
       name: "More",
