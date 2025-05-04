@@ -1,4 +1,3 @@
-
 import { useLocation, useNavigate } from "react-router-dom";
 import { Calendar, FileText, Layers, Percent, User, CalendarDays, BarChart, Building, Users, LogOut, MoreHorizontal, CheckSquare, ContactRound, AlertOctagon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -150,12 +149,6 @@ const BottomNav = () => {
           showAlways: true,
         }]
       : []),
-    {
-      name: "Report",
-      icon: AlertOctagon,
-      path: "/issues/report",
-      showAlways: true,
-    },
     {
       name: "More",
       icon: MoreHorizontal,
@@ -350,6 +343,14 @@ const BottomNav = () => {
                     name: "Directory",
                     icon: ContactRound,
                     path: "/directory",
+                    showAlways: true,
+                  });
+                }
+                if (isAdmin) {
+                  mainNavItems.push({
+                    name: "Report",
+                    icon: AlertOctagon,
+                    path: "/issues/report",
                     showAlways: true,
                   });
                 }
