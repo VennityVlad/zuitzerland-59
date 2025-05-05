@@ -30,7 +30,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { useAllPrices } from "@/hooks/usePrices";
-import PageTitle from "@/components/PageTitle";
+import { PageTitle } from "@/components/PageTitle";
 import { PriceData } from "@/types/booking";
 import { 
   Edit, 
@@ -103,7 +103,7 @@ const Pricing = () => {
     fetchRoomTypes();
   }, [toast]);
 
-  const handleAddPrice = async (closeSheet: () => void) => {
+  const handleAddPrice = async () => {
     try {
       const { error } = await supabase
         .from("prices")
@@ -130,7 +130,6 @@ const Pricing = () => {
       });
       
       refetch();
-      closeSheet();
     } catch (error) {
       console.error("Error adding price:", error);
       toast({
@@ -141,7 +140,7 @@ const Pricing = () => {
     }
   };
 
-  const handleUpdatePrice = async (closeSheet: () => void) => {
+  const handleUpdatePrice = async () => {
     if (!editingPrice) return;
     
     try {
@@ -163,7 +162,6 @@ const Pricing = () => {
       
       refetch();
       setEditingPrice(null);
-      closeSheet();
     } catch (error) {
       console.error("Error updating price:", error);
       toast({
@@ -235,84 +233,80 @@ const Pricing = () => {
           </Select>
 
           <Sheet>
-            {(close) => (
-              <>
-                <SheetTrigger asChild>
-                  <Button className="gap-2 whitespace-nowrap">
-                    <Plus className="h-4 w-4" /> Add Price
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="sm:max-w-md">
-                  <SheetHeader>
-                    <SheetTitle>Add New Price</SheetTitle>
-                    <SheetDescription>
-                      Define a new price for a specific room type and duration.
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="mt-8 grid gap-4">
-                    <div className="grid gap-2">
-                      <label htmlFor="room_type">Room Type</label>
-                      <Select 
-                        value={newPrice.room_type} 
-                        onValueChange={(value) => setNewPrice({...newPrice, room_type: value})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select room type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roomTypes.map((roomType) => (
-                            <SelectItem key={roomType.code} value={roomType.code}>
-                              {roomType.display_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <label htmlFor="duration">Stay Duration (days)</label>
-                      <Input
-                        type="number"
-                        value={newPrice.duration}
-                        onChange={(e) => setNewPrice({...newPrice, duration: Number(e.target.value)})}
-                        min={1}
-                      />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <label htmlFor="price">Price (CHF)</label>
-                      <Input
-                        type="number"
-                        value={newPrice.price}
-                        onChange={(e) => setNewPrice({...newPrice, price: Number(e.target.value)})}
-                        min={0}
-                        step="0.01"
-                      />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <label htmlFor="date">Date</label>
-                      <Input
-                        type="date"
-                        value={newPrice.date}
-                        onChange={(e) => setNewPrice({...newPrice, date: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <SheetFooter className="mt-6">
-                    <SheetClose asChild>
-                      <Button variant="outline" type="button">Cancel</Button>
-                    </SheetClose>
-                    <Button 
-                      onClick={() => handleAddPrice(() => close())} 
-                      disabled={!newPrice.room_type || newPrice.price <= 0}
-                    >
-                      Save
-                    </Button>
-                  </SheetFooter>
-                </SheetContent>
-              </>
-            )}
+            <SheetTrigger asChild>
+              <Button className="gap-2 whitespace-nowrap">
+                <Plus className="h-4 w-4" /> Add Price
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>Add New Price</SheetTitle>
+                <SheetDescription>
+                  Define a new price for a specific room type and duration.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-8 grid gap-4">
+                <div className="grid gap-2">
+                  <label htmlFor="room_type">Room Type</label>
+                  <Select 
+                    value={newPrice.room_type} 
+                    onValueChange={(value) => setNewPrice({...newPrice, room_type: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select room type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roomTypes.map((roomType) => (
+                        <SelectItem key={roomType.code} value={roomType.code}>
+                          {roomType.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid gap-2">
+                  <label htmlFor="duration">Stay Duration (days)</label>
+                  <Input
+                    type="number"
+                    value={newPrice.duration}
+                    onChange={(e) => setNewPrice({...newPrice, duration: Number(e.target.value)})}
+                    min={1}
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <label htmlFor="price">Price (CHF)</label>
+                  <Input
+                    type="number"
+                    value={newPrice.price}
+                    onChange={(e) => setNewPrice({...newPrice, price: Number(e.target.value)})}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <label htmlFor="date">Date</label>
+                  <Input
+                    type="date"
+                    value={newPrice.date}
+                    onChange={(e) => setNewPrice({...newPrice, date: e.target.value})}
+                  />
+                </div>
+              </div>
+              <SheetFooter className="mt-6">
+                <SheetClose asChild>
+                  <Button variant="outline" type="button">Cancel</Button>
+                </SheetClose>
+                <Button 
+                  onClick={handleAddPrice} 
+                  disabled={!newPrice.room_type || newPrice.price <= 0}
+                >
+                  Save
+                </Button>
+              </SheetFooter>
+            </SheetContent>
           </Sheet>
         </div>
       </div>
@@ -370,101 +364,97 @@ const Pricing = () => {
                             </TableCell>
                             <TableCell>
                               <Sheet>
-                                {(close) => (
-                                  <>
-                                    <SheetTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setEditingPrice({...price})}
+                                <SheetTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setEditingPrice({...price})}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </SheetTrigger>
+                                {editingPrice && (
+                                  <SheetContent className="sm:max-w-md">
+                                    <SheetHeader>
+                                      <SheetTitle>Edit Price</SheetTitle>
+                                      <SheetDescription>
+                                        Update the price details.
+                                      </SheetDescription>
+                                    </SheetHeader>
+                                    <div className="mt-8 grid gap-4">
+                                      <div className="grid gap-2">
+                                        <label htmlFor="room_type">Room Type</label>
+                                        <Select 
+                                          value={editingPrice.room_type} 
+                                          onValueChange={(value) => setEditingPrice({
+                                            ...editingPrice,
+                                            room_type: value
+                                          })}
+                                        >
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select room type" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {roomTypes.map((roomType) => (
+                                              <SelectItem key={roomType.code} value={roomType.code}>
+                                                {roomType.display_name}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      
+                                      <div className="grid gap-2">
+                                        <label htmlFor="duration">Stay Duration (days)</label>
+                                        <Input
+                                          type="number"
+                                          value={editingPrice.duration}
+                                          onChange={(e) => setEditingPrice({
+                                            ...editingPrice,
+                                            duration: Number(e.target.value)
+                                          })}
+                                          min={1}
+                                        />
+                                      </div>
+                                      
+                                      <div className="grid gap-2">
+                                        <label htmlFor="price">Price (CHF)</label>
+                                        <Input
+                                          type="number"
+                                          value={editingPrice.price}
+                                          onChange={(e) => setEditingPrice({
+                                            ...editingPrice,
+                                            price: Number(e.target.value)
+                                          })}
+                                          min={0}
+                                          step="0.01"
+                                        />
+                                      </div>
+                                      
+                                      <div className="grid gap-2">
+                                        <label htmlFor="date">Date</label>
+                                        <Input
+                                          type="date"
+                                          value={editingPrice.date || ""}
+                                          disabled
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                          Date cannot be modified
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <SheetFooter className="mt-6">
+                                      <SheetClose asChild>
+                                        <Button variant="outline" type="button">Cancel</Button>
+                                      </SheetClose>
+                                      <Button 
+                                        onClick={handleUpdatePrice}
+                                        disabled={!editingPrice.room_type || editingPrice.price <= 0}
                                       >
-                                        <Edit className="h-4 w-4" />
+                                        Update
                                       </Button>
-                                    </SheetTrigger>
-                                    {editingPrice && (
-                                      <SheetContent className="sm:max-w-md">
-                                        <SheetHeader>
-                                          <SheetTitle>Edit Price</SheetTitle>
-                                          <SheetDescription>
-                                            Update the price details.
-                                          </SheetDescription>
-                                        </SheetHeader>
-                                        <div className="mt-8 grid gap-4">
-                                          <div className="grid gap-2">
-                                            <label htmlFor="room_type">Room Type</label>
-                                            <Select 
-                                              value={editingPrice.room_type} 
-                                              onValueChange={(value) => setEditingPrice({
-                                                ...editingPrice,
-                                                room_type: value
-                                              })}
-                                            >
-                                              <SelectTrigger>
-                                                <SelectValue placeholder="Select room type" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {roomTypes.map((roomType) => (
-                                                  <SelectItem key={roomType.code} value={roomType.code}>
-                                                    {roomType.display_name}
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                          </div>
-                                          
-                                          <div className="grid gap-2">
-                                            <label htmlFor="duration">Stay Duration (days)</label>
-                                            <Input
-                                              type="number"
-                                              value={editingPrice.duration}
-                                              onChange={(e) => setEditingPrice({
-                                                ...editingPrice,
-                                                duration: Number(e.target.value)
-                                              })}
-                                              min={1}
-                                            />
-                                          </div>
-                                          
-                                          <div className="grid gap-2">
-                                            <label htmlFor="price">Price (CHF)</label>
-                                            <Input
-                                              type="number"
-                                              value={editingPrice.price}
-                                              onChange={(e) => setEditingPrice({
-                                                ...editingPrice,
-                                                price: Number(e.target.value)
-                                              })}
-                                              min={0}
-                                              step="0.01"
-                                            />
-                                          </div>
-                                          
-                                          <div className="grid gap-2">
-                                            <label htmlFor="date">Date</label>
-                                            <Input
-                                              type="date"
-                                              value={editingPrice.date || ""}
-                                              disabled
-                                            />
-                                            <p className="text-xs text-muted-foreground">
-                                              Date cannot be modified
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <SheetFooter className="mt-6">
-                                          <SheetClose asChild>
-                                            <Button variant="outline" type="button">Cancel</Button>
-                                          </SheetClose>
-                                          <Button 
-                                            onClick={() => handleUpdatePrice(() => close())}
-                                            disabled={!editingPrice.room_type || editingPrice.price <= 0}
-                                          >
-                                            Update
-                                          </Button>
-                                        </SheetFooter>
-                                      </SheetContent>
-                                    )}
-                                  </>
+                                    </SheetFooter>
+                                  </SheetContent>
                                 )}
                               </Sheet>
                             </TableCell>
@@ -511,89 +501,85 @@ const Pricing = () => {
                                     </TableCell>
                                     <TableCell>
                                       <Sheet>
-                                        {(close) => (
-                                          <>
-                                            <SheetTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => setEditingPrice({...price})}
+                                        <SheetTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setEditingPrice({...price})}
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                        </SheetTrigger>
+                                        {editingPrice && editingPrice.id === price.id && (
+                                          <SheetContent className="sm:max-w-md">
+                                            <SheetHeader>
+                                              <SheetTitle>Edit Price</SheetTitle>
+                                              <SheetDescription>
+                                                Update the price details.
+                                              </SheetDescription>
+                                            </SheetHeader>
+                                            <div className="mt-8 grid gap-4">
+                                              <div className="grid gap-2">
+                                                <label htmlFor="room_type">Room Type</label>
+                                                <Select 
+                                                  value={editingPrice.room_type} 
+                                                  onValueChange={(value) => setEditingPrice({
+                                                    ...editingPrice,
+                                                    room_type: value
+                                                  })}
+                                                >
+                                                  <SelectTrigger>
+                                                    <SelectValue placeholder="Select room type" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {roomTypes.map((roomType) => (
+                                                      <SelectItem key={roomType.code} value={roomType.code}>
+                                                        {roomType.display_name}
+                                                      </SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
+                                              </div>
+                                              
+                                              <div className="grid gap-2">
+                                                <label htmlFor="duration">Stay Duration (days)</label>
+                                                <Input
+                                                  type="number"
+                                                  value={editingPrice.duration}
+                                                  onChange={(e) => setEditingPrice({
+                                                    ...editingPrice,
+                                                    duration: Number(e.target.value)
+                                                  })}
+                                                  min={1}
+                                                />
+                                              </div>
+                                              
+                                              <div className="grid gap-2">
+                                                <label htmlFor="price">Price (CHF)</label>
+                                                <Input
+                                                  type="number"
+                                                  value={editingPrice.price}
+                                                  onChange={(e) => setEditingPrice({
+                                                    ...editingPrice,
+                                                    price: Number(e.target.value)
+                                                  })}
+                                                  min={0}
+                                                  step="0.01"
+                                                />
+                                              </div>
+                                            </div>
+                                            <SheetFooter className="mt-6">
+                                              <SheetClose asChild>
+                                                <Button variant="outline" type="button">Cancel</Button>
+                                              </SheetClose>
+                                              <Button 
+                                                onClick={handleUpdatePrice}
+                                                disabled={!editingPrice.room_type || editingPrice.price <= 0}
                                               >
-                                                <Edit className="h-4 w-4" />
+                                                Update
                                               </Button>
-                                            </SheetTrigger>
-                                            {editingPrice && editingPrice.id === price.id && (
-                                              <SheetContent className="sm:max-w-md">
-                                                <SheetHeader>
-                                                  <SheetTitle>Edit Price</SheetTitle>
-                                                  <SheetDescription>
-                                                    Update the price details.
-                                                  </SheetDescription>
-                                                </SheetHeader>
-                                                <div className="mt-8 grid gap-4">
-                                                  <div className="grid gap-2">
-                                                    <label htmlFor="room_type">Room Type</label>
-                                                    <Select 
-                                                      value={editingPrice.room_type} 
-                                                      onValueChange={(value) => setEditingPrice({
-                                                        ...editingPrice,
-                                                        room_type: value
-                                                      })}
-                                                    >
-                                                      <SelectTrigger>
-                                                        <SelectValue placeholder="Select room type" />
-                                                      </SelectTrigger>
-                                                      <SelectContent>
-                                                        {roomTypes.map((roomType) => (
-                                                          <SelectItem key={roomType.code} value={roomType.code}>
-                                                            {roomType.display_name}
-                                                          </SelectItem>
-                                                        ))}
-                                                      </SelectContent>
-                                                    </Select>
-                                                  </div>
-                                                  
-                                                  <div className="grid gap-2">
-                                                    <label htmlFor="duration">Stay Duration (days)</label>
-                                                    <Input
-                                                      type="number"
-                                                      value={editingPrice.duration}
-                                                      onChange={(e) => setEditingPrice({
-                                                        ...editingPrice,
-                                                        duration: Number(e.target.value)
-                                                      })}
-                                                      min={1}
-                                                    />
-                                                  </div>
-                                                  
-                                                  <div className="grid gap-2">
-                                                    <label htmlFor="price">Price (CHF)</label>
-                                                    <Input
-                                                      type="number"
-                                                      value={editingPrice.price}
-                                                      onChange={(e) => setEditingPrice({
-                                                        ...editingPrice,
-                                                        price: Number(e.target.value)
-                                                      })}
-                                                      min={0}
-                                                      step="0.01"
-                                                    />
-                                                  </div>
-                                                </div>
-                                                <SheetFooter className="mt-6">
-                                                  <SheetClose asChild>
-                                                    <Button variant="outline" type="button">Cancel</Button>
-                                                  </SheetClose>
-                                                  <Button 
-                                                    onClick={() => handleUpdatePrice(() => close())}
-                                                    disabled={!editingPrice.room_type || editingPrice.price <= 0}
-                                                  >
-                                                    Update
-                                                  </Button>
-                                                </SheetFooter>
-                                              </SheetContent>
-                                            )}
-                                          </>
+                                            </SheetFooter>
+                                          </SheetContent>
                                         )}
                                       </Sheet>
                                     </TableCell>
