@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { type RoomType } from "@/types/booking";
+import { PricingDialog } from "@/components/room-types/PricingDialog"; 
+import { Tag, DollarSign } from "lucide-react";
 
 interface RoomTypeCardProps {
   roomType: RoomType;
@@ -28,6 +32,8 @@ const RoomTypeCard = ({
   editValues,
   setEditValues
 }: RoomTypeCardProps) => {
+  const [isPricingDialogOpen, setIsPricingDialogOpen] = useState(false);
+  
   // Query to get current bookings count
   const { data: bookingsCount } = useQuery({
     queryKey: ['roomTypeBookings', roomType.code],
@@ -184,22 +190,38 @@ const RoomTypeCard = ({
             <Button onClick={() => onUpdateQuantity(roomType.id, editValues.quantity || roomType.quantity)}>Save</Button>
           </>
         ) : (
-          <>
+          <div className="flex gap-2 w-full">
             <Button 
               variant="outline" 
               onClick={() => onEdit(roomType.id)}
+              className="flex-1"
             >
-              Edit
+              <Tag className="mr-1 h-4 w-4" /> Edit
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setIsPricingDialogOpen(true)}
+              className="flex-1"
+            >
+              <DollarSign className="mr-1 h-4 w-4" /> Pricing
             </Button>
             <Button 
               variant="destructive" 
               onClick={() => onDelete(roomType.id)}
+              className="flex-1"
             >
               Delete
             </Button>
-          </>
+          </div>
         )}
       </CardFooter>
+      
+      <PricingDialog
+        open={isPricingDialogOpen}
+        onOpenChange={setIsPricingDialogOpen}
+        roomType={roomType.code}
+        roomTypeDisplay={roomType.display_name}
+      />
     </Card>
   );
 };
