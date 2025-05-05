@@ -103,7 +103,7 @@ export const useBookingForm = () => {
       console.log('Using cached price data for calculation');
       
       // Filter price data for this room type
-      const roomPrices = allPriceData.filter(price => price.room_code === roomType);
+      const roomPrices = allPriceData.filter(price => price.room_type === roomType);
       console.log('Available prices for room type:', roomPrices);
       
       if (roomPrices.length === 0) {
@@ -147,7 +147,7 @@ export const useBookingForm = () => {
       const { data: prices, error } = await supabase
         .from('prices')
         .select('*')
-        .eq('room_code', roomData.code)
+        .eq('room_type', roomData.code)
         .lte('duration', days)
         .order('duration', { ascending: false })
         .limit(1);
@@ -159,7 +159,7 @@ export const useBookingForm = () => {
 
       if (!prices || prices.length === 0) {
         console.error('No applicable price found for:', {
-          room_code: roomData.code,
+          room_type: roomData.code,
           duration: days
         });
         return 0;
