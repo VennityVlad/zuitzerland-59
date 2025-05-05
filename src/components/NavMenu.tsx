@@ -1,3 +1,4 @@
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,8 @@ import {
   Shield,
   Settings,
   AppWindow, 
-  AlertOctagon 
+  AlertOctagon,
+  DollarSign
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -192,6 +194,11 @@ const NavMenu = () => {
           path: "/invoices",
         },
         {
+          label: "Pricing",
+          icon: <DollarSign className="h-4 w-4" />,
+          path: "/pricing",
+        },
+        {
           label: "Discounts",
           icon: <Percent className="h-4 w-4" />,
           path: "/discounts",
@@ -261,7 +268,7 @@ const NavMenu = () => {
     },
     {
       label: "ZuLink Apps",
-      path: "/zulink-apps", // Changed from href to path to match the MenuItem type
+      path: "/zulink-apps",
       icon: <AppWindow className="h-5 w-5" />,
     },
     {

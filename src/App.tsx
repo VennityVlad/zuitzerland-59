@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,6 +48,7 @@ import IssueTracking from "./pages/IssueTracking";
 import IssueConfirmationPage from "./pages/IssueConfirmationPage";
 import IssueListPage from "./pages/IssueListPage";
 import IssueDetailPage from "./pages/IssueDetailPage";
+import Pricing from "./pages/Pricing";
 
 const PageTrackingWrapper = ({ children }: { children: React.ReactNode }) => {
   usePageTracking();
@@ -307,6 +309,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly={true}>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pricing"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <Pricing />
           </ProtectedRoute>
         }
       />
