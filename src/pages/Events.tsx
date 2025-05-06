@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday } from "date-fns";
+import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Mic, Filter, Share, LogIn, CalendarPlus, Search } from "lucide-react";
+import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -23,6 +23,7 @@ import { EventCalendar } from "@/components/calendar/EventCalendar";
 import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { SearchHeader } from "@/pages/events/SearchHeader";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +84,8 @@ const Events = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  
   const { user: privyUser } = usePrivy();
   const { user: supabaseUser } = useSupabaseAuth();
   const { toast } = useToast();
@@ -171,6 +174,10 @@ const Events = () => {
       (hasPaidInvoice || userIsAdmin) && 
       (!!privyUser?.id || !!supabaseUser?.id)
   });
+
+  useEffect(() => {
+    setIsSearchMode(selectedTags.length > 0 || !!selectedDate);
+  }, [selectedTags, selectedDate]);
 
   const filteredEvents = React.useMemo(() => {
     if (!events) return [];
@@ -361,12 +368,21 @@ const Events = () => {
       (isBefore(startDate, currentDate) && isBefore(currentDate, endDate));
   });
   
-  const upcomingEvents = filteredEvents.filter(event => new Date(event.end_date) >= currentDate) || [];
-  const pastEvents = filteredEvents.filter(event => new Date(event.end_date) < currentDate) || [];
+  // Updated to match the "Upcoming" tab name
+  const upcomingEvents = filteredEvents.filter(event => {
+    // Show events that end today or in the future
+    const endDate = new Date(event.end_date);
+    return !isToday(endDate) && isBefore(currentDate, endDate);
+  });
+  
+  const pastEvents = filteredEvents.filter(event => {
+    const endDate = new Date(event.end_date);
+    return isBefore(endDate, currentDate);
+  });
+  
   const rsvpedEvents = filteredEvents.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
   const hostingEvents = filteredEvents.filter(event => event.created_by === profileId) || [];
-  const allEvents = filteredEvents;
-
+  
   // Extract unique tag IDs for each event category
   const getUniqueTagIdsForEvents = (eventsList: EventWithProfile[]) => {
     const tagIds = new Set<string>();
@@ -379,20 +395,20 @@ const Events = () => {
   };
 
   const todayTagIds = getUniqueTagIdsForEvents(todayEvents);
+  const upcomingTagIds = getUniqueTagIdsForEvents(upcomingEvents);
   const goingTagIds = getUniqueTagIdsForEvents(rsvpedEvents);
   const hostingTagIds = getUniqueTagIdsForEvents(hostingEvents);
-  const allTagIds = getUniqueTagIdsForEvents(allEvents);
   const pastTagIds = getUniqueTagIdsForEvents(pastEvents);
 
   // Get visible tag IDs based on the active tab
   const getVisibleTagIds = () => {
     switch (activeTab) {
       case 'today': return todayTagIds;
+      case 'upcoming': return upcomingTagIds;
       case 'going': return goingTagIds;
       case 'hosting': return hostingTagIds;
-      case 'all': return allTagIds;
       case 'past': return pastTagIds;
-      default: return allTagIds;
+      default: return todayTagIds;
     }
   };
 
@@ -401,6 +417,9 @@ const Events = () => {
   const clearFilters = () => {
     setSelectedTags([]);
     setSelectedDate(undefined);
+    setIsSearchMode(false);
+    // Return to the previous active tab or default to "today"
+    setActiveTab(activeTab || "today");
   };
 
   const hasActiveFilters = selectedTags.length > 0 || !!selectedDate;
@@ -436,14 +455,41 @@ const Events = () => {
     }
   };
 
-  // Handle date selection with tab switching
+  // Handle date selection with search mode
   const handleDateSelection = (date: Date | undefined, shouldSwitchTab: boolean = false) => {
     setSelectedDate(date);
-    // If a date is selected and we should switch tabs, activate the "all" tab
-    if (date && shouldSwitchTab) {
-      setActiveTab("all");
+    if (date) {
+      setIsSearchMode(true);
     }
   };
+
+  // Handle tag selection with search mode
+  const handleTagsChange = (tags: string[]) => {
+    setSelectedTags(tags);
+    if (tags.length > 0) {
+      setIsSearchMode(true);
+    } else if (!selectedDate) {
+      setIsSearchMode(false);
+    }
+  };
+  
+  // Simplified logic to get the events to show based on active tab or search mode
+  const getEventsToShow = () => {
+    if (isSearchMode) {
+      return filteredEvents;
+    }
+    
+    switch (activeTab) {
+      case 'today': return todayEvents;
+      case 'upcoming': return upcomingEvents;
+      case 'going': return rsvpedEvents;
+      case 'hosting': return hostingEvents;
+      case 'past': return pastEvents;
+      default: return todayEvents;
+    }
+  };
+  
+  const eventsToShow = getEventsToShow();
 
   // Early return for users without paid invoices
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
@@ -513,14 +559,6 @@ const Events = () => {
       </div>
     );
   }
-
-  const handleTagsChange = (tags: string[]) => {
-    setSelectedTags(tags);
-    // When tags are selected, switch to "all" tab to show all filtered events
-    if (tags.length > 0) {
-      setActiveTab("all");
-    }
-  };
 
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
@@ -625,116 +663,145 @@ const Events = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="col-span-1 md:col-span-3">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 mb-2">
-                <TabsTrigger value="today">Today</TabsTrigger>
-                <TabsTrigger value="going">Going</TabsTrigger>
-                <TabsTrigger value="hosting">Hosting</TabsTrigger>
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="past">Past</TabsTrigger>
-              </TabsList>
+            {isSearchMode ? (
+              <div className="space-y-4">
+                <SearchHeader 
+                  selectedTags={selectedTags} 
+                  selectedDate={selectedDate} 
+                  clearFilters={clearFilters} 
+                />
+                
+                {renderEventsList(
+                  eventsToShow,
+                  isLoading,
+                  profileLoading,
+                  canCreateEvents,
+                  canEditEvent,
+                  openDeleteDialog,
+                  handleEditEvent,
+                  formatDateForSidebar,
+                  formatEventTime,
+                  formatDateRange,
+                  rsvpMap,
+                  userRSVPEventIds,
+                  profileId,
+                  refetchRSVPs,
+                  isMobile,
+                  handleShare
+                )}
+              </div>
+            ) : (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-5 mb-2">
+                  <TabsTrigger value="today">Today</TabsTrigger>
+                  <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                  <TabsTrigger value="going">Going</TabsTrigger>
+                  <TabsTrigger value="hosting">Hosting</TabsTrigger>
+                  <TabsTrigger value="past">Past</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="today" className="space-y-4 mt-4">
-                {renderEventsList(
-                  todayEvents,
-                  isLoading,
-                  profileLoading,
-                  canCreateEvents,
-                  canEditEvent,
-                  openDeleteDialog,
-                  handleEditEvent,
-                  formatDateForSidebar,
-                  formatEventTime,
-                  formatDateRange,
-                  rsvpMap,
-                  userRSVPEventIds,
-                  profileId,
-                  refetchRSVPs,
-                  isMobile,
-                  handleShare
-                )}
-              </TabsContent>
-              <TabsContent value="going" className="space-y-4 mt-4">
-                {renderEventsList(
-                  rsvpedEvents,
-                  isLoading,
-                  profileLoading,
-                  canCreateEvents,
-                  canEditEvent,
-                  openDeleteDialog,
-                  handleEditEvent,
-                  formatDateForSidebar,
-                  formatEventTime,
-                  formatDateRange,
-                  rsvpMap,
-                  userRSVPEventIds,
-                  profileId,
-                  refetchRSVPs,
-                  isMobile,
-                  handleShare
-                )}
-              </TabsContent>
-              <TabsContent value="hosting" className="space-y-4 mt-4">
-                {renderEventsList(
-                  hostingEvents,
-                  isLoading,
-                  profileLoading,
-                  canCreateEvents,
-                  canEditEvent,
-                  openDeleteDialog,
-                  handleEditEvent,
-                  formatDateForSidebar,
-                  formatEventTime,
-                  formatDateRange,
-                  rsvpMap,
-                  userRSVPEventIds,
-                  profileId,
-                  refetchRSVPs,
-                  isMobile,
-                  handleShare
-                )}
-              </TabsContent>
-              <TabsContent value="all" className="space-y-4 mt-4">
-                {renderEventsList(
-                  allEvents,
-                  isLoading,
-                  profileLoading,
-                  canCreateEvents,
-                  canEditEvent,
-                  openDeleteDialog,
-                  handleEditEvent,
-                  formatDateForSidebar,
-                  formatEventTime,
-                  formatDateRange,
-                  rsvpMap,
-                  userRSVPEventIds,
-                  profileId,
-                  refetchRSVPs,
-                  isMobile,
-                  handleShare
-                )}
-              </TabsContent>
-              <TabsContent value="past" className="space-y-4 mt-4">
-                {renderEventsList(
-                  pastEvents,
-                  isLoading,
-                  profileLoading,
-                  canCreateEvents,
-                  canEditEvent,
-                  openDeleteDialog,
-                  handleEditEvent,
-                  formatDateForSidebar,
-                  formatEventTime,
-                  formatDateRange,
-                  rsvpMap,
-                  userRSVPEventIds,
-                  profileId,
-                  refetchRSVPs,
-                  isMobile,
-                  handleShare
-                )}
-              </TabsContent>
-            </Tabs>
+                <TabsContent value="today" className="space-y-4 mt-4">
+                  {renderEventsList(
+                    todayEvents,
+                    isLoading,
+                    profileLoading,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    rsvpMap,
+                    userRSVPEventIds,
+                    profileId,
+                    refetchRSVPs,
+                    isMobile,
+                    handleShare
+                  )}
+                </TabsContent>
+                <TabsContent value="upcoming" className="space-y-4 mt-4">
+                  {renderEventsList(
+                    upcomingEvents,
+                    isLoading,
+                    profileLoading,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    rsvpMap,
+                    userRSVPEventIds,
+                    profileId,
+                    refetchRSVPs,
+                    isMobile,
+                    handleShare
+                  )}
+                </TabsContent>
+                <TabsContent value="going" className="space-y-4 mt-4">
+                  {renderEventsList(
+                    rsvpedEvents,
+                    isLoading,
+                    profileLoading,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    rsvpMap,
+                    userRSVPEventIds,
+                    profileId,
+                    refetchRSVPs,
+                    isMobile,
+                    handleShare
+                  )}
+                </TabsContent>
+                <TabsContent value="hosting" className="space-y-4 mt-4">
+                  {renderEventsList(
+                    hostingEvents,
+                    isLoading,
+                    profileLoading,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    rsvpMap,
+                    userRSVPEventIds,
+                    profileId,
+                    refetchRSVPs,
+                    isMobile,
+                    handleShare
+                  )}
+                </TabsContent>
+                <TabsContent value="past" className="space-y-4 mt-4">
+                  {renderEventsList(
+                    pastEvents,
+                    isLoading,
+                    profileLoading,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    rsvpMap,
+                    userRSVPEventIds,
+                    profileId,
+                    refetchRSVPs,
+                    isMobile,
+                    handleShare
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
           
           {!isMobile && (
