@@ -76,8 +76,8 @@ const Events = () => {
             if (!coHostsMap[item.event_id]) {
               coHostsMap[item.event_id] = [];
             }
-            // Only add the profile if it's valid
-            if (item.profiles && typeof item.profiles === 'object' && 'id' in item.profiles) {
+            // Check if profiles exists and is a valid object with an id property
+            if (item.profiles && typeof item.profiles === 'object' && item.profiles !== null && 'id' in item.profiles) {
               coHostsMap[item.event_id].push(item.profiles as unknown as {
                 id: string;
                 username: string;
