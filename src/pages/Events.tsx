@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import PageTitle from "@/components/PageTitle";
+import { PageTitle } from "@/components/PageTitle";
 import { EventWithProfile, CoHostRecord } from "@/types/event";
 import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { usePrivy } from "@privy-io/react-auth";
@@ -65,7 +65,7 @@ const Events = () => {
       try {
         const { data, error } = await supabase
           .from('event_co_hosts')
-          .select('event_id, profiles:profiles(id, username, avatar_url)');
+          .select('event_id, profiles:profile_id(id, username, avatar_url)');
 
         if (error) throw error;
         
@@ -76,7 +76,14 @@ const Events = () => {
             if (!coHostsMap[item.event_id]) {
               coHostsMap[item.event_id] = [];
             }
-            coHostsMap[item.event_id].push(item.profiles);
+            // Only add the profile if it's valid
+            if (item.profiles && typeof item.profiles === 'object' && 'id' in item.profiles) {
+              coHostsMap[item.event_id].push(item.profiles as unknown as {
+                id: string;
+                username: string;
+                avatar_url?: string | null;
+              });
+            }
           });
           
           setCoHosts(coHostsMap);
@@ -92,7 +99,7 @@ const Events = () => {
 
   return (
     <div className="container py-8">
-      <PageTitle>Events</PageTitle>
+      <PageTitle title="Events" />
       <div className="space-y-4">
         {loading ? (
           <p>Loading events...</p>

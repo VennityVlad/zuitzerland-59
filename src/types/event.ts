@@ -1,6 +1,4 @@
 
-import { Profile } from "@/integrations/supabase/types";
-
 export interface EventWithProfile {
   id: string;
   title: string;
@@ -12,7 +10,11 @@ export interface EventWithProfile {
   location_text?: string;
   created_by: string;
   color?: string;
-  profiles?: Profile;
+  profiles?: {
+    id: string;
+    username: string;
+    avatar_url?: string | null;
+  };
   // Add other fields as needed
 }
 
