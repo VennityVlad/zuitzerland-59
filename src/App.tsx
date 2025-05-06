@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
@@ -392,11 +393,48 @@ function AppRoutes() {
       />
       <Route path="/404" element={<NotFound />} />
       <Route path="*" element={<Navigate to="/404" />} />
-      <Route path="/issues/report" element={<IssueReporting />} />
-      <Route path="/issues/track" element={<IssueTracking />} />
-      <Route path="/issues/confirmation/:trackingCode" element={<IssueConfirmationPage />} />
-      <Route path="/issues" element={<IssueListPage />} />
-      <Route path="/issues/:id" element={<IssueDetailPage />} />
+      
+      {/* Update issue reporting routes to use ProtectedRoute */}
+      <Route
+        path="/issues/report"
+        element={
+          <ProtectedRoute>
+            <IssueReporting />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/issues/track"
+        element={
+          <ProtectedRoute>
+            <IssueTracking />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/issues/confirmation/:trackingCode"
+        element={
+          <ProtectedRoute>
+            <IssueConfirmationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/issues"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <IssueListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/issues/:id"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <IssueDetailPage />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
