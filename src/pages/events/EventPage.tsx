@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -11,7 +10,6 @@ import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { EventDateBadge } from "@/components/events/EventDateBadge";
 import { EventDetailsCard } from "@/components/events/EventDetailsCard";
 import { CalendarOptionsPopover } from "@/components/events/CalendarOptionsPopover";
-import { AddCoHostDialog } from "@/components/events/AddCoHostDialog";
 import { Card } from "@/components/ui/card";
 import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { Skeleton } from "@/components/ui/skeleton";
