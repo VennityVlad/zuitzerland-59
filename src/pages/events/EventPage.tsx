@@ -234,6 +234,7 @@ const EventPage = () => {
         <meta property="og:description" content={metaDescription} />
         <meta property="og:type" content="event" />
         <meta property="og:url" content={window.location.href} />
+        <meta property="og:image" content="/lovable-uploads/3ffe57c2-320a-4cca-86fd-dab25c9ecd8f.png" />
         {event?.start_date && <meta property="event:start_time" content={new Date(event.start_date).toISOString()} />}
         {event?.end_date && <meta property="event:end_time" content={new Date(event.end_date).toISOString()} />}
         {eventLocation && <meta property="event:location" content={eventLocation} />}
