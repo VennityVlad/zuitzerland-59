@@ -6,16 +6,10 @@ import { usePrivy } from "@privy-io/react-auth";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  Sidebar,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useMenuVisibility } from "@/hooks/useMenuVisibility";
 
 const BottomNav = () => {
@@ -166,98 +160,90 @@ const BottomNav = () => {
         )}
 
         {/* More Menu for both admin and non-admin */}
-        <Sheet>
-          <SheetTrigger asChild>
+        <Popover>
+          <PopoverTrigger asChild>
             <button className="flex flex-col items-center justify-center text-xs text-gray-500 hover:text-primary">
               <MoreHorizontal className="mb-1 h-5 w-5" />
               <span>More</span>
             </button>
-          </SheetTrigger>
-          <SheetContent side="right" className="p-0">
-            <Sidebar collapsible="none" className="border-none shadow-none">
-              <SidebarMenu>
-                {isAdmin ? (
-                  // Admin menu items
-                  <>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <NavLink to="/book">
-                          <CalendarDays className="h-4 w-4 mr-2" />
-                          Book
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <NavLink to="/pricing">
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          Pricing
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <NavLink to="/reports">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Reports
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <NavLink to="/settings">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Settings
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </>
-                ) : (
-                  // Non-admin menu items
-                  <>
-                    {showOnboarding ? null : (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <NavLink to="/onboarding">
-                            <BookOpen className="h-4 w-4 mr-2" />
-                            Onboarding
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )}
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <NavLink to="/invoices">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Invoices
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </>
-                )}
-                
-                {/* Common menu items for both admin and non-admin */}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <NavLink to="/profile">
-                      <User className="h-4 w-4 mr-2" />
-                      Profile
+          </PopoverTrigger>
+          <PopoverContent side="top" className="w-56 p-0">
+            <div className="flex flex-col py-2">
+              {isAdmin ? (
+                // Admin menu items
+                <>
+                  <NavLink 
+                    to="/book" 
+                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+                  >
+                    <CalendarDays className="h-4 w-4 mr-2" />
+                    Book
+                  </NavLink>
+                  <NavLink 
+                    to="/pricing" 
+                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Pricing
+                  </NavLink>
+                  <NavLink 
+                    to="/reports" 
+                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Reports
+                  </NavLink>
+                  <NavLink 
+                    to="/settings" 
+                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Settings
+                  </NavLink>
+                </>
+              ) : (
+                // Non-admin menu items
+                <>
+                  {!showOnboarding && (
+                    <NavLink 
+                      to="/onboarding" 
+                      className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+                    >
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Onboarding
                     </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                
-                <div className="border-t my-2"></div>
-                
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => logout()} className="text-red-500 hover:text-red-700">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Log out
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </Sidebar>
-          </SheetContent>
-        </Sheet>
+                  )}
+                  <NavLink 
+                    to="/invoices" 
+                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Invoices
+                  </NavLink>
+                </>
+              )}
+              
+              {/* Common menu items for both admin and non-admin */}
+              <NavLink 
+                to="/profile" 
+                className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </NavLink>
+              
+              <div className="border-t my-2"></div>
+              
+              <button
+                onClick={() => logout()}
+                className="flex items-center px-3 py-2 text-sm text-red-500 hover:bg-red-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Log out
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
