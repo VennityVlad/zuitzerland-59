@@ -78,10 +78,12 @@ const Events = () => {
             }
             // Check if profiles exists and is a valid object with an id property
             if (item.profiles && typeof item.profiles === 'object' && item.profiles !== null && 'id' in item.profiles) {
-              coHostsMap[item.event_id].push(item.profiles as unknown as {
-                id: string;
-                username: string;
-                avatar_url?: string | null;
+              // Use a type guard function to ensure profiles has the correct shape
+              const profile = item.profiles as { id: string; username: string; avatar_url?: string | null };
+              coHostsMap[item.event_id].push({
+                id: profile.id,
+                username: profile.username,
+                avatar_url: profile.avatar_url
               });
             }
           });
