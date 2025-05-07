@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays } from "date-fns";
@@ -165,7 +164,19 @@ const Events = () => {
         throw error;
       }
 
-      return data as unknown as EventWithProfile[];
+      // Make sure the event_tags property on each event is properly typed
+      // If there's an error or data is missing, set it to an empty array
+      return data.map((event: any): EventWithProfile => {
+        // Handle potentially missing or error in event_tags
+        const safeEventTags = Array.isArray(event.event_tags) 
+          ? event.event_tags 
+          : [];
+
+        return {
+          ...event,
+          event_tags: safeEventTags
+        };
+      });
     },
     // Only fetch events if:
     // 1. We know the invoice status (not still loading)
@@ -207,15 +218,19 @@ const Events = () => {
       const typedEvents: EventWithProfile[] = [];
       
       data.forEach(item => {
-        // Make sure the event is properly typed and not null
+        // Handle potentially missing or invalid events
         if (item.events) {
-          // Handle potential type errors with event_tags
+          // Handle potentially missing or error in event_tags
           const event = item.events;
-          
-          // Only add events with valid data
-          if (event.id) {
-            typedEvents.push(event as EventWithProfile);
-          }
+          const safeEventTags = Array.isArray(event.event_tags) 
+            ? event.event_tags 
+            : [];
+            
+          // Add a properly typed event to our result array
+          typedEvents.push({
+            ...event,
+            event_tags: safeEventTags
+          });
         }
       });
       
