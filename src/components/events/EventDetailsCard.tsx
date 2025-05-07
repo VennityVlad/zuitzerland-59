@@ -1,9 +1,10 @@
 
-import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, UserPlus } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { EventRSVPAvatars } from "./EventRSVPAvatars";
+import { AddCoHostPopover } from "./AddCoHostPopover";
 
 interface EventDetailsCardProps {
   startDate: Date;
@@ -13,6 +14,10 @@ interface EventDetailsCardProps {
   location: string;
   totalRsvps: number;
   attendees: any[];
+  eventId?: string;
+  profileId?: string;
+  canEdit?: boolean;
+  onCoHostAdded?: () => void;
 }
 
 export const EventDetailsCard = ({
@@ -23,6 +28,10 @@ export const EventDetailsCard = ({
   location,
   totalRsvps,
   attendees,
+  eventId,
+  profileId,
+  canEdit = false,
+  onCoHostAdded,
 }: EventDetailsCardProps) => {
   return (
     <Card className="border shadow-sm">

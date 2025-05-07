@@ -912,6 +912,9 @@ const renderEventsList = (
                   const location = event.locations ? 
                     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
                     event.location_text;
+                  
+                  // Determine if the current user can edit this event (they are either the creator or admin)
+                  const isCreator = event.created_by === profileId;
 
                   return (
                     <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200 w-full">
@@ -944,9 +947,19 @@ const renderEventsList = (
                           <div className="flex items-center">
                             <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
                             <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
+                            
+                            {/* Add Co-Host Button - Only visible if user is the creator of the event */}
+                            {isCreator && profileId && (
+                              <AddCoHostPopover 
+                                eventId={event.id} 
+                                profileId={profileId}
+                                onSuccess={refetch}
+                              />
+                            )}
                           </div>
                         </div>
 
+                        {/* ... keep existing code (tags, speakers, buttons, etc.) */}
                         {event.event_tags && event.event_tags.length > 0 && (
                           <div className="flex items-start gap-2 mt-4">
                             <Tag className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
@@ -978,7 +991,6 @@ const renderEventsList = (
                               onChange={() => refetchRSVPs()}
                             />
                           )}
-                          {/* Replace the Add to Calendar button with CalendarOptionsPopover */}
                           <CalendarOptionsPopover event={event} isMobile={isMobile} />
                           <Button
                             variant="outline"
