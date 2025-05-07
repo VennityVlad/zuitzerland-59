@@ -247,7 +247,11 @@ const Events = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("event_co_hosts")
-        .select("event_id, profile_id, profiles(id, username)");
+        .select(`
+          event_id, 
+          profile_id, 
+          profiles:profiles!event_co_hosts_profile_id_fkey(id, username)
+        `); // Fixed the query by specifying the foreign key relationship
       if (error) throw error;
       return data || [];
     }
@@ -953,8 +957,8 @@ const renderEventsList = (
                   // Determine if the current user can edit this event (they are either the creator or admin)
                   const isCreator = event.created_by === profileId;
                   
-                  // Get co-hosts for this event
-                  const eventCoHosts = coHostsMap[event.id] || [];
+                  // Get co-hosts for this event from the global coHostsMap
+                  const eventCoHosts = event.id && coHostsMap[event.id] ? coHostsMap[event.id] : [];
                   
                   // Combine host and co-hosts
                   const allHosts = event.profiles?.username ? 
@@ -1007,10 +1011,7 @@ const renderEventsList = (
                                   <AddCoHostPopover 
                                     eventId={event.id} 
                                     profileId={profileId}
-                                    onSuccess={() => {
-                                      refetchCoHosts();
-                                      refetchRSVPs();
-                                    }}
+                                    onSuccess={refetchRSVPs}
                                   />
                                 </div>
                               )}
