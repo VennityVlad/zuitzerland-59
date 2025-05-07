@@ -958,7 +958,7 @@ const renderEventsList = (
                   const isCreator = event.created_by === profileId;
                   
                   // Get co-hosts for this event from the global coHostsMap
-                  const eventCoHosts = event.id && coHostsMap[event.id] ? coHostsMap[event.id] : [];
+                  const eventCoHosts = event.id ? (coHostsMap[event.id] || []) : [];
                   
                   // Combine host and co-hosts
                   const allHosts = event.profiles?.username ? 
@@ -1011,7 +1011,10 @@ const renderEventsList = (
                                   <AddCoHostPopover 
                                     eventId={event.id} 
                                     profileId={profileId}
-                                    onSuccess={refetchRSVPs}
+                                    onSuccess={() => {
+                                      refetchCoHosts();
+                                      refetchRSVPs();
+                                    }}
                                   />
                                 </div>
                               )}
