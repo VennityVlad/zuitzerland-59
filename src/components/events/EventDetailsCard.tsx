@@ -13,7 +13,6 @@ interface EventDetailsCardProps {
   location: string;
   totalRsvps: number;
   attendees: any[];
-  coHosts?: { username: string }[];
 }
 
 export const EventDetailsCard = ({
@@ -24,7 +23,6 @@ export const EventDetailsCard = ({
   location,
   totalRsvps,
   attendees,
-  coHosts = [],
 }: EventDetailsCardProps) => {
   return (
     <Card className="border shadow-sm">

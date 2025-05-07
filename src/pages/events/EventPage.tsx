@@ -21,10 +21,8 @@ const EventPage = () => {
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rsvps, setRsvps] = useState<any[]>([]);
-  const [coHosts, setCoHosts] = useState<any[]>([]);
   const [isRsvped, setIsRsvped] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [addCoHostOpen, setAddCoHostOpen] = useState(false);
   const { toast } = useToast();
   const locationData = useLocation();
   const navigate = useNavigate();
@@ -128,44 +126,18 @@ const EventPage = () => {
       }
     };
 
-    const fetchCoHosts = async () => {
-      if (!eventId) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from("event_co_hosts")
-          .select(`
-            profile_id,
-            profiles:profiles(id, username, avatar_url)
-          `)
-          .eq("event_id", eventId);
-
-        if (error) throw error;
-        
-        if (data) {
-          setCoHosts(data.map(item => item.profiles));
-        }
-      } catch (error) {
-        console.error("Error fetching co-hosts:", error);
-      }
-    };
-
     // Only proceed if we have determined access status
     if (eventId && !isPaidInvoiceLoading) {
       fetchEvent();
       if (userProfile) {
         fetchRsvps();
-        fetchCoHosts();
       }
     }
   }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
 
   // Check if the current user is the creator of the event
   const isEventCreator = event && userProfile && event.created_by === userProfile.id;
-  
-  // Check if the current user is a co-host
-  const isCoHost = userProfile && coHosts.some(host => host.id === userProfile.id);
-  
+
   // Generate the appropriate Meerkat URL based on user role
   const getMeerkatUrl = () => {
     if (!event?.meerkat_url) return '';
@@ -211,24 +183,6 @@ const EventPage = () => {
           if (!error && data) {
             const profileData = data.map(rsvp => rsvp.profiles);
             setRsvps(profileData);
-          }
-        });
-    }
-  };
-
-  const handleCoHostAdded = () => {
-    // Refresh co-hosts list
-    if (eventId) {
-      supabase
-        .from("event_co_hosts")
-        .select(`
-          profile_id,
-          profiles:profiles(id, username, avatar_url)
-        `)
-        .eq("event_id", eventId)
-        .then(({ data, error }) => {
-          if (!error && data) {
-            setCoHosts(data.map(item => item.profiles));
           }
         });
     }
@@ -326,30 +280,9 @@ const EventPage = () => {
               </div>
               
               <div className="flex-1 space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-muted-foreground">
-                    {event?.profiles?.username && (
-                      <>
-                        Hosted by {event.profiles.username}
-                        {coHosts.length > 0 && (
-                          <span className="text-gray-500">
-                            {" "}• Co-hosts: {coHosts.map(host => host.username).join(', ')}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </p>
-                  {(isEventCreator || isAdmin) && !isEventInPast && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setAddCoHostOpen(true)}
-                      className="text-xs"
-                    >
-                      Add Co-host
-                    </Button>
-                  )}
-                </div>
+                <p className="text-muted-foreground">
+                  {event?.profiles?.username && `Hosted by ${event.profiles.username}`}
+                </p>
                 <h1 className="text-3xl font-bold text-foreground">{event?.title}</h1>
                 
                 <div className="flex flex-wrap gap-4 items-center justify-between">
@@ -444,20 +377,10 @@ const EventPage = () => {
                   location={eventLocation ?? ""}
                   totalRsvps={rsvps.length}
                   attendees={rsvps}
-                  coHosts={coHosts}
                 />
               </div>
             </div>
           </div>
-
-          {/* Add Co-host Dialog */}
-          <AddCoHostDialog
-            open={addCoHostOpen}
-            onOpenChange={setAddCoHostOpen}
-            eventId={eventId || ''}
-            createdBy={userProfile?.id || ''}
-            onCoHostAdded={handleCoHostAdded}
-          />
         </div>
       )}
     </>
