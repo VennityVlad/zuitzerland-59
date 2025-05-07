@@ -11,7 +11,7 @@ import { EventDateBadge } from "@/components/events/EventDateBadge";
 import { EventDetailsCard } from "@/components/events/EventDetailsCard";
 import { CalendarOptionsPopover } from "@/components/events/CalendarOptionsPopover";
 import { Card } from "@/components/ui/card";
-import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
+import { usePaidInvoiceStatus } from "@/hooks/use-paidInvoiceStatus";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCoHostPopover } from "@/components/events/AddCoHostPopover";
@@ -28,6 +28,7 @@ const EventPage = () => {
   const [isCoHost, setIsCoHost] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<any>(null);
   const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [coHosts, setCoHosts] = useState<any[]>([]);
   const { toast } = useToast();
   const locationData = useLocation();
   const navigate = useNavigate();
@@ -95,6 +96,30 @@ const EventPage = () => {
     
     checkCoHostStatus();
   }, [userProfile, eventId]);
+
+  useEffect(() => {
+    const fetchCoHosts = async () => {
+      if (eventId) {
+        try {
+          const { data, error } = await supabase
+            .from("event_co_hosts")
+            .select("profile_id, profiles(id, username)")
+            .eq("event_id", eventId);
+            
+          if (error) throw error;
+          
+          const coHostsList = data?.map(ch => ch.profiles) || [];
+          setCoHosts(coHostsList);
+        } catch (error) {
+          console.error("Error fetching co-hosts:", error);
+        }
+      }
+    };
+    
+    if (eventId) {
+      fetchCoHosts();
+    }
+  }, [eventId]);
 
   const fetchEvent = async () => {
     // Only fetch event data if user has access (paid invoice or admin)
@@ -229,7 +254,20 @@ const EventPage = () => {
   };
 
   const handleCoHostAdded = () => {
+    // Refresh co-hosts list
     fetchEvent();
+    // Fetch co-hosts again
+    supabase
+      .from("event_co_hosts")
+      .select("profile_id, profiles(id, username)")
+      .eq("event_id", eventId)
+      .then(({ data, error }) => {
+        if (!error && data) {
+          const coHostsList = data.map(ch => ch.profiles);
+          setCoHosts(coHostsList);
+        }
+      });
+      
     // Force refresh co-host status
     setIsCoHost(true);
     toast({
@@ -274,6 +312,23 @@ const EventPage = () => {
   const metaDescription = event?.description 
     ? (event.description.length > 160 ? `${event.description.substring(0, 157)}...` : event.description)
     : `Event at ${eventLocation} on ${new Date(event?.start_date).toLocaleDateString()}`;
+
+  // Format the host text to include co-hosts
+  const formatHostText = () => {
+    const hosts = [];
+    if (event?.profiles?.username) {
+      hosts.push(event.profiles.username);
+    }
+    
+    coHosts.forEach(host => {
+      if (host && host.username) {
+        hosts.push(host.username);
+      }
+    });
+    
+    if (hosts.length === 0) return "Anonymous host";
+    return `Hosted by ${hosts.join(', ')}`;
+  };
 
   return (
     <>
@@ -331,17 +386,8 @@ const EventPage = () => {
               
               <div className="flex-1 space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-muted-foreground flex items-center">
-                    {event?.profiles?.username && `Hosted by ${event.profiles.username}`}
-                    
-                    {/* Add Co-Host Button - Only visible if user is the creator of the event */}
-                    {isEventCreator && userProfile && eventId && (
-                      <AddCoHostPopover 
-                        eventId={eventId}
-                        profileId={userProfile.id}
-                        onSuccess={handleCoHostAdded}
-                      />
-                    )}
+                  <p className="text-muted-foreground">
+                    {formatHostText()}
                   </p>
                   
                   {/* Edit Button - Only visible if user can edit this event */}
@@ -455,6 +501,7 @@ const EventPage = () => {
                   profileId={userProfile?.id}
                   canEdit={canEditEvent}
                   onCoHostAdded={handleCoHostAdded}
+                  coHosts={coHosts}
                 />
               </div>
             </div>

@@ -18,6 +18,7 @@ interface EventDetailsCardProps {
   profileId?: string;
   canEdit?: boolean;
   onCoHostAdded?: () => void;
+  coHosts?: any[]; // Added co-hosts prop
 }
 
 export const EventDetailsCard = ({
@@ -32,6 +33,7 @@ export const EventDetailsCard = ({
   profileId,
   canEdit = false,
   onCoHostAdded,
+  coHosts = [], // Default to empty array
 }: EventDetailsCardProps) => {
   return (
     <Card className="border shadow-sm">
@@ -69,6 +71,20 @@ export const EventDetailsCard = ({
               <EventRSVPAvatars profiles={attendees} />
             </div>
           </div>
+
+          {/* Add Co-Host button - only visible if user can edit and eventId exists */}
+          {canEdit && eventId && profileId && (
+            <div className="flex items-start gap-3">
+              <UserPlus className="h-5 w-5 mt-1 text-muted-foreground" />
+              <div>
+                <AddCoHostPopover 
+                  eventId={eventId}
+                  profileId={profileId}
+                  onSuccess={onCoHostAdded}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Card>

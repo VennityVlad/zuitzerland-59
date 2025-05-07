@@ -241,8 +241,44 @@ const Events = () => {
     });
   }
 
+  // Add a query to fetch co-hosts for events
+  const { data: coHosts, isLoading: coHostsLoading, refetch: refetchCoHosts } = useQuery({
+    queryKey: ["event_co_hosts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_co_hosts")
+        .select("event_id, profile_id, profiles(id, username)");
+      if (error) throw error;
+      return data || [];
+    }
+  });
+  
+  // Create a map of co-hosts by event ID for easier lookup
+  const coHostsMap: Record<string, { id: string; username: string }[]> = React.useMemo(() => {
+    const map: Record<string, { id: string; username: string }[]> = {};
+    
+    if (coHosts) {
+      coHosts.forEach(coHost => {
+        if (!map[coHost.event_id]) map[coHost.event_id] = [];
+        if (coHost.profiles) {
+          map[coHost.event_id].push({
+            id: coHost.profiles.id,
+            username: coHost.profiles.username || 'Unknown',
+          });
+        }
+      });
+    }
+    
+    return map;
+  }, [coHosts]);
+
   const handleCreateEventSuccess = () => {
     refetch();
+    refetchCoHosts(); // Also refetch co-hosts when a new event is created
+  };
+
+  const handleCoHostAdded = () => {
+    refetchCoHosts(); // Refetch co-hosts when a new co-host is added
   };
 
   const handleDeleteEvent = async () => {
@@ -913,9 +949,22 @@ const renderEventsList = (
                   const location = event.locations ? 
                     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
                     event.location_text;
-                  
+                    
                   // Determine if the current user can edit this event (they are either the creator or admin)
                   const isCreator = event.created_by === profileId;
+                  
+                  // Get co-hosts for this event
+                  const eventCoHosts = coHostsMap[event.id] || [];
+                  
+                  // Combine host and co-hosts
+                  const allHosts = event.profiles?.username ? 
+                    [event.profiles.username, ...eventCoHosts.map(ch => ch.username)] : 
+                    eventCoHosts.map(ch => ch.username);
+                  
+                  // Format host display text
+                  const hostsText = allHosts.length > 0 ? 
+                    `Hosted by ${allHosts.join(', ')}` : 
+                    "Anonymous host";
 
                   return (
                     <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200 w-full">
@@ -945,18 +994,27 @@ const renderEventsList = (
                               <span className="break-words">{location}</span>
                             </div>
                           )}
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
-                            <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
-                            
-                            {/* Add Co-Host Button - Only visible if user is the creator of the event */}
-                            {isCreator && profileId && (
-                              <AddCoHostPopover 
-                                eventId={event.id} 
-                                profileId={profileId}
-                                onSuccess={refetchRSVPs}
-                              />
-                            )}
+                          
+                          {/* Host information with all hosts displayed */}
+                          <div className="flex items-start">
+                            <User className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                            <div className="flex flex-col">
+                              <span className="truncate">{hostsText}</span>
+                              
+                              {/* Add Co-Host Button - Only visible if user is the creator of the event */}
+                              {isCreator && profileId && (
+                                <div className="mt-1">
+                                  <AddCoHostPopover 
+                                    eventId={event.id} 
+                                    profileId={profileId}
+                                    onSuccess={() => {
+                                      refetchCoHosts();
+                                      refetchRSVPs();
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
