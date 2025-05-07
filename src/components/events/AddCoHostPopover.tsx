@@ -114,8 +114,7 @@ export const AddCoHostPopover = ({ eventId, profileId, onSuccess }: AddCoHostPop
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-auto p-0 ml-1 text-xs">
-          <UserPlus className="h-3 w-3 mr-1" />
+        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-muted-foreground">
           Add Co-Host
         </Button>
       </PopoverTrigger>

@@ -94,20 +94,21 @@ export const EventDetailsCard = ({
 
           {/* Host information */}
           {hostsString && (
-            <div className="space-y-2">
-              <div className="flex flex-col gap-2">
-                <p className="text-muted-foreground">Hosted by {hostsString}</p>
-                
-                {/* Add Co-Host Button - Only visible if user can edit */}
-                {canEdit && eventId && profileId && (
-                  <div>
+            <div className="flex items-start gap-3">
+              <UserPlus className="h-5 w-5 mt-1 text-muted-foreground" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-foreground">Hosted by {hostsString}</p>
+                  
+                  {/* Add Co-Host Button - Only visible if user can edit */}
+                  {canEdit && eventId && profileId && (
                     <AddCoHostPopover
                       eventId={eventId}
                       profileId={profileId}
                       onSuccess={onCoHostAdded}
                     />
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           )}
