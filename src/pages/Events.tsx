@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays } from "date-fns";
@@ -624,6 +623,7 @@ const Events = () => {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
+          {/* Tag Filter Row */}
           <div className="flex items-center justify-between gap-2">
             {/* TagFilter (on the left) */}
             <div className="flex-grow overflow-x-auto">
@@ -645,21 +645,7 @@ const Events = () => {
             )}
           </div>
           
-          {hasActiveFilters && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700 truncate">
-                  {selectedTags.length > 0 && `${selectedTags.length} tag${selectedTags.length !== 1 ? 's' : ''}`}
-                  {selectedTags.length > 0 && selectedDate && ', '}
-                  {selectedDate && `Date: ${format(selectedDate, 'MMM d, yyyy')}`}
-                </span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                Clear filters
-              </Button>
-            </div>
-          )}
+          {/* REMOVED: The duplicate filter status area that was here */}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -692,6 +678,7 @@ const Events = () => {
                 )}
               </div>
             ) : (
+              // ... keep existing code for tabs content
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-5 mb-2">
                   <TabsTrigger value="today">Today</TabsTrigger>
@@ -701,6 +688,7 @@ const Events = () => {
                   <TabsTrigger value="past">Past</TabsTrigger>
                 </TabsList>
 
+                {/* ... keep existing code for tab contents */}
                 <TabsContent value="today" className="space-y-4 mt-4">
                   {renderEventsList(
                     todayEvents,
