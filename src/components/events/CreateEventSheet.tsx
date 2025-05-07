@@ -468,6 +468,7 @@ export function CreateEventSheet({
     setRecurrenceInterval(1);
     setRecurrenceEndDate(null);
     setSelectedDaysOfWeek([]);
+    setOverlapValidationError(null);
   };
 
   const validateLocationAvailability = (availabilities: Availability[]) => {
