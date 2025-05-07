@@ -1,249 +1,125 @@
 
-import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
-import { CalendarDays, Calendar, FileText, User, DollarSign, MoreHorizontal, LogOut, Users, BookOpen } from "lucide-react";
-import { usePrivy } from "@privy-io/react-auth";
-import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Home,
+  CalendarDays,
+  BookOpen,
+  MoreHorizontal,
+  User,
+  LogOut,
+  FileText,
+} from "lucide-react";
+import { usePrivy } from "@privy-io/react-auth";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { useMenuVisibility } from "@/hooks/useMenuVisibility";
 
 const BottomNav = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = usePrivy();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const { showOnboarding } = useMenuVisibility(user?.id);
+  const [openSheet, setOpenSheet] = useState(false);
+  const { isAdmin, showOnboarding } = useMenuVisibility(user?.id);
 
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (!user?.id) return;
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('privy_id', user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-        setIsAdmin(data?.role === 'admin');
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-      }
-    };
-
-    checkAdmin();
-  }, [user?.id]);
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setOpenSheet(false);
+  };
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full border-t bg-white">
-      <div className="grid h-14 grid-cols-4 items-center">
-        {/* Events - Common for both admin and non-admin */}
-        <NavLink
-          to="/events"
-          className={({ isActive }) =>
-            cn(
-              "flex flex-col items-center justify-center text-xs",
-              isActive
-                ? "text-primary"
-                : "text-gray-500 hover:text-primary"
-            )
-          }
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200">
+      <div className="flex items-center justify-around h-16">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`flex-1 flex-col items-center justify-center h-full rounded-none ${
+            isActive("/book") ? "text-primary" : "text-gray-500"
+          }`}
+          onClick={() => navigate("/book")}
         >
-          {({ isActive }) => (
-            <>
-              <Calendar
-                className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
-              />
-              <span>Events</span>
-            </>
-          )}
-        </NavLink>
+          <Home className="h-5 w-5" />
+          <span className="text-xs mt-1">Book</span>
+        </Button>
 
-        {isAdmin ? (
-          <>
-            {/* Invoices (admin only) */}
-            <NavLink
-              to="/invoices"
-              className={({ isActive }) =>
-                cn(
-                  "flex flex-col items-center justify-center text-xs",
-                  isActive
-                    ? "text-primary"
-                    : "text-gray-500 hover:text-primary"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <FileText
-                    className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
-                  />
-                  <span>Invoices</span>
-                </>
-              )}
-            </NavLink>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`flex-1 flex-col items-center justify-center h-full rounded-none ${
+            isActive("/events") ? "text-primary" : "text-gray-500"
+          }`}
+          onClick={() => navigate("/events")}
+        >
+          <CalendarDays className="h-5 w-5" />
+          <span className="text-xs mt-1">Events</span>
+        </Button>
 
-            {/* Users (admin only) */}
-            <NavLink
-              to="/user-management"
-              className={({ isActive }) =>
-                cn(
-                  "flex flex-col items-center justify-center text-xs",
-                  isActive
-                    ? "text-primary"
-                    : "text-gray-500 hover:text-primary"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Users
-                    className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
-                  />
-                  <span>Users</span>
-                </>
-              )}
-            </NavLink>
-          </>
-        ) : (
-          <>
-            {/* Book (non-admin only) */}
-            <NavLink
-              to="/book"
-              className={({ isActive }) =>
-                cn(
-                  "flex flex-col items-center justify-center text-xs",
-                  isActive
-                    ? "text-primary"
-                    : "text-gray-500 hover:text-primary"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <CalendarDays
-                    className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
-                  />
-                  <span>Book</span>
-                </>
-              )}
-            </NavLink>
-
-            {/* Onboarding (non-admin only) */}
-            {showOnboarding && (
-              <NavLink
-                to="/onboarding"
-                className={({ isActive }) =>
-                  cn(
-                    "flex flex-col items-center justify-center text-xs",
-                    isActive
-                      ? "text-primary"
-                      : "text-gray-500 hover:text-primary"
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <BookOpen
-                      className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
-                    />
-                    <span>Onboarding</span>
-                  </>
-                )}
-              </NavLink>
-            )}
-          </>
+        {showOnboarding && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`flex-1 flex-col items-center justify-center h-full rounded-none ${
+              isActive("/onboarding") ? "text-primary" : "text-gray-500"
+            }`}
+            onClick={() => navigate("/onboarding")}
+          >
+            <BookOpen className="h-5 w-5" />
+            <span className="text-xs mt-1">Onboarding</span>
+          </Button>
         )}
 
-        {/* More Menu for both admin and non-admin */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className="flex flex-col items-center justify-center text-xs text-gray-500 hover:text-primary">
-              <MoreHorizontal className="mb-1 h-5 w-5" />
-              <span>More</span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent side="top" className="w-56 p-0">
-            <div className="flex flex-col py-2">
-              {isAdmin ? (
-                // Admin menu items
-                <>
-                  <NavLink 
-                    to="/book" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <CalendarDays className="h-4 w-4 mr-2" />
-                    Book
-                  </NavLink>
-                  <NavLink 
-                    to="/pricing" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Pricing
-                  </NavLink>
-                  <NavLink 
-                    to="/reports" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Reports
-                  </NavLink>
-                  <NavLink 
-                    to="/settings" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Settings
-                  </NavLink>
-                </>
-              ) : (
-                // Non-admin menu items
-                <>
-                  {!showOnboarding && (
-                    <NavLink 
-                      to="/onboarding" 
-                      className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                    >
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Onboarding
-                    </NavLink>
-                  )}
-                  <NavLink 
-                    to="/invoices" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Invoices
-                  </NavLink>
-                </>
+        <Sheet open={openSheet} onOpenChange={setOpenSheet}>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex-1 flex-col items-center justify-center h-full rounded-none text-gray-500"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+              <span className="text-xs mt-1">More</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-auto rounded-t-xl">
+            <div className="flex flex-col space-y-2 py-4">
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => handleNavigation("/invoices")}
+                >
+                  <FileText className="mr-2 h-5 w-5" />
+                  Invoices
+                </Button>
               )}
-              
-              {/* Common menu items for both admin and non-admin */}
-              <NavLink 
-                to="/profile" 
-                className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => handleNavigation("/profile")}
               >
-                <User className="h-4 w-4 mr-2" />
+                <User className="mr-2 h-5 w-5" />
                 Profile
-              </NavLink>
-              
-              <div className="border-t my-2"></div>
-              
-              <button
-                onClick={() => logout()}
-                className="flex items-center px-3 py-2 text-sm text-red-500 hover:bg-red-50"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Log out
-              </button>
+              </Button>
+              <div className="pt-2 border-t border-gray-100">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-red-500"
+                  onClick={() => logout()}
+                >
+                  <LogOut className="mr-2 h-5 w-5" />
+                  Log out
+                </Button>
+              </div>
             </div>
-          </PopoverContent>
-        </Popover>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );
