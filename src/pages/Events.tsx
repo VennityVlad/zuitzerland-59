@@ -24,6 +24,7 @@ import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { SearchHeader } from "@/pages/events/SearchHeader";
+import { AddCoHostPopover } from "@/components/events/AddCoHostPopover";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -953,7 +954,7 @@ const renderEventsList = (
                               <AddCoHostPopover 
                                 eventId={event.id} 
                                 profileId={profileId}
-                                onSuccess={refetch}
+                                onSuccess={refetchRSVPs}
                               />
                             )}
                           </div>
