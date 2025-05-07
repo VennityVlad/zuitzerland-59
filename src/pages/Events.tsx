@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays } from "date-fns";
@@ -202,8 +203,23 @@ const Events = () => {
         throw error;
       }
       
-      // Extract the events from the nested structure
-      return data.map(item => item.events);
+      // Extract the events from the nested structure and ensure they have the right types
+      const typedEvents: EventWithProfile[] = [];
+      
+      data.forEach(item => {
+        // Make sure the event is properly typed and not null
+        if (item.events) {
+          // Handle potential type errors with event_tags
+          const event = item.events;
+          
+          // Only add events with valid data
+          if (event.id) {
+            typedEvents.push(event as EventWithProfile);
+          }
+        }
+      });
+      
+      return typedEvents;
     },
     enabled: !!profileId
   });
@@ -420,24 +436,25 @@ const Events = () => {
   });
   
   const rsvpedEvents = filteredEvents.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
+  
+  // Update hostingEvents to include both created events and co-hosted events
   const hostingEvents = React.useMemo(() => {
-    if (!events) return [];
+    if (!events || !profileId) return [];
     
     // Events created by the user
     const createdEvents = events.filter(event => event.created_by === profileId) || [];
-    
-    // Events where the user is a co-host
-    const coHosted = coHostedEvents || [];
     
     // Combine both lists and remove duplicates
     const combined = [...createdEvents];
     
     // Add co-hosted events only if they're not already in the list
-    coHosted.forEach(coEvent => {
-      if (!combined.some(event => event.id === coEvent.id)) {
-        combined.push(coEvent);
-      }
-    });
+    if (coHostedEvents && coHostedEvents.length > 0) {
+      coHostedEvents.forEach(coEvent => {
+        if (!combined.some(event => event.id === coEvent.id)) {
+          combined.push(coEvent);
+        }
+      });
+    }
     
     return combined;
   }, [events, profileId, coHostedEvents]);
@@ -733,7 +750,8 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare
+                  handleShare,
+                  isAdminUser
                 )}
               </div>
             ) : (
@@ -765,7 +783,8 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare
+                    handleShare,
+                    isAdminUser
                   )}
                 </TabsContent>
                 <TabsContent value="upcoming" className="space-y-4 mt-4">
@@ -785,7 +804,8 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare
+                    handleShare,
+                    isAdminUser
                   )}
                 </TabsContent>
                 <TabsContent value="going" className="space-y-4 mt-4">
@@ -805,7 +825,8 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare
+                    handleShare,
+                    isAdminUser
                   )}
                 </TabsContent>
                 <TabsContent value="hosting" className="space-y-4 mt-4">
@@ -825,7 +846,8 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare
+                    handleShare,
+                    isAdminUser
                   )}
                 </TabsContent>
                 <TabsContent value="past" className="space-y-4 mt-4">
@@ -845,7 +867,8 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare
+                    handleShare,
+                    isAdminUser
                   )}
                 </TabsContent>
               </Tabs>
@@ -919,7 +942,8 @@ const renderEventsList = (
   profileId: string | undefined,
   refetchRSVPs: () => void,
   isMobile: boolean,
-  handleShare: (event: Event) => void
+  handleShare: (event: Event) => void,
+  isAdminUser: boolean
 ) => {
   if (isLoading || profileLoading) {
     return (
@@ -972,7 +996,7 @@ const renderEventsList = (
                     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
                     event.location_text;
                   
-                  // Determine if the current user can edit this event (they are either the creator or admin)
+                  // Determine if the current user can edit this event (they are either the creator or admin or co-host)
                   const isCreator = event.created_by === profileId;
                   const canEdit = canEditEvent(event);
 
