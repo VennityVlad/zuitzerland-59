@@ -11,7 +11,7 @@ import { EventDateBadge } from "@/components/events/EventDateBadge";
 import { EventDetailsCard } from "@/components/events/EventDetailsCard";
 import { CalendarOptionsPopover } from "@/components/events/CalendarOptionsPopover";
 import { Card } from "@/components/ui/card";
-import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
+import { usePaidInvoiceStatus } from "@/hooks/use-paidInvoiceStatus";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCoHostPopover } from "@/components/events/AddCoHostPopover";
@@ -490,7 +490,7 @@ const EventPage = () => {
                   attendees={rsvps}
                   eventId={eventId}
                   profileId={userProfile?.id}
-                  canEdit={canEditEvent}
+                  canEdit={isEventCreator}
                   onCoHostAdded={handleCoHostAdded}
                   hostUsername={event?.profiles?.username}
                   coHosts={coHosts}
