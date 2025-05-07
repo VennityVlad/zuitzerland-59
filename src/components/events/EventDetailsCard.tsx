@@ -18,6 +18,8 @@ interface EventDetailsCardProps {
   profileId?: string;
   canEdit?: boolean;
   onCoHostAdded?: () => void;
+  hostUsername?: string;
+  coHosts?: {username: string}[];
 }
 
 export const EventDetailsCard = ({
@@ -32,7 +34,27 @@ export const EventDetailsCard = ({
   profileId,
   canEdit = false,
   onCoHostAdded,
+  hostUsername,
+  coHosts = [],
 }: EventDetailsCardProps) => {
+  // Create a formatted hosts string
+  const formatHosts = () => {
+    if (!hostUsername) return "";
+    
+    const hosts = [hostUsername];
+    if (coHosts && coHosts.length > 0) {
+      coHosts.forEach(host => {
+        if (host.username) {
+          hosts.push(host.username);
+        }
+      });
+    }
+    
+    return hosts.join(", ");
+  };
+  
+  const hostsString = formatHosts();
+
   return (
     <Card className="border shadow-sm">
       <div className="p-6 space-y-6">
@@ -69,6 +91,22 @@ export const EventDetailsCard = ({
               <EventRSVPAvatars profiles={attendees} />
             </div>
           </div>
+
+          {/* Host information */}
+          {hostsString && (
+            <div className="space-y-2">
+              <p className="text-muted-foreground">Hosted by {hostsString}</p>
+              
+              {/* Add Co-Host Button - Only visible if user can edit */}
+              {canEdit && eventId && profileId && (
+                <AddCoHostPopover
+                  eventId={eventId}
+                  profileId={profileId}
+                  onSuccess={onCoHostAdded}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Card>

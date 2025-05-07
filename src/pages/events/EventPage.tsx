@@ -28,6 +28,7 @@ const EventPage = () => {
   const [isCoHost, setIsCoHost] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<any>(null);
   const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [coHosts, setCoHosts] = useState<any[]>([]);
   const { toast } = useToast();
   const locationData = useLocation();
   const navigate = useNavigate();
@@ -154,11 +155,35 @@ const EventPage = () => {
       }
     };
 
+    const fetchCoHosts = async () => {
+      if (eventId) {
+        try {
+          const { data, error } = await supabase
+            .from("event_co_hosts")
+            .select(`
+              profile_id,
+              profiles:profiles(id, username, avatar_url)
+            `)
+            .eq("event_id", eventId);
+
+          if (error) throw error;
+          
+          if (data) {
+            const coHostsData = data.map(item => item.profiles || {});
+            setCoHosts(coHostsData);
+          }
+        } catch (error) {
+          console.error("Error fetching co-hosts:", error);
+        }
+      }
+    };
+
     // Only proceed if we have determined access status
     if (eventId && !isPaidInvoiceLoading) {
       fetchEvent();
       if (userProfile) {
         fetchRsvps();
+        fetchCoHosts();
       }
     }
   }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
@@ -230,8 +255,20 @@ const EventPage = () => {
 
   const handleCoHostAdded = () => {
     fetchEvent();
-    // Force refresh co-host status
-    setIsCoHost(true);
+    // Fetch co-hosts after adding one
+    supabase
+      .from("event_co_hosts")
+      .select(`
+        profile_id,
+        profiles:profiles(id, username, avatar_url)
+      `)
+      .eq("event_id", eventId)
+      .then(({ data, error }) => {
+        if (!error && data) {
+          const coHostsData = data.map(item => item.profiles || {});
+          setCoHosts(coHostsData);
+        }
+      });
     toast({
       title: "Co-host added",
       description: "Co-host has been successfully added to this event"
@@ -455,6 +492,8 @@ const EventPage = () => {
                   profileId={userProfile?.id}
                   canEdit={canEditEvent}
                   onCoHostAdded={handleCoHostAdded}
+                  hostUsername={event?.profiles?.username}
+                  coHosts={coHosts}
                 />
               </div>
             </div>
