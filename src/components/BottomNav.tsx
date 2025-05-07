@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { CalendarDays, Calendar, FileText, User, DollarSign, MoreHorizontal, LogOut, Users, BookOpen } from "lucide-react";
@@ -213,13 +212,6 @@ const BottomNav = () => {
                       Onboarding
                     </NavLink>
                   )}
-                  <NavLink 
-                    to="/invoices" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Invoices
-                  </NavLink>
                 </>
               )}
               
