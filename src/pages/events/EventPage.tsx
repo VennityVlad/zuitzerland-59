@@ -494,6 +494,7 @@ const EventPage = () => {
                   onCoHostAdded={handleCoHostAdded}
                   hostUsername={event?.profiles?.username}
                   coHosts={coHosts}
+                  speakers={event?.speakers}
                 />
               </div>
             </div>
