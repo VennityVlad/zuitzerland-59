@@ -259,52 +259,6 @@ export type Database = {
           },
         ]
       }
-      event_co_hosts: {
-        Row: {
-          created_at: string
-          created_by: string
-          event_id: string
-          id: string
-          profile_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          event_id: string
-          id?: string
-          profile_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          event_id?: string
-          id?: string
-          profile_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_co_hosts_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_co_hosts_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_co_hosts_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       event_rsvps: {
         Row: {
           created_at: string
@@ -1444,10 +1398,6 @@ export type Database = {
       }
       is_admin_user: {
         Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_event_co_host: {
-        Args: { event_id: string; user_profile_id: string }
         Returns: boolean
       }
       sync_application_from_airtable: {

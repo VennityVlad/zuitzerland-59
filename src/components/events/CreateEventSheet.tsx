@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -166,7 +165,7 @@ export function CreateEventSheet({
     timezone: 'Europe/Zurich',
     recurring_pattern_id: null,
     is_recurring_instance: false,
-    meerkat_enabled: true  // Changed from false to true to make it enabled by default
+    meerkat_enabled: false
   });
   
   // New state for Meerkat integration
@@ -456,7 +455,7 @@ export function CreateEventSheet({
       timezone: 'Europe/Zurich',
       recurring_pattern_id: null,
       is_recurring_instance: false,
-      meerkat_enabled: true  // Changed from false to true to make it enabled by default
+      meerkat_enabled: false
     });
     setSelectedTags([]);
     setAvailabilityValidationError(null);
@@ -469,7 +468,6 @@ export function CreateEventSheet({
     setRecurrenceInterval(1);
     setRecurrenceEndDate(null);
     setSelectedDaysOfWeek([]);
-    setOverlapValidationError(null);
   };
 
   const validateLocationAvailability = (availabilities: Availability[]) => {

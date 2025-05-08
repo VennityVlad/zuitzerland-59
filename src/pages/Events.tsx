@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays } from "date-fns";
@@ -24,7 +25,6 @@ import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { SearchHeader } from "@/pages/events/SearchHeader";
-import { AddCoHostPopover } from "@/components/events/AddCoHostPopover";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -140,7 +140,7 @@ const Events = () => {
   
   const userId = privyUser?.id || supabaseUser?.id || "";
   const profileId = userProfile?.id;
-  
+
   // Key change: Only enable the events query if the user has paid invoice or is admin
   // This prevents fetching events data until we know the user's invoice status
   const { data: events, isLoading, refetch } = useQuery({
@@ -164,19 +164,7 @@ const Events = () => {
         throw error;
       }
 
-      // Make sure the event_tags property on each event is properly typed
-      // If there's an error or data is missing, set it to an empty array
-      return data.map((event: any): EventWithProfile => {
-        // Handle potentially missing or error in event_tags
-        const safeEventTags = Array.isArray(event.event_tags) 
-          ? event.event_tags 
-          : [];
-
-        return {
-          ...event,
-          event_tags: safeEventTags
-        };
-      });
+      return data as unknown as EventWithProfile[];
     },
     // Only fetch events if:
     // 1. We know the invoice status (not still loading)
@@ -186,57 +174,6 @@ const Events = () => {
       !isPaidInvoiceLoading && 
       (hasPaidInvoice || userIsAdmin) && 
       (!!privyUser?.id || !!supabaseUser?.id)
-  });
-
-  // Fetch co-hosted events for the current user
-  const { data: coHostedEvents, isLoading: coHostsLoading } = useQuery({
-    queryKey: ["co_hosted_events", profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-      
-      const { data, error } = await supabase
-        .from("event_co_hosts")
-        .select(`
-          event_id,
-          events:event_id (
-            *,
-            profiles:profiles!events_created_by_fkey(username, id),
-            locations:location_id(name, building, floor),
-            event_tags:event_tag_relations(
-              tags:event_tags(id, name)
-            )
-          )
-        `)
-        .eq("profile_id", profileId);
-      
-      if (error) {
-        console.error("Error fetching co-hosted events:", error);
-        throw error;
-      }
-      
-      // Extract the events from the nested structure and ensure they have the right types
-      const typedEvents: EventWithProfile[] = [];
-      
-      data.forEach(item => {
-        // Handle potentially missing or invalid events
-        if (item.events) {
-          // Handle potentially missing or error in event_tags
-          const event = item.events;
-          const safeEventTags = Array.isArray(event.event_tags) 
-            ? event.event_tags 
-            : [];
-            
-          // Add a properly typed event to our result array
-          typedEvents.push({
-            ...event,
-            event_tags: safeEventTags
-          });
-        }
-      });
-      
-      return typedEvents;
-    },
-    enabled: !!profileId
   });
 
   useEffect(() => {
@@ -353,13 +290,7 @@ const Events = () => {
   const canEditEvent = (event: EventWithProfile) => {
     if (isAdminUser) return true;
     if (event.profiles?.id === profileId) return true;
-    
-    // Check if the user is a co-host for this event
-    const isCoHost = coHostedEvents?.some(coHostedEvent => 
-      coHostedEvent.id === event.id
-    );
-    
-    return !!isCoHost;
+    return false;
   };
 
   const generateICalEvent = (event: Event) => {
@@ -451,28 +382,7 @@ const Events = () => {
   });
   
   const rsvpedEvents = filteredEvents.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
-  
-  // Update hostingEvents to include both created events and co-hosted events
-  const hostingEvents = React.useMemo(() => {
-    if (!events || !profileId) return [];
-    
-    // Events created by the user
-    const createdEvents = events.filter(event => event.created_by === profileId) || [];
-    
-    // Combine both lists and remove duplicates
-    const combined = [...createdEvents];
-    
-    // Add co-hosted events only if they're not already in the list
-    if (coHostedEvents && coHostedEvents.length > 0) {
-      coHostedEvents.forEach(coEvent => {
-        if (!combined.some(event => event.id === coEvent.id)) {
-          combined.push(coEvent);
-        }
-      });
-    }
-    
-    return combined;
-  }, [events, profileId, coHostedEvents]);
+  const hostingEvents = filteredEvents.filter(event => event.created_by === profileId) || [];
   
   // Extract unique tag IDs for each event category
   const getUniqueTagIdsForEvents = (eventsList: EventWithProfile[]) => {
@@ -714,7 +624,6 @@ const Events = () => {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
-          {/* Tag Filter Row */}
           <div className="flex items-center justify-between gap-2">
             {/* TagFilter (on the left) */}
             <div className="flex-grow overflow-x-auto">
@@ -736,7 +645,21 @@ const Events = () => {
             )}
           </div>
           
-          {/* REMOVED: The duplicate filter status area that was here */}
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-700 truncate">
+                  {selectedTags.length > 0 && `${selectedTags.length} tag${selectedTags.length !== 1 ? 's' : ''}`}
+                  {selectedTags.length > 0 && selectedDate && ', '}
+                  {selectedDate && `Date: ${format(selectedDate, 'MMM d, yyyy')}`}
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -765,12 +688,10 @@ const Events = () => {
                   profileId,
                   refetchRSVPs,
                   isMobile,
-                  handleShare,
-                  isAdminUser
+                  handleShare
                 )}
               </div>
             ) : (
-              // ... keep existing code for tabs content
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-5 mb-2">
                   <TabsTrigger value="today">Today</TabsTrigger>
@@ -780,7 +701,6 @@ const Events = () => {
                   <TabsTrigger value="past">Past</TabsTrigger>
                 </TabsList>
 
-                {/* ... keep existing code for tab contents */}
                 <TabsContent value="today" className="space-y-4 mt-4">
                   {renderEventsList(
                     todayEvents,
@@ -798,8 +718,7 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare,
-                    isAdminUser
+                    handleShare
                   )}
                 </TabsContent>
                 <TabsContent value="upcoming" className="space-y-4 mt-4">
@@ -819,8 +738,7 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare,
-                    isAdminUser
+                    handleShare
                   )}
                 </TabsContent>
                 <TabsContent value="going" className="space-y-4 mt-4">
@@ -840,8 +758,7 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare,
-                    isAdminUser
+                    handleShare
                   )}
                 </TabsContent>
                 <TabsContent value="hosting" className="space-y-4 mt-4">
@@ -861,8 +778,7 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare,
-                    isAdminUser
+                    handleShare
                   )}
                 </TabsContent>
                 <TabsContent value="past" className="space-y-4 mt-4">
@@ -882,8 +798,7 @@ const Events = () => {
                     profileId,
                     refetchRSVPs,
                     isMobile,
-                    handleShare,
-                    isAdminUser
+                    handleShare
                   )}
                 </TabsContent>
               </Tabs>
@@ -957,8 +872,7 @@ const renderEventsList = (
   profileId: string | undefined,
   refetchRSVPs: () => void,
   isMobile: boolean,
-  handleShare: (event: Event) => void,
-  isAdminUser: boolean
+  handleShare: (event: Event) => void
 ) => {
   if (isLoading || profileLoading) {
     return (
@@ -1010,10 +924,6 @@ const renderEventsList = (
                   const location = event.locations ? 
                     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
                     event.location_text;
-                  
-                  // Determine if the current user can edit this event (they are either the creator or admin or co-host)
-                  const isCreator = event.created_by === profileId;
-                  const canEdit = canEditEvent(event);
 
                   return (
                     <Card key={event.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-200 w-full">
@@ -1046,19 +956,30 @@ const renderEventsList = (
                           <div className="flex items-center">
                             <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
                             <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
-                            
-                            {/* Add Co-Host Button - Only visible if user is the creator of the event */}
-                            {isCreator && profileId && (
-                              <AddCoHostPopover 
-                                eventId={event.id} 
-                                profileId={profileId}
-                                onSuccess={refetchRSVPs}
-                              />
-                            )}
                           </div>
                         </div>
 
-                        {/* ... keep existing code (tags, speakers) */}
+                        {event.event_tags && event.event_tags.length > 0 && (
+                          <div className="flex items-start gap-2 mt-4">
+                            <Tag className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <div className="flex flex-wrap gap-2">
+                              {event.event_tags.map(tag => (
+                                <Badge key={tag.tags.id} variant="secondary">
+                                  {tag.tags.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {event.speakers && (
+                          <div className="flex items-start gap-2 mt-4">
+                            <Mic className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-gray-600 break-words">
+                              <span className="font-semibold">Speakers:</span> {event.speakers}
+                            </div>
+                          </div>
+                        )}
 
                         <div className="flex flex-wrap gap-2 mt-4">
                           {!!profileId && new Date(event.end_date) >= new Date() && (
@@ -1069,6 +990,7 @@ const renderEventsList = (
                               onChange={() => refetchRSVPs()}
                             />
                           )}
+                          {/* Replace the Add to Calendar button with CalendarOptionsPopover */}
                           <CalendarOptionsPopover event={event} isMobile={isMobile} />
                           <Button
                             variant="outline"
@@ -1082,7 +1004,7 @@ const renderEventsList = (
                             <Share className="h-4 w-4 mr-2" />
                             {isMobile ? "" : "Share"}
                           </Button>
-                          {canEdit && (
+                          {canEditEvent(event) && (
                             <>
                               <Button
                                 variant="outline"
@@ -1093,18 +1015,15 @@ const renderEventsList = (
                                 <Edit className="h-4 w-4 mr-2" />
                                 {isMobile ? "" : "Edit"}
                               </Button>
-                              {/* Only show Delete button for event creators and admins (not co-hosts) */}
-                              {(isCreator || isAdminUser) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(event)}
-                                  className="text-red-500 border-red-500 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {isMobile ? "" : "Delete"}
-                                </Button>
-                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openDeleteDialog(event)}
+                                className="text-red-500 border-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {isMobile ? "" : "Delete"}
+                              </Button>
                             </>
                           )}
                         </div>
