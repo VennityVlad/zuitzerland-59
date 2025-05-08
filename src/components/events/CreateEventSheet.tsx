@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { toZonedTime } from "date-fns-tz";
 import { convertToUTC } from "@/lib/date-utils";
-import { RecurrenceSettings, RecurrenceFrequency } from './RecurrenceSettings';
 
 // UI Component imports
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -143,12 +142,12 @@ export function CreateEventSheet({
   const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [locationRequired, setLocationRequired] = useState(false);
   
-  // Recurring event states
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>('weekly');
-  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null);
-  const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
+  // New state for Meerkat integration
+  const [isCreatingMeerkatEvent, setIsCreatingMeerkatEvent] = useState(false);
+  const [meerkatUrl, setMeerkatUrl] = useState<string | null>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditMode = !!event;
 
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: "",
@@ -168,13 +167,6 @@ export function CreateEventSheet({
     is_recurring_instance: false,
     meerkat_enabled: true  // Changed from false to true to make it enabled by default
   });
-  
-  // New state for Meerkat integration
-  const [isCreatingMeerkatEvent, setIsCreatingMeerkatEvent] = useState(false);
-  const [meerkatUrl, setMeerkatUrl] = useState<string | null>(null);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isEditMode = !!event;
 
   useEffect(() => {
     if (event) {
@@ -204,11 +196,6 @@ export function CreateEventSheet({
         setMeerkatUrl(event.meerkat_url);
       }
       
-      if (event.recurring_pattern_id) {
-        setIsRecurring(true);
-        fetchRecurringPattern(event.recurring_pattern_id);
-      }
-      
       if (event.id) {
         fetchEventTags(event.id);
       }
@@ -222,28 +209,6 @@ export function CreateEventSheet({
       resetForm();
     }
   }, [event]);
-
-  // Add the function to fetch recurring pattern details
-  const fetchRecurringPattern = async (patternId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('recurring_event_patterns')
-        .select('*')
-        .eq('id', patternId)
-        .single();
-      
-      if (error) throw error;
-      
-      if (data) {
-        setRecurrenceFrequency(data.frequency as RecurrenceFrequency);
-        setRecurrenceInterval(data.interval_count);
-        setSelectedDaysOfWeek(data.days_of_week || []);
-        setRecurrenceEndDate(data.end_date ? new Date(data.end_date) : null);
-      }
-    } catch (error) {
-      console.error("Error fetching recurring pattern:", error);
-    }
-  };
 
   const fetchEventTags = async (eventId: string) => {
     try {
@@ -462,13 +427,6 @@ export function CreateEventSheet({
     setAvailabilityValidationError(null);
     setUseCustomLocation(false);
     setMeerkatUrl(null);
-    
-    // Reset recurrence state
-    setIsRecurring(false);
-    setRecurrenceFrequency('weekly');
-    setRecurrenceInterval(1);
-    setRecurrenceEndDate(null);
-    setSelectedDaysOfWeek([]);
     setOverlapValidationError(null);
   };
 
@@ -719,42 +677,6 @@ export function CreateEventSheet({
         utcEndDate,
         originalTimezone: newEvent.timezone
       });
-      
-      let recurringPatternId = null;
-
-      if (isRecurring) {
-        // Create or update recurring pattern
-        const patternData = {
-          frequency: recurrenceFrequency,
-          interval_count: recurrenceInterval,
-          days_of_week: recurrenceFrequency === 'weekly' ? selectedDaysOfWeek : null,
-          start_date: utcStartDate,
-          end_date: recurrenceEndDate ? convertToUTC(recurrenceEndDate.toISOString(), newEvent.timezone) : null,
-          created_by: userProfile?.id || '',
-          timezone: newEvent.timezone
-        };
-
-        if (event?.recurring_pattern_id) {
-          const { data: pattern, error: patternError } = await supabase
-            .from('recurring_event_patterns')
-            .update(patternData)
-            .eq('id', event.recurring_pattern_id)
-            .select()
-            .single();
-
-          if (patternError) throw patternError;
-          recurringPatternId = pattern.id;
-        } else {
-          const { data: pattern, error: patternError } = await supabase
-            .from('recurring_event_patterns')
-            .insert(patternData)
-            .select()
-            .single();
-
-          if (patternError) throw patternError;
-          recurringPatternId = pattern.id;
-        }
-      }
 
       const eventData = {
         title: newEvent.title,
@@ -769,7 +691,7 @@ export function CreateEventSheet({
         speakers: newEvent.speakers || null,
         link: newEvent.link || null,
         timezone: newEvent.timezone,
-        recurring_pattern_id: recurringPatternId,
+        recurring_pattern_id: newEvent.recurring_pattern_id,
         is_recurring_instance: false,
         meerkat_enabled: newEvent.meerkat_enabled
       };
@@ -1183,31 +1105,9 @@ export function CreateEventSheet({
               />
             </div>
             
+            {/* AV Needs notice instead of field */}
             <div className="space-y-2">
-              <Label>A/V Needs</Label>
-              <Textarea 
-                value={newEvent.av_needs || ''}
-                onChange={(e) => setNewEvent({...newEvent, av_needs: e.target.value})}
-                placeholder="Any specific A/V requirements (e.g., projector, microphone)"
-                rows={2}
-              />
-            </div>
-
-            {/* Recurring Event Options */}
-            <div className="border-t pt-4">
-              <h3 className="text-md font-medium mb-4">Recurring Event Options</h3>
-              <RecurrenceSettings
-                isRecurring={isRecurring}
-                onIsRecurringChange={setIsRecurring}
-                frequency={recurrenceFrequency}
-                onFrequencyChange={setRecurrenceFrequency}
-                intervalCount={recurrenceInterval}
-                onIntervalCountChange={setRecurrenceInterval}
-                endDate={recurrenceEndDate}
-                onEndDateChange={setRecurrenceEndDate}
-                daysOfWeek={selectedDaysOfWeek}
-                onDaysOfWeekChange={setSelectedDaysOfWeek}
-              />
+              <Label className="font-semibold text-amber-600">TALK TO MEDIA TEAM 24 HOURS IN ADVANCE TO COORDINATE A/V NEEDS</Label>
             </div>
 
             {/* Meerkat Q&A Toggle Section */}
