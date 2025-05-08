@@ -312,6 +312,11 @@ const EventPage = () => {
     ? (event.description.length > 160 ? `${event.description.substring(0, 157)}...` : event.description)
     : `Event at ${eventLocation} on ${new Date(event?.start_date).toLocaleDateString()}`;
 
+  console.log("🔍 Event Object:", event);
+  console.log("🎤 Speakers data:", event?.speakers);
+  console.log("📊 Does speakers field exist:", event?.hasOwnProperty('speakers'));
+  console.log("📝 Speakers type:", typeof event?.speakers);
+
   return (
     <>
       <Helmet>
