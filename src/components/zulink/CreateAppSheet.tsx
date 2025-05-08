@@ -24,7 +24,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { toast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
@@ -226,14 +225,6 @@ export function CreateAppSheet({ onAppCreated, hasPaidInvoice }: CreateAppSheetP
                   </FormItem>
                 )}
               />
-
-              {/* A/V Notice instead of AV Needs field */}
-              <FormItem>
-                <FormLabel className="font-bold text-amber-600">A/V Notice</FormLabel>
-                <FormDescription className="font-medium text-amber-600">
-                  TALK TO MEDIA TEAM 24 HOURS IN ADVANCE TO COORDINATE A/V NEEDS
-                </FormDescription>
-              </FormItem>
 
               <div className="flex justify-end gap-2">
                 <Button 
