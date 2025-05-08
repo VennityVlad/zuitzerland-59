@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
-import { Share, LogIn, FileText, MessageSquare } from "lucide-react";
+import { Share, LogIn, FileText, MessageSquare, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EventRSVPButton } from "@/components/events/EventRSVPButton";
 import { EventDateBadge } from "@/components/events/EventDateBadge";
@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/card";
 import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AddCoHostPopover } from "@/components/events/AddCoHostPopover";
+import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -23,6 +25,10 @@ const EventPage = () => {
   const [rsvps, setRsvps] = useState<any[]>([]);
   const [isRsvped, setIsRsvped] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [isCoHost, setIsCoHost] = useState(false);
+  const [eventToEdit, setEventToEdit] = useState<any>(null);
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [coHosts, setCoHosts] = useState<any[]>([]);
   const { toast } = useToast();
   const locationData = useLocation();
   const navigate = useNavigate();
@@ -69,39 +75,62 @@ const EventPage = () => {
   }, [user, authenticated]);
 
   useEffect(() => {
-    const fetchEvent = async () => {
-      // Only fetch event data if user has access (paid invoice or admin)
-      if (!hasPaidInvoice && !isAdmin && !isPaidInvoiceLoading) {
-        console.log("🚫 Skipping event fetch - No access");
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        console.log("🔍 Fetching event data with ID:", eventId);
-        const { data, error } = await supabase
-          .from("events")
-          .select(`
-            *,
-            profiles:profiles!events_created_by_fkey(username),
-            locations:location_id (name, building, floor),
-            event_tags:event_tag_relations (
-              tags:event_tags (id, name)
-            )
-          `)
-          .eq("id", eventId)
-          .single();
-
-        if (error) throw error;
-        setEvent(data);
-        console.log("✅ Event data fetched successfully:", data);
-      } catch (error) {
-        console.error("Error fetching event:", error);
-      } finally {
-        setLoading(false);
+    const checkCoHostStatus = async () => {
+      if (userProfile?.id && eventId) {
+        try {
+          const { data, error } = await supabase
+            .from("event_co_hosts")
+            .select("id")
+            .eq("event_id", eventId)
+            .eq("profile_id", userProfile.id)
+            .maybeSingle();
+          
+          if (error) throw error;
+          setIsCoHost(!!data);
+        } catch (error) {
+          console.error("Error checking co-host status:", error);
+          setIsCoHost(false);
+        }
       }
     };
+    
+    checkCoHostStatus();
+  }, [userProfile, eventId]);
 
+  const fetchEvent = async () => {
+    // Only fetch event data if user has access (paid invoice or admin)
+    if (!hasPaidInvoice && !isAdmin && !isPaidInvoiceLoading) {
+      console.log("🚫 Skipping event fetch - No access");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      console.log("🔍 Fetching event data with ID:", eventId);
+      const { data, error } = await supabase
+        .from("events")
+        .select(`
+          *,
+          profiles:profiles!events_created_by_fkey(username),
+          locations:location_id (name, building, floor),
+          event_tags:event_tag_relations (
+            tags:event_tags (id, name)
+          )
+        `)
+        .eq("id", eventId)
+        .single();
+
+      if (error) throw error;
+      setEvent(data);
+      console.log("✅ Event data fetched successfully:", data);
+    } catch (error) {
+      console.error("Error fetching event:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     const fetchRsvps = async () => {
       try {
         const { data, error } = await supabase
@@ -126,25 +155,50 @@ const EventPage = () => {
       }
     };
 
+    const fetchCoHosts = async () => {
+      if (eventId) {
+        try {
+          const { data, error } = await supabase
+            .from("event_co_hosts")
+            .select(`
+              profile_id,
+              profiles:profiles(id, username, avatar_url)
+            `)
+            .eq("event_id", eventId);
+
+          if (error) throw error;
+          
+          if (data) {
+            const coHostsData = data.map(item => item.profiles || {});
+            setCoHosts(coHostsData);
+          }
+        } catch (error) {
+          console.error("Error fetching co-hosts:", error);
+        }
+      }
+    };
+
     // Only proceed if we have determined access status
     if (eventId && !isPaidInvoiceLoading) {
       fetchEvent();
       if (userProfile) {
         fetchRsvps();
+        fetchCoHosts();
       }
     }
   }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
 
-  // Check if the current user is the creator of the event
+  // Check if the current user is the creator of the event or a co-host
   const isEventCreator = event && userProfile && event.created_by === userProfile.id;
+  const canEditEvent = isEventCreator || isCoHost || isAdmin;
 
   // Generate the appropriate Meerkat URL based on user role
   const getMeerkatUrl = () => {
     if (!event?.meerkat_url) return '';
     
-    // If the user is the event creator, show the original meerkat URL (for hosts)
+    // If the user is the event creator or co-host, show the original meerkat URL (for hosts)
     // Otherwise, add "/remote" to the URL for attendees
-    return isEventCreator ? event.meerkat_url : `${event.meerkat_url}/remote`;
+    return (isEventCreator || isCoHost) ? event.meerkat_url : `${event.meerkat_url}/remote`;
   };
 
   const handleShare = async () => {
@@ -169,6 +223,17 @@ const EventPage = () => {
     }
   };
 
+  const handleEditEvent = () => {
+    setEventToEdit(event);
+    setCreateEventOpen(true);
+  };
+
+  const handleCreateEventSuccess = () => {
+    fetchEvent();
+    setCreateEventOpen(false);
+    setEventToEdit(null);
+  };
+
   const handleRsvpChange = (newStatus: boolean) => {
     setIsRsvped(newStatus);
     if (eventId && userProfile) {
@@ -186,6 +251,28 @@ const EventPage = () => {
           }
         });
     }
+  };
+
+  const handleCoHostAdded = () => {
+    fetchEvent();
+    // Fetch co-hosts after adding one
+    supabase
+      .from("event_co_hosts")
+      .select(`
+        profile_id,
+        profiles:profiles(id, username, avatar_url)
+      `)
+      .eq("event_id", eventId)
+      .then(({ data, error }) => {
+        if (!error && data) {
+          const coHostsData = data.map(item => item.profiles || {});
+          setCoHosts(coHostsData);
+        }
+      });
+    toast({
+      title: "Co-host added",
+      description: "Co-host has been successfully added to this event"
+    });
   };
 
   const isEventInPast = event ? new Date(event.end_date) < new Date() : false;
@@ -280,9 +367,33 @@ const EventPage = () => {
               </div>
               
               <div className="flex-1 space-y-4">
-                <p className="text-muted-foreground">
-                  {event?.profiles?.username && `Hosted by ${event.profiles.username}`}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground flex items-center">
+                    {event?.profiles?.username && `Hosted by ${event.profiles.username}`}
+                    
+                    {/* Add Co-Host Button - Only visible if user is the creator of the event */}
+                    {isEventCreator && userProfile && eventId && (
+                      <AddCoHostPopover 
+                        eventId={eventId}
+                        profileId={userProfile.id}
+                        onSuccess={handleCoHostAdded}
+                      />
+                    )}
+                  </p>
+                  
+                  {/* Edit Button - Only visible if user can edit this event */}
+                  {canEditEvent && !isEventInPast && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleEditEvent}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Event
+                    </Button>
+                  )}
+                </div>
+                
                 <h1 className="text-3xl font-bold text-foreground">{event?.title}</h1>
                 
                 <div className="flex flex-wrap gap-4 items-center justify-between">
@@ -341,7 +452,7 @@ const EventPage = () => {
                       >
                         <a href={getMeerkatUrl()} target="_blank" rel="noopener noreferrer">
                           <MessageSquare className="mr-2 h-4 w-4" />
-                          {isEventCreator ? "Open Q&A Host Session" : "Open Q&A Session"}
+                          {isEventCreator || isCoHost ? "Open Q&A Host Session" : "Open Q&A Session"}
                         </a>
                       </Button>
                     </div>
@@ -377,12 +488,28 @@ const EventPage = () => {
                   location={eventLocation ?? ""}
                   totalRsvps={rsvps.length}
                   attendees={rsvps}
+                  eventId={eventId}
+                  profileId={userProfile?.id}
+                  canEdit={isEventCreator}
+                  onCoHostAdded={handleCoHostAdded}
+                  hostUsername={event?.profiles?.username}
+                  coHosts={coHosts}
                 />
               </div>
             </div>
           </div>
         </div>
       )}
+
+      <CreateEventSheet
+        open={createEventOpen}
+        onOpenChange={setCreateEventOpen}
+        onSuccess={handleCreateEventSuccess}
+        userId={user?.id || ''}
+        profileId={userProfile?.id}
+        event={eventToEdit}
+        userProfileData={userProfile}
+      />
     </>
   );
 };
