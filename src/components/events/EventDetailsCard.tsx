@@ -1,5 +1,5 @@
 
-import { Calendar, Clock, MapPin, Users, UserPlus } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, UserPlus, Mic } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,7 @@ interface EventDetailsCardProps {
   onCoHostAdded?: () => void;
   hostUsername?: string;
   coHosts?: {username: string}[];
+  speakers?: string;
 }
 
 export const EventDetailsCard = ({
@@ -36,6 +37,7 @@ export const EventDetailsCard = ({
   onCoHostAdded,
   hostUsername,
   coHosts = [],
+  speakers,
 }: EventDetailsCardProps) => {
   // Create a formatted hosts string
   const formatHosts = () => {
@@ -80,6 +82,16 @@ export const EventDetailsCard = ({
               <MapPin className="h-5 w-5 mt-1 text-muted-foreground" />
               <div>
                 <p className="font-medium text-foreground">{location}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Speakers section */}
+          {speakers && (
+            <div className="flex items-start gap-3">
+              <Mic className="h-5 w-5 mt-1 text-muted-foreground" />
+              <div>
+                <p className="font-medium text-foreground">{speakers}</p>
               </div>
             </div>
           )}
