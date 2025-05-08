@@ -767,7 +767,6 @@ const Events = () => {
                 )}
               </div>
             ) : (
-              // ... keep existing code for tabs content
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-5 mb-2">
                   <TabsTrigger value="today">Today</TabsTrigger>
@@ -777,7 +776,6 @@ const Events = () => {
                   <TabsTrigger value="past">Past</TabsTrigger>
                 </TabsList>
 
-                {/* ... keep existing code for tab contents */}
                 <TabsContent value="today" className="space-y-4 mt-4">
                   {renderEventsList(
                     todayEvents,
@@ -981,6 +979,14 @@ const renderEventsList = (
     );
   }
 
+  // Add console log for debugging events data
+  console.log("🗓️ Events list data:", events);
+  events.forEach(event => {
+    console.log(`📅 Event "${event.title}" speakers:`, event.speakers);
+    console.log(`📊 Event "${event.title}" has speakers property:`, event.hasOwnProperty('speakers'));
+    console.log(`📝 Event "${event.title}" speakers type:`, typeof event.speakers);
+  });
+
   const eventsByDate = events.reduce((acc, event) => {
     const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
     if (!acc[dateKey]) acc[dateKey] = [];
@@ -1055,7 +1061,25 @@ const renderEventsList = (
                           </div>
                         </div>
 
-                        {/* ... keep existing code (tags, speakers) */}
+                        {/* Speakers section */}
+                        {event.speakers && (
+                          <div className="flex items-start mt-2">
+                            <Mic className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm text-gray-600 break-words">{event.speakers}</span>
+                          </div>
+                        )}
+
+                        {/* Tags section */}
+                        {event.event_tags && event.event_tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {event.event_tags.map((tagRel) => (
+                              <Badge key={tagRel.tags.id} variant="secondary" className="flex items-center gap-1">
+                                <Tag className="h-3 w-3" />
+                                {tagRel.tags.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
 
                         <div className="flex flex-wrap gap-2 mt-4">
                           {!!profileId && new Date(event.end_date) >= new Date() && (
