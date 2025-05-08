@@ -1,5 +1,5 @@
 
-import { Calendar, Clock, MapPin, Users, UserPlus, Mic } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, UserPlus } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
@@ -20,7 +20,6 @@ interface EventDetailsCardProps {
   onCoHostAdded?: () => void;
   hostUsername?: string;
   coHosts?: {username: string}[];
-  speakers?: string;
 }
 
 export const EventDetailsCard = ({
@@ -37,7 +36,6 @@ export const EventDetailsCard = ({
   onCoHostAdded,
   hostUsername,
   coHosts = [],
-  speakers,
 }: EventDetailsCardProps) => {
   // Create a formatted hosts string
   const formatHosts = () => {
@@ -86,16 +84,6 @@ export const EventDetailsCard = ({
             </div>
           )}
 
-          {/* Speakers section */}
-          {speakers && (
-            <div className="flex items-start gap-3">
-              <Mic className="h-5 w-5 mt-1 text-muted-foreground" />
-              <div>
-                <p className="font-medium text-foreground">{speakers}</p>
-              </div>
-            </div>
-          )}
-
           <div className="flex items-start gap-3">
             <Users className="h-5 w-5 mt-1 text-muted-foreground" />
             <div className="space-y-2">
@@ -106,14 +94,13 @@ export const EventDetailsCard = ({
 
           {/* Host information */}
           {hostsString && (
-            <div className="flex items-start gap-3">
-              <UserPlus className="h-5 w-5 mt-1 text-muted-foreground" />
-              <div className="space-y-2">
+            <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <p className="text-muted-foreground">Hosted by {hostsString}</p>
                 
                 {/* Add Co-Host Button - Only visible if user can edit */}
                 {canEdit && eventId && profileId && (
-                  <div className="mt-2">
+                  <div>
                     <AddCoHostPopover
                       eventId={eventId}
                       profileId={profileId}

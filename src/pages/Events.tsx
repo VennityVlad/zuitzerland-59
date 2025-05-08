@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays, isAfter, startOfDay } from "date-fns";
+import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search, Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -433,13 +433,16 @@ const Events = () => {
   // Events categorized by tab filter types
   const todayEvents = filteredEvents.filter(event => {
     const startDate = new Date(event.start_date);
-    return isToday(startDate); // Only include events that start today
+    const endDate = new Date(event.end_date);
+    return isToday(startDate) || isToday(endDate) || 
+      (isBefore(startDate, currentDate) && isBefore(currentDate, endDate));
   });
   
   // Updated to match the "Upcoming" tab name
   const upcomingEvents = filteredEvents.filter(event => {
-    const startDate = new Date(event.start_date);
-    return isAfter(startDate, currentDate); // Show events that start after the current time
+    // Show events that end today or in the future
+    const endDate = new Date(event.end_date);
+    return !isToday(endDate) && isBefore(currentDate, endDate);
   });
   
   const pastEvents = filteredEvents.filter(event => {
