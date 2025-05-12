@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCoHostPopover } from "@/components/events/AddCoHostPopover";
 import { CreateEventSheet } from "@/components/events/CreateEventSheet";
+import { EventComments } from "@/components/events/EventComments";
+import { Separator } from "@/components/ui/separator";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -482,6 +484,13 @@ const EventPage = () => {
                     </div>
                   </Card>
                 )}
+
+                {/* Comments Section */}
+                <Card className="border shadow-sm">
+                  <div className="p-6">
+                    <EventComments eventId={eventId || ''} profileId={userProfile?.id} />
+                  </div>
+                </Card>
               </div>
 
               <div className="md:col-span-1">
