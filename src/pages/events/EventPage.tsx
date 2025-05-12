@@ -562,8 +562,8 @@ const EventPage = () => {
                   </Card>
                 )}
 
-                {/* Comments Section with ref for scrolling */}
-                <Card className="border shadow-sm" ref={commentsRef}>
+                {/* Comments Section with ref and id for direct navigation */}
+                <Card className="border shadow-sm" ref={commentsRef} id="comments">
                   <div className="p-6">
                     <EventComments eventId={eventId || ''} profileId={userProfile?.id} />
                   </div>
