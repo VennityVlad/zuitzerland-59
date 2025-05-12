@@ -61,7 +61,8 @@ const Book = () => {
         if (profileError) throw profileError;
         if (!profileData) return null;
 
-        // Get the user's invoice
+        // Get the user's invoice - Updated to handle multiple invoices
+        // Using order by created_at desc to get the most recent invoice
         const { data, error } = await supabase
           .from('invoices')
           .select('*')
@@ -71,6 +72,7 @@ const Book = () => {
           .limit(1);
 
         if (error) throw error;
+        console.log('Fetched invoice data:', data);
         return data && data.length > 0 ? data[0] as Invoice : null;
       } catch (error) {
         console.error('Error fetching invoice:', error);
