@@ -67,6 +67,7 @@ interface Event {
   timezone: string;
   recurring_pattern_id: string | null;
   is_recurring_instance: boolean;
+  meerkat_enabled?: boolean;
 }
 
 interface EventWithProfile extends Event {
@@ -74,6 +75,7 @@ interface EventWithProfile extends Event {
     username: string | null;
     id: string;
   } | null;
+  meerkat_enabled?: boolean;
 }
 
 const Events = () => {
@@ -835,7 +837,7 @@ const Events = () => {
                     )}
                     
                     {eventRsvps.length > 0 && (
-                      <EventRSVPAvatars rsvps={eventRsvps} eventId={event.id} />
+                      <EventRSVPAvatars profiles={eventRsvps} eventId={event.id} />
                     )}
                     
                     <CalendarOptionsPopover event={event} isMobile={isMobile} />

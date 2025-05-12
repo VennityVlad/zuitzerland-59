@@ -24,9 +24,10 @@ interface RSVPProfile {
 interface EventRSVPAvatarsProps {
   profiles: RSVPProfile[];
   maxVisible?: number;
+  eventId?: string; // Make eventId optional
 }
 
-export function EventRSVPAvatars({ profiles, maxVisible = 5 }: EventRSVPAvatarsProps) {
+export function EventRSVPAvatars({ profiles, maxVisible = 5, eventId }: EventRSVPAvatarsProps) {
   const profilesToShow = profiles.slice(0, maxVisible);
   const othersCount = profiles.length - profilesToShow.length;
 
