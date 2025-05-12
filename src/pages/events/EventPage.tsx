@@ -18,6 +18,7 @@ import { AddCoHostPopover } from "@/components/events/AddCoHostPopover";
 import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 import { EventComments } from "@/components/events/EventComments";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -478,6 +479,23 @@ const EventPage = () => {
                     )}
                     {event && (
                       <CalendarOptionsPopover event={event} isMobile={isMobile} />
+                    )}
+                    {/* Add Comments Button here, inline with other actions */}
+                    {eventId && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={scrollToComments}
+                        className="flex items-center"
+                      >
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Comments
+                        {commentCount > 0 && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {commentCount}
+                          </Badge>
+                        )}
+                      </Button>
                     )}
                     <Button onClick={handleShare} variant="outline" size="sm">
                       <Share className="mr-2 h-4 w-4" />

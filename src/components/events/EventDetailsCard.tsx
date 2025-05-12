@@ -1,5 +1,5 @@
 
-import { Calendar, Clock, MapPin, Users, UserPlus, Mic, MessageSquare } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, UserPlus, Mic } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
@@ -110,28 +110,7 @@ export const EventDetailsCard = ({
             </div>
           </div>
 
-          {/* Comments button */}
-          {eventId && onCommentClick && (
-            <div className="flex items-start gap-3">
-              <MessageSquare className="h-5 w-5 mt-1 text-muted-foreground" />
-              <div className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onCommentClick}
-                  className="flex items-center"
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Comments
-                  {commentCount > 0 && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {commentCount}
-                    </Badge>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* Removed the Comments button from here since we moved it to the main action buttons */}
 
           {/* Host information */}
           {hostsString && (
