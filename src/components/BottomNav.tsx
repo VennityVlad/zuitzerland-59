@@ -1,9 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { CalendarDays, Calendar, FileText, User, DollarSign, MoreHorizontal, LogOut, Users, BookOpen } from "lucide-react";
+import { CalendarDays, Calendar, FileText, User, LogOut, MoreHorizontal, Users, BookOpen } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Popover,
   PopoverContent,
@@ -13,29 +13,7 @@ import { useMenuVisibility } from "@/hooks/useMenuVisibility";
 
 const BottomNav = () => {
   const { user, logout } = usePrivy();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const { showOnboarding } = useMenuVisibility(user?.id);
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (!user?.id) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('privy_id', user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-        setIsAdmin(data?.role === 'admin');
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-      }
-    };
-
-    checkAdmin();
-  }, [user?.id]);
+  const { isAdmin, showOnboarding } = useMenuVisibility(user?.id);
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full border-t bg-white">
@@ -133,28 +111,26 @@ const BottomNav = () => {
             </NavLink>
 
             {/* Onboarding (non-admin only) */}
-            {showOnboarding && (
-              <NavLink
-                to="/onboarding"
-                className={({ isActive }) =>
-                  cn(
-                    "flex flex-col items-center justify-center text-xs",
-                    isActive
-                      ? "text-primary"
-                      : "text-gray-500 hover:text-primary"
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <BookOpen
-                      className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
-                    />
-                    <span>Onboarding</span>
-                  </>
-                )}
-              </NavLink>
-            )}
+            <NavLink
+              to="/onboarding"
+              className={({ isActive }) =>
+                cn(
+                  "flex flex-col items-center justify-center text-xs",
+                  isActive
+                    ? "text-primary"
+                    : "text-gray-500 hover:text-primary"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <BookOpen
+                    className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
+                  />
+                  <span>Onboarding</span>
+                </>
+              )}
+            </NavLink>
           </>
         )}
 
@@ -168,53 +144,6 @@ const BottomNav = () => {
           </PopoverTrigger>
           <PopoverContent side="top" className="w-56 p-0">
             <div className="flex flex-col py-2">
-              {isAdmin ? (
-                // Admin menu items
-                <>
-                  <NavLink 
-                    to="/book" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <CalendarDays className="h-4 w-4 mr-2" />
-                    Book
-                  </NavLink>
-                  <NavLink 
-                    to="/pricing" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Pricing
-                  </NavLink>
-                  <NavLink 
-                    to="/reports" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Reports
-                  </NavLink>
-                  <NavLink 
-                    to="/settings" 
-                    className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Settings
-                  </NavLink>
-                </>
-              ) : (
-                // Non-admin menu items
-                <>
-                  {!showOnboarding && (
-                    <NavLink 
-                      to="/onboarding" 
-                      className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
-                    >
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Onboarding
-                    </NavLink>
-                  )}
-                </>
-              )}
-              
               {/* Common menu items for both admin and non-admin */}
               <NavLink 
                 to="/profile" 
