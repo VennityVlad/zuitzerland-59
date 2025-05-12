@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays, isAfter, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search, Mic } from "lucide-react";
+import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search, Mic, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -67,6 +67,8 @@ interface Event {
   timezone: string;
   recurring_pattern_id: string | null;
   is_recurring_instance: boolean;
+  meerkat_enabled?: boolean;
+  meerkat_url?: string;
 }
 
 interface EventWithProfile extends Event {
@@ -1091,6 +1093,21 @@ const renderEventsList = (
                             />
                           )}
                           <CalendarOptionsPopover event={event} isMobile={isMobile} />
+                          
+                          {/* New Comments Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                            className="text-gray-500 border-gray-500 hover:bg-gray-50"
+                          >
+                            <a href={`/events/${event.id}#comments`}>
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              {isMobile ? "" : "Comments"}
+                              {/* Display comment count badge if available (future feature) */}
+                            </a>
+                          </Button>
+                          
                           <Button
                             variant="outline"
                             size="sm"
@@ -1103,6 +1120,7 @@ const renderEventsList = (
                             <Share className="h-4 w-4 mr-2" />
                             {isMobile ? "" : "Share"}
                           </Button>
+                          
                           {canEdit && (
                             <>
                               <Button

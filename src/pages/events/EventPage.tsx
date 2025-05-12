@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -563,7 +564,7 @@ const EventPage = () => {
                 )}
 
                 {/* Comments Section with ref for scrolling */}
-                <Card className="border shadow-sm" ref={commentsRef}>
+                <Card className="border shadow-sm" id="comments" ref={commentsRef}>
                   <div className="p-6">
                     <EventComments eventId={eventId || ''} profileId={userProfile?.id} />
                   </div>
