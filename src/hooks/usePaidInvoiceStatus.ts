@@ -15,6 +15,8 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
 
     const checkStatus = async () => {
       try {
+        console.log('Checking paid invoice status for user:', userId);
+        
         // First check if user is admin (do this in parallel)
         const adminPromise = supabase
           .from('profiles')
@@ -36,13 +38,14 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
         }
         
         // Now check for paid invoices using profile_id
+        // Using limit(1) instead of maybeSingle() to handle multiple paid invoices
         const invoicePromise = profileData?.id 
           ? supabase
               .from('invoices')
-              .select('status')
+              .select('id')
               .eq('profile_id', profileData.id)
               .eq('status', 'paid')
-              .maybeSingle()
+              .limit(1)
           : Promise.resolve({ data: null, error: null });
           
         // Wait for both requests to complete
@@ -53,12 +56,16 @@ export const usePaidInvoiceStatus = (userId: string | undefined) => {
           console.error('Error checking admin status:', adminResult.error);
         } else {
           setIsAdmin(adminResult.data?.role === 'admin');
+          console.log('Admin status:', adminResult.data?.role === 'admin');
         }
         
         if (invoiceResult.error) {
           console.error('Error checking invoice status:', invoiceResult.error);
         } else {
-          setHasPaidInvoice(!!invoiceResult.data);
+          // Check if at least one paid invoice was found
+          const hasPaid = Array.isArray(invoiceResult.data) && invoiceResult.data.length > 0;
+          setHasPaidInvoice(hasPaid);
+          console.log('Has paid invoice:', hasPaid, 'Data:', invoiceResult.data);
         }
       } catch (error) {
         console.error('Error in usePaidInvoiceStatus:', error);

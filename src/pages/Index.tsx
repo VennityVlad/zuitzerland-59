@@ -35,6 +35,8 @@ const Index = () => {
       // If we have an authenticated user, check if they have a paid invoice
       if (user?.id) {
         try {
+          console.log("Index: Checking access status for user:", user.id);
+          
           // Get user's profile to find their profile ID
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
@@ -49,24 +51,32 @@ const Index = () => {
             return;
           }
 
-          // Check if user has a paid invoice
+          // Check if user has a paid invoice - using limit(1) instead of maybeSingle()
+          // to correctly handle users with multiple paid invoices
           const { data: invoiceData, error: invoiceError } = await supabase
             .from('invoices')
             .select('id')
             .eq('profile_id', profileData.id)
             .eq('status', 'paid')
-            .maybeSingle();
+            .limit(1);
 
           if (invoiceError) throw invoiceError;
           
           const isAdmin = profileData.role === 'admin';
+          const hasPaidInvoice = Array.isArray(invoiceData) && invoiceData.length > 0;
+          
+          console.log("Index: Access check results:", {
+            isAdmin,
+            hasPaidInvoice,
+            invoiceCount: invoiceData?.length
+          });
           
           // Handle redirects based on invoice status and intended path
-          if ((invoiceData || isAdmin) && isEventPage) {
+          if ((hasPaidInvoice || isAdmin) && isEventPage) {
             // Redirect to the specific event page if that's where they were trying to go
             console.log(`Index: User has access, redirecting to specific event page: ${redirectPath}`);
             navigate(redirectPath, { replace: true });
-          } else if (invoiceData || isAdmin) {
+          } else if (hasPaidInvoice || isAdmin) {
             // User has a paid invoice or is admin, redirect to events
             console.log("Index: User has paid invoice or is admin, redirecting to events");
             navigate("/events", { replace: true });
