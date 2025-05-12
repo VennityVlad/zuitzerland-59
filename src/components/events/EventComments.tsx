@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { User2, Trash2, Send, Edit, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -468,17 +467,6 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
             </div>
           )}
         </>
-      )}
-
-      {/* Debug information (visible during development) */}
-      {process.env.NODE_ENV === 'development' && profileId && (
-        <Card className="mt-4 p-4 border-dashed border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
-          <p className="text-xs text-yellow-800 dark:text-yellow-400 font-mono">
-            Debug info: profileId: {profileId || 'undefined'}, 
-            isAuthenticated: {isAuthenticated ? 'true' : 'false'},
-            hasAuthClient: {authenticatedSupabase ? 'true' : 'false'}
-          </p>
-        </Card>
       )}
     </div>
   );
