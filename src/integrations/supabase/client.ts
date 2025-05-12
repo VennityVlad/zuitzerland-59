@@ -10,24 +10,27 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // import { supabase } from "@/integrations/supabase/client";
 
 // Create client with debug logging enabled in development mode
+const options = {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+};
+
+// Add debug logging in development mode
+if (process.env.NODE_ENV === 'development') {
+  options.global = { 
+    fetch: (...args) => {
+      console.log('[Supabase Debug] API call:', args[0]);
+      return fetch(...args);
+    }
+  };
+}
+
 export const supabase = createClient<Database>(
   SUPABASE_URL, 
   SUPABASE_PUBLISHABLE_KEY,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-    // Log events in development mode
-    ...(process.env.NODE_ENV === 'development' && { 
-      global: { 
-        fetch: (...args) => {
-          console.log('[Supabase Debug] API call:', args[0]);
-          return fetch(...args);
-        }
-      }
-    })
-  }
+  options
 );
 
 // DEBUG: Log client initialization
