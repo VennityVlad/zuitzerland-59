@@ -34,7 +34,7 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const { toast } = useToast();
-  const { authenticatedSupabase, isAuthenticated } = useSupabaseJwt(); // Get authenticated client
+  const { authenticatedSupabase, isAuthenticated } = useSupabaseJwt();
 
   console.log("[EventComments] Component initialized with:", {
     eventId,
@@ -110,8 +110,6 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
   // Subscribe to real-time updates for comments
   useEffect(() => {
     if (!eventId) return;
-
-    console.log("[EventComments] Setting up real-time subscription for event:", eventId);
     
     // Subscribe to comment changes
     const channel = supabase
@@ -125,8 +123,6 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
           filter: `event_id=eq.${eventId}`
         },
         async (payload) => {
-          console.log("[EventComments] Real-time update received:", payload);
-          
           // Refetch all comments to ensure we have the complete data with joins
           const { data, error } = await supabase
             .from("event_comments")
@@ -141,7 +137,6 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
             .order("created_at", { ascending: true });
 
           if (!error) {
-            console.log("[EventComments] Comments updated via real-time:", data);
             setComments(data || []);
           } else {
             console.error("[EventComments] Error refreshing comments after real-time update:", error);
@@ -152,78 +147,43 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
 
     // Cleanup subscription on unmount
     return () => {
-      console.log("[EventComments] Cleaning up real-time subscription");
       supabase.removeChannel(channel);
     };
   }, [eventId]);
 
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !profileId) {
-      console.log("[EventComments] Cannot submit comment - missing content or profileId:", {
-        contentLength: newComment.trim().length,
-        profileId
-      });
       return;
     }
-
-    console.log("[EventComments] Submitting new comment:", {
-      eventId,
-      profileId,
-      contentLength: newComment.length,
-      isAuthenticated,
-      usingAuthenticatedClient: !!authenticatedSupabase
-    });
 
     setSubmitting(true);
     try {
       // First, try with the authenticatedSupabase client if available
       if (authenticatedSupabase && isAuthenticated) {
-        console.log("[EventComments] Using authenticated client for comment submission");
-        const { data, error } = await authenticatedSupabase
+        const { error } = await authenticatedSupabase
           .from("event_comments")
           .insert({
             event_id: eventId,
             profile_id: profileId,
             content: newComment.trim()
-          })
-          .select();
+          });
 
         if (error) {
-          console.error("[EventComments] Error adding comment with authenticated client:", {
-            error,
-            errorCode: error.code,
-            errorMessage: error.message,
-            errorDetails: error.details,
-            errorHint: error.hint
-          });
           throw error;
         }
-        
-        console.log("[EventComments] Comment added successfully with authenticated client:", data);
       } else {
         // Fallback to regular client
-        console.log("[EventComments] Using regular client for comment submission");
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("event_comments")
           .insert({
             event_id: eventId,
             profile_id: profileId,
             content: newComment.trim()
-          })
-          .select();
+          });
 
         if (error) {
-          console.error("[EventComments] Error adding comment with regular client:", {
-            error,
-            errorCode: error.code,
-            errorMessage: error.message,
-            errorDetails: error.details,
-            errorHint: error.hint
-          });
           throw error;
         }
-        
-        console.log("[EventComments] Comment added successfully with regular client:", data);
       }
       
       setNewComment("");
@@ -236,10 +196,7 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
     } catch (error: any) {
       console.error("[EventComments] Error adding comment:", {
         error,
-        errorCode: error?.code,
-        errorMessage: error?.message,
-        errorDetails: error?.details,
-        errorHint: error?.hint
+        errorMessage: error?.message
       });
       
       toast({
