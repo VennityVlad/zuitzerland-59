@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { User2, Trash2, Send, Edit, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +72,8 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
   useEffect(() => {
     if (!eventId) return;
     
+    console.log("Setting up real-time subscription for comments on event:", eventId);
+    
     // Subscribe to comment changes
     const channel = supabase
       .channel('event_comments_channel')
@@ -85,8 +86,42 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
           filter: `event_id=eq.${eventId}`
         },
         (payload) => {
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
-            fetchComments(); // Refresh comments when changes occur
+          console.log("Real-time update received:", payload);
+          
+          // Instead of calling fetchComments() which causes a full reload,
+          // let's update the state directly based on the operation
+          if (payload.eventType === 'INSERT') {
+            // For inserts, we'll still fetch the new comment to get the profile data
+            supabase
+              .from("event_comments")
+              .select(`
+                id, 
+                content, 
+                created_at, 
+                updated_at,
+                profiles:profile_id (id, username, avatar_url)
+              `)
+              .eq("id", payload.new.id)
+              .single()
+              .then(({ data, error }) => {
+                if (!error && data) {
+                  setComments(prevComments => [...prevComments, data]);
+                }
+              });
+          } else if (payload.eventType === 'UPDATE') {
+            // For updates, modify the existing comment in the state
+            setComments(prevComments => 
+              prevComments.map(comment => 
+                comment.id === payload.new.id 
+                  ? { ...comment, content: payload.new.content, updated_at: payload.new.updated_at }
+                  : comment
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            // For deletes, remove the comment from the state
+            setComments(prevComments => 
+              prevComments.filter(comment => comment.id !== payload.old.id)
+            );
           }
         }
       )
@@ -94,6 +129,7 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
 
     // Cleanup subscription on unmount
     return () => {
+      console.log("Cleaning up real-time subscription");
       supabase.removeChannel(channel);
     };
   }, [eventId]);
@@ -144,13 +180,21 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
     if (!editingContent.trim() || !profileId) return;
     
     try {
-      const { error } = await supabase
+      console.log("Updating comment:", commentId, "with content:", editingContent.trim());
+      
+      // Use authenticated client if available for better auth context
+      const client = (authenticatedSupabase && isAuthenticated) ? authenticatedSupabase : supabase;
+      
+      const { error, data } = await client
         .from("event_comments")
         .update({ content: editingContent.trim() })
         .eq("id", commentId)
-        .eq("profile_id", profileId);
+        .eq("profile_id", profileId)
+        .select();  // Added select to return the updated row
 
       if (error) throw error;
+      
+      console.log("Comment update response:", data);
       
       setEditingCommentId(null);
       setEditingContent("");
@@ -160,13 +204,23 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
         description: "Your comment has been updated successfully."
       });
       
-      // The real-time subscription will update the UI
-    } catch (error) {
+      // The real-time subscription should update the UI, but as a fallback:
+      if (!data || data.length === 0) {
+        // If no real-time update occurs, manually update the UI
+        setComments(prevComments => 
+          prevComments.map(comment => 
+            comment.id === commentId 
+              ? { ...comment, content: editingContent.trim(), updated_at: new Date().toISOString() }
+              : comment
+          )
+        );
+      }
+    } catch (error: any) {
       console.error("Error updating comment:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update your comment. Please try again."
+        description: `Failed to update your comment: ${error?.message || "Unknown error"}`
       });
     }
   };
@@ -175,7 +229,12 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
     if (!profileId) return;
     
     try {
-      const { error } = await supabase
+      console.log("Deleting comment:", commentId);
+      
+      // Use authenticated client if available for better auth context
+      const client = (authenticatedSupabase && isAuthenticated) ? authenticatedSupabase : supabase;
+      
+      const { error } = await client
         .from("event_comments")
         .delete()
         .eq("id", commentId)
@@ -183,18 +242,21 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
 
       if (error) throw error;
       
+      console.log("Comment deleted successfully");
+      
       toast({
         title: "Comment deleted",
         description: "Your comment has been deleted successfully."
       });
       
-      // The real-time subscription will update the UI
-    } catch (error) {
+      // The real-time subscription should update the UI, but as a fallback:
+      setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
+    } catch (error: any) {
       console.error("Error deleting comment:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete your comment. Please try again."
+        description: `Failed to delete your comment: ${error?.message || "Unknown error"}`
       });
     }
   };
