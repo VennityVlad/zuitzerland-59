@@ -648,6 +648,220 @@ const Events = () => {
     );
   }
 
+  const renderEventsList = (
+    events: EventWithProfile[], 
+    isLoading: boolean, 
+    profileLoading: boolean,
+    canCreateEvents: boolean,
+    canEditEvent: (event: EventWithProfile) => boolean,
+    openDeleteDialog: (event: Event) => void,
+    handleEditEvent: (event: Event) => void,
+    formatDateForSidebar: (date: Date) => JSX.Element,
+    formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
+    formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
+    rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
+    userRSVPEventIds: string[],
+    profileId: string | undefined,
+    refetchRSVPs: () => void,
+    isMobile: boolean,
+    handleShare: (event: Event) => Promise<void>,
+    isAdminUser: boolean,
+  ) => {
+    const today = new Date();
+    const isAfterToday = (date: Date) => isAfter(date, today);
+    
+    if (isLoading || profileLoading) {
+      return (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-4">
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-1/3" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    if (events.length === 0) {
+      return (
+        <Card className="p-8 text-center space-y-6">
+          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+            <CalendarDays className="h-8 w-8 text-gray-500" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground">No events found</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            {canCreateEvents ? (
+              <>There are no events for this selection. Why not create a new one?</>
+            ) : (
+              <>There are no events scheduled for this selection.</>
+            )}
+          </p>
+          {canCreateEvents && (
+            <div className="flex justify-center">
+              <Button onClick={() => setCreateEventOpen(true)}>
+                <CalendarPlus className="mr-2 h-4 w-4" /> Create Event
+              </Button>
+            </div>
+          )}
+        </Card>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {events.map((event) => {
+          const startDate = new Date(event.start_date);
+          const endDate = new Date(event.end_date);
+          const isEventInFuture = isAfterToday(startDate); 
+          const isUserRSVPed = userRSVPEventIds.includes(event.id);
+          const eventRsvps = rsvpMap[event.id] || [];
+          const canEdit = canEditEvent(event);
+          
+          const eventLocation = event.locations 
+            ? `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}`
+            : event.location_text || '';
+          
+          // Extract event tags
+          const tags = event.event_tags?.map(tag => tag.tags) || [];
+          
+          // Check for special features like AV needs, speakers, etc.
+          const hasAVNeeds = !!event.av_needs;
+          const hasSpeakers = !!event.speakers;
+          const hasMeerkatEnabled = !!event.meerkat_enabled;
+          
+          return (
+            <Card key={event.id} className="overflow-hidden">
+              <div className="p-4 md:p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <Link to={`/events/${event.id}`} className="text-xl font-semibold mb-1 hover:underline hover:text-blue-700">
+                      {event.title}
+                    </Link>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDateRange(event.start_date, event.end_date, event.is_all_day)}
+                      {' · '}
+                      {formatEventTime(event.start_date, event.end_date, event.is_all_day, event.timezone)}
+                    </p>
+                  </div>
+                  
+                  {canEdit && isEventInFuture && (
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditEvent(event)}>
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      
+                      {(isAdminUser || (event.profiles?.id === profileId)) && (
+                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(event)}>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {event.description && (
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{event.description}</p>
+                )}
+                
+                <div className="flex flex-col sm:flex-row justify-between gap-4">
+                  <div className="space-y-2">
+                    {/* Host information */}
+                    {event.profiles?.username && (
+                      <div className="flex items-center text-sm">
+                        <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Hosted by {event.profiles.username}</span>
+                      </div>
+                    )}
+                    
+                    {/* Location information */}
+                    {eventLocation && (
+                      <div className="flex items-center text-sm">
+                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">{eventLocation}</span>
+                      </div>
+                    )}
+
+                    {/* Special features */}
+                    {(hasAVNeeds || hasSpeakers || hasMeerkatEnabled) && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {hasSpeakers && (
+                          <Badge variant="outline" className="flex items-center">
+                            <Mic className="mr-1 h-3 w-3" />
+                            Speakers
+                          </Badge>
+                        )}
+                        {hasMeerkatEnabled && (
+                          <Badge variant="outline" className="flex items-center">
+                            <MessageSquare className="mr-1 h-3 w-3" />
+                            Q&A
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Tags */}
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {tags.slice(0, 3).map(tag => (
+                          <Badge key={tag.id} variant="secondary" className="flex items-center">
+                            <Tag className="mr-1 h-3 w-3" />
+                            {tag.name}
+                          </Badge>
+                        ))}
+                        {tags.length > 3 && (
+                          <Badge variant="secondary">+{tags.length - 3}</Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 self-end">
+                    {profileId && isEventInFuture && (
+                      <EventRSVPButton 
+                        eventId={event.id} 
+                        profileId={profileId}
+                        initialRSVP={isUserRSVPed}
+                        onChange={() => refetchRSVPs()}
+                      />
+                    )}
+                    
+                    {eventRsvps.length > 0 && (
+                      <EventRSVPAvatars rsvps={eventRsvps} eventId={event.id} />
+                    )}
+                    
+                    <CalendarOptionsPopover event={event} isMobile={isMobile} />
+                    
+                    {/* Add Comments Button */}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/events/${event.id}#comments`}>
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Comments
+                      </Link>
+                    </Button>
+                    
+                    <Button variant="outline" size="sm" onClick={() => handleShare(event)}>
+                      <Share className="mr-2 h-4 w-4" />
+                      Share
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
       <div className="flex items-center justify-between gap-3">
@@ -936,7 +1150,4 @@ const Events = () => {
   );
 };
 
-const renderEventsList = (
-  events: EventWithProfile[], 
-  isLoading: boolean, 
-  profileLoading: boolean,
+export default Events;
