@@ -36,72 +36,33 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
   const { toast } = useToast();
   const { authenticatedSupabase, isAuthenticated } = useSupabaseJwt();
 
-  console.log("[EventComments] Component initialized with:", {
-    eventId,
-    profileId,
-    isAuthenticated
-  });
-
-  // Debug call to check the current auth state
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        console.log("[EventComments] Authentication state:", { 
-          profileId, 
-          isAuthenticated,
-          usingAuthenticatedClient: !!authenticatedSupabase
-        });
-        
-        // Check auth.uid() through a simple query to validate JWT
-        if (isAuthenticated && authenticatedSupabase) {
-          const { data: authData, error: authError } = await authenticatedSupabase
-            .rpc('get_auth_context');
-          
-          console.log("[EventComments] Auth context check:", { 
-            authData, 
-            authError,
-            expectedProfileId: profileId 
-          });
-        }
-      } catch (error) {
-        console.error("[EventComments] Error checking auth:", error);
-      }
-    };
-    
-    checkAuth();
-  }, [profileId, isAuthenticated, authenticatedSupabase]);
-
   // Fetch comments
+  const fetchComments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("event_comments")
+        .select(`
+          id, 
+          content, 
+          created_at, 
+          updated_at,
+          profiles:profile_id (id, username, avatar_url)
+        `)
+        .eq("event_id", eventId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      
+      setComments(data || []);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch of comments
   useEffect(() => {
-    const fetchComments = async () => {
-      try {
-        console.log("[EventComments] Fetching comments for event:", eventId);
-        const { data, error } = await supabase
-          .from("event_comments")
-          .select(`
-            id, 
-            content, 
-            created_at, 
-            updated_at,
-            profiles:profile_id (id, username, avatar_url)
-          `)
-          .eq("event_id", eventId)
-          .order("created_at", { ascending: true });
-
-        if (error) {
-          console.error("[EventComments] Error fetching comments:", error);
-          throw error;
-        }
-        
-        console.log("[EventComments] Comments fetched successfully:", data);
-        setComments(data || []);
-      } catch (error) {
-        console.error("[EventComments] Error fetching comments:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (eventId) {
       fetchComments();
     }
@@ -122,25 +83,8 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
           table: 'event_comments',
           filter: `event_id=eq.${eventId}`
         },
-        async (payload) => {
-          // Refetch all comments to ensure we have the complete data with joins
-          const { data, error } = await supabase
-            .from("event_comments")
-            .select(`
-              id, 
-              content, 
-              created_at, 
-              updated_at,
-              profiles:profile_id (id, username, avatar_url)
-            `)
-            .eq("event_id", eventId)
-            .order("created_at", { ascending: true });
-
-          if (!error) {
-            setComments(data || []);
-          } else {
-            console.error("[EventComments] Error refreshing comments after real-time update:", error);
-          }
+        (payload) => {
+          fetchComments();
         }
       )
       .subscribe();
@@ -152,52 +96,36 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
   }, [eventId]);
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim() || !profileId) {
-      return;
-    }
+    if (!newComment.trim() || !profileId) return;
 
     setSubmitting(true);
     try {
-      // First, try with the authenticatedSupabase client if available
-      if (authenticatedSupabase && isAuthenticated) {
-        const { error } = await authenticatedSupabase
-          .from("event_comments")
-          .insert({
-            event_id: eventId,
-            profile_id: profileId,
-            content: newComment.trim()
-          });
+      const commentData = {
+        event_id: eventId,
+        profile_id: profileId,
+        content: newComment.trim()
+      };
 
-        if (error) {
-          throw error;
-        }
-      } else {
-        // Fallback to regular client
-        const { error } = await supabase
-          .from("event_comments")
-          .insert({
-            event_id: eventId,
-            profile_id: profileId,
-            content: newComment.trim()
-          });
-
-        if (error) {
-          throw error;
-        }
-      }
+      // Try with authenticated client first, fallback to regular client
+      const client = (authenticatedSupabase && isAuthenticated) ? authenticatedSupabase : supabase;
       
+      const { error } = await client
+        .from("event_comments")
+        .insert(commentData);
+
+      if (error) throw error;
+      
+      // Clear the input immediately
       setNewComment("");
+      
       toast({
         title: "Comment added",
         description: "Your comment has been added successfully."
       });
       
-      // Comments will be updated via the real-time subscription
+      // No need to update comments state manually - the real-time subscription will handle it
     } catch (error: any) {
-      console.error("[EventComments] Error adding comment:", {
-        error,
-        errorMessage: error?.message
-      });
+      console.error("Error adding comment:", error);
       
       toast({
         variant: "destructive",
@@ -229,7 +157,7 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
         description: "Your comment has been updated successfully."
       });
       
-      // Comments will be updated via the real-time subscription
+      // The real-time subscription will update the UI
     } catch (error) {
       console.error("Error updating comment:", error);
       toast({
@@ -257,7 +185,7 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
         description: "Your comment has been deleted successfully."
       });
       
-      // Comments will be updated via the real-time subscription
+      // The real-time subscription will update the UI
     } catch (error) {
       console.error("Error deleting comment:", error);
       toast({
