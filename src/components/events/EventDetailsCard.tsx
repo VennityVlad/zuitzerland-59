@@ -1,10 +1,12 @@
 
-import { Calendar, Clock, MapPin, Users, UserPlus, Mic } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, UserPlus, Mic, MessageSquare } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { EventRSVPAvatars } from "./EventRSVPAvatars";
 import { AddCoHostPopover } from "./AddCoHostPopover";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface EventDetailsCardProps {
   startDate: Date;
@@ -21,6 +23,8 @@ interface EventDetailsCardProps {
   hostUsername?: string;
   coHosts?: {username: string}[];
   speakers?: string;
+  commentCount?: number;
+  onCommentClick?: () => void;
 }
 
 export const EventDetailsCard = ({
@@ -38,6 +42,8 @@ export const EventDetailsCard = ({
   hostUsername,
   coHosts = [],
   speakers,
+  commentCount = 0,
+  onCommentClick,
 }: EventDetailsCardProps) => {
   // Create a formatted hosts string
   const formatHosts = () => {
@@ -103,6 +109,29 @@ export const EventDetailsCard = ({
               <EventRSVPAvatars profiles={attendees} />
             </div>
           </div>
+
+          {/* Comments button */}
+          {eventId && onCommentClick && (
+            <div className="flex items-start gap-3">
+              <MessageSquare className="h-5 w-5 mt-1 text-muted-foreground" />
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onCommentClick}
+                  className="flex items-center"
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Comments
+                  {commentCount > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {commentCount}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Host information */}
           {hostsString && (

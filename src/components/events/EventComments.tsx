@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { User2, Trash2, Send, Edit, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,7 +85,9 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
           filter: `event_id=eq.${eventId}`
         },
         (payload) => {
-          fetchComments();
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+            fetchComments(); // Refresh comments when changes occur
+          }
         }
       )
       .subscribe();
@@ -123,7 +126,7 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
         description: "Your comment has been added successfully."
       });
       
-      // No need to update comments state manually - the real-time subscription will handle it
+      // The real-time subscription will update the comments list
     } catch (error: any) {
       console.error("Error adding comment:", error);
       

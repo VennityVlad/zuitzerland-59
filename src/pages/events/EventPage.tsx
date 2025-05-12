@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +31,8 @@ const EventPage = () => {
   const [eventToEdit, setEventToEdit] = useState<any>(null);
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [coHosts, setCoHosts] = useState<any[]>([]);
+  const [commentCount, setCommentCount] = useState(0);
+  const commentsRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const locationData = useLocation();
   const navigate = useNavigate();
@@ -190,6 +192,59 @@ const EventPage = () => {
     }
   }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
 
+  // Fetch comment count
+  useEffect(() => {
+    const fetchCommentCount = async () => {
+      if (eventId) {
+        try {
+          const { count, error } = await supabase
+            .from("event_comments")
+            .select("id", { count: "exact", head: true })
+            .eq("event_id", eventId);
+            
+          if (error) throw error;
+          setCommentCount(count || 0);
+        } catch (error) {
+          console.error("Error fetching comment count:", error);
+        }
+      }
+    };
+
+    fetchCommentCount();
+  }, [eventId]);
+
+  // Listen for real-time comment updates to update the count
+  useEffect(() => {
+    if (!eventId) return;
+    
+    // Subscribe to comment changes to update the count
+    const channel = supabase
+      .channel('comment_count_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'event_comments',
+          filter: `event_id=eq.${eventId}`
+        },
+        (payload) => {
+          // Update the count based on the operation
+          if (payload.eventType === 'INSERT') {
+            setCommentCount(prevCount => prevCount + 1);
+          } else if (payload.eventType === 'DELETE') {
+            setCommentCount(prevCount => Math.max(0, prevCount - 1));
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [eventId]);
+
   // Check if the current user is the creator of the event or a co-host
   const isEventCreator = event && userProfile && event.created_by === userProfile.id;
   const canEditEvent = isEventCreator || isCoHost || isAdmin;
@@ -318,6 +373,10 @@ const EventPage = () => {
   console.log("🎤 Speakers data:", event?.speakers);
   console.log("📊 Does speakers field exist:", event?.hasOwnProperty('speakers'));
   console.log("📝 Speakers type:", typeof event?.speakers);
+
+  const scrollToComments = () => {
+    commentsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <>
@@ -485,8 +544,8 @@ const EventPage = () => {
                   </Card>
                 )}
 
-                {/* Comments Section */}
-                <Card className="border shadow-sm">
+                {/* Comments Section with ref for scrolling */}
+                <Card className="border shadow-sm" ref={commentsRef}>
                   <div className="p-6">
                     <EventComments eventId={eventId || ''} profileId={userProfile?.id} />
                   </div>
@@ -509,6 +568,8 @@ const EventPage = () => {
                   hostUsername={event?.profiles?.username}
                   coHosts={coHosts}
                   speakers={event?.speakers}
+                  commentCount={commentCount}
+                  onCommentClick={scrollToComments}
                 />
               </div>
             </div>
