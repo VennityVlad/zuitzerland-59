@@ -21,15 +21,24 @@ export const useAuthenticatedSupabase = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
 
+  console.log("[useAuthenticatedSupabase] Hook initialized with:", {
+    privyAuthenticated: authenticated,
+    privyUserId: user?.id,
+    ready,
+    hasJwtData: !!jwtData,
+    supabaseAuthenticated: isAuthenticated
+  });
+
   const refreshJwt = useCallback(async () => {
     if (!authenticated || !user?.id) {
+      console.log("[useAuthenticatedSupabase] Cannot refresh JWT - not authenticated or no user ID");
       setJwtData(null);
       setIsAuthenticated(false);
       return;
     }
 
     try {
-      console.log("Fetching new Supabase JWT for Privy user:", user.id);
+      console.log("[useAuthenticatedSupabase] Fetching new Supabase JWT for Privy user:", user.id);
       const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-supabase-jwt`, {
         method: 'POST',
         headers: {
@@ -41,11 +50,29 @@ export const useAuthenticatedSupabase = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("[useAuthenticatedSupabase] JWT refresh failed - response not OK:", errorData);
         throw new Error(errorData.error || 'Failed to refresh JWT');
       }
 
       const newJwtData = await response.json();
-      console.log("New JWT received, expires at:", new Date(newJwtData.expiresAt).toISOString());
+      console.log("[useAuthenticatedSupabase] New JWT received:", {
+        expiresAt: new Date(newJwtData.expiresAt).toISOString(),
+        jwtPreview: newJwtData.jwt.substring(0, 20) + '...',
+      });
+
+      // Try to parse JWT payload for debugging
+      try {
+        const [, payloadBase64] = newJwtData.jwt.split('.');
+        const payload = JSON.parse(atob(payloadBase64));
+        console.log("[useAuthenticatedSupabase] JWT payload:", {
+          sub: payload.sub,
+          role: payload.role,
+          expires: new Date(payload.exp * 1000).toISOString(),
+          userMetadata: payload.user_metadata
+        });
+      } catch (parseErr) {
+        console.error("[useAuthenticatedSupabase] Could not parse JWT payload:", parseErr);
+      }
       
       setJwtData(newJwtData);
       setIsAuthenticated(true);
@@ -64,13 +91,13 @@ export const useAuthenticatedSupabase = () => {
           })
         });
       } catch (updateErr) {
-        console.error("Error updating JWT claims:", updateErr);
+        console.error("[useAuthenticatedSupabase] Error updating JWT claims:", updateErr);
         // Non-fatal error, so we continue
       }
       
       return newJwtData;
     } catch (err) {
-      console.error("Error refreshing JWT:", err);
+      console.error("[useAuthenticatedSupabase] Error refreshing JWT:", err);
       setError((err as Error).message);
       setIsAuthenticated(false);
       toast({
@@ -84,14 +111,17 @@ export const useAuthenticatedSupabase = () => {
 
   // Initialize with JWT when authenticated
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) {
+      console.log("[useAuthenticatedSupabase] Privy not ready yet");
+      return;
+    }
 
     const initializeClient = async () => {
       setLoading(true);
       setError(null);
 
       if (!authenticated || !user?.id) {
-        console.log("Not authenticated, using anonymous Supabase client");
+        console.log("[useAuthenticatedSupabase] Not authenticated, using anonymous Supabase client");
         const anonClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
         setSupabaseClient(anonClient);
         setJwtData(null);
@@ -101,10 +131,11 @@ export const useAuthenticatedSupabase = () => {
       }
 
       try {
+        console.log("[useAuthenticatedSupabase] Initializing authenticated client for user:", user.id);
         const newJwtData = await refreshJwt();
         
         if (newJwtData?.jwt) {
-          console.log("Creating authenticated Supabase client");
+          console.log("[useAuthenticatedSupabase] Creating authenticated Supabase client with JWT");
           const authClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
             global: {
               headers: {
@@ -113,16 +144,40 @@ export const useAuthenticatedSupabase = () => {
             },
           });
           
+          // Test the authenticated client with a simple query
+          try {
+            console.log("[useAuthenticatedSupabase] Testing authenticated client...");
+            const { data: authTest, error: authError } = await authClient.rpc('get_auth_context');
+            console.log("[useAuthenticatedSupabase] Auth context test:", { authTest, authError });
+            
+            // Get profile to compare IDs
+            const { data: profileData, error: profileError } = await authClient
+              .from('profiles')
+              .select('id, privy_id')
+              .eq('privy_id', user.id)
+              .maybeSingle();
+              
+            console.log("[useAuthenticatedSupabase] Profile data:", { 
+              profileData, 
+              profileError,
+              authContextId: authTest,
+              match: profileData?.id === authTest 
+            });
+          } catch (testErr) {
+            console.error("[useAuthenticatedSupabase] Error testing authenticated client:", testErr);
+          }
+          
           setSupabaseClient(authClient);
           setIsAuthenticated(true);
         } else {
           // Fall back to anonymous client if JWT fetch fails
+          console.warn("[useAuthenticatedSupabase] Failed to get JWT, falling back to anonymous client");
           const anonClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
           setSupabaseClient(anonClient);
           setIsAuthenticated(false);
         }
       } catch (err) {
-        console.error("Error initializing authenticated client:", err);
+        console.error("[useAuthenticatedSupabase] Error initializing authenticated client:", err);
         setError((err as Error).message);
         setIsAuthenticated(false);
         
@@ -152,13 +207,14 @@ export const useAuthenticatedSupabase = () => {
     
     // Don't schedule if already expired
     if (refreshTime <= 0) {
+      console.log("[useAuthenticatedSupabase] JWT already expired, refreshing immediately");
       refreshJwt();
       return;
     }
     
-    console.log(`Scheduling JWT refresh in ${refreshTime / 1000 / 60} minutes`);
+    console.log(`[useAuthenticatedSupabase] Scheduling JWT refresh in ${refreshTime / 1000 / 60} minutes`);
     const refreshTimer = setTimeout(() => {
-      console.log("Executing scheduled JWT refresh");
+      console.log("[useAuthenticatedSupabase] Executing scheduled JWT refresh");
       refreshJwt();
     }, refreshTime);
 

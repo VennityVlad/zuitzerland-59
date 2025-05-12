@@ -18,19 +18,27 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("JWT Generation: Request received");
+    
     const { privyUserId } = await req.json() as RequestBody;
     
     if (!privyUserId) {
+      console.error("JWT Generation: Missing Privy user ID");
       throw new Error('Privy user ID is required');
     }
     
-    console.log("Generating Supabase JWT for privyUserId:", privyUserId);
+    console.log("JWT Generation: Generating Supabase JWT for privyUserId:", privyUserId);
 
     // Initialize Supabase client with service role key for admin access
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error("JWT Generation: Missing Supabase environment variables");
+      throw new Error('Supabase configuration is missing');
+    }
+    
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
     
     // Fetch the user's profile to get their profile ID
     const { data: profile, error: profileError } = await supabaseAdmin
@@ -40,20 +48,26 @@ Deno.serve(async (req) => {
       .maybeSingle();
     
     if (profileError) {
-      console.error("Error fetching profile:", profileError);
+      console.error("JWT Generation: Error fetching profile:", profileError);
       throw new Error('Error fetching user profile');
     }
     
     if (!profile) {
+      console.error("JWT Generation: User profile not found for Privy ID:", privyUserId);
       throw new Error('User profile not found');
     }
     
-    console.log("Profile found:", profile);
+    console.log("JWT Generation: Profile found:", {
+      id: profile.id,
+      role: profile.role,
+      privyId: privyUserId
+    });
     
     // Get the JWT secret from environment variables
     // Use JWT_SECRET instead of SUPABASE_JWT_SECRET
     const supabaseJwtSecret = Deno.env.get('JWT_SECRET');
     if (!supabaseJwtSecret) {
+      console.error("JWT Generation: JWT_SECRET environment variable is not set");
       throw new Error('JWT_SECRET environment variable is not set');
     }
     
@@ -74,13 +88,21 @@ Deno.serve(async (req) => {
       }
     };
     
+    console.log("JWT Generation: Creating JWT with payload:", {
+      sub: payload.sub,
+      exp: new Date(payload.exp * 1000).toISOString(),
+      iat: new Date(payload.iat * 1000).toISOString(),
+      role: payload.role,
+      userMetadata: payload.user_metadata
+    });
+    
     // Sign the JWT with the secret
     const secret = new TextEncoder().encode(supabaseJwtSecret);
     const jwt = await new jose.SignJWT(payload)
       .setProtectedHeader({ alg: 'HS256' })
       .sign(secret);
     
-    console.log("JWT generated successfully");
+    console.log("JWT Generation: JWT generated successfully");
     
     // Return the JWT to the client
     return new Response(
@@ -95,7 +117,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('JWT Generation Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

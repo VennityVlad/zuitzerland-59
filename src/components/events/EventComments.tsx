@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { User2, Trash2, Send, Edit, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 
 interface Comment {
   id: string;
@@ -33,11 +35,48 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const { toast } = useToast();
+  const { authenticatedSupabase, isAuthenticated } = useSupabaseJwt(); // Get authenticated client
+
+  console.log("[EventComments] Component initialized with:", {
+    eventId,
+    profileId,
+    isAuthenticated
+  });
+
+  // Debug call to check the current auth state
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        console.log("[EventComments] Authentication state:", { 
+          profileId, 
+          isAuthenticated,
+          usingAuthenticatedClient: !!authenticatedSupabase
+        });
+        
+        // Check auth.uid() through a simple query to validate JWT
+        if (isAuthenticated && authenticatedSupabase) {
+          const { data: authData, error: authError } = await authenticatedSupabase
+            .rpc('get_auth_context');
+          
+          console.log("[EventComments] Auth context check:", { 
+            authData, 
+            authError,
+            expectedProfileId: profileId 
+          });
+        }
+      } catch (error) {
+        console.error("[EventComments] Error checking auth:", error);
+      }
+    };
+    
+    checkAuth();
+  }, [profileId, isAuthenticated, authenticatedSupabase]);
 
   // Fetch comments
   useEffect(() => {
     const fetchComments = async () => {
       try {
+        console.log("[EventComments] Fetching comments for event:", eventId);
         const { data, error } = await supabase
           .from("event_comments")
           .select(`
@@ -50,10 +89,15 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
           .eq("event_id", eventId)
           .order("created_at", { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+          console.error("[EventComments] Error fetching comments:", error);
+          throw error;
+        }
+        
+        console.log("[EventComments] Comments fetched successfully:", data);
         setComments(data || []);
       } catch (error) {
-        console.error("Error fetching comments:", error);
+        console.error("[EventComments] Error fetching comments:", error);
       } finally {
         setLoading(false);
       }
@@ -68,6 +112,8 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
   useEffect(() => {
     if (!eventId) return;
 
+    console.log("[EventComments] Setting up real-time subscription for event:", eventId);
+    
     // Subscribe to comment changes
     const channel = supabase
       .channel('event_comments_channel')
@@ -80,6 +126,8 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
           filter: `event_id=eq.${eventId}`
         },
         async (payload) => {
+          console.log("[EventComments] Real-time update received:", payload);
+          
           // Refetch all comments to ensure we have the complete data with joins
           const { data, error } = await supabase
             .from("event_comments")
@@ -94,7 +142,10 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
             .order("created_at", { ascending: true });
 
           if (!error) {
+            console.log("[EventComments] Comments updated via real-time:", data);
             setComments(data || []);
+          } else {
+            console.error("[EventComments] Error refreshing comments after real-time update:", error);
           }
         }
       )
@@ -102,24 +153,79 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
 
     // Cleanup subscription on unmount
     return () => {
+      console.log("[EventComments] Cleaning up real-time subscription");
       supabase.removeChannel(channel);
     };
   }, [eventId]);
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim() || !profileId) return;
+    if (!newComment.trim() || !profileId) {
+      console.log("[EventComments] Cannot submit comment - missing content or profileId:", {
+        contentLength: newComment.trim().length,
+        profileId
+      });
+      return;
+    }
+
+    console.log("[EventComments] Submitting new comment:", {
+      eventId,
+      profileId,
+      contentLength: newComment.length,
+      isAuthenticated,
+      usingAuthenticatedClient: !!authenticatedSupabase
+    });
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from("event_comments")
-        .insert({
-          event_id: eventId,
-          profile_id: profileId,
-          content: newComment.trim()
-        });
+      // First, try with the authenticatedSupabase client if available
+      if (authenticatedSupabase && isAuthenticated) {
+        console.log("[EventComments] Using authenticated client for comment submission");
+        const { data, error } = await authenticatedSupabase
+          .from("event_comments")
+          .insert({
+            event_id: eventId,
+            profile_id: profileId,
+            content: newComment.trim()
+          })
+          .select();
 
-      if (error) throw error;
+        if (error) {
+          console.error("[EventComments] Error adding comment with authenticated client:", {
+            error,
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint
+          });
+          throw error;
+        }
+        
+        console.log("[EventComments] Comment added successfully with authenticated client:", data);
+      } else {
+        // Fallback to regular client
+        console.log("[EventComments] Using regular client for comment submission");
+        const { data, error } = await supabase
+          .from("event_comments")
+          .insert({
+            event_id: eventId,
+            profile_id: profileId,
+            content: newComment.trim()
+          })
+          .select();
+
+        if (error) {
+          console.error("[EventComments] Error adding comment with regular client:", {
+            error,
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint
+          });
+          throw error;
+        }
+        
+        console.log("[EventComments] Comment added successfully with regular client:", data);
+      }
       
       setNewComment("");
       toast({
@@ -128,12 +234,19 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
       });
       
       // Comments will be updated via the real-time subscription
-    } catch (error) {
-      console.error("Error adding comment:", error);
+    } catch (error: any) {
+      console.error("[EventComments] Error adding comment:", {
+        error,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+        errorDetails: error?.details,
+        errorHint: error?.hint
+      });
+      
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add your comment. Please try again."
+        description: `Failed to add your comment: ${error?.message || "Unknown error"}`
       });
     } finally {
       setSubmitting(false);
@@ -355,6 +468,17 @@ export const EventComments: React.FC<EventCommentsProps> = ({ eventId, profileId
             </div>
           )}
         </>
+      )}
+
+      {/* Debug information (visible during development) */}
+      {process.env.NODE_ENV === 'development' && profileId && (
+        <Card className="mt-4 p-4 border-dashed border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <p className="text-xs text-yellow-800 dark:text-yellow-400 font-mono">
+            Debug info: profileId: {profileId || 'undefined'}, 
+            isAuthenticated: {isAuthenticated ? 'true' : 'false'},
+            hasAuthClient: {authenticatedSupabase ? 'true' : 'false'}
+          </p>
+        </Card>
       )}
     </div>
   );

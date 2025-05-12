@@ -9,4 +9,33 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Create client with debug logging enabled in development mode
+export const supabase = createClient<Database>(
+  SUPABASE_URL, 
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+    // Log events in development mode
+    ...(process.env.NODE_ENV === 'development' && { 
+      global: { 
+        fetch: (...args) => {
+          console.log('[Supabase Debug] API call:', args[0]);
+          return fetch(...args);
+        }
+      }
+    })
+  }
+);
+
+// DEBUG: Log client initialization
+console.log('[Supabase Client] Initialized with URL:', SUPABASE_URL);
+
+// Add a function to check if the client is properly initialized
+// This can be useful for debugging
+export const checkSupabaseClient = () => {
+  console.log('[Supabase Client Check] Client initialized:', !!supabase);
+  return supabase;
+};
