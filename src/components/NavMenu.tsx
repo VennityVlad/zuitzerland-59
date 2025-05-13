@@ -1,4 +1,3 @@
-
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -168,6 +167,11 @@ const NavMenu = () => {
       label: "Onboarding",
       icon: <CheckSquare className="h-5 w-5" />,
       path: "/onboarding",
+    }] : []),
+    ...(hasPaidInvoice ? [{ // Assuming ZuLink Apps also requires a paid invoice like Onboarding/Directory
+      label: "ZuLink Apps",
+      icon: <AppWindow className="h-5 w-5" />,
+      path: "/zulink-apps",
     }] : []),
     ...(showDirectory && hasPaidInvoice ? [{
       label: "Directory",
