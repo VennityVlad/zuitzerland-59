@@ -132,13 +132,14 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
     }
   };
   
-  // Fix for user not being available on first render causing submission issues
+  // This useEffect will show a toast and close the sheet if it's opened
+  // while userId is still not available. Disabling the button makes this less likely.
   useEffect(() => {
     if (isOpen && !userId) {
        toast({
         title: "User not identified",
-        description: "Please wait a moment or try signing in again.",
-        variant: "default", // Changed from "warning" to "default"
+        description: "Please wait a moment or try signing in again. The button will enable once your profile is loaded.",
+        variant: "default",
       });
        setIsOpen(false); // Close sheet if user is not identified
     }
@@ -148,7 +149,7 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="default">
+        <Button variant="default" disabled={!userId} title={!userId ? "Loading user information..." : "Submit Project or Idea"}>
           <Plus className="h-4 w-4 mr-2" />
           Submit Project or Idea
         </Button>
@@ -344,3 +345,4 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
     </Sheet>
   );
 }
+
