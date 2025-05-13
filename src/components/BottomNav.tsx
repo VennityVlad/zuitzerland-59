@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { CalendarDays, Calendar, FileText, User, LogOut, MoreHorizontal, Users, BookOpen } from "lucide-react";
+import { CalendarDays, Calendar, FileText, User, LogOut, MoreHorizontal, Users, BookOpen, AppWindow } from "lucide-react"; // Added AppWindow
 import { usePrivy } from "@privy-io/react-auth";
 import { cn } from "@/lib/utils";
 import {
@@ -13,7 +13,7 @@ import { useMenuVisibility } from "@/hooks/useMenuVisibility";
 
 const BottomNav = () => {
   const { user, logout } = usePrivy();
-  const { isAdmin, showOnboarding } = useMenuVisibility(user?.id);
+  const { isAdmin, showOnboarding, hasPaidInvoice } = useMenuVisibility(user?.id); // Added hasPaidInvoice
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full border-t bg-white">
@@ -110,27 +110,31 @@ const BottomNav = () => {
               )}
             </NavLink>
 
-            {/* Onboarding (non-admin only) */}
-            <NavLink
-              to="/onboarding"
-              className={({ isActive }) =>
-                cn(
-                  "flex flex-col items-center justify-center text-xs",
-                  isActive
-                    ? "text-primary"
-                    : "text-gray-500 hover:text-primary"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <BookOpen
-                    className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
-                  />
-                  <span>Onboarding</span>
-                </>
-              )}
-            </NavLink>
+            {/* Onboarding (non-admin only, if enabled and paid) */}
+            {showOnboarding && hasPaidInvoice && (
+                <NavLink
+                to="/onboarding"
+                className={({ isActive }) =>
+                    cn(
+                    "flex flex-col items-center justify-center text-xs",
+                    isActive
+                        ? "text-primary"
+                        : "text-gray-500 hover:text-primary"
+                    )
+                }
+                >
+                {({ isActive }) => (
+                    <>
+                    <BookOpen
+                        className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
+                    />
+                    <span>Onboarding</span>
+                    </>
+                )}
+                </NavLink>
+            )}
+            {/* Placeholder if onboarding is not shown to maintain grid columns */}
+            {(!showOnboarding || !hasPaidInvoice) && <div />} 
           </>
         )}
 
@@ -144,6 +148,17 @@ const BottomNav = () => {
           </PopoverTrigger>
           <PopoverContent side="top" className="w-56 p-0">
             <div className="flex flex-col py-2">
+              {/* ZuLink Apps (non-admin only, if paid invoice exists) */}
+              {!isAdmin && hasPaidInvoice && (
+                <NavLink
+                  to="/zulink-apps"
+                  className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
+                >
+                  <AppWindow className="h-4 w-4 mr-2" />
+                  ZuLink Apps
+                </NavLink>
+              )}
+
               {/* Common menu items for both admin and non-admin */}
               <NavLink 
                 to="/profile" 
