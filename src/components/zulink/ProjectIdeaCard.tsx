@@ -1,8 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ExternalLink, ThumbsUp, ThumbsDown, Edit3, CheckCircle, XCircle, Settings2 } from "lucide-react";
+import { ExternalLink, ThumbsUp, ThumbsDown, Edit3, CheckCircle, XCircle, Settings2, Tag } from "lucide-react"; // Added Tag
 import { Tables } from '@/integrations/supabase/types'; // Will be auto-generated
 import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 import { toast } from "@/hooks/use-toast";
@@ -68,6 +67,12 @@ export function ProjectIdeaCard({
   
   const formattedDate = new Date(created_at).toLocaleDateString();
 
+  const getFlagBackgroundColor = () => {
+    if (flag === 'Green') return '#F2FCE2'; // Soft Green
+    if (flag === 'Yellow') return '#FEF7CD'; // Soft Yellow
+    return '#F1F0FB'; // Soft Gray (default for 'Grey' or other values)
+  };
+
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
@@ -92,16 +97,13 @@ export function ProjectIdeaCard({
         <div>
           <h4 className="font-semibold text-xs mb-1">Flag:</h4>
           <Badge
-            variant="outline"
-            className="w-4 h-4 p-0" // Makes it a 16x16 circle
+            className="flex items-center text-slate-700 dark:text-slate-900" // Adjusted text color for better contrast on light backgrounds
             style={{
-              backgroundColor: flag === 'Green' ? 'hsl(var(--green-badge))' :
-                               flag === 'Yellow' ? 'hsl(var(--yellow-badge))' :
-                               'hsl(var(--grey-badge))',
-              // Removed text-specific 'color' style
+              backgroundColor: getFlagBackgroundColor(),
             }}
           >
-            {/* No text content here, this will be a colored circle */}
+            <Tag className="h-3 w-3 mr-1.5" />
+            {flag}
           </Badge>
         </div>
         <div>
