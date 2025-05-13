@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button"; // Added this line back
 import { ExternalLink, ThumbsUp, ThumbsDown, Edit3, CheckCircle, XCircle, Settings2, Tag } from "lucide-react"; // Added Tag
 import { Tables } from '@/integrations/supabase/types'; // Will be auto-generated
 import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
