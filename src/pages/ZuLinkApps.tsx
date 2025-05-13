@@ -39,18 +39,22 @@ export default function ZuLinkProjects() {
         return null;
       }
       console.log("ZuLinkApps: Fetching profile for authUserId:", authUserId);
+      
+      // Fix: Query by privy_id instead of auth_user_id when dealing with Privy users
+      const queryField = privyUser?.id ? 'privy_id' : 'auth_user_id';
+      
       const { data: profileData, error } = await authenticatedSupabase
         .from('profiles')
         .select('id') // We need the profile.id
-        .eq('auth_user_id', authUserId) // Querying by auth_user_id
-        .single();
+        .eq(queryField, authUserId) // Query by the appropriate field
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching user profile for ZuLink:", error.message);
         // It's important to handle cases where a profile might not exist yet
         // or if there's a genuine error. Returning null is one way.
         if (error.code === 'PGRST116') { // PGRST116: "Fetched result not found" (0 rows)
-             console.warn(`ZuLinkApps: No profile found for auth_user_id ${authUserId}. This might be expected if the profile is created later.`);
+             console.warn(`ZuLinkApps: No profile found for ${queryField} ${authUserId}. This might be expected if the profile is created later.`);
         } else {
              toast({
                 title: "Error loading user profile",
