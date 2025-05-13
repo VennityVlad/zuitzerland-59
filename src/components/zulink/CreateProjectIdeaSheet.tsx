@@ -42,10 +42,10 @@ const projectIdeaFormSchema = z.object({
   }),
   name: z.string().min(1, { message: "Project/Idea name is required" }),
   description: z.string().min(1, { message: "Project description/idea is required" }),
-  contribution_type: z.enum(CONTRIBUTION_TYPES as [ContributionTypeValue, ...ContributionTypeValue[]], {
+  contribution_type: z.enum([...CONTRIBUTION_TYPES] as [ContributionTypeValue, ...ContributionTypeValue[]], { // Spread into mutable array
     required_error: "You need to select a contribution type.",
   }),
-  flag: z.enum(FLAG_TYPES as [FlagTypeValue, ...FlagTypeValue[]], {
+  flag: z.enum([...FLAG_TYPES] as [FlagTypeValue, ...FlagTypeValue[]], { // Spread into mutable array
     required_error: "You need to select a flag.",
   }),
   benefit_to_zuitzerland: z.string().min(1, { message: "Benefit to Zuitzerland is required" }),
@@ -138,7 +138,7 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
        toast({
         title: "User not identified",
         description: "Please wait a moment or try signing in again.",
-        variant: "warning",
+        variant: "default", // Changed from "warning" to "default"
       });
        setIsOpen(false); // Close sheet if user is not identified
     }

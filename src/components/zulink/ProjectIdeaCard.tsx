@@ -9,6 +9,7 @@ import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 import { toast } from "@/hooks/use-toast";
 
 type ZulinkProject = Tables<'zulink_projects'>;
+type ZulinkProjectStatus = ZulinkProject['status']; // 'pending' | 'approved' | 'rejected' | 'implemented'
 
 interface ProjectIdeaCardProps extends ZulinkProject {
   isAdmin: boolean;
@@ -36,7 +37,7 @@ export function ProjectIdeaCard({
 }: ProjectIdeaCardProps) {
   const { authenticatedSupabase } = useSupabaseJwt();
 
-  const handleStatusChange = async (newStatus: 'approved' | 'rejected' | 'implemented') => {
+  const handleStatusChange = async (newStatus: ZulinkProjectStatus) => { // Updated type to include 'pending'
     if (!authenticatedSupabase || !isAdmin) return;
 
     try {
@@ -56,10 +57,10 @@ export function ProjectIdeaCard({
 
   const isOwner = profile_id === currentUserId;
 
-  const getStatusBadgeVariant = (currentStatus: string) => {
+  const getStatusBadgeVariant = (currentStatus: ZulinkProjectStatus): "default" | "destructive" | "outline" | "secondary" => {
     switch (currentStatus) {
-      case 'approved': return 'success';
-      case 'implemented': return 'success';
+      case 'approved': return 'default'; // Was 'success'
+      case 'implemented': return 'default'; // Was 'success'
       case 'rejected': return 'destructive';
       case 'pending': return 'secondary';
       default: return 'outline';
@@ -112,7 +113,7 @@ export function ProjectIdeaCard({
           <p className="text-xs text-gray-500">TG: {telegram_handle}</p>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col items-start gap-2_ pt-4">
+      <CardFooter className="flex flex-col items-start gap-2 pt-4"> {/* Corrected gap-2_ to gap-2 */}
         {github_link && (
           <Button variant="outline" size="sm" asChild className="w-full">
             <a href={github_link} target="_blank" rel="noopener noreferrer">
@@ -122,7 +123,7 @@ export function ProjectIdeaCard({
         )}
         {isAdmin && status === 'pending' && (
           <div className="flex gap-2 w-full">
-            <Button variant="success" size="sm" onClick={() => handleStatusChange('approved')} className="flex-1">
+            <Button variant="default" size="sm" onClick={() => handleStatusChange('approved')} className="flex-1"> {/* Was 'success' */}
               <ThumbsUp className="h-4 w-4 mr-2" /> Approve
             </Button>
             <Button variant="destructive" size="sm" onClick={() => handleStatusChange('rejected')} className="flex-1">
