@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -252,7 +251,16 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
                 name="flag"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Flag (based on guideline)</FormLabel>
+                    <FormLabel>
+                      Flag <a 
+                        href="https://docsend.com/view/gef3utaa236ewney" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-600 hover:underline"
+                      >
+                        (based on guideline)
+                      </a>
+                    </FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -345,4 +353,3 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
     </Sheet>
   );
 }
-
