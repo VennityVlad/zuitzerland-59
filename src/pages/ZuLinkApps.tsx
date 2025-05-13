@@ -1,4 +1,8 @@
+
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query"; // Added for react-query
+import { usePrivy } from "@privy-io/react-auth"; // Added for Privy user
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext"; // Added for Supabase auth user
 import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { PageTitle } from "@/components/PageTitle";
@@ -8,48 +12,70 @@ import { AppsFilter } from "@/components/zulink/AppsFilter";
 import { useToast } from "@/hooks/use-toast";
 import { Lightbulb, Loader2 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
+// Supabase client might be needed if authenticatedSupabase is not used directly in queryFn
+// import { supabase } from "@/integrations/supabase/client"; 
 
 type ProjectIdeaData = Tables<'zulink_projects'>;
 
 export default function ZuLinkProjects() {
   const [projects, setProjects] = useState<ProjectIdeaData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingProjects, setLoadingProjects] = useState(true); // Renamed for clarity
   const [filter, setFilter] = useState("all");
+  
   const { authenticatedSupabase, isAuthenticated } = useSupabaseJwt();
   const { toast } = useToast();
-  
-  const [userId, setUserId] = useState<string | undefined>(undefined);
-  const [userProfileId, setUserProfileId] = useState<string | undefined>(undefined);
+  const { user: privyUser } = usePrivy();
+  const { user: supabaseAuthUser } = useSupabaseAuth();
 
-  useEffect(() => {
-    if (authenticatedSupabase) {
-      const fetchUserSession = async () => {
-        const { data: { session } } = await authenticatedSupabase.auth.getSession();
-        if (session?.user?.id) {
-            setUserId(session.user.id); // This is auth.users.id
-            // Fetch profile_id from profiles table based on auth.users.id
-            const { data: profile, error: profileError } = await authenticatedSupabase
-                .from('profiles')
-                .select('id')
-                .eq('auth_user_id', session.user.id)
-                .single();
-            if (profileError) console.error("Error fetching profile id:", profileError);
-            if (profile) setUserProfileId(profile.id);
+  // This will be auth.users.id from either Privy or Supabase Auth
+  const authUserId = privyUser?.id || supabaseAuthUser?.id;
+
+  // Fetch user profile (specifically profile.id) using React Query
+  const { data: userProfile, isLoading: profileLoading } = useQuery({
+    queryKey: ["zulinkUserProfile", authUserId, authenticatedSupabase],
+    queryFn: async () => {
+      if (!authUserId || !authenticatedSupabase) {
+        console.log("ZuLinkApps: No authUserId or authenticatedSupabase, skipping profile fetch.");
+        return null;
+      }
+      console.log("ZuLinkApps: Fetching profile for authUserId:", authUserId);
+      const { data: profileData, error } = await authenticatedSupabase
+        .from('profiles')
+        .select('id') // We need the profile.id
+        .eq('auth_user_id', authUserId) // Querying by auth_user_id
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile for ZuLink:", error.message);
+        // It's important to handle cases where a profile might not exist yet
+        // or if there's a genuine error. Returning null is one way.
+        if (error.code === 'PGRST116') { // PGRST116: "Fetched result not found" (0 rows)
+             console.warn(`ZuLinkApps: No profile found for auth_user_id ${authUserId}. This might be expected if the profile is created later.`);
+        } else {
+             toast({
+                title: "Error loading user profile",
+                description: "Could not load your profile information. Some features might be unavailable.",
+                variant: "destructive",
+             });
         }
-      };
-      fetchUserSession();
-    }
-  }, [authenticatedSupabase]);
-  
-  const { isAdmin } = useAdminStatus(userId); // Admin status based on auth.users.id
-  // const { hasPaidInvoice, isLoading: isInvoiceLoading } = usePaidInvoiceStatus(userId); // Keep if needed for other features or reinstate for submissions
+        return null;
+      }
+      console.log("ZuLinkApps: Profile fetched:", profileData);
+      return profileData;
+    },
+    enabled: !!authUserId && !!authenticatedSupabase, // Only run if authUserId and supabase client are available
+    retry: 1, // Retry once on failure
+  });
+
+  const userProfileId = userProfile?.id; // This is the profiles.id
+
+  const { isAdmin } = useAdminStatus(authUserId);
 
   const fetchProjects = async () => {
     if (!authenticatedSupabase) return;
     
-    setLoading(true);
+    setLoadingProjects(true);
     try {
-      // Fetch projects and related profile information (username as submitter_name)
       const { data, error } = await authenticatedSupabase
         .from('zulink_projects')
         .select(`
@@ -74,29 +100,36 @@ export default function ZuLinkProjects() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoadingProjects(false);
     }
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Fetch projects if authenticated and Supabase client is ready
+    // isAuthenticated from useSupabaseJwt() indicates if the Supabase session is set up
+    if (isAuthenticated && authenticatedSupabase) {
       fetchProjects();
     }
-  }, [isAuthenticated, authenticatedSupabase]);
+  }, [isAuthenticated, authenticatedSupabase]); // Removed toast dependency, fetchProjects has its own
 
   const filteredProjects = useMemo(() => {
-    if (!projects || !userProfileId) return []; // Use userProfileId for filtering 'my' submissions
+    // Ensure userProfileId is used for filtering 'my' submissions
+    // and for non-admin 'all' view to show user's own pending/rejected items.
+    if (!projects) return [];
 
     switch (filter) {
       case "pending":
         return projects.filter(project => project.status === "pending");
       case "my":
-        return projects.filter(project => project.profile_id === userProfileId);
+        // Only filter by 'my' if userProfileId is available
+        return userProfileId ? projects.filter(project => project.profile_id === userProfileId) : [];
       default: // "all"
         return isAdmin 
           ? projects 
           : projects.filter(project => 
-              project.status === "approved" || project.status === "implemented" || project.profile_id === userProfileId
+              project.status === "approved" || 
+              project.status === "implemented" || 
+              (userProfileId && project.profile_id === userProfileId) // Show user's own regardless of status
             );
     }
   }, [projects, filter, isAdmin, userProfileId]);
@@ -111,10 +144,17 @@ export default function ZuLinkProjects() {
   }, [projects, userProfileId]);
 
   const allProjectsCount = useMemo(() => {
-    if (!userProfileId) return projects.filter(p => p.status === "approved" || p.status === "implemented").length; // For non-logged in or profile not loaded
+    // For non-logged in or profile not loaded, show count of public projects
+    if (!userProfileId && !isAdmin) {
+        return projects.filter(p => p.status === "approved" || p.status === "implemented").length;
+    }
     return isAdmin 
         ? projects.length 
-        : projects.filter(p => p.status === "approved" || p.status === "implemented" || p.profile_id === userProfileId).length;
+        : projects.filter(p => 
+            p.status === "approved" || 
+            p.status === "implemented" || 
+            (userProfileId && p.profile_id === userProfileId)
+          ).length;
   }, [projects, isAdmin, userProfileId]);
 
 
@@ -125,6 +165,9 @@ export default function ZuLinkProjects() {
       </div>
     );
   }
+  
+  // Combined loading state for initial page readiness
+  const pageLoading = loadingProjects || (!!authUserId && profileLoading && !userProfileId);
 
   return (
     <div>
@@ -135,7 +178,7 @@ export default function ZuLinkProjects() {
         actions={
           <CreateProjectIdeaSheet 
             onProjectCreated={fetchProjects}
-            userId={userProfileId} // Pass the profile_id
+            userId={userProfileId} // Pass the profile.id from the fetched profile
           />
         }
       />
@@ -150,18 +193,19 @@ export default function ZuLinkProjects() {
           allProjectsCount={allProjectsCount}
         />
 
-        {loading ? (
+        {pageLoading ? (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            <span className="ml-2">Loading projects and user data...</span>
           </div>
         ) : filteredProjects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProjects.map((project) => (
               <ProjectIdeaCard
                 key={project.id}
-                {...project} // Spread all project properties
+                {...project} 
                 isAdmin={isAdmin}
-                currentUserId={userProfileId}
+                currentUserId={userProfileId} // Pass profile.id as currentUserId
                 onStatusUpdate={fetchProjects}
               />
             ))}
@@ -170,17 +214,15 @@ export default function ZuLinkProjects() {
           <div className="text-center py-12">
             <h3 className="text-xl font-medium text-gray-500 mb-2">
               {filter === "pending" ? "No pending submissions found" : 
-               filter === "my" ? "You haven't submitted any projects or ideas yet" : 
+               filter === "my" ? (userProfileId ? "You haven't submitted any projects or ideas yet" : "Loading your submissions...") : 
                "No projects or ideas available"}
             </h3>
             <p className="text-gray-400">
-              {filter === "my" ? "Click 'Submit Project or Idea' to add your first one" : 
+              {filter === "my" && userProfileId ? "Click 'Submit Project or Idea' to add your first one" : 
                "Check back later for new submissions or share your own!"}
             </p>
           </div>
         )}
-
-        {/* Removed the paid invoice banner as it's not specified for project submissions */}
       </div>
     </div>
   );
