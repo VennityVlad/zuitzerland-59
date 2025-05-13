@@ -1,21 +1,22 @@
 
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
 
 interface AppsFilterProps {
   onFilterChange: (filter: string) => void;
   filter: string;
   isAdmin: boolean;
-  pendingCount: number;
-  myAppsCount: number;
+  pendingProjectsCount: number;
+  myProjectsCount: number;
+  allProjectsCount: number;
 }
 
 export function AppsFilter({ 
   onFilterChange, 
   filter, 
   isAdmin, 
-  pendingCount, 
-  myAppsCount 
+  pendingProjectsCount, 
+  myProjectsCount,
+  allProjectsCount
 }: AppsFilterProps) {
   return (
     <div className="flex flex-wrap gap-2 mb-6">
@@ -23,8 +24,14 @@ export function AppsFilter({
         variant={filter === "all" ? "default" : "outline"}
         onClick={() => onFilterChange("all")}
         size="sm"
+        className="flex items-center"
       >
-        All Apps
+        All Projects
+        {allProjectsCount > 0 && (
+          <span className="ml-2 bg-primary-foreground text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs">
+            {allProjectsCount}
+          </span>
+        )}
       </Button>
       
       {isAdmin && (
@@ -35,9 +42,9 @@ export function AppsFilter({
           className="flex items-center"
         >
           Pending Review
-          {pendingCount > 0 && (
+          {pendingProjectsCount > 0 && (
             <span className="ml-2 bg-primary-foreground text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs">
-              {pendingCount}
+              {pendingProjectsCount}
             </span>
           )}
         </Button>
@@ -49,10 +56,10 @@ export function AppsFilter({
         size="sm"
         className="flex items-center"
       >
-        My Apps
-        {myAppsCount > 0 && (
+        My Submissions
+        {myProjectsCount > 0 && (
           <span className="ml-2 bg-primary-foreground text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs">
-            {myAppsCount}
+            {myProjectsCount}
           </span>
         )}
       </Button>

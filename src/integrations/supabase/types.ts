@@ -1395,6 +1395,65 @@ export type Database = {
           },
         ]
       }
+      zulink_projects: {
+        Row: {
+          benefit_to_zuitzerland: string
+          contribution_type: Database["public"]["Enums"]["zulink_contribution_type"]
+          created_at: string
+          description: string
+          flag: Database["public"]["Enums"]["zulink_flag_type"]
+          github_link: string | null
+          id: string
+          name: string
+          profile_id: string
+          status: Database["public"]["Enums"]["zulink_project_status"]
+          submission_type: Database["public"]["Enums"]["zulink_submission_type"]
+          support_needed: string | null
+          telegram_handle: string | null
+          updated_at: string
+        }
+        Insert: {
+          benefit_to_zuitzerland: string
+          contribution_type: Database["public"]["Enums"]["zulink_contribution_type"]
+          created_at?: string
+          description: string
+          flag: Database["public"]["Enums"]["zulink_flag_type"]
+          github_link?: string | null
+          id?: string
+          name: string
+          profile_id: string
+          status?: Database["public"]["Enums"]["zulink_project_status"]
+          submission_type: Database["public"]["Enums"]["zulink_submission_type"]
+          support_needed?: string | null
+          telegram_handle?: string | null
+          updated_at?: string
+        }
+        Update: {
+          benefit_to_zuitzerland?: string
+          contribution_type?: Database["public"]["Enums"]["zulink_contribution_type"]
+          created_at?: string
+          description?: string
+          flag?: Database["public"]["Enums"]["zulink_flag_type"]
+          github_link?: string | null
+          id?: string
+          name?: string
+          profile_id?: string
+          status?: Database["public"]["Enums"]["zulink_project_status"]
+          submission_type?: Database["public"]["Enums"]["zulink_submission_type"]
+          support_needed?: string | null
+          telegram_handle?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_profile_zulink_projects"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1584,6 +1643,16 @@ export type Database = {
         | "Scholarship to be Rejected"
       telegram_followup_status: "Done" | "Not coming" | "Scholar"
       white_list_status: "yes" | "no"
+      zulink_contribution_type:
+        | "Tooling"
+        | "Framework"
+        | "dacc"
+        | "Software"
+        | "Social"
+        | "Other"
+      zulink_flag_type: "Green" | "Grey" | "Yellow"
+      zulink_project_status: "pending" | "approved" | "rejected" | "implemented"
+      zulink_submission_type: "project_to_implement" | "project_idea"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1765,6 +1834,17 @@ export const Constants = {
       ],
       telegram_followup_status: ["Done", "Not coming", "Scholar"],
       white_list_status: ["yes", "no"],
+      zulink_contribution_type: [
+        "Tooling",
+        "Framework",
+        "dacc",
+        "Software",
+        "Social",
+        "Other",
+      ],
+      zulink_flag_type: ["Green", "Grey", "Yellow"],
+      zulink_project_status: ["pending", "approved", "rejected", "implemented"],
+      zulink_submission_type: ["project_to_implement", "project_idea"],
     },
   },
 } as const
