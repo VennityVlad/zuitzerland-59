@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -92,11 +91,17 @@ export function ProjectIdeaCard({
         </div>
         <div>
           <h4 className="font-semibold text-xs mb-1">Flag:</h4>
-          <Badge variant="outline" style={{ 
-            backgroundColor: flag === 'Green' ? 'hsl(var(--green-badge))' : flag === 'Yellow' ? 'hsl(var(--yellow-badge))' : 'hsl(var(--grey-badge))',
-            color: flag === 'Yellow' ? 'hsl(var(--foreground))' : 'hsl(var(--background))'
-            }}>
-            {flag}
+          <Badge
+            variant="outline"
+            className="w-4 h-4 p-0" // Makes it a 16x16 circle
+            style={{
+              backgroundColor: flag === 'Green' ? 'hsl(var(--green-badge))' :
+                               flag === 'Yellow' ? 'hsl(var(--yellow-badge))' :
+                               'hsl(var(--grey-badge))',
+              // Removed text-specific 'color' style
+            }}
+          >
+            {/* No text content here, this will be a colored circle */}
           </Badge>
         </div>
         <div>
@@ -113,7 +118,7 @@ export function ProjectIdeaCard({
           <p className="text-xs text-gray-500">TG: {telegram_handle}</p>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col items-start gap-2 pt-4"> {/* Corrected gap-2_ to gap-2 */}
+      <CardFooter className="flex flex-col items-start gap-2 pt-4">
         {github_link && (
           <Button variant="outline" size="sm" asChild className="w-full">
             <a href={github_link} target="_blank" rel="noopener noreferrer">
@@ -141,12 +146,6 @@ export function ProjectIdeaCard({
                 <Settings2 className="h-4 w-4 mr-2" /> Re-evaluate (Set to Pending)
             </Button>
         )}
-        {/* Placeholder for edit functionality for owners or admins */}
-        {/* {(isAdmin || isOwner) && (
-          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
-            <Edit3 className="h-4 w-4 mr-2" /> Edit (coming soon)
-          </Button>
-        )} */}
       </CardFooter>
     </Card>
   );
