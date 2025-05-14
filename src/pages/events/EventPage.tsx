@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -25,7 +26,7 @@ const EventPage = () => {
   const { user, authenticated } = usePrivy();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [rsvps, setRsvps] = useState<any[]>([]); // This will store RSVPProfile[]
+  const [rsvps, setRsvps] = useState<any[]>([]);
   const [isRsvped, setIsRsvped] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isCoHost, setIsCoHost] = useState(false);
@@ -186,15 +187,12 @@ const EventPage = () => {
     // Only proceed if we have determined access status
     if (eventId && !isPaidInvoiceLoading) {
       fetchEvent();
-      if (userProfile) { // Fetch RSVPs and CoHosts if userProfile exists
+      if (userProfile) {
         fetchRsvps();
         fetchCoHosts();
-      } else if (authenticated && !userProfile) { // If authenticated but profile not yet loaded, still attempt to fetch RSVPs after a small delay or rely on subsequent effect runs
-         // This case might indicate profile is still loading, initial fetchRsvps might run with userProfile as null.
-         // The dependency on userProfile should re-trigger this effect once profile is loaded.
       }
     }
-  }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading, authenticated]); // Added authenticated to dependency array
+  }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
 
   // Fetch comment count
   useEffect(() => {
@@ -302,7 +300,7 @@ const EventPage = () => {
         .from("event_rsvps")
         .select(`
           profile_id,
-          profiles:profiles(id, username, avatar_url, privacy_settings)
+          profiles:profiles(id, username, avatar_url)
         `)
         .eq("event_id", eventId)
         .then(({ data, error }) => {
