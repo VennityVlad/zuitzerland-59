@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -26,7 +25,7 @@ const EventPage = () => {
   const { user, authenticated } = usePrivy();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [rsvps, setRsvps] = useState<any[]>([]);
+  const [rsvps, setRsvps] = useState<any[]>([]); // This will store RSVPProfile[]
   const [isRsvped, setIsRsvped] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isCoHost, setIsCoHost] = useState(false);
@@ -143,7 +142,7 @@ const EventPage = () => {
           .from("event_rsvps")
           .select(`
             profile_id,
-            profiles:profiles(id, username, avatar_url, privacy_settings)
+            profiles:profiles(id, username, avatar_url, privacy_settings) // Ensure privacy_settings is fetched
           `)
           .eq("event_id", eventId);
 
@@ -187,12 +186,15 @@ const EventPage = () => {
     // Only proceed if we have determined access status
     if (eventId && !isPaidInvoiceLoading) {
       fetchEvent();
-      if (userProfile) {
+      if (userProfile) { // Fetch RSVPs and CoHosts if userProfile exists
         fetchRsvps();
         fetchCoHosts();
+      } else if (authenticated && !userProfile) { // If authenticated but profile not yet loaded, still attempt to fetch RSVPs after a small delay or rely on subsequent effect runs
+         // This case might indicate profile is still loading, initial fetchRsvps might run with userProfile as null.
+         // The dependency on userProfile should re-trigger this effect once profile is loaded.
       }
     }
-  }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading]);
+  }, [eventId, userProfile, hasPaidInvoice, isAdmin, isPaidInvoiceLoading, authenticated]); // Added authenticated to dependency array
 
   // Fetch comment count
   useEffect(() => {
@@ -300,12 +302,12 @@ const EventPage = () => {
         .from("event_rsvps")
         .select(`
           profile_id,
-          profiles:profiles(id, username, avatar_url)
+          profiles:profiles(id, username, avatar_url, privacy_settings) // Ensure privacy_settings is fetched
         `)
         .eq("event_id", eventId)
         .then(({ data, error }) => {
           if (!error && data) {
-            const profileData = data.map(rsvp => rsvp.profiles);
+            const profileData = data.map(rsvp => rsvp.profiles); // This will now include privacy_settings
             setRsvps(profileData);
           }
         });
@@ -579,7 +581,7 @@ const EventPage = () => {
                   timezone={event?.timezone ?? "Europe/Zurich"}
                   location={eventLocation ?? ""}
                   totalRsvps={rsvps.length}
-                  attendees={rsvps}
+                  attendees={rsvps} {/* rsvps now contains full RSVPProfile data */}
                   eventId={eventId}
                   profileId={userProfile?.id}
                   canEdit={isEventCreator}
