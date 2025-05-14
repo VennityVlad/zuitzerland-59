@@ -1,5 +1,5 @@
 
-import { Calendar, Clock, MapPin, Users, UserPlus, Mic } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, UserPlus, Mic, MessageSquare } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { EventRSVPAvatars } from "./EventRSVPAvatars";
 import { AddCoHostPopover } from "./AddCoHostPopover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EventDetailsCardProps {
   startDate: Date;
@@ -33,8 +35,8 @@ export const EventDetailsCard = ({
   isAllDay,
   timezone,
   location,
-  totalRsvps,
-  attendees,
+  totalRsvps: initialTotalRsvps,
+  attendees: initialAttendees,
   eventId,
   profileId,
   canEdit = false,
@@ -45,6 +47,42 @@ export const EventDetailsCard = ({
   commentCount = 0,
   onCommentClick,
 }: EventDetailsCardProps) => {
+  const [attendees, setAttendees] = useState(initialAttendees);
+  const [totalRsvps, setTotalRsvps] = useState(initialTotalRsvps);
+  const [isUserRsvped, setIsUserRsvped] = useState(false);
+
+  // Check if the current user is already RSVPed
+  useEffect(() => {
+    if (profileId && eventId) {
+      const isRsvped = initialAttendees.some(attendee => attendee.id === profileId);
+      setIsUserRsvped(isRsvped);
+    }
+  }, [profileId, eventId, initialAttendees]);
+
+  // Handle RSVP status change
+  const handleRsvpChange = async (newStatus: boolean) => {
+    if (newStatus) {
+      // Fetch updated attendees after RSVP is added
+      const { data } = await supabase
+        .from("event_rsvps")
+        .select("profiles:profiles(id, username, avatar_url, privacy_settings)")
+        .eq("event_id", eventId);
+      
+      if (data) {
+        const newAttendees = data.map(rsvp => rsvp.profiles);
+        setAttendees(newAttendees);
+        setTotalRsvps(newAttendees.length);
+      }
+    } else {
+      // For removal, we can just filter out the current user
+      if (profileId) {
+        const updatedAttendees = attendees.filter(attendee => attendee.id !== profileId);
+        setAttendees(updatedAttendees);
+        setTotalRsvps(updatedAttendees.length);
+      }
+    }
+  };
+
   // Create a formatted hosts string
   const formatHosts = () => {
     if (!hostUsername) return "";
@@ -107,10 +145,28 @@ export const EventDetailsCard = ({
             <div className="space-y-2">
               <p className="font-medium text-foreground">{totalRsvps} attending</p>
               <EventRSVPAvatars profiles={attendees} />
+              
+              {/* Add RSVP button if user is logged in and has a profileId */}
+              {profileId && eventId && (
+                <div className="mt-3">
+                  <Button 
+                    onClick={onCommentClick}
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 flex items-center"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Comments
+                    {commentCount > 0 && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {commentCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Removed the Comments button from here since we moved it to the main action buttons */}
 
           {/* Host information */}
           {hostsString && (

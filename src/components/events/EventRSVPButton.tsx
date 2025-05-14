@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,11 @@ export function EventRSVPButton({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Effect to update local state when initialRSVP prop changes
+  useEffect(() => {
+    setIsRSVPed(initialRSVP);
+  }, [initialRSVP]);
+
   const handleToggleRSVP = async () => {
     if (!profileId) {
       toast({ 
@@ -35,11 +40,24 @@ export function EventRSVPButton({
     setLoading(true);
     try {
       if (!isRSVPed) {
-        // RSVP
-        const { error } = await supabase
+        // Check if RSVP already exists first to avoid duplicate key errors
+        const { data: existingRSVP, error: checkError } = await supabase
           .from("event_rsvps")
-          .insert([{ event_id: eventId, profile_id: profileId }]);
-        if (error) throw error;
+          .select("id")
+          .eq("event_id", eventId)
+          .eq("profile_id", profileId)
+          .maybeSingle();
+          
+        if (checkError) throw checkError;
+        
+        if (!existingRSVP) {
+          // Only insert if no existing RSVP
+          const { error } = await supabase
+            .from("event_rsvps")
+            .insert([{ event_id: eventId, profile_id: profileId }]);
+          if (error) throw error;
+        }
+        
         setIsRSVPed(true);
         onChange(true);
         toast({ title: "RSVP added", description: "You are now going to this event!" });
@@ -51,6 +69,7 @@ export function EventRSVPButton({
           .eq("event_id", eventId)
           .eq("profile_id", profileId);
         if (error) throw error;
+        
         setIsRSVPed(false);
         onChange(false);
         toast({ title: "RSVP removed", description: "You are no longer going to this event." });
