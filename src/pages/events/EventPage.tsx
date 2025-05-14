@@ -302,12 +302,12 @@ const EventPage = () => {
         .from("event_rsvps")
         .select(`
           profile_id,
-          profiles:profiles(id, username, avatar_url, privacy_settings) // Ensure privacy_settings is fetched
+          profiles:profiles(id, username, avatar_url, privacy_settings)
         `)
         .eq("event_id", eventId)
         .then(({ data, error }) => {
           if (!error && data) {
-            const profileData = data.map(rsvp => rsvp.profiles); // This will now include privacy_settings
+            const profileData = data.map(rsvp => rsvp.profiles);
             setRsvps(profileData);
           }
         });
