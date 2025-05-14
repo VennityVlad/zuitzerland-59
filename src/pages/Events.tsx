@@ -292,7 +292,9 @@ const Events = () => {
           id: r.profiles.id,
           username: r.profiles.username,
           avatar_url: r.profiles.avatar_url,
-          privacy_settings: r.profiles.privacy_settings,
+          privacy_settings: typeof r.profiles.privacy_settings === 'object' ? 
+            r.profiles.privacy_settings as { event_rsvp_visibility?: 'private' | 'public' } : 
+            null
         });
       } else {
         rsvpMap[r.event_id].push({

@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -143,7 +142,7 @@ const EventPage = () => {
           .from("event_rsvps")
           .select(`
             profile_id,
-            profiles:profiles(id, username, avatar_url, privacy_settings) // Ensure privacy_settings is fetched
+            profiles:profiles(id, username, avatar_url, privacy_settings)
           `)
           .eq("event_id", eventId);
 
