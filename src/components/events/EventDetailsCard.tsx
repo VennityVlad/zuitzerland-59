@@ -59,10 +59,45 @@ export const EventDetailsCard = ({
     }
   }, [profileId, eventId, initialAttendees]);
 
-  // Handle RSVP status change
-  const handleRsvpChange = async (newStatus: boolean) => {
-    if (newStatus) {
-      // Fetch updated attendees after RSVP is added
+  // Update local state when props change
+  useEffect(() => {
+    setAttendees(initialAttendees);
+    setTotalRsvps(initialTotalRsvps);
+  }, [initialAttendees, initialTotalRsvps]);
+
+  // Set up real-time subscription for RSVP changes
+  useEffect(() => {
+    if (!eventId) return;
+    
+    // Subscribe to RSVP changes for this event
+    const channel = supabase
+      .channel(`event_rsvps_${eventId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',  // Listen for all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'event_rsvps',
+          filter: `event_id=eq.${eventId}`
+        },
+        () => {
+          // When any RSVP change happens, refresh the attendees data
+          refreshAttendees();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [eventId]);
+
+  // Function to refresh attendees data
+  const refreshAttendees = async () => {
+    if (!eventId) return;
+    
+    try {
       const { data } = await supabase
         .from("event_rsvps")
         .select("profiles:profiles(id, username, avatar_url, privacy_settings)")
@@ -72,15 +107,22 @@ export const EventDetailsCard = ({
         const newAttendees = data.map(rsvp => rsvp.profiles);
         setAttendees(newAttendees);
         setTotalRsvps(newAttendees.length);
+        
+        // Update the user's RSVP status
+        if (profileId) {
+          const isRsvped = newAttendees.some(attendee => attendee.id === profileId);
+          setIsUserRsvped(isRsvped);
+        }
       }
-    } else {
-      // For removal, we can just filter out the current user
-      if (profileId) {
-        const updatedAttendees = attendees.filter(attendee => attendee.id !== profileId);
-        setAttendees(updatedAttendees);
-        setTotalRsvps(updatedAttendees.length);
-      }
+    } catch (error) {
+      console.error("Error refreshing attendees:", error);
     }
+  };
+
+  // Handle RSVP status change
+  const handleRsvpChange = async (newStatus: boolean) => {
+    setIsUserRsvped(newStatus);
+    await refreshAttendees();
   };
 
   // Create a formatted hosts string

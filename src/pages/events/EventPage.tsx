@@ -19,6 +19,7 @@ import { CreateEventSheet } from "@/components/events/CreateEventSheet";
 import { EventComments } from "@/components/events/EventComments";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { getRsvpProfilesQuery } from "@/lib/utils";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -138,13 +139,7 @@ const EventPage = () => {
   useEffect(() => {
     const fetchRsvps = async () => {
       try {
-        const { data, error } = await supabase
-          .from("event_rsvps")
-          .select(`
-            profile_id,
-            profiles:profiles(id, username, avatar_url, privacy_settings)
-          `)
-          .eq("event_id", eventId);
+        const { data, error } = await getRsvpProfilesQuery(supabase, eventId);
 
         if (error) throw error;
         
@@ -212,6 +207,34 @@ const EventPage = () => {
     };
 
     fetchCommentCount();
+  }, [eventId]);
+
+  // Set up real-time subscription for RSVP changes
+  useEffect(() => {
+    if (!eventId) return;
+    
+    // Subscribe to RSVP changes for this event
+    const channel = supabase
+      .channel(`event_rsvps_${eventId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',  // Listen for all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'event_rsvps',
+          filter: `event_id=eq.${eventId}`
+        },
+        () => {
+          // When any RSVP change happens, refresh the RSVPs
+          fetchRsvps();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [eventId]);
 
   // Listen for real-time comment updates to update the count
@@ -294,21 +317,8 @@ const EventPage = () => {
 
   const handleRsvpChange = (newStatus: boolean) => {
     setIsRsvped(newStatus);
-    if (eventId && userProfile) {
-      supabase
-        .from("event_rsvps")
-        .select(`
-          profile_id,
-          profiles:profiles(id, username, avatar_url)
-        `)
-        .eq("event_id", eventId)
-        .then(({ data, error }) => {
-          if (!error && data) {
-            const profileData = data.map(rsvp => rsvp.profiles);
-            setRsvps(profileData);
-          }
-        });
-    }
+    // Use the consistent query helper to fetch updated RSVPs
+    fetchRsvps();
   };
 
   const handleCoHostAdded = () => {
