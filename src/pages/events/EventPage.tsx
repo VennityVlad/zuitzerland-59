@@ -48,6 +48,27 @@ const EventPage = () => {
   console.log("🎪 EventPage - Invoice status:", { hasPaidInvoice, isPaidInvoiceLoading, isAdmin });
   console.log("🎪 EventPage - Current path:", locationData.pathname);
 
+  // Define the fetchRsvps function to fix the error
+  const fetchRsvps = async () => {
+    if (!eventId) return;
+    
+    try {
+      const { data, error } = await getRsvpProfilesQuery(supabase, eventId);
+
+      if (error) throw error;
+      
+      if (userProfile && data) {
+        const hasRsvped = data.some(rsvp => rsvp.profile_id === userProfile.id);
+        setIsRsvped(hasRsvped);
+      }
+      
+      const profileData = data?.map(rsvp => rsvp.profiles) || [];
+      setRsvps(profileData);
+    } catch (error) {
+      console.error("Error fetching RSVPs:", error);
+    }
+  };
+
   // Handle unauthenticated users by redirecting to sign in with return path
   useEffect(() => {
     if (authenticated === false && !isPaidInvoiceLoading) {
@@ -137,24 +158,6 @@ const EventPage = () => {
   };
 
   useEffect(() => {
-    const fetchRsvps = async () => {
-      try {
-        const { data, error } = await getRsvpProfilesQuery(supabase, eventId);
-
-        if (error) throw error;
-        
-        if (userProfile && data) {
-          const hasRsvped = data.some(rsvp => rsvp.profile_id === userProfile.id);
-          setIsRsvped(hasRsvped);
-        }
-        
-        const profileData = data?.map(rsvp => rsvp.profiles) || [];
-        setRsvps(profileData);
-      } catch (error) {
-        console.error("Error fetching RSVPs:", error);
-      }
-    };
-
     const fetchCoHosts = async () => {
       if (eventId) {
         try {
