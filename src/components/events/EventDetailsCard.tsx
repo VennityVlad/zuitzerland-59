@@ -1,11 +1,10 @@
 
-import { Calendar, Clock, MapPin, Users, UserPlus, Mic, MessageSquare } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, UserPlus, Mic } from "lucide-react";
 import { formatTimeRange } from "@/lib/date-utils";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { EventRSVPAvatars } from "./EventRSVPAvatars";
 import { AddCoHostPopover } from "./AddCoHostPopover";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 interface EventDetailsCardProps {
@@ -107,26 +106,6 @@ export const EventDetailsCard = ({
             <div className="space-y-2">
               <p className="font-medium text-foreground">{totalRsvps} attending</p>
               <EventRSVPAvatars profiles={attendees} />
-              
-              {/* Add RSVP button if user is logged in and has a profileId */}
-              {profileId && eventId && (
-                <div className="mt-3">
-                  <Button 
-                    onClick={onCommentClick}
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 flex items-center"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Comments
-                    {commentCount > 0 && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {commentCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
 
