@@ -350,7 +350,7 @@ const EventPage = () => {
 
   if (isPaidInvoiceLoading || loading) {
     return (
-      <div className="container py-12 max-w-4xl mx-auto">
+      <div className="container py-8 px-4 max-w-4xl mx-auto">
         <Card className="p-6">
           <div className="space-y-4">
             <Skeleton className="h-8 w-3/4" />
@@ -408,7 +408,7 @@ const EventPage = () => {
       </Helmet>
 
       {!authenticated ? (
-        <div className="container max-w-4xl mx-auto px-4 py-12">
+        <div className="container max-w-4xl mx-auto px-4 py-8">
           <Card className="p-6 text-center space-y-4">
             <h2 className="text-xl font-semibold text-foreground">Sign in to view event details</h2>
             <p className="text-muted-foreground">
@@ -424,7 +424,7 @@ const EventPage = () => {
           </Card>
         </div>
       ) : !hasPaidInvoice && !isPaidInvoiceLoading && !isAdmin ? (
-        <div className="container max-w-4xl mx-auto px-4 py-12">
+        <div className="container max-w-4xl mx-auto px-4 py-8">
           <Card className="p-6 text-center space-y-4">
             <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
             <p className="text-muted-foreground">
@@ -441,12 +441,13 @@ const EventPage = () => {
       ) : (
         <div className="container max-w-4xl mx-auto px-4 py-8">
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-6 items-start">
+            {/* Event Header Section */}
+            <div className="flex flex-col gap-4">
               <div className="md:hidden">
                 <EventDateBadge date={new Date(event?.start_date)} />
               </div>
               
-              <div className="flex-1 space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-muted-foreground flex items-center">
                     {event?.profiles?.username && `Hosted by ${event.profiles.username}`}
@@ -474,14 +475,14 @@ const EventPage = () => {
                   )}
                 </div>
                 
-                <h1 className="text-3xl font-bold text-foreground">{event?.title}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground break-words">{event?.title}</h1>
                 
-                <div className="flex flex-wrap gap-4 items-center justify-between">
+                <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-between">
                   <div className="hidden md:block">
                     <EventDateBadge date={new Date(event?.start_date)} />
                   </div>
                   
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-2 md:gap-3">
                     {userProfile && !isEventInPast && (
                       <EventRSVPButton 
                         eventId={eventId || ''} 
@@ -519,8 +520,32 @@ const EventPage = () => {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 space-y-6">
+            {/* Event Content Section - Reordered to show details card first on mobile */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Details Card - Full width on mobile, right column on desktop */}
+              <div className="md:order-2 md:col-span-1">
+                <EventDetailsCard
+                  startDate={event?.start_date ? new Date(event.start_date) : new Date()}
+                  endDate={event?.end_date ? new Date(event.end_date) : new Date()}
+                  isAllDay={event?.is_all_day ?? false}
+                  timezone={event?.timezone ?? "Europe/Zurich"}
+                  location={eventLocation ?? ""}
+                  totalRsvps={rsvps.length}
+                  attendees={rsvps}
+                  eventId={eventId}
+                  profileId={userProfile?.id}
+                  canEdit={isEventCreator}
+                  onCoHostAdded={handleCoHostAdded}
+                  hostUsername={event?.profiles?.username}
+                  coHosts={coHosts}
+                  speakers={event?.speakers}
+                  commentCount={commentCount}
+                  onCommentClick={scrollToComments}
+                />
+              </div>
+
+              {/* Description and other info - Full width on mobile, left column on desktop */}
+              <div className="md:order-1 md:col-span-2 space-y-6">
                 <Card className="border shadow-sm">
                   <div className="p-6">
                     <div className="prose max-w-none">
@@ -581,27 +606,6 @@ const EventPage = () => {
                     <EventComments eventId={eventId || ''} profileId={userProfile?.id} />
                   </div>
                 </Card>
-              </div>
-
-              <div className="md:col-span-1">
-                <EventDetailsCard
-                  startDate={event?.start_date ? new Date(event.start_date) : new Date()}
-                  endDate={event?.end_date ? new Date(event.end_date) : new Date()}
-                  isAllDay={event?.is_all_day ?? false}
-                  timezone={event?.timezone ?? "Europe/Zurich"}
-                  location={eventLocation ?? ""}
-                  totalRsvps={rsvps.length}
-                  attendees={rsvps}
-                  eventId={eventId}
-                  profileId={userProfile?.id}
-                  canEdit={isEventCreator}
-                  onCoHostAdded={handleCoHostAdded}
-                  hostUsername={event?.profiles?.username}
-                  coHosts={coHosts}
-                  speakers={event?.speakers}
-                  commentCount={commentCount}
-                  onCommentClick={scrollToComments}
-                />
               </div>
             </div>
           </div>
