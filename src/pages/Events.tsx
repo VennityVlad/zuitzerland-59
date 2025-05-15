@@ -241,65 +241,6 @@ const Events = () => {
     enabled: !!profileId
   });
 
-  // Refactored to use consistent query keys and proper caching
-  const { data: rsvps, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useQuery({
-    queryKey: ["event_rsvps"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("event_rsvps")
-        .select("event_id, profile_id, profiles(id, username, avatar_url)");
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !isPaidInvoiceLoading && (hasPaidInvoice || userIsAdmin) && !!profileId
-  });
-
-  // Separate query to get events the current user has RSVPed to
-  // This is crucial for correctly populating the "Going" tab
-  const { data: userRsvpEvents, isLoading: userRsvpsLoading } = useQuery({
-    queryKey: ["user_rsvp_events", profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-      
-      const { data, error } = await supabase
-        .from("event_rsvps")
-        .select(`
-          event_id,
-          events:events(
-            *,
-            profiles:profiles!events_created_by_fkey(username, id),
-            locations:location_id(name, building, floor),
-            event_tags:event_tag_relations(
-              tags:event_tags(id, name)
-            )
-          )
-        `)
-        .eq("profile_id", profileId);
-        
-      if (error) throw error;
-      
-      // Extract the events from the nested structure and ensure proper types
-      const typedEvents: EventWithProfile[] = [];
-      
-      data.forEach(item => {
-        if (item.events) {
-          const event = item.events;
-          const safeEventTags = Array.isArray(event.event_tags) 
-            ? event.event_tags 
-            : [];
-            
-          typedEvents.push({
-            ...event,
-            event_tags: safeEventTags
-          });
-        }
-      });
-      
-      return typedEvents;
-    },
-    enabled: !!profileId && !isPaidInvoiceLoading && (hasPaidInvoice || userIsAdmin)
-  });
-
   useEffect(() => {
     setIsSearchMode(selectedTags.length > 0 || !!selectedDate);
   }, [selectedTags, selectedDate]);
@@ -333,10 +274,23 @@ const Events = () => {
     });
   }, [events, selectedTags, selectedDate]);
 
-  // Use the consistent user RSVP events from query instead of filtering
-  const userRsvpEventIds = getRSVPedEventIds();
+  const { data: rsvps, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useQuery({
+    queryKey: ["event_rsvps"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_rsvps")
+        .select("event_id, profile_id, profiles(id, username, avatar_url)")
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
-  // Improved RSVP mapping to ensure consistent data
+  const getRSVPedEventIds = () => {
+    if (!rsvps || !profileId) return [];
+    return rsvps.filter(r => r.profile_id === profileId).map(r => r.event_id);
+  };
+  const userRSVPEventIds = getRSVPedEventIds();
+
   const rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]> = {};
   if (rsvps) {
     rsvps.forEach(r => {
@@ -351,31 +305,6 @@ const Events = () => {
       rsvpMap[r.event_id].push(profile);
     });
   }
-
-  // Set up real-time subscription for RSVP changes
-  useEffect(() => {
-    // Subscribe to RSVP changes for all events
-    const channel = supabase
-      .channel('event_rsvps_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',  // Listen for all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'event_rsvps'
-        },
-        () => {
-          // When any RSVP change happens, refresh the RSVPs
-          refetchRSVPs();
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscription on unmount
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refetchRSVPs]);
 
   const handleCreateEventSuccess = () => {
     refetch();
@@ -520,8 +449,7 @@ const Events = () => {
     return isBefore(endDate, currentDate);
   });
   
-  // Modified: Removed duplicate rsvpedEvents declaration
-  // Now using the data from userRsvpEvents query
+  const rsvpedEvents = filteredEvents.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
   
   // Update hostingEvents to include both created events and co-hosted events
   const hostingEvents = React.useMemo(() => {
@@ -558,7 +486,7 @@ const Events = () => {
 
   const todayTagIds = getUniqueTagIdsForEvents(todayEvents);
   const upcomingTagIds = getUniqueTagIdsForEvents(upcomingEvents);
-  const goingTagIds = getUniqueTagIdsForEvents(userRsvpEvents || []);
+  const goingTagIds = getUniqueTagIdsForEvents(rsvpedEvents);
   const hostingTagIds = getUniqueTagIdsForEvents(hostingEvents);
   const pastTagIds = getUniqueTagIdsForEvents(pastEvents);
 
@@ -644,7 +572,7 @@ const Events = () => {
     switch (activeTab) {
       case 'today': return todayEvents;
       case 'upcoming': return upcomingEvents;
-      case 'going': return userRsvpEvents || []; // Use userRsvpEvents directly
+      case 'going': return rsvpedEvents;
       case 'hosting': return hostingEvents;
       case 'past': return pastEvents;
       default: return todayEvents;
@@ -832,9 +760,9 @@ const Events = () => {
                   formatEventTime,
                   formatDateRange,
                   rsvpMap,
-                  userRsvpEventIds,
+                  userRSVPEventIds,
                   profileId,
-                  refetchRSVPs, // Changed: Use refetchRSVPs instead of handleRsvpChange
+                  refetchRSVPs,
                   isMobile,
                   handleShare,
                   isAdminUser
@@ -863,7 +791,7 @@ const Events = () => {
                     formatEventTime,
                     formatDateRange,
                     rsvpMap,
-                    userRsvpEventIds,
+                    userRSVPEventIds,
                     profileId,
                     refetchRSVPs,
                     isMobile,
@@ -884,7 +812,7 @@ const Events = () => {
                     formatEventTime,
                     formatDateRange,
                     rsvpMap,
-                    userRsvpEventIds,
+                    userRSVPEventIds,
                     profileId,
                     refetchRSVPs,
                     isMobile,
@@ -894,8 +822,8 @@ const Events = () => {
                 </TabsContent>
                 <TabsContent value="going" className="space-y-4 mt-4">
                   {renderEventsList(
-                    userRsvpEvents || [], // Use userRsvpEvents directly
-                    userRsvpsLoading, // Use loading state from the userRsvpEvents query
+                    rsvpedEvents,
+                    isLoading,
                     profileLoading,
                     canCreateEvents,
                     canEditEvent,
@@ -905,7 +833,7 @@ const Events = () => {
                     formatEventTime,
                     formatDateRange,
                     rsvpMap,
-                    userRsvpEventIds,
+                    userRSVPEventIds,
                     profileId,
                     refetchRSVPs,
                     isMobile,
@@ -926,7 +854,7 @@ const Events = () => {
                     formatEventTime,
                     formatDateRange,
                     rsvpMap,
-                    userRsvpEventIds,
+                    userRSVPEventIds,
                     profileId,
                     refetchRSVPs,
                     isMobile,
@@ -947,7 +875,7 @@ const Events = () => {
                     formatEventTime,
                     formatDateRange,
                     rsvpMap,
-                    userRsvpEventIds,
+                    userRSVPEventIds,
                     profileId,
                     refetchRSVPs,
                     isMobile,
@@ -1024,7 +952,7 @@ const renderEventsList = (
   rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
   userRSVPEventIds: string[],
   profileId: string | undefined,
-  refetchRSVPs: () => void, // Changed: Use refetchRSVPs instead of handleRsvpChange
+  refetchRSVPs: () => void,
   isMobile: boolean,
   handleShare: (event: Event) => void,
   isAdminUser: boolean
@@ -1161,7 +1089,7 @@ const renderEventsList = (
                               eventId={event.id}
                               profileId={profileId}
                               initialRSVP={isRSVPed}
-                              onChange={() => refetchRSVPs()} // Use refetchRSVPs instead of handleRsvpChange
+                              onChange={() => refetchRSVPs()}
                             />
                           )}
                           <CalendarOptionsPopover event={event} isMobile={isMobile} />

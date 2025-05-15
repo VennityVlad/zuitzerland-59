@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getRsvpProfilesQuery } from "@/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
 
 interface EventRSVPButtonProps {
   eventId: string;
@@ -23,7 +22,6 @@ export function EventRSVPButton({
   const [isRSVPed, setIsRSVPed] = useState(initialRSVP);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Effect to update local state when initialRSVP prop changes
   useEffect(() => {
@@ -63,12 +61,6 @@ export function EventRSVPButton({
         
         setIsRSVPed(true);
         onChange(true);
-        
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({ queryKey: ["event_rsvps"] });
-        queryClient.invalidateQueries({ queryKey: ["event_rsvps", eventId] });
-        queryClient.invalidateQueries({ queryKey: ["user_rsvp_events", profileId] });
-        
         toast({ title: "RSVP added", description: "You are now going to this event!" });
       } else {
         // Remove RSVP
@@ -81,12 +73,6 @@ export function EventRSVPButton({
         
         setIsRSVPed(false);
         onChange(false);
-        
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({ queryKey: ["event_rsvps"] });
-        queryClient.invalidateQueries({ queryKey: ["event_rsvps", eventId] });
-        queryClient.invalidateQueries({ queryKey: ["user_rsvp_events", profileId] });
-        
         toast({ title: "RSVP removed", description: "You are no longer going to this event." });
       }
     } catch (error: any) {
