@@ -7,8 +7,6 @@ import { EventRSVPAvatars } from "./EventRSVPAvatars";
 import { AddCoHostPopover } from "./AddCoHostPopover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface EventDetailsCardProps {
   startDate: Date;
@@ -35,8 +33,8 @@ export const EventDetailsCard = ({
   isAllDay,
   timezone,
   location,
-  totalRsvps: initialTotalRsvps,
-  attendees: initialAttendees,
+  totalRsvps,
+  attendees,
   eventId,
   profileId,
   canEdit = false,
@@ -47,84 +45,6 @@ export const EventDetailsCard = ({
   commentCount = 0,
   onCommentClick,
 }: EventDetailsCardProps) => {
-  const [attendees, setAttendees] = useState(initialAttendees);
-  const [totalRsvps, setTotalRsvps] = useState(initialTotalRsvps);
-  const [isUserRsvped, setIsUserRsvped] = useState(false);
-
-  // Check if the current user is already RSVPed
-  useEffect(() => {
-    if (profileId && eventId) {
-      const isRsvped = initialAttendees.some(attendee => attendee.id === profileId);
-      setIsUserRsvped(isRsvped);
-    }
-  }, [profileId, eventId, initialAttendees]);
-
-  // Update local state when props change
-  useEffect(() => {
-    setAttendees(initialAttendees);
-    setTotalRsvps(initialTotalRsvps);
-  }, [initialAttendees, initialTotalRsvps]);
-
-  // Set up real-time subscription for RSVP changes
-  useEffect(() => {
-    if (!eventId) return;
-    
-    // Subscribe to RSVP changes for this event
-    const channel = supabase
-      .channel(`event_rsvps_${eventId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',  // Listen for all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'event_rsvps',
-          filter: `event_id=eq.${eventId}`
-        },
-        () => {
-          // When any RSVP change happens, refresh the attendees data
-          refreshAttendees();
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscription on unmount
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [eventId]);
-
-  // Function to refresh attendees data
-  const refreshAttendees = async () => {
-    if (!eventId) return;
-    
-    try {
-      const { data } = await supabase
-        .from("event_rsvps")
-        .select("profiles:profiles(id, username, avatar_url, privacy_settings)")
-        .eq("event_id", eventId);
-      
-      if (data) {
-        const newAttendees = data.map(rsvp => rsvp.profiles);
-        setAttendees(newAttendees);
-        setTotalRsvps(newAttendees.length);
-        
-        // Update the user's RSVP status
-        if (profileId) {
-          const isRsvped = newAttendees.some(attendee => attendee.id === profileId);
-          setIsUserRsvped(isRsvped);
-        }
-      }
-    } catch (error) {
-      console.error("Error refreshing attendees:", error);
-    }
-  };
-
-  // Handle RSVP status change
-  const handleRsvpChange = async (newStatus: boolean) => {
-    setIsUserRsvped(newStatus);
-    await refreshAttendees();
-  };
-
   // Create a formatted hosts string
   const formatHosts = () => {
     if (!hostUsername) return "";
