@@ -281,6 +281,7 @@ const Events = () => {
       const { data, error } = await supabase
         .from("event_rsvps")
         .select("event_id, profile_id, profiles(id, username, avatar_url)")
+        .limit(3000) // Increased limit from default 1000 to 3000
       
       if (error) {
         console.error("❌ Error fetching RSVPs:", error);
