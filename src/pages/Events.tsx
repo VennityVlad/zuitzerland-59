@@ -279,7 +279,7 @@ const Events = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("event_rsvps")
-        .select("event_id, profile_id, profiles(id, username, avatar_url, privacy_settings)");
+        .select("event_id, profile_id, profiles(id, username, avatar_url)")
       if (error) throw error;
       return data || [];
     }
