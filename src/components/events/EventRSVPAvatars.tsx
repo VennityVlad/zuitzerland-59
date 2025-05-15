@@ -35,16 +35,13 @@ export function EventRSVPAvatars({ profiles, maxVisible = 5 }: EventRSVPAvatarsP
       <PopoverTrigger asChild>
         <div className="flex items-center -space-x-2 mt-2 cursor-pointer group">
           {profilesToShow.map((profile, idx) => {
-            // Check if the profile has private RSVP visibility settings
-            const isPrivate = profile.privacy_settings?.event_rsvp_visibility === 'private';
-
             return (
               <Avatar
                 key={profile.id}
                 className={`border-2 border-white shadow-sm h-8 w-8 transition-transform group-hover:scale-105 ${idx === 0 ? "" : ""}`}
                 style={{ zIndex: 10 - idx }}
               >
-                {!isPrivate && profile.avatar_url ? (
+                {profile.avatar_url ? (
                   <AvatarImage src={profile.avatar_url} alt={profile.username || "User"} />
                 ) : (
                   <AvatarFallback className="bg-gray-200">
@@ -65,11 +62,10 @@ export function EventRSVPAvatars({ profiles, maxVisible = 5 }: EventRSVPAvatarsP
         <h4 className="text-sm font-medium mb-2">Attendees ({profiles.length})</h4>
         <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2">
           {profiles.map((profile) => {
-            const isPrivate = profile.privacy_settings?.event_rsvp_visibility === 'private';
             return (
               <div key={profile.id} className="flex items-center gap-2 py-1">
                 <Avatar className="h-8 w-8">
-                  {!isPrivate && profile.avatar_url ? (
+                  {profile.avatar_url ? (
                     <AvatarImage src={profile.avatar_url} alt={profile.username || "User"} />
                   ) : (
                     <AvatarFallback className="bg-gray-200">
@@ -78,7 +74,7 @@ export function EventRSVPAvatars({ profiles, maxVisible = 5 }: EventRSVPAvatarsP
                   )}
                 </Avatar>
                 <span className="text-sm truncate">
-                  {isPrivate ? "Anonymous User" : profile.username || "Anonymous User"}
+                  {profile.username || "Anonymous User"}
                 </span>
               </div>
             );
