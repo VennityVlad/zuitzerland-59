@@ -277,22 +277,40 @@ const Events = () => {
   const { data: rsvps, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useQuery({
     queryKey: ["event_rsvps"],
     queryFn: async () => {
+      console.log("🔍 Fetching event RSVPs...");
       const { data, error } = await supabase
         .from("event_rsvps")
         .select("event_id, profile_id, profiles(id, username, avatar_url)")
-      if (error) throw error;
+      
+      if (error) {
+        console.error("❌ Error fetching RSVPs:", error);
+        throw error;
+      }
+      
+      console.log("✅ RSVP data fetched successfully:", data);
+      console.log("🧑‍💻 Current profile ID:", profileId);
       return data || [];
     }
   });
 
   const getRSVPedEventIds = () => {
     if (!rsvps || !profileId) return [];
-    return rsvps.filter(r => r.profile_id === profileId).map(r => r.event_id);
+    
+    const userRSVPs = rsvps.filter(r => r.profile_id === profileId);
+    console.log("👤 User's RSVPs:", userRSVPs);
+    
+    const eventIds = userRSVPs.map(r => r.event_id);
+    console.log("🗓️ User's RSVP'd event IDs:", eventIds);
+    
+    return eventIds;
   };
+  
   const userRSVPEventIds = getRSVPedEventIds();
+  console.log("📊 Final list of user's RSVP'd event IDs:", userRSVPEventIds);
 
   const rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]> = {};
   if (rsvps) {
+    console.log("🔄 Building RSVP map from", rsvps.length, "total RSVPs");
     rsvps.forEach(r => {
       if (!rsvpMap[r.event_id]) rsvpMap[r.event_id] = [];
       const profile = r.profiles
@@ -304,6 +322,7 @@ const Events = () => {
         : { id: "-", username: "-", avatar_url: "" };
       rsvpMap[r.event_id].push(profile);
     });
+    console.log("🗺️ RSVP map built:", Object.keys(rsvpMap).length, "events have RSVPs");
   }
 
   const handleCreateEventSuccess = () => {
