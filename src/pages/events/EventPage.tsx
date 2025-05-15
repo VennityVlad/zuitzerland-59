@@ -48,7 +48,7 @@ const EventPage = () => {
   console.log("🎪 EventPage - Invoice status:", { hasPaidInvoice, isPaidInvoiceLoading, isAdmin });
   console.log("🎪 EventPage - Current path:", locationData.pathname);
 
-  // Define the fetchRsvps function to fix the error
+  // Use the standardized query helper for RSVP fetching
   const fetchRsvps = async () => {
     if (!eventId) return;
     
@@ -212,7 +212,7 @@ const EventPage = () => {
     fetchCommentCount();
   }, [eventId]);
 
-  // Set up real-time subscription for RSVP changes
+  // Set up real-time subscription for RSVP changes with improved handler
   useEffect(() => {
     if (!eventId) return;
     
@@ -227,7 +227,7 @@ const EventPage = () => {
           table: 'event_rsvps',
           filter: `event_id=eq.${eventId}`
         },
-        () => {
+        (payload) => {
           // When any RSVP change happens, refresh the RSVPs
           fetchRsvps();
         }
@@ -238,7 +238,7 @@ const EventPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [eventId]);
+  }, [eventId, userProfile]);
 
   // Listen for real-time comment updates to update the count
   useEffect(() => {
@@ -320,7 +320,6 @@ const EventPage = () => {
 
   const handleRsvpChange = (newStatus: boolean) => {
     setIsRsvped(newStatus);
-    // Use the consistent query helper to fetch updated RSVPs
     fetchRsvps();
   };
 
