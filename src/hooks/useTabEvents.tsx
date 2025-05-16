@@ -69,8 +69,10 @@ export function useInfiniteTabEvents(
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [events, setEvents] = useState<EventWithProfile[]>([]);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const pageSize = EVENTS_PER_PAGE;
   const { staleTime = 60000, skipReset = false } = options; // Default to 1 minute stale time
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Build the fetch function based on tab type and filters
   const fetchEvents = useCallback(async () => {
@@ -194,6 +196,25 @@ export function useInfiniteTabEvents(
     staleTime: staleTime,
   });
 
+  // Set up periodic refresh timer - refresh every minute
+  useEffect(() => {
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
+    }
+
+    refreshTimerRef.current = setInterval(() => {
+      console.log(`Auto-refreshing events for tab ${tabType}`);
+      setLastRefreshTime(new Date());
+      refetch();
+    }, 60000); // Refresh every 1 minute
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+      }
+    };
+  }, [refetch, tabType]);
+
   useEffect(() => {
     if (data?.data) {
       if (page === 0) {
@@ -231,7 +252,8 @@ export function useInfiniteTabEvents(
     loadMore,
     resetEvents,
     refetch,
-    error
+    error,
+    lastRefreshTime
   };
 }
 

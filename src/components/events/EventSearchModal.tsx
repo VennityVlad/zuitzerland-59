@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from "react";
-import { Search, X } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Search, X, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   Dialog,
@@ -33,11 +33,20 @@ interface EventSearchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   events: Event[];
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
-export const EventSearchModal = ({ open, onOpenChange, events }: EventSearchModalProps) => {
+export const EventSearchModal = ({ 
+  open, 
+  onOpenChange, 
+  events,
+  onRefresh,
+  isRefreshing = false
+}: EventSearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Event[]>([]);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
 
   // Auto-focus the search input when the modal opens
   useEffect(() => {
@@ -68,6 +77,30 @@ export const EventSearchModal = ({ open, onOpenChange, events }: EventSearchModa
     setSearchResults(results);
   }, [searchQuery, events]);
 
+  // Set up periodic refresh timer - refresh every minute
+  useEffect(() => {
+    let refreshTimer: NodeJS.Timeout | null = null;
+    
+    if (open && onRefresh) {
+      refreshTimer = setInterval(() => {
+        console.log("Auto-refreshing search events");
+        setLastRefreshTime(new Date());
+        onRefresh();
+      }, 60000); // Every 1 minute
+    }
+    
+    return () => {
+      if (refreshTimer) clearInterval(refreshTimer);
+    };
+  }, [open, onRefresh]);
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      setLastRefreshTime(new Date());
+      onRefresh();
+    }
+  };
+
   const formatEventDate = (startDate: string, endDate: string, isAllDay: boolean) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -85,7 +118,18 @@ export const EventSearchModal = ({ open, onOpenChange, events }: EventSearchModa
         <DialogHeader className="pb-4">
           <div className="flex items-center justify-between">
             <DialogTitle>Search Events</DialogTitle>
-            {/* Removed the duplicate close button here */}
+            {onRefresh && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="h-8 w-8 p-0"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="sr-only">Refresh events</span>
+              </Button>
+            )}
           </div>
         </DialogHeader>
         

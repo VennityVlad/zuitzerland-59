@@ -1,6 +1,6 @@
 
-import React from "react";
-import { Calendar } from "lucide-react";
+import React, { useState } from "react";
+import { Calendar, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,12 +22,16 @@ interface MobileCalendarDialogProps {
   events: Event[];
   onSelectDate: (date: Date | undefined, shouldSwitchTab?: boolean) => void;
   selectedDate?: Date;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const MobileCalendarDialog = ({ 
   events = [], 
   onSelectDate, 
-  selectedDate 
+  selectedDate,
+  onRefresh,
+  isRefreshing = false
 }: MobileCalendarDialogProps) => {
   const [open, setOpen] = React.useState(false);
   
@@ -48,15 +52,29 @@ export const MobileCalendarDialog = ({
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Event Calendar</DialogTitle>
+          {onRefresh && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="h-8 w-8 p-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="sr-only">Refresh</span>
+            </Button>
+          )}
         </DialogHeader>
         <div className="mt-2">
           <EventCalendar 
             onSelectDate={handleDateSelect}
             events={events}
             className="min-h-[320px] p-0 border-0 shadow-none"
-            hideTitle={true} // Add this prop to hide the title in the EventCalendar
+            hideTitle={true}
+            onRefresh={onRefresh}
+            isRefreshing={isRefreshing}
           />
           
           {selectedDate && (

@@ -1,10 +1,10 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format, addMonths, subMonths, setMonth, setYear } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -24,20 +24,43 @@ interface EventCalendarProps {
   className?: string;
   events?: Event[];
   hideTitle?: boolean; // Add this prop to hide the title
+  onRefresh?: () => void; // Add refresh handler prop
+  isRefreshing?: boolean; // Add refreshing state prop
 }
 
 export const EventCalendar = ({ 
   onSelectDate, 
   className, 
   events = [],
-  hideTitle = false // Default to showing the title
+  hideTitle = false, // Default to showing the title
+  onRefresh,
+  isRefreshing = false
 }: EventCalendarProps) => {
   // Initialize with May 2025
   const initialDate = new Date(2025, 4, 1); // Month is 0-based, so 4 is May
   const [currentMonth, setCurrentMonth] = useState<Date>(initialDate);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [refreshTimerOn, setRefreshTimerOn] = useState(true);
 
   const weekDays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
+  // Auto-refresh events every minute
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    
+    if (refreshTimerOn && onRefresh) {
+      timer = setInterval(() => {
+        console.log("Auto-refreshing calendar events");
+        setLastRefreshTime(new Date());
+        onRefresh();
+      }, 60000); // Every 1 minute
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [onRefresh, refreshTimerOn]);
 
   const getEventsForDate = (date: Date) => {
     return events.filter(event => {
@@ -108,12 +131,35 @@ export const EventCalendar = ({
     setCurrentMonth(prev => addMonths(prev, 1));
   };
 
+  const handleRefresh = () => {
+    if (onRefresh) {
+      setLastRefreshTime(new Date());
+      onRefresh();
+    }
+  };
+
   const calendarDays = generateCalendarDays();
 
   return (
     <Card className={cn("bg-white p-4", className)}>
       {/* Only render the title if hideTitle is false */}
-      {!hideTitle && <h4 className="text-lg font-semibold text-gray-900 mb-4">Event Calendar</h4>}
+      {!hideTitle && (
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-lg font-semibold text-gray-900">Event Calendar</h4>
+          {onRefresh && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="h-8 w-8 p-0"
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              <span className="sr-only">Refresh calendar</span>
+            </Button>
+          )}
+        </div>
+      )}
       
       <div className="flex items-center justify-between mb-4">
         <Button 
