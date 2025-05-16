@@ -444,74 +444,68 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [isPreview, setIsPreview] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchPrivyAppId = async () => {
       try {
         // Determine if we're in preview mode based on the hostname/domain
         const hostname = window.location.hostname;
-        const isPreview = hostname.includes('preview--') || 
+        const isPreviewEnvironment = hostname.includes('preview--') || 
                          hostname.includes('.preview.') || 
                          hostname.startsWith('preview-') ||
                          hostname === 'localhost' ||
                          hostname === '127.0.0.1';
         
         console.log(`Current hostname: ${hostname}`);
-        console.log(`Running in ${isPreview ? 'preview' : 'production'} mode`);
-
-        // For preview environments, use hardcoded app ID
-        if (isPreview) {
-          const hardcodedPreviewAppId = "client-WY5gJF7sG7VB51B5qkv1Vv4isqH4CyePZH5ayP1Dz9dzk";
-          console.log(`Using hardcoded Privy App ID for preview: "${hardcodedPreviewAppId}"`, {
-            length: hardcodedPreviewAppId.length,
-            type: typeof hardcodedPreviewAppId
+        console.log(`Running in ${isPreviewEnvironment ? 'preview' : 'production'} mode`);
+        
+        // Set the isPreview state for use in the PrivyProvider
+        setIsPreview(isPreviewEnvironment);
+        
+        // For production environments, fetch the App ID from Supabase
+        if (!isPreviewEnvironment) {
+          const { data, error } = await supabase.functions.invoke('get-secret', {
+            body: { 
+              secretName: 'PRIVY_APP_ID',
+              isPreview: false
+            }
           });
-          setPrivyAppId(hardcodedPreviewAppId);
-          setIsLoading(false);
-          return;
-        }
 
-        // For production, continue fetching from Supabase as before
-        const { data, error } = await supabase.functions.invoke('get-secret', {
-          body: { 
-            secretName: 'PRIVY_APP_ID',
-            isPreview: false // Always false here as we handle preview with hardcoded value
+          if (error) {
+            console.error('Error fetching Privy App ID:', error);
+            setError('Failed to fetch authentication configuration');
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Failed to fetch authentication configuration"
+            });
+            return;
           }
-        });
 
-        if (error) {
-          console.error('Error fetching Privy App ID:', error);
-          setError('Failed to fetch authentication configuration');
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to fetch authentication configuration"
+          if (!data?.secret) {
+            console.error('No Privy App ID returned:', data);
+            setError('Authentication configuration is missing');
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Authentication configuration is missing"
+            });
+            return;
+          }
+
+          // Log the Privy App ID for debugging
+          console.log(`Using Privy App ID: "${data.secret}"`, {
+            length: data.secret.length,
+            isEmpty: data.secret === '',
+            isUndefined: data.secret === undefined,
+            isNull: data.secret === null,
+            type: typeof data.secret
           });
-          return;
+
+          console.log(`Using Privy App ID for production`);
+          setPrivyAppId(data.secret);
         }
-
-        if (!data?.secret) {
-          console.error('No Privy App ID returned:', data);
-          setError('Authentication configuration is missing');
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Authentication configuration is missing"
-          });
-          return;
-        }
-
-        // Log the Privy App ID for debugging
-        console.log(`Using Privy App ID: "${data.secret}"`, {
-          length: data.secret.length,
-          isEmpty: data.secret === '',
-          isUndefined: data.secret === undefined,
-          isNull: data.secret === null,
-          type: typeof data.secret
-        });
-
-        console.log(`Using Privy App ID for production`);
-        setPrivyAppId(data.secret);
       } catch (error) {
         console.error('Error in fetchPrivyAppId:', error);
         setError('Failed to initialize authentication');
@@ -536,7 +530,7 @@ const App = () => {
     );
   }
 
-  if (error || !privyAppId) {
+  if (error && !isPreview) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -552,6 +546,17 @@ const App = () => {
     );
   }
 
+  // Define the hardcoded preview app ID
+  const hardcodedPreviewAppId = "client-WY5gJF7sG7VB51B5qkv1Vv4isqH4CyePZH5ayP1Dz9dzk";
+  
+  // Log which App ID will be used
+  if (isPreview) {
+    console.log(`Using hardcoded Privy App ID for preview: "${hardcodedPreviewAppId}"`, {
+      length: hardcodedPreviewAppId.length,
+      type: typeof hardcodedPreviewAppId
+    });
+  }
+
   return (
     <TooltipProvider>
       <HelmetProvider>
@@ -559,7 +564,9 @@ const App = () => {
         <Toaster />
         <Sonner />
         <PrivyProvider
-          appId={privyAppId}
+          appId={isPreview 
+            ? hardcodedPreviewAppId 
+            : privyAppId}
           config={{
             loginMethods: ['email'],
             appearance: {
