@@ -678,9 +678,9 @@ const Events = () => {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <div className="flex-grow sm:flex-grow-0 overflow-x-auto">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto flex-grow">
+              <div className="flex-shrink-0">
                 <TagFilter 
                   selectedTags={selectedTags} 
                   onTagsChange={handleTagsChange}
@@ -692,7 +692,7 @@ const Events = () => {
                 size="sm"
                 onClick={toggleGoingFilter}
                 disabled={!profileId}
-                className={isGoing ? "bg-green-600 hover:bg-green-700" : ""}
+                className={`flex-shrink-0 ${isGoing ? "bg-green-600 hover:bg-green-700" : ""}`}
               >
                 Going
               </Button>
@@ -702,7 +702,7 @@ const Events = () => {
                 size="sm"
                 onClick={toggleHostingFilter}
                 disabled={!profileId}
-                className={isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}
+                className={`flex-shrink-0 ${isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}`}
               >
                 Hosting
               </Button>

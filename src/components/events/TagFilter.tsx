@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
@@ -88,7 +87,7 @@ export const TagFilter = ({ selectedTags, onTagsChange, availableTagIds }: TagFi
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium">Filter by tag</h4>
+                <h4 className="font-medium">Tags</h4>
                 {selectedCount > 0 && (
                   <Button
                     variant="ghost"
