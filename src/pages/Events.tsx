@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
-import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Share, Mic, MessageSquare } from "lucide-react";
+import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Share, Mic, MessageSquare, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -49,6 +49,7 @@ import {
   useUserRSVPs, 
   EVENTS_PER_PAGE 
 } from "@/hooks/useTabEvents";
+import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
 
 interface Event {
   id: string;
@@ -75,6 +76,12 @@ interface Event {
   }[] | null;
   speakers?: string | null;
   timezone: string;
+  recurring_pattern_id?: string | null;
+  is_recurring_instance?: boolean;
+  parent_event_id?: string | null;
+  is_exception?: boolean;
+  instance_date?: string | null;
+  meerkat_enabled?: boolean;
 }
 
 interface EventWithProfile extends Event {
@@ -83,6 +90,39 @@ interface EventWithProfile extends Event {
     id: string;
   } | null;
 }
+
+// Format event date for the sidebar
+const formatDateForSidebar = (date: Date): JSX.Element => {
+  return (
+    <div className="text-center">
+      <div className="text-sm font-medium text-gray-500">
+        {format(date, 'eee')}
+      </div>
+      <div className="text-2xl font-bold">
+        {format(date, 'd')}
+      </div>
+      <div className="text-sm font-medium">
+        {format(date, 'MMM')}
+      </div>
+    </div>
+  );
+};
+
+// Format event time with timezone display
+const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string): string => {
+  if (isAllDay) {
+    return "All day";
+  }
+  
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  if (isSameDay(start, end)) {
+    return `${format(start, 'h:mm a')} - ${format(end, 'h:mm a')} (${getReadableTimezoneName(timezone)})`;
+  } else {
+    return `${format(start, 'MMM d, h:mm a')} - ${format(end, 'MMM d, h:mm a')} (${getReadableTimezoneName(timezone)})`;
+  }
+};
 
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
