@@ -459,10 +459,23 @@ const App = () => {
         console.log(`Current hostname: ${hostname}`);
         console.log(`Running in ${isPreview ? 'preview' : 'production'} mode`);
 
+        // For preview environments, use hardcoded app ID
+        if (isPreview) {
+          const hardcodedPreviewAppId = "client-WY5gJF7sG7VB51B5qkv1Vv4isqH4CyePZH5ayP1Dz9dzk";
+          console.log(`Using hardcoded Privy App ID for preview: "${hardcodedPreviewAppId}"`, {
+            length: hardcodedPreviewAppId.length,
+            type: typeof hardcodedPreviewAppId
+          });
+          setPrivyAppId(hardcodedPreviewAppId);
+          setIsLoading(false);
+          return;
+        }
+
+        // For production, continue fetching from Supabase as before
         const { data, error } = await supabase.functions.invoke('get-secret', {
           body: { 
             secretName: 'PRIVY_APP_ID',
-            isPreview: isPreview
+            isPreview: false // Always false here as we handle preview with hardcoded value
           }
         });
 
@@ -497,7 +510,7 @@ const App = () => {
           type: typeof data.secret
         });
 
-        console.log(`Using Privy App ID for ${isPreview ? 'preview' : 'production'}`);
+        console.log(`Using Privy App ID for production`);
         setPrivyAppId(data.secret);
       } catch (error) {
         console.error('Error in fetchPrivyAppId:', error);
