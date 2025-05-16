@@ -168,7 +168,7 @@ const Events = () => {
       const { data, error } = await supabase
         .from("events")
         .select(`
-          id, title, start_date, end_date, color, is_all_day, location_id, location_text
+          id, title, start_date, end_date, color, is_all_day, location_id, location_text, timezone
         `)
         .order("start_date", { ascending: true });
 
