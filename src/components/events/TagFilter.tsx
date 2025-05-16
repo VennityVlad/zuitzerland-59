@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
@@ -60,7 +59,7 @@ export const TagFilter = ({ selectedTags, onTagsChange, availableTagIds }: TagFi
   const selectedCount = selectedTags.length;
 
   return (
-    <div className="flex flex-col space-y-2 w-full">
+    <div className="flex flex-col space-y-2">
       <div className="flex items-center space-x-2">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
