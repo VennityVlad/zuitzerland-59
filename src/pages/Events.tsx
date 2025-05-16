@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isWithinInterval, isToday, isSameDay, isBefore, isAfter, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search, Mic, MessageSquare, RefreshCw } from "lucide-react";
+import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search, Mic, MessageSquare, RefreshCw, CalendarCheck, CalendarMinus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -68,6 +68,8 @@ const Events = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isGoing, setIsGoing] = useState(false);
+  const [isHosting, setIsHosting] = useState(false);
   
   // Store tab data separately
   const [tabsData, setTabsData] = useState<Record<string, TabData>>({
@@ -197,7 +199,7 @@ const Events = () => {
     refetch: refetchTabEvents
   } = useInfiniteTabEvents(
     activeTabForQuery, 
-    { selectedTags, selectedDate }, 
+    { selectedTags, selectedDate, isGoing, isHosting }, 
     profileId,
     isAdminUser,
     { 
@@ -314,6 +316,72 @@ const Events = () => {
       });
       return newState;
     });
+  };
+
+  // Toggle the going filter
+  const toggleGoingFilter = () => {
+    if (isHosting) setIsHosting(false); // Turn off hosting filter if it's on
+    setIsGoing(!isGoing);
+    // Reset events to apply the new filter
+    setTabsData(prev => {
+      const newState = {...prev};
+      Object.keys(newState).forEach(key => {
+        newState[key] = {
+          ...newState[key],
+          events: [],
+          hasMore: true,
+          page: 0,
+          lastRefreshed: Date.now()
+        };
+      });
+      return newState;
+    });
+    resetEvents();
+  };
+
+  // Toggle the hosting filter
+  const toggleHostingFilter = () => {
+    if (isGoing) setIsGoing(false); // Turn off going filter if it's on
+    setIsHosting(!isHosting);
+    // Reset events to apply the new filter
+    setTabsData(prev => {
+      const newState = {...prev};
+      Object.keys(newState).forEach(key => {
+        newState[key] = {
+          ...newState[key],
+          events: [],
+          hasMore: true,
+          page: 0,
+          lastRefreshed: Date.now()
+        };
+      });
+      return newState;
+    });
+    resetEvents();
+  };
+
+  // Clear all filters function
+  const clearAllFilters = () => {
+    setIsGoing(false);
+    setIsHosting(false);
+    setSelectedTags([]);
+    setSelectedDate(undefined);
+    setIsSearchMode(false);
+    // Reset all events
+    setTabsData(prev => {
+      const newState = {...prev};
+      Object.keys(newState).forEach(key => {
+        newState[key] = {
+          ...newState[key],
+          events: [],
+          hasMore: true,
+          page: 0,
+          lastRefreshed: Date.now()
+        };
+      });
+      return newState;
+    });
+    resetEvents();
   };
 
   const handleDeleteEvent = async () => {
@@ -437,6 +505,8 @@ const Events = () => {
   const clearFilters = () => {
     setSelectedTags([]);
     setSelectedDate(undefined);
+    setIsGoing(false);
+    setIsHosting(false);
     setIsSearchMode(false);
     setActiveTab(activeTab || "today");
   };
@@ -648,12 +718,50 @@ const Events = () => {
               </div>
             </div>
             
+            {/* Filter buttons for Going and Hosting */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Button
+                variant={isGoing ? "default" : "outline"}
+                size="sm"
+                onClick={toggleGoingFilter}
+                disabled={!profileId}
+                className={isGoing ? "bg-green-600 hover:bg-green-700" : ""}
+              >
+                <CalendarCheck className="h-4 w-4 mr-2" />
+                Going
+              </Button>
+              
+              <Button
+                variant={isHosting ? "default" : "outline"}
+                size="sm"
+                onClick={toggleHostingFilter}
+                disabled={!profileId}
+                className={isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}
+              >
+                <CalendarMinus className="h-4 w-4 mr-2" />
+                Hosting
+              </Button>
+              
+              {(isGoing || isHosting || selectedTags.length > 0 || !!selectedDate) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="ml-auto"
+                >
+                  Clear all filters
+                </Button>
+              )}
+            </div>
+            
             {isSearchMode ? (
               <div className="space-y-4">
                 <SearchHeader 
                   selectedTags={selectedTags} 
                   selectedDate={selectedDate} 
                   clearFilters={clearFilters} 
+                  isGoing={isGoing}
+                  isHosting={isHosting}
                 />
                 
                 {renderEventsList(

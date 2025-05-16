@@ -8,6 +8,8 @@ export interface TabEventFilters {
   selectedDate?: Date;
   page: number;
   pageSize: number;
+  isGoing?: boolean;
+  isHosting?: boolean;
 }
 
 export const EVENTS_PER_PAGE = 5;
@@ -65,7 +67,7 @@ export function useInfiniteTabEvents(
     skipReset?: boolean;
   } = {}
 ) {
-  const { selectedTags, selectedDate } = filters;
+  const { selectedTags, selectedDate, isGoing, isHosting } = filters;
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [events, setEvents] = useState<EventWithProfile[]>([]);
@@ -110,6 +112,45 @@ export function useInfiniteTabEvents(
       } else {
         // No events have the selected tags, return empty array
         return { data: [], hasMore: false };
+      }
+    }
+
+    // Apply isGoing filter if selected
+    if (isGoing && profileId) {
+      const { data: rsvpData, error: rsvpError } = await supabase
+        .from("event_rsvps")
+        .select("event_id")
+        .eq("profile_id", profileId);
+
+      if (rsvpError) {
+        throw rsvpError;
+      }
+
+      const rsvpEventIds = rsvpData.map(rsvp => rsvp.event_id);
+      if (rsvpEventIds.length === 0) {
+        return { data: [], hasMore: false }; // User hasn't RSVPed to any events
+      }
+      
+      query = query.in("id", rsvpEventIds);
+    }
+
+    // Apply isHosting filter if selected
+    if (isHosting && profileId) {
+      const { data: coHostData, error: coHostError } = await supabase
+        .from("event_co_hosts")
+        .select("event_id")
+        .eq("profile_id", profileId);
+
+      if (coHostError) {
+        throw coHostError;
+      }
+
+      const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
+      
+      if (coHostEventIds.length > 0) {
+        query = query.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
+      } else {
+        query = query.eq("created_by", profileId);
       }
     }
 
@@ -216,13 +257,13 @@ export function useInfiniteTabEvents(
     const hasMoreData = typedEvents.length === pageSize;
     
     return { data: typedEvents as EventWithProfile[], hasMore: hasMoreData };
-  }, [tabType, selectedTags, selectedDate, page, profileId, pageSize, hasMore]);
+  }, [tabType, selectedTags, selectedDate, isGoing, isHosting, page, profileId, pageSize, hasMore]);
 
   // Set up the React Query
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["infiniteTabEvents", tabType, selectedTags, selectedDate, page, profileId],
+    queryKey: ["infiniteTabEvents", tabType, selectedTags, selectedDate, isGoing, isHosting, page, profileId],
     queryFn: fetchEvents,
-    enabled: !!tabType && (!["going", "hosting"].includes(tabType) || !!profileId) && hasMore,
+    enabled: !!tabType && ((!isGoing && !isHosting) || !!profileId) && hasMore,
     staleTime: staleTime,
   });
 
