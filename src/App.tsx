@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
@@ -477,6 +478,7 @@ const App = () => {
         }
 
         if (!data?.secret) {
+          console.error('No Privy App ID returned:', data);
           setError('Authentication configuration is missing');
           toast({
             variant: "destructive",
@@ -485,6 +487,15 @@ const App = () => {
           });
           return;
         }
+
+        // Log the Privy App ID for debugging
+        console.log(`Using Privy App ID: "${data.secret}"`, {
+          length: data.secret.length,
+          isEmpty: data.secret === '',
+          isUndefined: data.secret === undefined,
+          isNull: data.secret === null,
+          type: typeof data.secret
+        });
 
         console.log(`Using Privy App ID for ${isPreview ? 'preview' : 'production'}`);
         setPrivyAppId(data.secret);
