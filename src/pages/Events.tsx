@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
-import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Share, RefreshCw } from "lucide-react";
+import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Share, RefreshCw, Search, Mic, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -309,7 +309,7 @@ const Events = () => {
         hasMore: hasMoreData 
       };
     },
-    keepPreviousData: page > 0,
+    placeholderData: (prevData) => prevData,
     staleTime: 60000, // 1 minute
   });
 
@@ -906,6 +906,17 @@ const formatDateRange = (startDate: string, endDate: string, isAllDay: boolean) 
   }
   
   return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+};
+
+const formatTimeRange = (start: Date, end: Date, isAllDay: boolean, timezone: string) => {
+  if (isAllDay) return "All day";
+  
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    console.warn('Invalid date detected:', { start, end });
+    return 'Invalid date';
+  }
+
+  return `${format(start, "h:mm a")} - ${format(end, "h:mm a")}`;
 };
 
 const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => {
