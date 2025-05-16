@@ -677,39 +677,47 @@ const Events = () => {
       <Separator className="mt-3" />
 
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <TagFilter 
-            selectedTags={selectedTags} 
-            onTagsChange={handleTagsChange}
-          />
-          
-          <Button
-            variant={isGoing ? "default" : "outline"}
-            size="sm"
-            onClick={toggleGoingFilter}
-            disabled={!profileId}
-            className={isGoing ? "bg-green-600 hover:bg-green-700" : ""}
-          >
-            Going
-          </Button>
-          
-          <Button
-            variant={isHosting ? "default" : "outline"}
-            size="sm"
-            onClick={toggleHostingFilter}
-            disabled={!profileId}
-            className={isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}
-          >
-            Hosting
-          </Button>
-          
-          {isMobile && (
-            <MobileCalendarDialog 
-              events={allEvents || []} 
-              onSelectDate={handleDateSelection}
-              selectedDate={selectedDate}
-            />
-          )}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="flex-grow sm:flex-grow-0 overflow-x-auto">
+                <TagFilter 
+                  selectedTags={selectedTags} 
+                  onTagsChange={handleTagsChange}
+                />
+              </div>
+              
+              <Button
+                variant={isGoing ? "default" : "outline"}
+                size="sm"
+                onClick={toggleGoingFilter}
+                disabled={!profileId}
+                className={isGoing ? "bg-green-600 hover:bg-green-700" : ""}
+              >
+                Going
+              </Button>
+              
+              <Button
+                variant={isHosting ? "default" : "outline"}
+                size="sm"
+                onClick={toggleHostingFilter}
+                disabled={!profileId}
+                className={isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}
+              >
+                Hosting
+              </Button>
+            </div>
+            
+            {isMobile && (
+              <div className="flex-shrink-0">
+                <MobileCalendarDialog 
+                  events={allEvents || []} 
+                  onSelectDate={handleDateSelection}
+                  selectedDate={selectedDate}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -754,7 +762,26 @@ const Events = () => {
                   isHosting={isHosting}
                 />
                 
-                {/* ... keep existing code (renderEventsList function call) */}
+                {renderEventsList(
+                  currentEvents,
+                  tabEventsLoading && currentEvents.length === 0,
+                  isFetchingMore,
+                  hasMore,
+                  currentPageRSVPMap || {},
+                  userRSVPEventIds,
+                  profileId,
+                  handleRSVPChange,
+                  canCreateEvents,
+                  canEditEvent,
+                  openDeleteDialog,
+                  handleEditEvent,
+                  handleShare,
+                  formatDateForSidebar,
+                  formatEventTime,
+                  formatDateRange,
+                  isMobile,
+                  isAdminUser
+                )}
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -764,7 +791,74 @@ const Events = () => {
                   <TabsTrigger value="past">Past</TabsTrigger>
                 </TabsList>
 
-                {/* ... keep existing code (TabsContent sections) */}
+                <TabsContent value="upcoming" className="space-y-4 mt-4">
+                  {renderEventsList(
+                    currentEvents,
+                    tabEventsLoading && currentEvents.length === 0,
+                    isFetchingMore,
+                    hasMore,
+                    currentPageRSVPMap || {},
+                    userRSVPEventIds,
+                    profileId,
+                    handleRSVPChange,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    handleShare,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    isMobile,
+                    isAdminUser
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="new" className="space-y-4 mt-4">
+                  {renderEventsList(
+                    currentEvents,
+                    tabEventsLoading && currentEvents.length === 0,
+                    isFetchingMore,
+                    hasMore,
+                    currentPageRSVPMap || {},
+                    userRSVPEventIds,
+                    profileId,
+                    handleRSVPChange,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    handleShare,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    isMobile,
+                    isAdminUser
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="past" className="space-y-4 mt-4">
+                  {renderEventsList(
+                    currentEvents,
+                    tabEventsLoading && currentEvents.length === 0,
+                    isFetchingMore,
+                    hasMore,
+                    currentPageRSVPMap || {},
+                    userRSVPEventIds,
+                    profileId,
+                    handleRSVPChange,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    handleShare,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    isMobile,
+                    isAdminUser
+                  )}
+                </TabsContent>
               </Tabs>
             )}
           </div>
