@@ -225,7 +225,6 @@ export function useInfiniteTabEvents(
     queryFn: fetchEvents,
     enabled: !!tabType && (!["going", "hosting"].includes(tabType) || !!profileId) && hasMore,
     staleTime: 10000,
-    keepPreviousData: true
   });
 
   useEffect(() => {
@@ -301,8 +300,7 @@ export function useTabEvents(
       if (eventIds.length > 0) {
         query = query.in("id", eventIds);
       } else {
-        // No events have the selected tags, return empty array
-        return [];
+        return []; // No events have the selected tags
       }
     }
 
