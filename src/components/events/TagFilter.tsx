@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
@@ -66,11 +67,11 @@ export const TagFilter = ({ selectedTags, onTagsChange, availableTagIds }: TagFi
             <Button
               variant="outline"
               size="sm"
-              className="h-9 border-dashed flex-shrink-0"
+              className="h-9 flex-shrink-0"
               disabled={!visibleTags || visibleTags.length === 0}
             >
               <ChevronDownIcon className="mr-2 h-4 w-4" />
-              Filter by tag
+              Tags
               {selectedCount > 0 && (
                 <Badge
                   variant="secondary"
