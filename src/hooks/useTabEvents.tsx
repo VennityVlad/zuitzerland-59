@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,43 +10,6 @@ export interface TabEventFilters {
 }
 
 export const EVENTS_PER_PAGE = 5;
-
-// Make sure we're using a consistent event interface
-export interface EventData {
-  id: string;
-  title: string;
-  description: string | null;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  created_at: string;
-  timezone: string;
-  recurring_pattern_id: string | null;
-  is_recurring_instance: boolean;
-  parent_event_id: string | null;
-  is_exception: boolean;
-  instance_date: string | null;
-  meerkat_enabled?: boolean;
-  locations?: {
-    name: string;
-    building: string | null;
-    floor: string | null;
-  } | null;
-  event_tags?: {
-    tags: {
-      id: string;
-      name: string;
-    }
-  }[] | null;
-  profiles?: {
-    username: string | null;
-    id: string;
-  } | null;
-}
 
 export function useTabEvents(
   tabType: string,
@@ -124,12 +86,51 @@ export function useTabEvents(
         query = query.gt("start_date", now.toISOString());
         break;
 
-      case "new":
-        // Show events created in the last 24 hours
-        const yesterday = new Date(now);
-        yesterday.setHours(now.getHours() - 24);
-        
-        query = query.gte("created_at", yesterday.toISOString());
+      case "going":
+        // Need to fetch RSVPs first to filter by events the user is going to
+        if (profileId) {
+          const { data: rsvpData, error: rsvpError } = await supabase
+            .from("event_rsvps")
+            .select("event_id")
+            .eq("profile_id", profileId);
+
+          if (rsvpError) {
+            throw rsvpError;
+          }
+
+          const rsvpEventIds = rsvpData.map(rsvp => rsvp.event_id);
+          if (rsvpEventIds.length === 0) {
+            return []; // User hasn't RSVPed to any events
+          }
+          
+          query = query.in("id", rsvpEventIds);
+        } else {
+          return []; // No profile ID, can't determine "going" events
+        }
+        break;
+
+      case "hosting":
+        // Events created by the user or where they're a co-host
+        if (profileId) {
+          const { data: coHostData, error: coHostError } = await supabase
+            .from("event_co_hosts")
+            .select("event_id")
+            .eq("profile_id", profileId);
+
+          if (coHostError) {
+            throw coHostError;
+          }
+
+          const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
+          
+          if (coHostEventIds.length > 0) {
+            query = query.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
+          } else {
+            query = query.eq("created_by", profileId);
+          }
+        } else {
+          return []; // No profile ID, can't determine "hosting" events
+        }
         break;
 
       case "past":
@@ -159,27 +160,21 @@ export function useTabEvents(
       const safeEventTags = Array.isArray(event.event_tags) ? event.event_tags : [];
       return {
         ...event,
-        event_tags: safeEventTags,
-        recurring_pattern_id: event.recurring_pattern_id || null,
-        is_recurring_instance: event.is_recurring_instance || false,
-        parent_event_id: event.parent_event_id || null,
-        is_exception: event.is_exception || false,
-        instance_date: event.instance_date || null
+        event_tags: safeEventTags
       };
     });
 
-    return typedEvents as EventData[];
+    return typedEvents;
   };
 
   // Set up the React Query
   return useQuery({
     queryKey: ["tabEvents", tabType, selectedTags, selectedDate, page, pageSize, profileId],
     queryFn: fetchEvents,
-    enabled: !!tabType
+    enabled: !!tabType && (!["going", "hosting"].includes(tabType) || !!profileId)
   });
 }
 
-// Update the rest of the hook functions to use the EventData interface
 export function useEventCount(tabType: string, filters: Omit<TabEventFilters, 'page' | 'pageSize'>, profileId?: string) {
   const { selectedTags, selectedDate } = filters;
 
@@ -241,12 +236,51 @@ export function useEventCount(tabType: string, filters: Omit<TabEventFilters, 'p
         query = query.gt("start_date", now.toISOString());
         break;
 
-      case "new":
-        // Show events created in the last 24 hours
-        const yesterday = new Date(now);
-        yesterday.setHours(now.getHours() - 24);
-        
-        query = query.gte("created_at", yesterday.toISOString());
+      case "going":
+        // Need to fetch RSVPs first to filter by events the user is going to
+        if (profileId) {
+          const { data: rsvpData, error: rsvpError } = await supabase
+            .from("event_rsvps")
+            .select("event_id")
+            .eq("profile_id", profileId);
+
+          if (rsvpError) {
+            throw rsvpError;
+          }
+
+          const rsvpEventIds = rsvpData.map(rsvp => rsvp.event_id);
+          if (rsvpEventIds.length === 0) {
+            return 0; // User hasn't RSVPed to any events
+          }
+          
+          query = query.in("id", rsvpEventIds);
+        } else {
+          return 0; // No profile ID, can't determine "going" events
+        }
+        break;
+
+      case "hosting":
+        // Events created by the user or where they're a co-host
+        if (profileId) {
+          const { data: coHostData, error: coHostError } = await supabase
+            .from("event_co_hosts")
+            .select("event_id")
+            .eq("profile_id", profileId);
+
+          if (coHostError) {
+            throw coHostError;
+          }
+
+          const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
+          
+          if (coHostEventIds.length > 0) {
+            query = query.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
+          } else {
+            query = query.eq("created_by", profileId);
+          }
+        } else {
+          return 0; // No profile ID, can't determine "hosting" events
+        }
         break;
 
       case "past":
@@ -273,7 +307,7 @@ export function useEventCount(tabType: string, filters: Omit<TabEventFilters, 'p
   return useQuery({
     queryKey: ["eventCount", tabType, selectedTags, selectedDate, profileId],
     queryFn: fetchEventCount,
-    enabled: !!tabType
+    enabled: !!tabType && (!["going", "hosting"].includes(tabType) || !!profileId)
   });
 }
 
