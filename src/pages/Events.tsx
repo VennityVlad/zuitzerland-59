@@ -435,7 +435,7 @@ const Events = () => {
   };
 
   // Fix the handleCreateEventSuccess function to match the expected prop type
-  const handleCreateEventSuccess = (newEventId: string) => {
+  const handleCreateEventSuccess = useCallback((newEventId: string) => {
     // Invalidate queries to refresh data
     queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
     queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
@@ -446,7 +446,7 @@ const Events = () => {
     
     // Navigate to the new event's page
     navigate(`/events/${newEventId}`);
-  };
+  }, [queryClient, navigate]);
 
   // Toggle the going filter
   const toggleGoingFilter = () => {
@@ -851,7 +851,7 @@ const Events = () => {
       <CreateEventSheet
         open={createEventOpen}
         onOpenChange={setCreateEventOpen}
-        onSuccess={handleCreateEventSuccess}
+        onSuccess={handleCreateEventSuccess as any}
         userId={privyUser?.id || supabaseUser?.id || ''}
         profileId={userProfile?.id}
         event={eventToEdit}
