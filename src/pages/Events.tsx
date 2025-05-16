@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isWithinInterval, isToday, isSameDay, isBefore, isAfter, startOfDay } from "date-fns";
@@ -37,66 +38,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
 import { EventSearchModal } from "@/components/events/EventSearchModal"; 
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
-} from "@/components/ui/pagination"; 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   useTabEvents, 
   useEventCount, 
   useEventRSVPs, 
-  useUserRSVPs, 
-  EVENTS_PER_PAGE 
+  useUserRSVPs,
+  useInfiniteTabEvents,
+  EVENTS_PER_PAGE,
+  EventWithProfile 
 } from "@/hooks/useTabEvents";
-
-interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  created_at: string;
-  locations?: {
-    name: string;
-    building: string | null;
-    floor: string | null;
-  } | null;
-  event_tags?: {
-    tags: {
-      id: string;
-      name: string;
-    }
-  }[] | null;
-  av_needs?: string | null;
-  speakers?: string | null;
-  link?: string | null;
-  timezone: string;
-  recurring_pattern_id: string | null;
-  is_recurring_instance: boolean;
-  meerkat_enabled?: boolean;
-  meerkat_url?: string;
-}
-
-interface EventWithProfile extends Event {
-  profiles?: {
-    username: string | null;
-    id: string;
-  } | null;
-}
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
-  const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<EventWithProfile | null>(null);
+  const [eventToEdit, setEventToEdit] = useState<EventWithProfile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("today");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -104,16 +61,6 @@ const Events = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
   
-  const [paginationState, setPaginationState] = useState({
-    today: 0,
-    upcoming: 0,
-    going: 0,
-    hosting: 0,
-    past: 0,
-    search: 0
-  });
-  
-  const currentPage = isSearchMode ? paginationState.search : paginationState[activeTab as keyof typeof paginationState];
   const queryClient = useQueryClient();
   
   const { user: privyUser } = usePrivy();
@@ -189,17 +136,24 @@ const Events = () => {
   const profileId = userProfile?.id;
   
   const activeTabForQuery = isSearchMode ? "search" : activeTab;
-  const { data: tabEvents, isLoading: tabEventsLoading, refetch: refetchTabEvents } = useTabEvents(
+  
+  // Use infinite loading hook instead of pagination
+  const { 
+    events: tabEvents, 
+    isLoading: tabEventsLoading, 
+    isFetchingMore,
+    hasMore,
+    loadMore,
+    resetEvents
+  } = useInfiniteTabEvents(
     activeTabForQuery, 
-    { 
-      selectedTags, 
-      selectedDate, 
-      page: currentPage, 
-      pageSize: EVENTS_PER_PAGE 
-    }, 
+    { selectedTags, selectedDate }, 
     profileId,
     isAdminUser
   );
+  
+  // Use infinite scroll hook
+  useInfiniteScroll(loadMore, { threshold: 400 });
   
   const { data: totalEvents, isLoading: countLoading } = useEventCount(
     activeTabForQuery,
@@ -212,31 +166,18 @@ const Events = () => {
   const { data: currentPageRSVPMap, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useEventRSVPs(currentEventIds);
   
   const { data: userRSVPEventIds = [], refetch: refetchUserRSVPs } = useUserRSVPs(profileId);
-  
-  const handlePageChange = (page: number) => {
-    if (isSearchMode) {
-      setPaginationState(prev => ({ ...prev, search: page }));
-    } else {
-      setPaginationState(prev => ({ ...prev, [activeTab]: page }));
-    }
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   useEffect(() => {
-    if (isSearchMode) {
-      setPaginationState(prev => ({ ...prev, search: 0 }));
-    } else {
-      setPaginationState(prev => ({ ...prev, [activeTab]: 0 }));
-    }
-  }, [activeTab, isSearchMode, selectedTags, selectedDate]);
+    // Reset the event list when tab, search mode, or filters change
+    resetEvents();
+  }, [activeTab, isSearchMode, selectedTags, selectedDate, resetEvents]);
   
   useEffect(() => {
     setIsSearchMode(selectedTags.length > 0 || !!selectedDate);
   }, [selectedTags, selectedDate]);
 
   const handleCreateEventSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
+    queryClient.invalidateQueries({ queryKey: ["infiniteTabEvents"] });
     queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
     queryClient.invalidateQueries({ queryKey: ["eventCount"] });
     setCreateEventOpen(false);
@@ -261,7 +202,7 @@ const Events = () => {
         description: "The event has been successfully deleted.",
       });
       
-      queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
+      queryClient.invalidateQueries({ queryKey: ["infiniteTabEvents"] });
       queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
       queryClient.invalidateQueries({ queryKey: ["eventCount"] });
     } catch (error) {
@@ -277,11 +218,11 @@ const Events = () => {
     }
   };
 
-  const openDeleteDialog = (event: Event) => {
+  const openDeleteDialog = (event: EventWithProfile) => {
     setEventToDelete(event);
   };
 
-  const handleEditEvent = (event: Event) => {
+  const handleEditEvent = (event: EventWithProfile) => {
     setEventToEdit(event);
     setCreateEventOpen(true);
   };
@@ -293,7 +234,7 @@ const Events = () => {
     return userProfile?.role === 'admin';
   };
 
-  const handleShare = async (event: Event) => {
+  const handleShare = async (event: EventWithProfile) => {
     const shareUrl = `${window.location.origin}/events/${event.id}`;
     
     if (navigator.share && navigator.canShare) {
@@ -404,7 +345,7 @@ const Events = () => {
         
         <Card className="p-8 text-center space-y-6">
           <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-            <CalendarDays className="h-8 w-8 text-gray-500" />
+            <CalendarDays className="h-8 w-8 text-gray-400" />
           </div>
           <h2 className="text-2xl font-semibold text-foreground">Access Restricted</h2>
           <p className="text-muted-foreground max-w-md mx-auto">
@@ -546,7 +487,9 @@ const Events = () => {
                 
                 {renderEventsList(
                   tabEvents || [],
-                  tabEventsLoading || profileLoading,
+                  tabEventsLoading,
+                  isFetchingMore,
+                  hasMore,
                   currentPageRSVPMap || {},
                   userRSVPEventIds,
                   profileId,
@@ -562,54 +505,6 @@ const Events = () => {
                   isMobile,
                   isAdminUser
                 )}
-                
-                {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
-                  <Pagination className="my-4">
-                    <PaginationContent>
-                      {currentPage > 0 && (
-                        <PaginationItem>
-                          <PaginationPrevious 
-                            onClick={() => handlePageChange(currentPage - 1)} 
-                            aria-disabled={currentPage === 0}
-                            className="cursor-pointer"
-                          />
-                        </PaginationItem>
-                      )}
-                      
-                      {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
-                        const pageToShow = Math.min(
-                          Math.max(0, currentPage - 2 + i),
-                          Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
-                        );
-                        
-                        if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
-                          return (
-                            <PaginationItem key={pageToShow}>
-                              <PaginationLink
-                                onClick={() => handlePageChange(pageToShow)}
-                                isActive={currentPage === pageToShow}
-                                className="cursor-pointer"
-                              >
-                                {pageToShow + 1}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        }
-                        return null;
-                      })}
-                      
-                      {currentPage < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
-                        <PaginationItem>
-                          <PaginationNext 
-                            onClick={() => handlePageChange(currentPage + 1)} 
-                            aria-disabled={currentPage === Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1}
-                            className="cursor-pointer"
-                          />
-                        </PaginationItem>
-                      )}
-                    </PaginationContent>
-                  </Pagination>
-                )}
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -624,7 +519,9 @@ const Events = () => {
                 <TabsContent value="today" className="space-y-4 mt-4">
                   {renderEventsList(
                     tabEvents || [],
-                    tabEventsLoading || profileLoading,
+                    tabEventsLoading,
+                    isFetchingMore,
+                    hasMore,
                     currentPageRSVPMap || {},
                     userRSVPEventIds,
                     profileId,
@@ -639,59 +536,15 @@ const Events = () => {
                     formatDateRange,
                     isMobile,
                     isAdminUser
-                  )}
-                  
-                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
-                    <Pagination className="my-4">
-                      <PaginationContent>
-                        {paginationState.today > 0 && (
-                          <PaginationItem>
-                            <PaginationPrevious 
-                              onClick={() => handlePageChange(paginationState.today - 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                        
-                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
-                          const pageToShow = Math.min(
-                            Math.max(0, paginationState.today - 2 + i),
-                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
-                          );
-                          
-                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
-                            return (
-                              <PaginationItem key={pageToShow}>
-                                <PaginationLink
-                                  onClick={() => handlePageChange(pageToShow)}
-                                  isActive={paginationState.today === pageToShow}
-                                  className="cursor-pointer"
-                                >
-                                  {pageToShow + 1}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                          return null;
-                        })}
-                        
-                        {paginationState.today < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
-                          <PaginationItem>
-                            <PaginationNext 
-                              onClick={() => handlePageChange(paginationState.today + 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                      </PaginationContent>
-                    </Pagination>
                   )}
                 </TabsContent>
                 
                 <TabsContent value="upcoming" className="space-y-4 mt-4">
                   {renderEventsList(
                     tabEvents || [],
-                    tabEventsLoading || profileLoading,
+                    tabEventsLoading,
+                    isFetchingMore,
+                    hasMore,
                     currentPageRSVPMap || {},
                     userRSVPEventIds,
                     profileId,
@@ -706,59 +559,15 @@ const Events = () => {
                     formatDateRange,
                     isMobile,
                     isAdminUser
-                  )}
-                  
-                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
-                    <Pagination className="my-4">
-                      <PaginationContent>
-                        {paginationState.upcoming > 0 && (
-                          <PaginationItem>
-                            <PaginationPrevious 
-                              onClick={() => handlePageChange(paginationState.upcoming - 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                        
-                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
-                          const pageToShow = Math.min(
-                            Math.max(0, paginationState.upcoming - 2 + i),
-                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
-                          );
-                          
-                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
-                            return (
-                              <PaginationItem key={pageToShow}>
-                                <PaginationLink
-                                  onClick={() => handlePageChange(pageToShow)}
-                                  isActive={paginationState.upcoming === pageToShow}
-                                  className="cursor-pointer"
-                                >
-                                  {pageToShow + 1}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                          return null;
-                        })}
-                        
-                        {paginationState.upcoming < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
-                          <PaginationItem>
-                            <PaginationNext 
-                              onClick={() => handlePageChange(paginationState.upcoming + 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                      </PaginationContent>
-                    </Pagination>
                   )}
                 </TabsContent>
                 
                 <TabsContent value="going" className="space-y-4 mt-4">
                   {renderEventsList(
                     tabEvents || [],
-                    tabEventsLoading || profileLoading,
+                    tabEventsLoading,
+                    isFetchingMore,
+                    hasMore,
                     currentPageRSVPMap || {},
                     userRSVPEventIds,
                     profileId,
@@ -773,59 +582,15 @@ const Events = () => {
                     formatDateRange,
                     isMobile,
                     isAdminUser
-                  )}
-                  
-                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
-                    <Pagination className="my-4">
-                      <PaginationContent>
-                        {paginationState.going > 0 && (
-                          <PaginationItem>
-                            <PaginationPrevious 
-                              onClick={() => handlePageChange(paginationState.going - 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                        
-                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
-                          const pageToShow = Math.min(
-                            Math.max(0, paginationState.going - 2 + i),
-                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
-                          );
-                          
-                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
-                            return (
-                              <PaginationItem key={pageToShow}>
-                                <PaginationLink
-                                  onClick={() => handlePageChange(pageToShow)}
-                                  isActive={paginationState.going === pageToShow}
-                                  className="cursor-pointer"
-                                >
-                                  {pageToShow + 1}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                          return null;
-                        })}
-                        
-                        {paginationState.going < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
-                          <PaginationItem>
-                            <PaginationNext 
-                              onClick={() => handlePageChange(paginationState.going + 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                      </PaginationContent>
-                    </Pagination>
                   )}
                 </TabsContent>
                 
                 <TabsContent value="hosting" className="space-y-4 mt-4">
                   {renderEventsList(
                     tabEvents || [],
-                    tabEventsLoading || profileLoading,
+                    tabEventsLoading,
+                    isFetchingMore,
+                    hasMore,
                     currentPageRSVPMap || {},
                     userRSVPEventIds,
                     profileId,
@@ -840,59 +605,15 @@ const Events = () => {
                     formatDateRange,
                     isMobile,
                     isAdminUser
-                  )}
-                  
-                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
-                    <Pagination className="my-4">
-                      <PaginationContent>
-                        {paginationState.hosting > 0 && (
-                          <PaginationItem>
-                            <PaginationPrevious 
-                              onClick={() => handlePageChange(paginationState.hosting - 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                        
-                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
-                          const pageToShow = Math.min(
-                            Math.max(0, paginationState.hosting - 2 + i),
-                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
-                          );
-                          
-                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
-                            return (
-                              <PaginationItem key={pageToShow}>
-                                <PaginationLink
-                                  onClick={() => handlePageChange(pageToShow)}
-                                  isActive={paginationState.hosting === pageToShow}
-                                  className="cursor-pointer"
-                                >
-                                  {pageToShow + 1}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                          return null;
-                        })}
-                        
-                        {paginationState.hosting < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
-                          <PaginationItem>
-                            <PaginationNext 
-                              onClick={() => handlePageChange(paginationState.hosting + 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                      </PaginationContent>
-                    </Pagination>
                   )}
                 </TabsContent>
                 
                 <TabsContent value="past" className="space-y-4 mt-4">
                   {renderEventsList(
                     tabEvents || [],
-                    tabEventsLoading || profileLoading,
+                    tabEventsLoading,
+                    isFetchingMore,
+                    hasMore,
                     currentPageRSVPMap || {},
                     userRSVPEventIds,
                     profileId,
@@ -907,52 +628,6 @@ const Events = () => {
                     formatDateRange,
                     isMobile,
                     isAdminUser
-                  )}
-                  
-                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
-                    <Pagination className="my-4">
-                      <PaginationContent>
-                        {paginationState.past > 0 && (
-                          <PaginationItem>
-                            <PaginationPrevious 
-                              onClick={() => handlePageChange(paginationState.past - 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                        
-                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
-                          const pageToShow = Math.min(
-                            Math.max(0, paginationState.past - 2 + i),
-                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
-                          );
-                          
-                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
-                            return (
-                              <PaginationItem key={pageToShow}>
-                                <PaginationLink
-                                  onClick={() => handlePageChange(pageToShow)}
-                                  isActive={paginationState.past === pageToShow}
-                                  className="cursor-pointer"
-                                >
-                                  {pageToShow + 1}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                          return null;
-                        })}
-                        
-                        {paginationState.past < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
-                          <PaginationItem>
-                            <PaginationNext 
-                              onClick={() => handlePageChange(paginationState.past + 1)} 
-                              className="cursor-pointer"
-                            />
-                          </PaginationItem>
-                        )}
-                      </PaginationContent>
-                    </Pagination>
                   )}
                 </TabsContent>
               </Tabs>
@@ -1013,28 +688,31 @@ const Events = () => {
 const renderEventsList = (
   events: EventWithProfile[], 
   isLoading: boolean,
+  isFetchingMore: boolean,
+  hasMore: boolean,
   rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
   userRSVPEventIds: string[],
   profileId: string | undefined,
   onRSVPChange: (eventId: string, newStatus: boolean) => void,
   canCreateEvents: boolean,
   canEditEvent: (event: EventWithProfile) => boolean,
-  openDeleteDialog: (event: Event) => void,
-  handleEditEvent: (event: Event) => void,
-  handleShare: (event: Event) => void,
+  openDeleteDialog: (event: EventWithProfile) => void,
+  handleEditEvent: (event: EventWithProfile) => void,
+  handleShare: (event: EventWithProfile) => void,
   formatDateForSidebar: (date: Date) => JSX.Element,
   formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
   formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
   isMobile: boolean,
   isAdminUser: boolean
 ) => {
-  if (isLoading) {
+  if (isLoading && events.length === 0) {
     return (
       <div className="flex justify-center py-8">
         <div className="animate-pulse">Loading events...</div>
       </div>
     );
   }
+  
   if (!events || events.length === 0) {
     return (
       <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
@@ -1212,6 +890,18 @@ const renderEventsList = (
           </div>
         );
       })}
+      
+      {isFetchingMore && (
+        <div className="flex justify-center py-4">
+          <div className="animate-pulse">Loading more events...</div>
+        </div>
+      )}
+      
+      {!isLoading && !isFetchingMore && !hasMore && events.length > 0 && (
+        <div className="text-center py-4 text-gray-500 text-sm">
+          No more events to load
+        </div>
+      )}
     </div>
   );
 };
