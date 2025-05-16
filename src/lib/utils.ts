@@ -16,3 +16,17 @@ export const getRsvpProfilesQuery = (supabase: any, eventId: string) => {
     `)
     .eq("event_id", eventId);
 };
+
+// New function to load RSVPs for multiple events efficiently
+export const getMultipleEventRsvpsQuery = (supabase: any, eventIds: string[]) => {
+  if (!eventIds || eventIds.length === 0) return null;
+  
+  return supabase
+    .from("event_rsvps")
+    .select(`
+      event_id,
+      profile_id,
+      profiles:profiles(id, username, avatar_url)
+    `)
+    .in("event_id", eventIds);
+};

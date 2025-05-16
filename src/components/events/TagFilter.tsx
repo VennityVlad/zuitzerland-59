@@ -16,9 +16,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface TagFilterProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
+  availableTagIds?: string[]; // Optional param to limit visible tags
 }
 
-export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
+export const TagFilter = ({ selectedTags, onTagsChange, availableTagIds }: TagFilterProps) => {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -51,6 +52,11 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
     setOpen(false);
   };
 
+  // Filter tags by available tag IDs if provided
+  const visibleTags = availableTagIds && allTags 
+    ? allTags.filter(tag => availableTagIds.includes(tag.id))
+    : allTags;
+
   const selectedCount = selectedTags.length;
 
   return (
@@ -62,7 +68,7 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
               variant="outline"
               size="sm"
               className="h-9 border-dashed flex-shrink-0"
-              disabled={!allTags || allTags.length === 0}
+              disabled={!visibleTags || visibleTags.length === 0}
             >
               <ChevronDownIcon className="mr-2 h-4 w-4" />
               Filter by tag
@@ -98,14 +104,14 @@ export const TagFilter = ({ selectedTags, onTagsChange }: TagFilterProps) => {
                 <div className="flex items-center justify-center p-4">
                   <p className="text-sm text-muted-foreground">Loading...</p>
                 </div>
-              ) : !allTags || allTags.length === 0 ? (
+              ) : !visibleTags || visibleTags.length === 0 ? (
                 <div className="flex items-center justify-center p-4">
                   <p className="text-sm text-muted-foreground">No tags found</p>
                 </div>
               ) : (
                 <ScrollArea className="h-60">
                   <div className="space-y-2">
-                    {allTags.map((tag) => (
+                    {visibleTags.map((tag) => (
                       <div
                         key={tag.id}
                         className="flex items-center space-x-2"

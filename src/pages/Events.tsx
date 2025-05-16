@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, isSameDay, isWithinInterval, startOfMonth, endOfMonth, isSameMonth, isBefore, isToday, addDays, isAfter, startOfDay } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format, parseISO, isWithinInterval, isToday, isSameDay, isBefore, isAfter, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search, Mic, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +36,22 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
-import { EventSearchModal } from "@/components/events/EventSearchModal";
+import { EventSearchModal } from "@/components/events/EventSearchModal"; 
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from "@/components/ui/pagination"; 
+import { 
+  useTabEvents, 
+  useEventCount, 
+  useEventRSVPs, 
+  useUserRSVPs, 
+  EVENTS_PER_PAGE 
+} from "@/hooks/useTabEvents";
 
 interface Event {
   id: string;
@@ -89,6 +104,18 @@ const Events = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
   
+  const [paginationState, setPaginationState] = useState({
+    today: 0,
+    upcoming: 0,
+    going: 0,
+    hosting: 0,
+    past: 0,
+    search: 0
+  });
+  
+  const currentPage = isSearchMode ? paginationState.search : paginationState[activeTab as keyof typeof paginationState];
+  const queryClient = useQueryClient();
+  
   const { user: privyUser } = usePrivy();
   const { user: supabaseUser } = useSupabaseAuth();
   const { toast } = useToast();
@@ -134,200 +161,85 @@ const Events = () => {
     enabled: !!(privyUser?.id || supabaseUser?.id)
   });
   
-  // Allow any user with a profile to create events
-  const canCreateEvents = !!userProfile?.id;
+  const { data: allEvents } = useQuery({
+    queryKey: ["calendarEvents"],
+    queryFn: async () => {
+      console.log("🔍 Fetching calendar events");
+      const { data, error } = await supabase
+        .from("events")
+        .select(`
+          id, title, start_date, end_date, color, is_all_day, location_id, location_text
+        `)
+        .order("start_date", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching calendar events:", error);
+        throw error;
+      }
+
+      return data || [];
+    },
+    enabled: !isPaidInvoiceLoading && (hasPaidInvoice || userIsAdmin)
+  });
   
-  // Admin users can edit/delete any event
+  const canCreateEvents = !!userProfile?.id;
   const isAdminUser = userProfile?.role === 'admin';
   
   const userId = privyUser?.id || supabaseUser?.id || "";
   const profileId = userProfile?.id;
   
-  // Key change: Only enable the events query if the user has paid invoice or is admin
-  // This prevents fetching events data until we know the user's invoice status
-  const { data: events, isLoading, refetch } = useQuery({
-    queryKey: ["events", selectedTags, selectedDate],
-    queryFn: async () => {
-      console.log("🔍 Fetching events with access granted");
-      const { data, error } = await supabase
-        .from("events")
-        .select(`
-          *,
-          profiles:profiles!events_created_by_fkey(username, id),
-          locations:location_id (name, building, floor),
-          event_tags:event_tag_relations (
-            tags:event_tags (id, name)
-          )
-        `)
-        .order("start_date", { ascending: true });
+  const activeTabForQuery = isSearchMode ? "search" : activeTab;
+  const { data: tabEvents, isLoading: tabEventsLoading, refetch: refetchTabEvents } = useTabEvents(
+    activeTabForQuery, 
+    { 
+      selectedTags, 
+      selectedDate, 
+      page: currentPage, 
+      pageSize: EVENTS_PER_PAGE 
+    }, 
+    profileId,
+    isAdminUser
+  );
+  
+  const { data: totalEvents, isLoading: countLoading } = useEventCount(
+    activeTabForQuery,
+    { selectedTags, selectedDate },
+    profileId
+  );
+  
+  const currentEventIds = (tabEvents || []).map(event => event.id);
+  
+  const { data: currentPageRSVPMap, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useEventRSVPs(currentEventIds);
+  
+  const { data: userRSVPEventIds = [], refetch: refetchUserRSVPs } = useUserRSVPs(profileId);
+  
+  const handlePageChange = (page: number) => {
+    if (isSearchMode) {
+      setPaginationState(prev => ({ ...prev, search: page }));
+    } else {
+      setPaginationState(prev => ({ ...prev, [activeTab]: page }));
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-      if (error) {
-        console.error("Error fetching events:", error);
-        throw error;
-      }
-
-      // Make sure the event_tags property on each event is properly typed
-      // If there's an error or data is missing, set it to an empty array
-      return data.map((event: any): EventWithProfile => {
-        // Handle potentially missing or error in event_tags
-        const safeEventTags = Array.isArray(event.event_tags) 
-          ? event.event_tags 
-          : [];
-
-        return {
-          ...event,
-          event_tags: safeEventTags
-        };
-      });
-    },
-    // Only fetch events if:
-    // 1. We know the invoice status (not still loading)
-    // 2. The user has a paid invoice or is an admin
-    // 3. The user is authenticated
-    enabled: 
-      !isPaidInvoiceLoading && 
-      (hasPaidInvoice || userIsAdmin) && 
-      (!!privyUser?.id || !!supabaseUser?.id)
-  });
-
-  // Fetch co-hosted events for the current user
-  const { data: coHostedEvents, isLoading: coHostsLoading } = useQuery({
-    queryKey: ["co_hosted_events", profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-      
-      const { data, error } = await supabase
-        .from("event_co_hosts")
-        .select(`
-          event_id,
-          events:event_id (
-            *,
-            profiles:profiles!events_created_by_fkey(username, id),
-            locations:location_id(name, building, floor),
-            event_tags:event_tag_relations(
-              tags:event_tags(id, name)
-            )
-          )
-        `)
-        .eq("profile_id", profileId);
-      
-      if (error) {
-        console.error("Error fetching co-hosted events:", error);
-        throw error;
-      }
-      
-      // Extract the events from the nested structure and ensure they have the right types
-      const typedEvents: EventWithProfile[] = [];
-      
-      data.forEach(item => {
-        // Handle potentially missing or invalid events
-        if (item.events) {
-          // Handle potentially missing or error in event_tags
-          const event = item.events;
-          const safeEventTags = Array.isArray(event.event_tags) 
-            ? event.event_tags 
-            : [];
-            
-          // Add a properly typed event to our result array
-          typedEvents.push({
-            ...event,
-            event_tags: safeEventTags
-          });
-        }
-      });
-      
-      return typedEvents;
-    },
-    enabled: !!profileId
-  });
-
+  useEffect(() => {
+    if (isSearchMode) {
+      setPaginationState(prev => ({ ...prev, search: 0 }));
+    } else {
+      setPaginationState(prev => ({ ...prev, [activeTab]: 0 }));
+    }
+  }, [activeTab, isSearchMode, selectedTags, selectedDate]);
+  
   useEffect(() => {
     setIsSearchMode(selectedTags.length > 0 || !!selectedDate);
   }, [selectedTags, selectedDate]);
 
-  const filteredEvents = React.useMemo(() => {
-    if (!events) return [];
-    
-    return events.filter(event => {
-      if (selectedTags.length > 0) {
-        const eventTagIds = event.event_tags?.map(tag => tag.tags.id) || [];
-        if (!selectedTags.some(tagId => eventTagIds.includes(tagId))) {
-          return false;
-        }
-      }
-      
-      if (selectedDate) {
-        const startDate = new Date(event.start_date);
-        const endDate = new Date(event.end_date);
-        
-        const isEventOnSelectedDate = 
-          isWithinInterval(selectedDate, { start: startDate, end: endDate }) ||
-          isSameDay(selectedDate, startDate) || 
-          isSameDay(selectedDate, endDate);
-          
-        if (!isEventOnSelectedDate) {
-          return false;
-        }
-      }
-      
-      return true;
-    });
-  }, [events, selectedTags, selectedDate]);
-
-  const { data: rsvps, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useQuery({
-    queryKey: ["event_rsvps"],
-    queryFn: async () => {
-      console.log("🔍 Fetching event RSVPs...");
-      const { data, error } = await supabase
-        .from("event_rsvps")
-        .select("event_id, profile_id, profiles(id, username, avatar_url)")
-        .limit(3000) // Increased limit from default 1000 to 3000
-      
-      if (error) {
-        console.error("❌ Error fetching RSVPs:", error);
-        throw error;
-      }
-      
-      console.log("✅ RSVP data fetched successfully:", data);
-      console.log("🧑‍💻 Current profile ID:", profileId);
-      return data || [];
-    }
-  });
-
-  const getRSVPedEventIds = () => {
-    if (!rsvps || !profileId) return [];
-    
-    const userRSVPs = rsvps.filter(r => r.profile_id === profileId);
-    console.log("👤 User's RSVPs:", userRSVPs);
-    
-    const eventIds = userRSVPs.map(r => r.event_id);
-    console.log("🗓️ User's RSVP'd event IDs:", eventIds);
-    
-    return eventIds;
-  };
-  
-  const userRSVPEventIds = getRSVPedEventIds();
-  console.log("📊 Final list of user's RSVP'd event IDs:", userRSVPEventIds);
-
-  const rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]> = {};
-  if (rsvps) {
-    console.log("🔄 Building RSVP map from", rsvps.length, "total RSVPs");
-    rsvps.forEach(r => {
-      if (!rsvpMap[r.event_id]) rsvpMap[r.event_id] = [];
-      const profile = r.profiles
-        ? {
-            id: r.profiles.id,
-            username: r.profiles.username,
-            avatar_url: r.profiles.avatar_url,
-          }
-        : { id: "-", username: "-", avatar_url: "" };
-      rsvpMap[r.event_id].push(profile);
-    });
-    console.log("🗺️ RSVP map built:", Object.keys(rsvpMap).length, "events have RSVPs");
-  }
-
   const handleCreateEventSuccess = () => {
-    refetch();
+    queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
+    queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
+    queryClient.invalidateQueries({ queryKey: ["eventCount"] });
+    setCreateEventOpen(false);
   };
 
   const handleDeleteEvent = async () => {
@@ -349,7 +261,9 @@ const Events = () => {
         description: "The event has been successfully deleted.",
       });
       
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
+      queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
+      queryClient.invalidateQueries({ queryKey: ["eventCount"] });
     } catch (error) {
       console.error("Error deleting event:", error);
       toast({
@@ -376,42 +290,66 @@ const Events = () => {
     if (isAdminUser) return true;
     if (event.profiles?.id === profileId) return true;
     
-    // Check if the user is a co-host for this event
-    const isCoHost = coHostedEvents?.some(coHostedEvent => 
-      coHostedEvent.id === event.id
-    );
-    
-    return !!isCoHost;
+    return userProfile?.role === 'admin';
   };
 
-  const generateICalEvent = (event: Event) => {
-    const startDate = new Date(event.start_date);
-    const endDate = new Date(event.end_date);
+  const handleShare = async (event: Event) => {
+    const shareUrl = `${window.location.origin}/events/${event.id}`;
     
-    const formatICalDate = (date: Date) => {
-      return date.toISOString().replace(/-|:|\.\d+/g, '').substring(0, 15) + 'Z';
-    };
-    
-    const icalStart = formatICalDate(startDate);
-    const icalEnd = formatICalDate(endDate);
-    
-    const icalContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Zuitzerland//Calendar App//EN',
-      'BEGIN:VEVENT',
-      `UID:${event.id}@zuitzerland.app`,
-      `DTSTAMP:${formatICalDate(new Date())}`,
-      `DTSTART:${icalStart}`,
-      `DTEND:${icalEnd}`,
-      `SUMMARY:${event.title}`,
-      event.description ? `DESCRIPTION:${event.description}` : '',
-      event.location_text ? `LOCATION:${event.location_text}` : '',
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].filter(Boolean).join('\r\n');
-    
-    return icalContent;
+    if (navigator.share && navigator.canShare) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: event.description || event.title,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link copied",
+          description: "The event link has been copied to your clipboard.",
+        });
+      } catch (err) {
+        console.error('Error copying to clipboard:', err);
+        toast({
+          title: "Error",
+          description: "Failed to copy the link. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleDateSelection = (date: Date | undefined, shouldSwitchTab: boolean = false) => {
+    setSelectedDate(date);
+    if (date) {
+      setIsSearchMode(true);
+    }
+  };
+
+  const handleTagsChange = (tags: string[]) => {
+    setSelectedTags(tags);
+    if (tags.length > 0) {
+      setIsSearchMode(true);
+    } else if (!selectedDate) {
+      setIsSearchMode(false);
+    }
+  };
+  
+  const clearFilters = () => {
+    setSelectedTags([]);
+    setSelectedDate(undefined);
+    setIsSearchMode(false);
+    setActiveTab(activeTab || "today");
+  };
+
+  const handleRSVPChange = (eventId: string, newStatus: boolean) => {
+    refetchRSVPs();
+    refetchUserRSVPs();
   };
 
   const TIME_ZONE = "Europe/Zurich";
@@ -450,158 +388,6 @@ const Events = () => {
     return formatTimeRange(start, end, isAllDay, timezone);
   };
 
-  const currentDate = new Date();
-  
-  // Events categorized by tab filter types
-  const todayEvents = filteredEvents.filter(event => {
-    const startDate = new Date(event.start_date);
-    return isToday(startDate); // Only include events that start today
-  });
-  
-  // Updated to match the "Upcoming" tab name
-  const upcomingEvents = filteredEvents.filter(event => {
-    const startDate = new Date(event.start_date);
-    return isAfter(startDate, currentDate); // Show events that start after the current time
-  });
-  
-  const pastEvents = filteredEvents.filter(event => {
-    const endDate = new Date(event.end_date);
-    return isBefore(endDate, currentDate);
-  });
-  
-  const rsvpedEvents = filteredEvents.filter(ev => userRSVPEventIds.includes(ev.id)) || [];
-  
-  // Update hostingEvents to include both created events and co-hosted events
-  const hostingEvents = React.useMemo(() => {
-    if (!events || !profileId) return [];
-    
-    // Events created by the user
-    const createdEvents = events.filter(event => event.created_by === profileId) || [];
-    
-    // Combine both lists and remove duplicates
-    const combined = [...createdEvents];
-    
-    // Add co-hosted events only if they're not already in the list
-    if (coHostedEvents && coHostedEvents.length > 0) {
-      coHostedEvents.forEach(coEvent => {
-        if (!combined.some(event => event.id === coEvent.id)) {
-          combined.push(coEvent);
-        }
-      });
-    }
-    
-    return combined;
-  }, [events, profileId, coHostedEvents]);
-  
-  // Extract unique tag IDs for each event category
-  const getUniqueTagIdsForEvents = (eventsList: EventWithProfile[]) => {
-    const tagIds = new Set<string>();
-    eventsList.forEach(event => {
-      event.event_tags?.forEach(tag => {
-        tagIds.add(tag.tags.id);
-      });
-    });
-    return Array.from(tagIds);
-  };
-
-  const todayTagIds = getUniqueTagIdsForEvents(todayEvents);
-  const upcomingTagIds = getUniqueTagIdsForEvents(upcomingEvents);
-  const goingTagIds = getUniqueTagIdsForEvents(rsvpedEvents);
-  const hostingTagIds = getUniqueTagIdsForEvents(hostingEvents);
-  const pastTagIds = getUniqueTagIdsForEvents(pastEvents);
-
-  // Get visible tag IDs based on the active tab
-  const getVisibleTagIds = () => {
-    switch (activeTab) {
-      case 'today': return todayTagIds;
-      case 'upcoming': return upcomingTagIds;
-      case 'going': return goingTagIds;
-      case 'hosting': return hostingTagIds;
-      case 'past': return pastTagIds;
-      default: return todayTagIds;
-    }
-  };
-
-  const visibleTagIds = getVisibleTagIds();
-
-  const clearFilters = () => {
-    setSelectedTags([]);
-    setSelectedDate(undefined);
-    setIsSearchMode(false);
-    // Return to the previous active tab or default to "today"
-    setActiveTab(activeTab || "today");
-  };
-
-  const hasActiveFilters = selectedTags.length > 0 || !!selectedDate;
-
-  const handleShare = async (event: Event) => {
-    const shareUrl = `${window.location.origin}/events/${event.id}`;
-    
-    if (navigator.share && navigator.canShare) {
-      try {
-        await navigator.share({
-          title: event.title,
-          text: event.description || event.title,
-          url: shareUrl,
-        });
-      } catch (err) {
-        console.error('Error sharing:', err);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        toast({
-          title: "Link copied",
-          description: "The event link has been copied to your clipboard.",
-        });
-      } catch (err) {
-        console.error('Error copying to clipboard:', err);
-        toast({
-          title: "Error",
-          description: "Failed to copy the link. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  // Handle date selection with search mode
-  const handleDateSelection = (date: Date | undefined, shouldSwitchTab: boolean = false) => {
-    setSelectedDate(date);
-    if (date) {
-      setIsSearchMode(true);
-    }
-  };
-
-  // Handle tag selection with search mode
-  const handleTagsChange = (tags: string[]) => {
-    setSelectedTags(tags);
-    if (tags.length > 0) {
-      setIsSearchMode(true);
-    } else if (!selectedDate) {
-      setIsSearchMode(false);
-    }
-  };
-  
-  // Simplified logic to get the events to show based on active tab or search mode
-  const getEventsToShow = () => {
-    if (isSearchMode) {
-      return filteredEvents;
-    }
-    
-    switch (activeTab) {
-      case 'today': return todayEvents;
-      case 'upcoming': return upcomingEvents;
-      case 'going': return rsvpedEvents;
-      case 'hosting': return hostingEvents;
-      case 'past': return pastEvents;
-      default: return todayEvents;
-    }
-  };
-  
-  const eventsToShow = getEventsToShow();
-
-  // Early return for users without paid invoices
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
     console.log("🚫 Showing restricted access message - No paid invoice found");
     return (
@@ -636,7 +422,6 @@ const Events = () => {
     );
   }
 
-  // Show loading state while checking invoice status
   if (isPaidInvoiceLoading) {
     console.log("⏳ Showing loading state while checking access status");
     return (
@@ -675,9 +460,7 @@ const Events = () => {
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-3xl font-bold tracking-tight text-hotel-navy">Events</h1>
         
-        {/* Modified mobile layout: Search on the right of the title, Create Event below */}
         <div className="flex items-center gap-2">
-          {/* Mobile view - Search button on right of title */}
           <div className="sm:hidden">
             <Button 
               variant="outline"
@@ -689,7 +472,6 @@ const Events = () => {
             </Button>
           </div>
           
-          {/* Desktop view - Search button and Create Event button */}
           <div className="hidden sm:flex items-center gap-2">
             <Button 
               variant="outline"
@@ -714,7 +496,6 @@ const Events = () => {
         </div>
       </div>
       
-      {/* Mobile only - Create Event button on its own line */}
       {canCreateEvents && (
         <div className="sm:hidden w-full mt-3">
           <Button 
@@ -733,9 +514,7 @@ const Events = () => {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4">
-          {/* Tag Filter Row */}
           <div className="flex items-center justify-between gap-2">
-            {/* TagFilter (on the left) */}
             <div className="flex-grow overflow-x-auto">
               <TagFilter 
                 selectedTags={selectedTags} 
@@ -743,19 +522,16 @@ const Events = () => {
               />
             </div>
             
-            {/* Mobile Calendar Button (on the right) */}
             {isMobile && (
               <div className="flex-shrink-0">
                 <MobileCalendarDialog 
-                  events={events || []} 
+                  events={allEvents || []} 
                   onSelectDate={handleDateSelection}
                   selectedDate={selectedDate}
                 />
               </div>
             )}
           </div>
-          
-          {/* REMOVED: The duplicate filter status area that was here */}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -769,23 +545,70 @@ const Events = () => {
                 />
                 
                 {renderEventsList(
-                  eventsToShow,
-                  isLoading,
-                  profileLoading,
+                  tabEvents || [],
+                  tabEventsLoading || profileLoading,
+                  currentPageRSVPMap || {},
+                  userRSVPEventIds,
+                  profileId,
+                  handleRSVPChange,
                   canCreateEvents,
                   canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
+                  handleShare,
                   formatDateForSidebar,
                   formatEventTime,
                   formatDateRange,
-                  rsvpMap,
-                  userRSVPEventIds,
-                  profileId,
-                  refetchRSVPs,
                   isMobile,
-                  handleShare,
                   isAdminUser
+                )}
+                
+                {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
+                  <Pagination className="my-4">
+                    <PaginationContent>
+                      {currentPage > 0 && (
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => handlePageChange(currentPage - 1)} 
+                            aria-disabled={currentPage === 0}
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                      
+                      {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
+                        const pageToShow = Math.min(
+                          Math.max(0, currentPage - 2 + i),
+                          Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
+                        );
+                        
+                        if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
+                          return (
+                            <PaginationItem key={pageToShow}>
+                              <PaginationLink
+                                onClick={() => handlePageChange(pageToShow)}
+                                isActive={currentPage === pageToShow}
+                                className="cursor-pointer"
+                              >
+                                {pageToShow + 1}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+                      
+                      {currentPage < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => handlePageChange(currentPage + 1)} 
+                            aria-disabled={currentPage === Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1}
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
                 )}
               </div>
             ) : (
@@ -800,107 +623,336 @@ const Events = () => {
 
                 <TabsContent value="today" className="space-y-4 mt-4">
                   {renderEventsList(
-                    todayEvents,
-                    isLoading,
-                    profileLoading,
+                    tabEvents || [],
+                    tabEventsLoading || profileLoading,
+                    currentPageRSVPMap || {},
+                    userRSVPEventIds,
+                    profileId,
+                    handleRSVPChange,
                     canCreateEvents,
                     canEditEvent,
                     openDeleteDialog,
                     handleEditEvent,
+                    handleShare,
                     formatDateForSidebar,
                     formatEventTime,
                     formatDateRange,
-                    rsvpMap,
-                    userRSVPEventIds,
-                    profileId,
-                    refetchRSVPs,
                     isMobile,
-                    handleShare,
                     isAdminUser
                   )}
+                  
+                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
+                    <Pagination className="my-4">
+                      <PaginationContent>
+                        {paginationState.today > 0 && (
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => handlePageChange(paginationState.today - 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                        
+                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
+                          const pageToShow = Math.min(
+                            Math.max(0, paginationState.today - 2 + i),
+                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
+                          );
+                          
+                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
+                            return (
+                              <PaginationItem key={pageToShow}>
+                                <PaginationLink
+                                  onClick={() => handlePageChange(pageToShow)}
+                                  isActive={paginationState.today === pageToShow}
+                                  className="cursor-pointer"
+                                >
+                                  {pageToShow + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        {paginationState.today < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => handlePageChange(paginationState.today + 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </TabsContent>
+                
                 <TabsContent value="upcoming" className="space-y-4 mt-4">
                   {renderEventsList(
-                    upcomingEvents,
-                    isLoading,
-                    profileLoading,
+                    tabEvents || [],
+                    tabEventsLoading || profileLoading,
+                    currentPageRSVPMap || {},
+                    userRSVPEventIds,
+                    profileId,
+                    handleRSVPChange,
                     canCreateEvents,
                     canEditEvent,
                     openDeleteDialog,
                     handleEditEvent,
+                    handleShare,
                     formatDateForSidebar,
                     formatEventTime,
                     formatDateRange,
-                    rsvpMap,
-                    userRSVPEventIds,
-                    profileId,
-                    refetchRSVPs,
                     isMobile,
-                    handleShare,
                     isAdminUser
                   )}
+                  
+                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
+                    <Pagination className="my-4">
+                      <PaginationContent>
+                        {paginationState.upcoming > 0 && (
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => handlePageChange(paginationState.upcoming - 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                        
+                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
+                          const pageToShow = Math.min(
+                            Math.max(0, paginationState.upcoming - 2 + i),
+                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
+                          );
+                          
+                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
+                            return (
+                              <PaginationItem key={pageToShow}>
+                                <PaginationLink
+                                  onClick={() => handlePageChange(pageToShow)}
+                                  isActive={paginationState.upcoming === pageToShow}
+                                  className="cursor-pointer"
+                                >
+                                  {pageToShow + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        {paginationState.upcoming < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => handlePageChange(paginationState.upcoming + 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </TabsContent>
+                
                 <TabsContent value="going" className="space-y-4 mt-4">
                   {renderEventsList(
-                    rsvpedEvents,
-                    isLoading,
-                    profileLoading,
+                    tabEvents || [],
+                    tabEventsLoading || profileLoading,
+                    currentPageRSVPMap || {},
+                    userRSVPEventIds,
+                    profileId,
+                    handleRSVPChange,
                     canCreateEvents,
                     canEditEvent,
                     openDeleteDialog,
                     handleEditEvent,
+                    handleShare,
                     formatDateForSidebar,
                     formatEventTime,
                     formatDateRange,
-                    rsvpMap,
-                    userRSVPEventIds,
-                    profileId,
-                    refetchRSVPs,
                     isMobile,
-                    handleShare,
                     isAdminUser
                   )}
+                  
+                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
+                    <Pagination className="my-4">
+                      <PaginationContent>
+                        {paginationState.going > 0 && (
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => handlePageChange(paginationState.going - 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                        
+                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
+                          const pageToShow = Math.min(
+                            Math.max(0, paginationState.going - 2 + i),
+                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
+                          );
+                          
+                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
+                            return (
+                              <PaginationItem key={pageToShow}>
+                                <PaginationLink
+                                  onClick={() => handlePageChange(pageToShow)}
+                                  isActive={paginationState.going === pageToShow}
+                                  className="cursor-pointer"
+                                >
+                                  {pageToShow + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        {paginationState.going < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => handlePageChange(paginationState.going + 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </TabsContent>
+                
                 <TabsContent value="hosting" className="space-y-4 mt-4">
                   {renderEventsList(
-                    hostingEvents,
-                    isLoading,
-                    profileLoading,
+                    tabEvents || [],
+                    tabEventsLoading || profileLoading,
+                    currentPageRSVPMap || {},
+                    userRSVPEventIds,
+                    profileId,
+                    handleRSVPChange,
                     canCreateEvents,
                     canEditEvent,
                     openDeleteDialog,
                     handleEditEvent,
+                    handleShare,
                     formatDateForSidebar,
                     formatEventTime,
                     formatDateRange,
-                    rsvpMap,
-                    userRSVPEventIds,
-                    profileId,
-                    refetchRSVPs,
                     isMobile,
-                    handleShare,
                     isAdminUser
                   )}
+                  
+                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
+                    <Pagination className="my-4">
+                      <PaginationContent>
+                        {paginationState.hosting > 0 && (
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => handlePageChange(paginationState.hosting - 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                        
+                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
+                          const pageToShow = Math.min(
+                            Math.max(0, paginationState.hosting - 2 + i),
+                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
+                          );
+                          
+                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
+                            return (
+                              <PaginationItem key={pageToShow}>
+                                <PaginationLink
+                                  onClick={() => handlePageChange(pageToShow)}
+                                  isActive={paginationState.hosting === pageToShow}
+                                  className="cursor-pointer"
+                                >
+                                  {pageToShow + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        {paginationState.hosting < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => handlePageChange(paginationState.hosting + 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </TabsContent>
+                
                 <TabsContent value="past" className="space-y-4 mt-4">
                   {renderEventsList(
-                    pastEvents,
-                    isLoading,
-                    profileLoading,
+                    tabEvents || [],
+                    tabEventsLoading || profileLoading,
+                    currentPageRSVPMap || {},
+                    userRSVPEventIds,
+                    profileId,
+                    handleRSVPChange,
                     canCreateEvents,
                     canEditEvent,
                     openDeleteDialog,
                     handleEditEvent,
+                    handleShare,
                     formatDateForSidebar,
                     formatEventTime,
                     formatDateRange,
-                    rsvpMap,
-                    userRSVPEventIds,
-                    profileId,
-                    refetchRSVPs,
                     isMobile,
-                    handleShare,
                     isAdminUser
+                  )}
+                  
+                  {!tabEventsLoading && totalEvents && totalEvents > EVENTS_PER_PAGE && (
+                    <Pagination className="my-4">
+                      <PaginationContent>
+                        {paginationState.past > 0 && (
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => handlePageChange(paginationState.past - 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                        
+                        {Array.from({ length: Math.min(5, Math.ceil(totalEvents / EVENTS_PER_PAGE)) }).map((_, i) => {
+                          const pageToShow = Math.min(
+                            Math.max(0, paginationState.past - 2 + i),
+                            Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1
+                          );
+                          
+                          if (pageToShow >= 0 && pageToShow < Math.ceil(totalEvents / EVENTS_PER_PAGE)) {
+                            return (
+                              <PaginationItem key={pageToShow}>
+                                <PaginationLink
+                                  onClick={() => handlePageChange(pageToShow)}
+                                  isActive={paginationState.past === pageToShow}
+                                  className="cursor-pointer"
+                                >
+                                  {pageToShow + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        {paginationState.past < Math.ceil(totalEvents / EVENTS_PER_PAGE) - 1 && (
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => handlePageChange(paginationState.past + 1)} 
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        )}
+                      </PaginationContent>
+                    </Pagination>
                   )}
                 </TabsContent>
               </Tabs>
@@ -911,7 +963,7 @@ const Events = () => {
             <div className="col-span-1 space-y-4">
               <EventCalendar 
                 onSelectDate={handleDateSelection} 
-                events={events || []}
+                events={allEvents || []}
               />
             </div>
           )}
@@ -931,7 +983,7 @@ const Events = () => {
       <EventSearchModal 
         open={searchModalOpen}
         onOpenChange={setSearchModalOpen}
-        events={events || []}
+        events={allEvents || []}
       />
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
@@ -960,24 +1012,23 @@ const Events = () => {
 
 const renderEventsList = (
   events: EventWithProfile[], 
-  isLoading: boolean, 
-  profileLoading: boolean,
+  isLoading: boolean,
+  rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
+  userRSVPEventIds: string[],
+  profileId: string | undefined,
+  onRSVPChange: (eventId: string, newStatus: boolean) => void,
   canCreateEvents: boolean,
   canEditEvent: (event: EventWithProfile) => boolean,
   openDeleteDialog: (event: Event) => void,
   handleEditEvent: (event: Event) => void,
+  handleShare: (event: Event) => void,
   formatDateForSidebar: (date: Date) => JSX.Element,
   formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
   formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
-  rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]>,
-  userRSVPEventIds: string[],
-  profileId: string | undefined,
-  refetchRSVPs: () => void,
   isMobile: boolean,
-  handleShare: (event: Event) => void,
   isAdminUser: boolean
 ) => {
-  if (isLoading || profileLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-8">
         <div className="animate-pulse">Loading events...</div>
@@ -1000,14 +1051,6 @@ const renderEventsList = (
       </div>
     );
   }
-
-  // Add console log for debugging events data
-  console.log("🗓️ Events list data:", events);
-  events.forEach(event => {
-    console.log(`📅 Event "${event.title}" speakers:`, event.speakers);
-    console.log(`📊 Event "${event.title}" has speakers property:`, event.hasOwnProperty('speakers'));
-    console.log(`📝 Event "${event.title}" speakers type:`, typeof event.speakers);
-  });
 
   const eventsByDate = events.reduce((acc, event) => {
     const dateKey = format(new Date(event.start_date), 'yyyy-MM-dd');
@@ -1036,7 +1079,6 @@ const renderEventsList = (
                     `${event.locations.name}${event.locations.building ? ` (${event.locations.building}${event.locations.floor ? `, Floor ${event.locations.floor}` : ''})` : ''}` :
                     event.location_text;
                   
-                  // Determine if the current user can edit this event (they are either the creator or admin or co-host)
                   const isCreator = event.created_by === profileId;
                   const canEdit = canEditEvent(event);
 
@@ -1071,19 +1113,9 @@ const renderEventsList = (
                           <div className="flex items-center">
                             <User className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
                             <span className="truncate">Hosted by {event.profiles?.username || "Anonymous"}</span>
-                            
-                            {/* Add Co-Host Button - Only visible if user is the creator of the event */}
-                            {isCreator && profileId && (
-                              <AddCoHostPopover 
-                                eventId={event.id} 
-                                profileId={profileId}
-                                onSuccess={refetchRSVPs}
-                              />
-                            )}
                           </div>
                         </div>
 
-                        {/* Speakers section */}
                         {event.speakers && (
                           <div className="flex items-start mt-2">
                             <Mic className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
@@ -1091,7 +1123,6 @@ const renderEventsList = (
                           </div>
                         )}
 
-                        {/* Tags section */}
                         {event.event_tags && event.event_tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-3">
                             {event.event_tags.map((tagRel) => (
@@ -1109,12 +1140,11 @@ const renderEventsList = (
                               eventId={event.id}
                               profileId={profileId}
                               initialRSVP={isRSVPed}
-                              onChange={() => refetchRSVPs()}
+                              onChange={(isRsvped) => onRSVPChange(event.id, isRsvped)}
                             />
                           )}
                           <CalendarOptionsPopover event={event} isMobile={isMobile} />
                           
-                          {/* New Comments Button */}
                           <Button
                             variant="outline"
                             size="sm"
@@ -1124,7 +1154,6 @@ const renderEventsList = (
                             <a href={`/events/${event.id}#comments`}>
                               <MessageSquare className="h-4 w-4 mr-2" />
                               {isMobile ? "" : "Comments"}
-                              {/* Display comment count badge if available (future feature) */}
                             </a>
                           </Button>
                           
@@ -1132,7 +1161,7 @@ const renderEventsList = (
                             variant="outline"
                             size="sm"
                             onClick={(e) => {
-                              e.preventDefault(); // Prevent navigation when clicking share
+                              e.preventDefault();
                               handleShare(event);
                             }}
                             className="text-gray-500 border-gray-500 hover:bg-gray-50"
@@ -1152,7 +1181,6 @@ const renderEventsList = (
                                 <Edit className="h-4 w-4 mr-2" />
                                 {isMobile ? "" : "Edit"}
                               </Button>
-                              {/* Only show Delete button for event creators and admins (not co-hosts) */}
                               {(isCreator || isAdminUser) && (
                                 <Button
                                   variant="outline"
