@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -58,13 +59,18 @@ export function useInfiniteTabEvents(
   tabType: string,
   filters: Omit<TabEventFilters, 'page' | 'pageSize'>,
   profileId?: string,
-  isAdmin?: boolean
+  isAdmin?: boolean,
+  options: {
+    staleTime?: number;
+    skipReset?: boolean;
+  } = {}
 ) {
   const { selectedTags, selectedDate } = filters;
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [events, setEvents] = useState<EventWithProfile[]>([]);
   const pageSize = EVENTS_PER_PAGE;
+  const { staleTime = 60000, skipReset = false } = options; // Default to 1 minute stale time
 
   // Build the fetch function based on tab type and filters
   const fetchEvents = useCallback(async () => {
@@ -181,11 +187,11 @@ export function useInfiniteTabEvents(
   }, [tabType, selectedTags, selectedDate, page, profileId, pageSize, hasMore]);
 
   // Set up the React Query
-  const { data, isLoading, isFetching, error } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["infiniteTabEvents", tabType, selectedTags, selectedDate, page, profileId],
     queryFn: fetchEvents,
     enabled: !!tabType && (!["going", "hosting"].includes(tabType) || !!profileId) && hasMore,
-    staleTime: 10000,
+    staleTime: staleTime,
   });
 
   useEffect(() => {
@@ -206,10 +212,16 @@ export function useInfiniteTabEvents(
   }, [isLoading, isFetching, hasMore]);
 
   const resetEvents = useCallback(() => {
+    if (skipReset) {
+      console.log(`Skipping reset for tab ${tabType} due to skipReset option`);
+      return;
+    }
+    
+    console.log(`Resetting events for tab ${tabType}`);
     setEvents([]);
     setPage(0);
     setHasMore(true);
-  }, []);
+  }, [skipReset, tabType]);
 
   return { 
     events, 
@@ -218,6 +230,7 @@ export function useInfiniteTabEvents(
     hasMore,
     loadMore,
     resetEvents,
+    refetch,
     error
   };
 }

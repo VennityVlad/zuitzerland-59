@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isWithinInterval, isToday, isSameDay, isBefore, isAfter, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search, Mic, MessageSquare } from "lucide-react";
+import { CalendarDays, Plus, Trash2, MapPin, User, Edit, Calendar, Tag, Filter, Share, LogIn, CalendarPlus, Search, Mic, MessageSquare, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
@@ -49,6 +49,14 @@ import {
 } from "@/hooks/useTabEvents";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
+// Interface for tab data storage
+interface TabData {
+  events: EventWithProfile[];
+  hasMore: boolean;
+  page: number;
+  lastRefreshed: number;
+}
+
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<EventWithProfile | null>(null);
@@ -59,6 +67,18 @@ const Events = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Store tab data separately
+  const [tabsData, setTabsData] = useState<Record<string, TabData>>({
+    upcoming: { events: [], hasMore: true, page: 0, lastRefreshed: Date.now() },
+    new: { events: [], hasMore: true, page: 0, lastRefreshed: Date.now() },
+    past: { events: [], hasMore: true, page: 0, lastRefreshed: Date.now() },
+    search: { events: [], hasMore: true, page: 0, lastRefreshed: Date.now() }
+  });
+  
+  // Timer reference for auto-refresh
+  const refreshTimerRef = useRef<number | null>(null);
   
   const queryClient = useQueryClient();
   
@@ -136,20 +156,84 @@ const Events = () => {
   
   const activeTabForQuery = isSearchMode ? "search" : activeTab;
   
-  // Use infinite loading hook instead of pagination
+  // Current tab data
+  const currentTabData = tabsData[activeTabForQuery];
+
+  // Setup auto-refresh for the active tab
+  useEffect(() => {
+    // Clear any existing timer
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current);
+    }
+    
+    // Set a new timer for the current tab (1 minute = 60000ms)
+    refreshTimerRef.current = window.setTimeout(() => {
+      console.log(`Auto-refreshing ${activeTabForQuery} tab after 1 minute`);
+      refreshTabData();
+    }, 60000);
+    
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [activeTabForQuery, tabsData[activeTabForQuery]?.lastRefreshed]);
+  
+  // Helper to check if tab data needs refresh (older than 1 minute)
+  const isTabDataStale = useCallback((tabName: string) => {
+    const lastRefreshed = tabsData[tabName]?.lastRefreshed || 0;
+    const now = Date.now();
+    return now - lastRefreshed > 60000; // 1 minute
+  }, [tabsData]);
+  
+  // Use infinite loading hook with skipReset option when we have cached data
   const { 
-    events: tabEvents, 
+    events, 
     isLoading: tabEventsLoading, 
     isFetchingMore,
     hasMore,
     loadMore,
-    resetEvents
+    resetEvents,
+    refetch: refetchTabEvents
   } = useInfiniteTabEvents(
     activeTabForQuery, 
     { selectedTags, selectedDate }, 
     profileId,
-    isAdminUser
+    isAdminUser,
+    { 
+      skipReset: currentTabData?.events.length > 0 && !isTabDataStale(activeTabForQuery),
+      staleTime: 60000 // 1 minute
+    }
   );
+  
+  // Manual refresh function
+  const refreshTabData = useCallback(() => {
+    setIsRefreshing(true);
+    
+    // Invalidate queries to force refetch
+    queryClient.invalidateQueries({ 
+      queryKey: ["infiniteTabEvents", activeTabForQuery] 
+    });
+    
+    // Reset the tab's data
+    setTabsData(prev => ({
+      ...prev,
+      [activeTabForQuery]: {
+        ...prev[activeTabForQuery],
+        events: [],
+        hasMore: true,
+        page: 0,
+        lastRefreshed: Date.now()
+      }
+    }));
+    
+    // Force reset in the hook
+    resetEvents();
+    
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+  }, [activeTabForQuery, queryClient, resetEvents]);
   
   // Use infinite scroll hook
   useInfiniteScroll(loadMore, { threshold: 400 });
@@ -160,16 +244,51 @@ const Events = () => {
     profileId
   );
   
-  const currentEventIds = (tabEvents || []).map(event => event.id);
+  // Update tab data when events change
+  useEffect(() => {
+    if (events && events.length > 0) {
+      setTabsData(prev => ({
+        ...prev,
+        [activeTabForQuery]: {
+          events: events,
+          hasMore: hasMore,
+          page: prev[activeTabForQuery]?.page || 0,
+          lastRefreshed: Date.now()
+        }
+      }));
+    }
+  }, [events, hasMore, activeTabForQuery]);
+  
+  // Get current events from either the hook or cached data
+  const currentEvents = events.length > 0 ? events : (currentTabData?.events || []);
+  
+  const currentEventIds = currentEvents.map(event => event.id);
   
   const { data: currentPageRSVPMap, isLoading: rsvpsLoading, refetch: refetchRSVPs } = useEventRSVPs(currentEventIds);
   
   const { data: userRSVPEventIds = [], refetch: refetchUserRSVPs } = useUserRSVPs(profileId);
-
+  
+  // Handle tab change
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    // If the tab data is stale, we'll let the useEffect trigger a refresh
+  };
+  
+  // Modified to avoid unnecessary resets
   useEffect(() => {
-    // Reset the event list when tab, search mode, or filters change
-    resetEvents();
-  }, [activeTab, isSearchMode, selectedTags, selectedDate, resetEvents]);
+    // Only reset when filters change, not when just switching tabs
+    if (selectedTags.length > 0 || !!selectedDate) {
+      setTabsData(prev => ({
+        ...prev,
+        search: {
+          events: [],
+          hasMore: true,
+          page: 0,
+          lastRefreshed: Date.now()
+        }
+      }));
+    }
+  }, [selectedTags, selectedDate]);
   
   useEffect(() => {
     setIsSearchMode(selectedTags.length > 0 || !!selectedDate);
@@ -180,6 +299,21 @@ const Events = () => {
     queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
     queryClient.invalidateQueries({ queryKey: ["eventCount"] });
     setCreateEventOpen(false);
+    
+    // Reset all tab data to ensure fresh content
+    setTabsData(prev => {
+      const newState = {...prev};
+      Object.keys(newState).forEach(key => {
+        newState[key] = {
+          ...newState[key],
+          events: [],
+          hasMore: true,
+          page: 0,
+          lastRefreshed: Date.now()
+        };
+      });
+      return newState;
+    });
   };
 
   const handleDeleteEvent = async () => {
@@ -268,6 +402,16 @@ const Events = () => {
     setSelectedDate(date);
     if (date) {
       setIsSearchMode(true);
+      // Reset search tab data when changing date
+      setTabsData(prev => ({
+        ...prev,
+        search: {
+          events: [],
+          hasMore: true,
+          page: 0,
+          lastRefreshed: Date.now()
+        }
+      }));
     }
   };
 
@@ -275,6 +419,16 @@ const Events = () => {
     setSelectedTags(tags);
     if (tags.length > 0) {
       setIsSearchMode(true);
+      // Reset search tab data when changing tags
+      setTabsData(prev => ({
+        ...prev,
+        search: {
+          events: [],
+          hasMore: true,
+          page: 0,
+          lastRefreshed: Date.now()
+        }
+      }));
     } else if (!selectedDate) {
       setIsSearchMode(false);
     }
@@ -476,6 +630,24 @@ const Events = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="col-span-1 md:col-span-3">
+            <div className="flex justify-between items-center mb-2">
+              {/* Manual refresh button */}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={refreshTabData}
+                disabled={isRefreshing}
+                className="text-gray-500"
+              >
+                <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
+              
+              <div className="text-xs text-gray-500">
+                Last updated: {new Date(currentTabData?.lastRefreshed || Date.now()).toLocaleTimeString()}
+              </div>
+            </div>
+            
             {isSearchMode ? (
               <div className="space-y-4">
                 <SearchHeader 
@@ -485,8 +657,8 @@ const Events = () => {
                 />
                 
                 {renderEventsList(
-                  tabEvents || [],
-                  tabEventsLoading,
+                  currentEvents,
+                  tabEventsLoading && currentEvents.length === 0,
                   isFetchingMore,
                   hasMore,
                   currentPageRSVPMap || {},
@@ -506,7 +678,7 @@ const Events = () => {
                 )}
               </div>
             ) : (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-2">
                   <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
                   <TabsTrigger value="new">New</TabsTrigger>
@@ -515,8 +687,8 @@ const Events = () => {
 
                 <TabsContent value="upcoming" className="space-y-4 mt-4">
                   {renderEventsList(
-                    tabEvents || [],
-                    tabEventsLoading,
+                    currentEvents,
+                    tabEventsLoading && currentEvents.length === 0,
                     isFetchingMore,
                     hasMore,
                     currentPageRSVPMap || {},
@@ -538,8 +710,8 @@ const Events = () => {
                 
                 <TabsContent value="new" className="space-y-4 mt-4">
                   {renderEventsList(
-                    tabEvents || [],
-                    tabEventsLoading,
+                    currentEvents,
+                    tabEventsLoading && currentEvents.length === 0,
                     isFetchingMore,
                     hasMore,
                     currentPageRSVPMap || {},
@@ -561,8 +733,8 @@ const Events = () => {
                 
                 <TabsContent value="past" className="space-y-4 mt-4">
                   {renderEventsList(
-                    tabEvents || [],
-                    tabEventsLoading,
+                    currentEvents,
+                    tabEventsLoading && currentEvents.length === 0,
                     isFetchingMore,
                     hasMore,
                     currentPageRSVPMap || {},
