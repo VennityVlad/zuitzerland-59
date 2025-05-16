@@ -434,6 +434,7 @@ const Events = () => {
     });
   };
 
+  // Fix the handleCreateEventSuccess function to match the expected prop type
   const handleCreateEventSuccess = (newEventId: string) => {
     // Invalidate queries to refresh data
     queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
