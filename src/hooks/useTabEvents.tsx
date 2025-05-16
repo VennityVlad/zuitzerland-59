@@ -12,6 +12,43 @@ export interface TabEventFilters {
 
 export const EVENTS_PER_PAGE = 5;
 
+// Make sure we're using a consistent event interface
+export interface EventData {
+  id: string;
+  title: string;
+  description: string | null;
+  start_date: string;
+  end_date: string;
+  location_id: string | null;
+  location_text: string | null;
+  color: string;
+  is_all_day: boolean;
+  created_by: string;
+  created_at: string;
+  timezone: string;
+  recurring_pattern_id?: string | null;
+  is_recurring_instance?: boolean;
+  parent_event_id?: string | null;
+  is_exception?: boolean;
+  instance_date?: string | null;
+  meerkat_enabled?: boolean;
+  locations?: {
+    name: string;
+    building: string | null;
+    floor: string | null;
+  } | null;
+  event_tags?: {
+    tags: {
+      id: string;
+      name: string;
+    }
+  }[] | null;
+  profiles?: {
+    username: string | null;
+    id: string;
+  } | null;
+}
+
 export function useTabEvents(
   tabType: string,
   filters: TabEventFilters,
@@ -126,7 +163,7 @@ export function useTabEvents(
       };
     });
 
-    return typedEvents;
+    return typedEvents as EventData[];
   };
 
   // Set up the React Query
@@ -137,6 +174,7 @@ export function useTabEvents(
   });
 }
 
+// Update the rest of the hook functions to use the EventData interface
 export function useEventCount(tabType: string, filters: Omit<TabEventFilters, 'page' | 'pageSize'>, profileId?: string) {
   const { selectedTags, selectedDate } = filters;
 

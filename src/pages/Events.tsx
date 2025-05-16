@@ -51,7 +51,8 @@ import {
 } from "@/hooks/useTabEvents";
 import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
 
-interface Event {
+// Renamed from Event to EventData to avoid conflict with DOM Event type
+interface EventData {
   id: string;
   title: string;
   description: string | null;
@@ -84,7 +85,8 @@ interface Event {
   meerkat_enabled?: boolean;
 }
 
-interface EventWithProfile extends Event {
+// Updated to use EventData instead of Event
+interface EventWithProfile extends EventData {
   profiles?: {
     username: string | null;
     id: string;
@@ -126,8 +128,8 @@ const formatEventTime = (startDate: string, endDate: string, isAllDay: boolean, 
 
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
-  const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<EventData | null>(null);
+  const [eventToEdit, setEventToEdit] = useState<EventData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("upcoming");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -305,11 +307,11 @@ const Events = () => {
     }
   };
 
-  const openDeleteDialog = (event: Event) => {
+  const openDeleteDialog = (event: EventData) => {
     setEventToDelete(event);
   };
 
-  const handleEditEvent = (event: Event) => {
+  const handleEditEvent = (event: EventData) => {
     setEventToEdit(event);
     setCreateEventOpen(true);
   };
@@ -321,7 +323,7 @@ const Events = () => {
     return userProfile?.role === 'admin';
   };
 
-  const handleShare = async (event: Event) => {
+  const handleShare = async (event: EventData) => {
     const shareUrl = `${window.location.origin}/events/${event.id}`;
     
     if (navigator.share && navigator.canShare) {
@@ -869,9 +871,9 @@ const renderEventsList = (
   onRSVPChange: (eventId: string, newStatus: boolean) => void,
   canCreateEvents: boolean,
   canEditEvent: (event: EventWithProfile) => boolean,
-  openDeleteDialog: (event: Event) => void,
-  handleEditEvent: (event: Event) => void,
-  handleShare: (event: Event) => void,
+  openDeleteDialog: (event: EventData) => void,
+  handleEditEvent: (event: EventData) => void,
+  handleShare: (event: EventData) => void,
   formatDateForSidebar: (date: Date) => JSX.Element,
   formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
   isMobile: boolean,
