@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
@@ -60,7 +61,7 @@ export const TagFilter = ({ selectedTags, onTagsChange, availableTagIds }: TagFi
 
   return (
     <div className="flex flex-col space-y-2">
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -141,7 +142,7 @@ export const TagFilter = ({ selectedTags, onTagsChange, availableTagIds }: TagFi
       </div>
 
       {selectedTags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-2">
           {selectedTags.map((tagId) => {
             const tag = allTags?.find((t) => t.id === tagId);
             if (!tag) return null;

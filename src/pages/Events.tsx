@@ -677,9 +677,9 @@ const Events = () => {
       <Separator className="mt-3" />
 
       <div className="space-y-4">
-        <div className="flex flex-col gap-4">
+        <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 overflow-x-auto flex-grow">
+            <div className="flex items-center gap-2">
               <div className="flex-shrink-0">
                 <TagFilter 
                   selectedTags={selectedTags} 
@@ -692,7 +692,7 @@ const Events = () => {
                 size="sm"
                 onClick={toggleGoingFilter}
                 disabled={!profileId}
-                className={`flex-shrink-0 ${isGoing ? "bg-green-600 hover:bg-green-700" : ""}`}
+                className={`flex-shrink-0 h-10 ${isGoing ? "bg-green-600 hover:bg-green-700" : ""}`}
               >
                 Going
               </Button>
@@ -702,7 +702,7 @@ const Events = () => {
                 size="sm"
                 onClick={toggleHostingFilter}
                 disabled={!profileId}
-                className={`flex-shrink-0 ${isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                className={`flex-shrink-0 h-10 ${isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}`}
               >
                 Hosting
               </Button>
@@ -718,6 +718,18 @@ const Events = () => {
               </div>
             )}
           </div>
+          
+          {(isGoing || isHosting || selectedTags.length > 0 || !!selectedDate) && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+              >
+                Clear all filters
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -739,18 +751,6 @@ const Events = () => {
                 Last updated: {new Date(currentTabData?.lastRefreshed || Date.now()).toLocaleTimeString()}
               </div>
             </div>
-            
-            {(isGoing || isHosting || selectedTags.length > 0 || !!selectedDate) && (
-              <div className="mb-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearAllFilters}
-                >
-                  Clear all filters
-                </Button>
-              </div>
-            )}
             
             {isSearchMode ? (
               <div className="space-y-4">
