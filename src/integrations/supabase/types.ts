@@ -1404,6 +1404,7 @@ export type Database = {
           flag: Database["public"]["Enums"]["zulink_flag_type"]
           github_link: string | null
           id: string
+          implementation_url: string | null
           name: string
           profile_id: string
           status: Database["public"]["Enums"]["zulink_project_status"]
@@ -1420,6 +1421,7 @@ export type Database = {
           flag: Database["public"]["Enums"]["zulink_flag_type"]
           github_link?: string | null
           id?: string
+          implementation_url?: string | null
           name: string
           profile_id: string
           status?: Database["public"]["Enums"]["zulink_project_status"]
@@ -1436,6 +1438,7 @@ export type Database = {
           flag?: Database["public"]["Enums"]["zulink_flag_type"]
           github_link?: string | null
           id?: string
+          implementation_url?: string | null
           name?: string
           profile_id?: string
           status?: Database["public"]["Enums"]["zulink_project_status"]

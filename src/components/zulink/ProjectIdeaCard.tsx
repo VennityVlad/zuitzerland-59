@@ -1,12 +1,18 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button"; // Added this line back
-import { ExternalLink, ThumbsUp, ThumbsDown, Edit3, CheckCircle, XCircle, Settings2, Tag } from "lucide-react"; // Added Tag
-import { Tables } from '@/integrations/supabase/types'; // Will be auto-generated
+import { Button } from "@/components/ui/button";
+import { ExternalLink, ThumbsUp, ThumbsDown, Edit3, CheckCircle, XCircle, Settings2, Tag, Link, Pencil } from "lucide-react"; // Added Link and Pencil icons
+import { Tables } from '@/integrations/supabase/types';
 import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 import { toast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Added Popover
+import { Input } from "@/components/ui/input"; // Added Input
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"; // Added Form components
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod"; // Added zod for form validation
 
 type ZulinkProject = Tables<'zulink_projects'>;
 type ZulinkProjectStatus = ZulinkProject['status']; // 'pending' | 'approved' | 'rejected' | 'implemented'
@@ -16,6 +22,13 @@ interface ProjectIdeaCardProps extends ZulinkProject {
   currentUserId?: string;
   onStatusUpdate?: () => void;
 }
+
+// URL validation schema
+const urlSchema = z.object({
+  implementation_url: z.string().url("Please enter a valid URL").min(1, "URL is required")
+});
+
+type UrlFormData = z.infer<typeof urlSchema>;
 
 export function ProjectIdeaCard({
   id,
@@ -31,13 +44,29 @@ export function ProjectIdeaCard({
   status,
   created_at,
   profile_id,
+  implementation_url,
   isAdmin,
   currentUserId,
   onStatusUpdate,
 }: ProjectIdeaCardProps) {
   const { authenticatedSupabase } = useSupabaseJwt();
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isEditingUrl, setIsEditingUrl] = useState(false);
 
-  const handleStatusChange = async (newStatus: ZulinkProjectStatus) => { // Updated type to include 'pending'
+  // Form setup
+  const form = useForm<UrlFormData>({
+    resolver: zodResolver(urlSchema),
+    defaultValues: {
+      implementation_url: implementation_url || ""
+    }
+  });
+
+  // Update form default values when implementation_url changes
+  React.useEffect(() => {
+    form.reset({ implementation_url: implementation_url || "" });
+  }, [implementation_url, form]);
+
+  const handleStatusChange = async (newStatus: ZulinkProjectStatus) => {
     if (!authenticatedSupabase || !isAdmin) return;
 
     try {
@@ -55,12 +84,35 @@ export function ProjectIdeaCard({
     }
   };
 
+  const handleImplementationUrlSubmit = async (data: UrlFormData) => {
+    if (!authenticatedSupabase || !isAdmin) return;
+
+    try {
+      const { error } = await authenticatedSupabase
+        .from('zulink_projects')
+        .update({ 
+          status: 'implemented', 
+          implementation_url: data.implementation_url 
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      toast({ title: "Project Implemented", description: `Project "${name}" has been marked as implemented.` });
+      setIsPopoverOpen(false);
+      setIsEditingUrl(false);
+      if (onStatusUpdate) onStatusUpdate();
+    } catch (error) {
+      console.error("Error updating implementation URL:", error);
+      toast({ title: "Error", description: "Failed to update implementation URL.", variant: "destructive" });
+    }
+  };
+
   const isOwner = profile_id === currentUserId;
 
   const getStatusBadgeVariant = (currentStatus: ZulinkProjectStatus): "default" | "destructive" | "outline" | "secondary" => {
     switch (currentStatus) {
-      case 'approved': return 'default'; // Was 'success'
-      case 'implemented': return 'default'; // Was 'success'
+      case 'approved': return 'default'; 
+      case 'implemented': return 'default'; 
       case 'rejected': return 'destructive';
       case 'pending': return 'secondary';
       default: return 'outline';
@@ -99,7 +151,7 @@ export function ProjectIdeaCard({
         <div>
           <h4 className="font-semibold text-xs mb-1">Flag:</h4>
           <Badge
-            className="flex items-center text-slate-700 dark:text-slate-900" // Adjusted text color for better contrast on light backgrounds
+            className="flex items-center text-slate-700 dark:text-slate-900" 
             style={{
               backgroundColor: getFlagBackgroundColor(),
             }}
@@ -123,16 +175,69 @@ export function ProjectIdeaCard({
         )}
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-2 pt-4">
-        {github_link && (
-          <Button variant="outline" size="sm" asChild className="w-full">
-            <a href={github_link} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4 mr-2" /> GitHub
-            </a>
-          </Button>
-        )}
+        {/* External Links Section */}
+        <div className="w-full space-y-2">
+          {github_link && (
+            <Button variant="outline" size="sm" asChild className="w-full">
+              <a href={github_link} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 mr-2" /> GitHub
+              </a>
+            </Button>
+          )}
+          
+          {implementation_url && status === 'implemented' && (
+            <div className="flex w-full gap-2">
+              <Button variant="default" size="sm" asChild className="flex-1">
+                <a href={implementation_url} target="_blank" rel="noopener noreferrer">
+                  <Link className="h-4 w-4 mr-2" /> Go to App
+                </a>
+              </Button>
+              
+              {isAdmin && (
+                <Popover open={isEditingUrl} onOpenChange={setIsEditingUrl}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Edit App URL</h4>
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(handleImplementationUrlSubmit)} className="space-y-3">
+                          <FormField
+                            control={form.control}
+                            name="implementation_url"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>URL</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="https://..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="flex justify-end gap-2">
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditingUrl(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" size="sm">Save</Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Admin Actions Section */}
         {isAdmin && status === 'pending' && (
           <div className="flex gap-2 w-full">
-            <Button variant="default" size="sm" onClick={() => handleStatusChange('approved')} className="flex-1"> {/* Was 'success' */}
+            <Button variant="default" size="sm" onClick={() => handleStatusChange('approved')} className="flex-1">
               <ThumbsUp className="h-4 w-4 mr-2" /> Approve
             </Button>
             <Button variant="destructive" size="sm" onClick={() => handleStatusChange('rejected')} className="flex-1">
@@ -140,23 +245,54 @@ export function ProjectIdeaCard({
             </Button>
           </div>
         )}
+        
         {isAdmin && status === 'approved' && (
-            <Button variant="secondary" size="sm" onClick={() => handleStatusChange('implemented')} className="w-full">
+          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="secondary" size="sm" className="w-full">
                 <CheckCircle className="h-4 w-4 mr-2" /> Mark as Implemented
-            </Button>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Implementation URL Required</h4>
+                <p className="text-xs text-muted-foreground">
+                  Please enter the URL where users can access the implemented project.
+                </p>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleImplementationUrlSubmit)} className="space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="implementation_url"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Implementation URL</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setIsPopoverOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" size="sm">Submit</Button>
+                    </div>
+                  </form>
+                </Form>
+              </div>
+            </PopoverContent>
+          </Popover>
         )}
+        
         {isAdmin && status === 'rejected' && (
-             <Button variant="outline" size="sm" onClick={() => handleStatusChange('pending')} className="w-full">
-                <Settings2 className="h-4 w-4 mr-2" /> Re-evaluate (Set to Pending)
-            </Button>
+          <Button variant="outline" size="sm" onClick={() => handleStatusChange('pending')} className="w-full">
+            <Settings2 className="h-4 w-4 mr-2" /> Re-evaluate (Set to Pending)
+          </Button>
         )}
       </CardFooter>
     </Card>
   );
 }
-// Add some CSS vars for badge colors (can be added to index.css or a global style sheet)
-// :root {
-//   --green-badge: 142.1 76.2% 36.3%; /* Example green */
-//   --yellow-badge: 47.9 95.8% 53.1%; /* Example yellow */
-//   --grey-badge: 215.4 16.3% 56.9%; /* Example grey */
-// }
