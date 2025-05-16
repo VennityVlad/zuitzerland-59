@@ -787,7 +787,7 @@ const Events = () => {
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-2">
                   <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                  <TabsTrigger value="new">New</TabsTrigger>
+                  <TabsTrigger value="new">Newly Added</TabsTrigger>
                   <TabsTrigger value="past">Past</TabsTrigger>
                 </TabsList>
 
