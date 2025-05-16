@@ -546,8 +546,8 @@ const App = () => {
     );
   }
 
-  // Define the hardcoded preview app ID
-  const hardcodedPreviewAppId = "client-WY5gJF7sG7VB51B5qkv1Vv4isqH4CyePZH5ayP1Dz9dzk";
+  // Define the new hardcoded app ID
+  const hardcodedPreviewAppId = "cm6v0x3vj006f131s5ztfbqc6";
   
   // Log which App ID will be used
   if (isPreview) {
