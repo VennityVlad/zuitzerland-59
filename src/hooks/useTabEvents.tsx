@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,51 +87,12 @@ export function useTabEvents(
         query = query.gt("start_date", now.toISOString());
         break;
 
-      case "going":
-        // Need to fetch RSVPs first to filter by events the user is going to
-        if (profileId) {
-          const { data: rsvpData, error: rsvpError } = await supabase
-            .from("event_rsvps")
-            .select("event_id")
-            .eq("profile_id", profileId);
-
-          if (rsvpError) {
-            throw rsvpError;
-          }
-
-          const rsvpEventIds = rsvpData.map(rsvp => rsvp.event_id);
-          if (rsvpEventIds.length === 0) {
-            return []; // User hasn't RSVPed to any events
-          }
-          
-          query = query.in("id", rsvpEventIds);
-        } else {
-          return []; // No profile ID, can't determine "going" events
-        }
-        break;
-
-      case "hosting":
-        // Events created by the user or where they're a co-host
-        if (profileId) {
-          const { data: coHostData, error: coHostError } = await supabase
-            .from("event_co_hosts")
-            .select("event_id")
-            .eq("profile_id", profileId);
-
-          if (coHostError) {
-            throw coHostError;
-          }
-
-          const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
-          
-          if (coHostEventIds.length > 0) {
-            query = query.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
-          } else {
-            query = query.eq("created_by", profileId);
-          }
-        } else {
-          return []; // No profile ID, can't determine "hosting" events
-        }
+      case "new":
+        // Show events created in the last 24 hours
+        const yesterday = new Date(now);
+        yesterday.setHours(now.getHours() - 24);
+        
+        query = query.gte("created_at", yesterday.toISOString());
         break;
 
       case "past":
@@ -171,7 +133,7 @@ export function useTabEvents(
   return useQuery({
     queryKey: ["tabEvents", tabType, selectedTags, selectedDate, page, pageSize, profileId],
     queryFn: fetchEvents,
-    enabled: !!tabType && (!["going", "hosting"].includes(tabType) || !!profileId)
+    enabled: !!tabType
   });
 }
 
@@ -236,51 +198,12 @@ export function useEventCount(tabType: string, filters: Omit<TabEventFilters, 'p
         query = query.gt("start_date", now.toISOString());
         break;
 
-      case "going":
-        // Need to fetch RSVPs first to filter by events the user is going to
-        if (profileId) {
-          const { data: rsvpData, error: rsvpError } = await supabase
-            .from("event_rsvps")
-            .select("event_id")
-            .eq("profile_id", profileId);
-
-          if (rsvpError) {
-            throw rsvpError;
-          }
-
-          const rsvpEventIds = rsvpData.map(rsvp => rsvp.event_id);
-          if (rsvpEventIds.length === 0) {
-            return 0; // User hasn't RSVPed to any events
-          }
-          
-          query = query.in("id", rsvpEventIds);
-        } else {
-          return 0; // No profile ID, can't determine "going" events
-        }
-        break;
-
-      case "hosting":
-        // Events created by the user or where they're a co-host
-        if (profileId) {
-          const { data: coHostData, error: coHostError } = await supabase
-            .from("event_co_hosts")
-            .select("event_id")
-            .eq("profile_id", profileId);
-
-          if (coHostError) {
-            throw coHostError;
-          }
-
-          const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
-          
-          if (coHostEventIds.length > 0) {
-            query = query.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
-          } else {
-            query = query.eq("created_by", profileId);
-          }
-        } else {
-          return 0; // No profile ID, can't determine "hosting" events
-        }
+      case "new":
+        // Show events created in the last 24 hours
+        const yesterday = new Date(now);
+        yesterday.setHours(now.getHours() - 24);
+        
+        query = query.gte("created_at", yesterday.toISOString());
         break;
 
       case "past":
@@ -307,7 +230,7 @@ export function useEventCount(tabType: string, filters: Omit<TabEventFilters, 'p
   return useQuery({
     queryKey: ["eventCount", tabType, selectedTags, selectedDate, profileId],
     queryFn: fetchEventCount,
-    enabled: !!tabType && (!["going", "hosting"].includes(tabType) || !!profileId)
+    enabled: !!tabType
   });
 }
 
