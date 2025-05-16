@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
@@ -448,8 +447,15 @@ const App = () => {
   useEffect(() => {
     const fetchPrivyAppId = async () => {
       try {
-        // Determine if we're in preview mode
-        const isPreview = process.env.IS_LOVABLE_PREVIEW === 'true';
+        // Determine if we're in preview mode based on the hostname/domain
+        const hostname = window.location.hostname;
+        const isPreview = hostname.includes('preview--') || 
+                         hostname.includes('.preview.') || 
+                         hostname.startsWith('preview-') ||
+                         hostname === 'localhost' ||
+                         hostname === '127.0.0.1';
+        
+        console.log(`Current hostname: ${hostname}`);
         console.log(`Running in ${isPreview ? 'preview' : 'production'} mode`);
 
         const { data, error } = await supabase.functions.invoke('get-secret', {
