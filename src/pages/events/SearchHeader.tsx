@@ -8,23 +8,17 @@ interface SearchHeaderProps {
   selectedTags: string[];
   selectedDate?: Date;
   clearFilters: () => void;
-  isGoing?: boolean;
-  isHosting?: boolean;
 }
 
-export const SearchHeader = ({ selectedTags, selectedDate, clearFilters, isGoing, isHosting }: SearchHeaderProps) => {
+export const SearchHeader = ({ selectedTags, selectedDate, clearFilters }: SearchHeaderProps) => {
   return (
     <div className="flex items-center justify-between gap-4 py-2 px-4 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 mb-4">
       <div className="flex items-center gap-2 overflow-hidden">
         <Filter className="h-4 w-4 text-purple-500 flex-shrink-0" />
         <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
           {selectedTags.length > 0 && `${selectedTags.length} tag${selectedTags.length !== 1 ? 's' : ''}`}
-          {selectedTags.length > 0 && (selectedDate || isGoing || isHosting) && ', '}
+          {selectedTags.length > 0 && selectedDate && ', '}
           {selectedDate && `Date: ${format(selectedDate, 'MMM d, yyyy')}`}
-          {selectedDate && (isGoing || isHosting) && ', '}
-          {isGoing && 'Going'}
-          {isGoing && isHosting && ', '}
-          {isHosting && 'Hosting'}
         </span>
       </div>
       <Button 

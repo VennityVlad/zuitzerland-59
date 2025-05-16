@@ -718,40 +718,36 @@ const Events = () => {
               </div>
             </div>
             
-            {/* Filter buttons for Going and Hosting moved inline with TagFilter */}
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <TagFilter 
-                  selectedTags={selectedTags} 
-                  onTagsChange={handleTagsChange}
-                />
-                
-                <Button
-                  variant={isGoing ? "default" : "outline"}
-                  size="sm"
-                  onClick={toggleGoingFilter}
-                  disabled={!profileId}
-                  className={isGoing ? "bg-green-600 hover:bg-green-700" : ""}
-                >
-                  Going
-                </Button>
-                
-                <Button
-                  variant={isHosting ? "default" : "outline"}
-                  size="sm"
-                  onClick={toggleHostingFilter}
-                  disabled={!profileId}
-                  className={isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}
-                >
-                  Hosting
-                </Button>
-              </div>
+            {/* Filter buttons for Going and Hosting */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Button
+                variant={isGoing ? "default" : "outline"}
+                size="sm"
+                onClick={toggleGoingFilter}
+                disabled={!profileId}
+                className={isGoing ? "bg-green-600 hover:bg-green-700" : ""}
+              >
+                <CalendarCheck className="h-4 w-4 mr-2" />
+                Going
+              </Button>
+              
+              <Button
+                variant={isHosting ? "default" : "outline"}
+                size="sm"
+                onClick={toggleHostingFilter}
+                disabled={!profileId}
+                className={isHosting ? "bg-blue-600 hover:bg-blue-700" : ""}
+              >
+                <CalendarMinus className="h-4 w-4 mr-2" />
+                Hosting
+              </Button>
               
               {(isGoing || isHosting || selectedTags.length > 0 || !!selectedDate) && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={clearAllFilters}
+                  className="ml-auto"
                 >
                   Clear all filters
                 </Button>
