@@ -121,9 +121,39 @@ export function useInfiniteTabEvents(
       const dateEnd = new Date(selectedDate);
       dateEnd.setHours(23, 59, 59, 999);
 
-      query = query.or(`start_date.gte.${dateStart.toISOString()},end_date.gte.${dateStart.toISOString()},start_date.lte.${dateEnd.toISOString()}`);
+      // Fix: Use specific date filter that makes more sense for events
+      query = query.or(
+        `and(start_date.gte.${dateStart.toISOString()},start_date.lte.${dateEnd.toISOString()}),` +
+        `and(end_date.gte.${dateStart.toISOString()},end_date.lte.${dateEnd.toISOString()}),` + 
+        `and(start_date.lte.${dateStart.toISOString()},end_date.gte.${dateEnd.toISOString()})`
+      );
+      
+      // When a date filter is applied, we shouldn't apply the tab-specific filters
+      // Return early to skip the tab-specific filters below
+      const { data, error } = await query
+        .order("start_date", { ascending: true })
+        .range(offset, offset + pageSize - 1);
+
+      if (error) {
+        console.error(`Error fetching events for date ${selectedDate}:`, error);
+        throw error;
+      }
+
+      // Make sure event_tags is properly typed
+      const typedEvents = data.map((event: any) => {
+        const safeEventTags = Array.isArray(event.event_tags) ? event.event_tags : [];
+        return {
+          ...event,
+          event_tags: safeEventTags
+        };
+      });
+
+      const hasMoreData = typedEvents.length === pageSize;
+      
+      return { data: typedEvents as EventWithProfile[], hasMore: hasMoreData };
     }
 
+    // If no date filter is active, continue with regular tab filters
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
