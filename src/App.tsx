@@ -448,8 +448,15 @@ const App = () => {
   useEffect(() => {
     const fetchPrivyAppId = async () => {
       try {
+        // Determine if we're in preview mode
+        const isPreview = process.env.IS_LOVABLE_PREVIEW === 'true';
+        console.log(`Running in ${isPreview ? 'preview' : 'production'} mode`);
+
         const { data, error } = await supabase.functions.invoke('get-secret', {
-          body: { secretName: 'PRIVY_APP_ID' }
+          body: { 
+            secretName: 'PRIVY_APP_ID',
+            isPreview: isPreview
+          }
         });
 
         if (error) {
@@ -473,6 +480,7 @@ const App = () => {
           return;
         }
 
+        console.log(`Using Privy App ID for ${isPreview ? 'preview' : 'production'}`);
         setPrivyAppId(data.secret);
       } catch (error) {
         console.error('Error in fetchPrivyAppId:', error);
