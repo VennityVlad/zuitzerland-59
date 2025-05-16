@@ -47,45 +47,23 @@ import {
   useEventCount, 
   useEventRSVPs, 
   useUserRSVPs, 
-  EVENTS_PER_PAGE 
+  EVENTS_PER_PAGE,
+  EventData 
 } from "@/hooks/useTabEvents";
 import { formatTimeRange, getReadableTimezoneName } from "@/lib/date-utils";
 
 // Renamed from Event to EventData to avoid conflict with DOM Event type
-interface EventData {
-  id: string;
-  title: string;
-  description: string | null;
-  start_date: string;
-  end_date: string;
-  location_id: string | null;
-  location_text: string | null;
-  color: string;
-  is_all_day: boolean;
-  created_by: string;
-  created_at: string;
-  locations?: {
-    name: string;
-    building: string | null;
-    floor: string | null;
-  } | null;
-  event_tags?: {
-    tags: {
-      id: string;
-      name: string;
-    }
-  }[] | null;
-  speakers?: string | null;
-  timezone: string;
-  recurring_pattern_id?: string | null;
-  is_recurring_instance?: boolean;
-  parent_event_id?: string | null;
-  is_exception?: boolean;
-  instance_date?: string | null;
-  meerkat_enabled?: boolean;
-}
+// Import the interface from useTabEvents instead of redefining it
+import { 
+  useTabEvents, 
+  useEventCount, 
+  useEventRSVPs, 
+  useUserRSVPs, 
+  EVENTS_PER_PAGE,
+  EventData 
+} from "@/hooks/useTabEvents";
 
-// Updated to use EventData instead of Event
+// Updated to use EventData instead of redefining it
 interface EventWithProfile extends EventData {
   profiles?: {
     username: string | null;

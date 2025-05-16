@@ -26,11 +26,11 @@ export interface EventData {
   created_by: string;
   created_at: string;
   timezone: string;
-  recurring_pattern_id?: string | null;
-  is_recurring_instance?: boolean;
-  parent_event_id?: string | null;
-  is_exception?: boolean;
-  instance_date?: string | null;
+  recurring_pattern_id: string | null;
+  is_recurring_instance: boolean;
+  parent_event_id: string | null;
+  is_exception: boolean;
+  instance_date: string | null;
   meerkat_enabled?: boolean;
   locations?: {
     name: string;
@@ -159,7 +159,12 @@ export function useTabEvents(
       const safeEventTags = Array.isArray(event.event_tags) ? event.event_tags : [];
       return {
         ...event,
-        event_tags: safeEventTags
+        event_tags: safeEventTags,
+        recurring_pattern_id: event.recurring_pattern_id || null,
+        is_recurring_instance: event.is_recurring_instance || false,
+        parent_event_id: event.parent_event_id || null,
+        is_exception: event.is_exception || false,
+        instance_date: event.instance_date || null
       };
     });
 
