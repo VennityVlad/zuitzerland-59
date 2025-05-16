@@ -118,6 +118,9 @@ export function useInfiniteTabEvents(
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Get date 24 hours ago for "new" tab
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     // Apply tab-specific filters
     switch (tabType) {
@@ -135,52 +138,10 @@ export function useInfiniteTabEvents(
         // Show future events (after today)
         query = query.gt("start_date", now.toISOString());
         break;
-
-      case "going":
-        // Need to fetch RSVPs first to filter by events the user is going to
-        if (profileId) {
-          const { data: rsvpData, error: rsvpError } = await supabase
-            .from("event_rsvps")
-            .select("event_id")
-            .eq("profile_id", profileId);
-
-          if (rsvpError) {
-            throw rsvpError;
-          }
-
-          const rsvpEventIds = rsvpData.map(rsvp => rsvp.event_id);
-          if (rsvpEventIds.length === 0) {
-            return { data: [], hasMore: false }; // User hasn't RSVPed to any events
-          }
-          
-          query = query.in("id", rsvpEventIds);
-        } else {
-          return { data: [], hasMore: false }; // No profile ID, can't determine "going" events
-        }
-        break;
-
-      case "hosting":
-        // Events created by the user or where they're a co-host
-        if (profileId) {
-          const { data: coHostData, error: coHostError } = await supabase
-            .from("event_co_hosts")
-            .select("event_id")
-            .eq("profile_id", profileId);
-
-          if (coHostError) {
-            throw coHostError;
-          }
-
-          const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
-          
-          if (coHostEventIds.length > 0) {
-            query = query.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
-          } else {
-            query = query.eq("created_by", profileId);
-          }
-        } else {
-          return { data: [], hasMore: false }; // No profile ID, can't determine "hosting" events
-        }
+        
+      case "new":
+        // Show events created in the last 24 hours
+        query = query.gte("created_at", last24Hours.toISOString());
         break;
 
       case "past":

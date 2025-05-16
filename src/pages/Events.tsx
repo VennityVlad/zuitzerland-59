@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isWithinInterval, isToday, isSameDay, isBefore, isAfter, startOfDay } from "date-fns";
@@ -55,7 +54,7 @@ const Events = () => {
   const [eventToDelete, setEventToDelete] = useState<EventWithProfile | null>(null);
   const [eventToEdit, setEventToEdit] = useState<EventWithProfile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("today");
+  const [activeTab, setActiveTab] = useState<string>("upcoming");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -508,37 +507,12 @@ const Events = () => {
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-5 mb-2">
-                  <TabsTrigger value="today">Today</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 mb-2">
                   <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                  <TabsTrigger value="going">Going</TabsTrigger>
-                  <TabsTrigger value="hosting">Hosting</TabsTrigger>
+                  <TabsTrigger value="new">New</TabsTrigger>
                   <TabsTrigger value="past">Past</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="today" className="space-y-4 mt-4">
-                  {renderEventsList(
-                    tabEvents || [],
-                    tabEventsLoading,
-                    isFetchingMore,
-                    hasMore,
-                    currentPageRSVPMap || {},
-                    userRSVPEventIds,
-                    profileId,
-                    handleRSVPChange,
-                    canCreateEvents,
-                    canEditEvent,
-                    openDeleteDialog,
-                    handleEditEvent,
-                    handleShare,
-                    formatDateForSidebar,
-                    formatEventTime,
-                    formatDateRange,
-                    isMobile,
-                    isAdminUser
-                  )}
-                </TabsContent>
-                
                 <TabsContent value="upcoming" className="space-y-4 mt-4">
                   {renderEventsList(
                     tabEvents || [],
@@ -562,30 +536,7 @@ const Events = () => {
                   )}
                 </TabsContent>
                 
-                <TabsContent value="going" className="space-y-4 mt-4">
-                  {renderEventsList(
-                    tabEvents || [],
-                    tabEventsLoading,
-                    isFetchingMore,
-                    hasMore,
-                    currentPageRSVPMap || {},
-                    userRSVPEventIds,
-                    profileId,
-                    handleRSVPChange,
-                    canCreateEvents,
-                    canEditEvent,
-                    openDeleteDialog,
-                    handleEditEvent,
-                    handleShare,
-                    formatDateForSidebar,
-                    formatEventTime,
-                    formatDateRange,
-                    isMobile,
-                    isAdminUser
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="hosting" className="space-y-4 mt-4">
+                <TabsContent value="new" className="space-y-4 mt-4">
                   {renderEventsList(
                     tabEvents || [],
                     tabEventsLoading,
