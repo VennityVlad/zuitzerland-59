@@ -171,7 +171,7 @@ export function useInfiniteTabEvents(
       
       // When a date filter is applied, we shouldn't apply the tab-specific filters
       // Return early to skip the tab-specific filters below
-      const { data, error } = await query
+      const { data, error, count } = await query
         .order("start_date", { ascending: true })
         .range(offset, offset + pageSize - 1);
 
@@ -191,7 +191,11 @@ export function useInfiniteTabEvents(
 
       const hasMoreData = typedEvents.length === pageSize;
       
-      return { data: typedEvents as EventWithProfile[], hasMore: hasMoreData };
+      return { 
+        data: typedEvents as EventWithProfile[], 
+        hasMore: hasMoreData,
+        count: count || typedEvents.length
+      };
     }
 
     // If no date filter is active, continue with regular tab filters
@@ -233,6 +237,14 @@ export function useInfiniteTabEvents(
         break;
     }
 
+    // Get the count first for pagination information
+    const countQuery = query.count();
+    const { count: totalCount, error: countError } = await countQuery;
+    
+    if (countError) {
+      console.error(`Error counting events for tab ${tabType}:`, countError);
+    }
+
     // Add pagination
     query = query
       .order("start_date", { ascending: tabType === "past" ? false : true })
@@ -256,7 +268,11 @@ export function useInfiniteTabEvents(
 
     const hasMoreData = typedEvents.length === pageSize;
     
-    return { data: typedEvents as EventWithProfile[], hasMore: hasMoreData };
+    return { 
+      data: typedEvents as EventWithProfile[], 
+      hasMore: hasMoreData,
+      count: totalCount || 0
+    };
   }, [tabType, selectedTags, selectedDate, isGoing, isHosting, page, profileId, pageSize, hasMore]);
 
   // Set up the React Query
@@ -324,7 +340,9 @@ export function useInfiniteTabEvents(
     resetEvents,
     refetch,
     error,
-    lastRefreshTime
+    lastRefreshTime,
+    totalCount: data?.count || 0,
+    currentPage: page
   };
 }
 
