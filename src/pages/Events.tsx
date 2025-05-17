@@ -436,17 +436,28 @@ const Events = () => {
 
   // Fix the handleCreateEventSuccess function to match the expected prop type
   const handleCreateEventSuccess = useCallback((newEventId: string) => {
+    console.log("Event created successfully, navigating to event page:", newEventId);
+    
     // Invalidate queries to refresh data
     queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
     queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
-    queryClient.invalidateQueries({ queryKey: ["eventCount"] });
     
     // Close the create event sheet
     setCreateEventOpen(false);
+    setEventToEdit(null);
     
     // Navigate to the new event's page
-    navigate(`/events/${newEventId}`);
-  }, [queryClient, navigate]);
+    if (newEventId) {
+      navigate(`/events/${newEventId}`);
+    } else {
+      console.error("Cannot navigate to event page: No event ID provided");
+      toast({
+        title: "Error",
+        description: "Could not open the event page",
+        variant: "destructive"
+      });
+    }
+  }, [queryClient, navigate, toast]);
 
   // Toggle the going filter
   const toggleGoingFilter = () => {
