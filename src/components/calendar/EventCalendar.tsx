@@ -119,6 +119,7 @@ export const EventCalendar = ({
       if (onSelectDate) onSelectDate(undefined, false);
     } else {
       setSelectedDate(date);
+      // When selecting a date, always enable date filter mode by passing true
       if (onSelectDate) onSelectDate(date, true);
     }
   };

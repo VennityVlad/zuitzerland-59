@@ -49,6 +49,7 @@ const Events = () => {
   const [isHosting, setIsHosting] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -573,8 +574,12 @@ const Events = () => {
 
   const handleDateSelection = (date: Date | undefined) => {
     setSelectedDate(date);
+    setIsDateFilterActive(!!date);
     setPage(0); // Reset to first page
-    // Query will automatically refetch due to queryKey change
+    // Active tab is irrelevant when date filter is active
+    if (date) {
+      setActiveTab("upcoming"); // Just keep a default value
+    }
   };
 
   const handleTagsChange = (tags: string[]) => {
@@ -586,6 +591,7 @@ const Events = () => {
   const clearFilters = () => {
     setSelectedTags([]);
     setSelectedDate(undefined);
+    setIsDateFilterActive(false);
     setIsGoing(false);
     setIsHosting(false);
     setActiveTab("upcoming");
@@ -811,14 +817,9 @@ const Events = () => {
               isHosting={isHosting}
             />
             
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-2">
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                <TabsTrigger value="new">Newly Added</TabsTrigger>
-                <TabsTrigger value="past">Past</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value={activeTab} className="space-y-4 mt-4">
+            {isDateFilterActive ? (
+              // When date filter is active, show only filtered content without tabs
+              <div className="space-y-4 mt-4">
                 {renderEventsList(
                   events,
                   (eventsLoading && page === 0),
@@ -844,8 +845,45 @@ const Events = () => {
                 {hasMore && !eventsLoading && !eventsFetching && (
                   <div ref={observerTarget} className="h-10" />
                 )}
-              </TabsContent>
-            </Tabs>
+              </div>
+            ) : (
+              // Original tabs display when no date filter is active
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-2">
+                  <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                  <TabsTrigger value="new">Newly Added</TabsTrigger>
+                  <TabsTrigger value="past">Past</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value={activeTab} className="space-y-4 mt-4">
+                  {renderEventsList(
+                    events,
+                    (eventsLoading && page === 0),
+                    (eventsFetching && page > 0),
+                    hasMore,
+                    currentPageRSVPMap,
+                    userRSVPEventIds || [],
+                    profileId,
+                    handleRSVPChange,
+                    canCreateEvents,
+                    canEditEvent,
+                    openDeleteDialog,
+                    handleEditEvent,
+                    handleShare,
+                    formatDateForSidebar,
+                    formatEventTime,
+                    formatDateRange,
+                    isMobile,
+                    isAdminUser
+                  )}
+                  
+                  {/* Intersection observer target for infinite scroll */}
+                  {hasMore && !eventsLoading && !eventsFetching && (
+                    <div ref={observerTarget} className="h-10" />
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
           
           {!isMobile && (
@@ -853,6 +891,8 @@ const Events = () => {
               <EventCalendar 
                 onSelectDate={handleDateSelection} 
                 events={allEvents || []}
+                onRefresh={refreshData}
+                isRefreshing={isRefreshing}
               />
             </div>
           )}

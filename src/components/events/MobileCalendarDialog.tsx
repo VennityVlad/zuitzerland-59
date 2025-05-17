@@ -36,7 +36,8 @@ export const MobileCalendarDialog = ({
   const [open, setOpen] = React.useState(false);
   
   const handleDateSelect = (date: Date | undefined, shouldSwitchTab?: boolean) => {
-    onSelectDate(date, shouldSwitchTab);
+    // Always pass true as the second parameter to indicate we want to switch to date filter mode
+    onSelectDate(date, true);
     if (date) {
       // Close dialog after date selection
       setTimeout(() => setOpen(false), 100);
@@ -87,7 +88,7 @@ export const MobileCalendarDialog = ({
                   variant="ghost" 
                   size="sm" 
                   onClick={() => {
-                    handleDateSelect(undefined);
+                    handleDateSelect(undefined, true);
                   }}
                   className="h-7 text-xs"
                 >
