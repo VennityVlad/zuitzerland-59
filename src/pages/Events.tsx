@@ -303,6 +303,7 @@ const Events = () => {
         };
       });
 
+      // Determine if there are more results to load
       const hasMoreData = typedEvents.length === EVENTS_PER_PAGE;
       
       return { 
@@ -605,10 +606,30 @@ const Events = () => {
   };
 
   // Prepare events data for display
-  const events = eventsData?.data || [];
-  const currentPageRSVPMap = rsvpMap || {};
+  const [accumulatedEvents, setAccumulatedEvents] = useState<EventWithProfile[]>([]);
   
-  const isSearchMode = selectedTags.length > 0 || !!selectedDate;
+  // Update the accumulated events when new data arrives
+  useEffect(() => {
+    if (eventsData?.data) {
+      if (page === 0) {
+        // Reset accumulated events when starting a new query (first page)
+        setAccumulatedEvents(eventsData.data);
+      } else {
+        // Append new events to accumulated list for subsequent pages
+        setAccumulatedEvents(prev => [...prev, ...eventsData.data]);
+      }
+      setHasMore(eventsData.hasMore);
+    }
+  }, [eventsData, page]);
+
+  // Reset accumulated events when filters or tabs change
+  useEffect(() => {
+    setAccumulatedEvents([]);
+    setPage(0);
+  }, [activeTab, selectedTags, selectedDate, isGoing, isHosting]);
+
+  // Use accumulated events instead of eventsData.data for rendering
+  const events = isDateFilterActive ? accumulatedEvents : (eventsData?.data || []);
 
   // Check if the user has restricted access
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
@@ -821,7 +842,7 @@ const Events = () => {
               // When date filter is active, show only filtered content without tabs
               <div className="space-y-4 mt-4">
                 {renderEventsList(
-                  events,
+                  accumulatedEvents, // Use accumulated events for date-filtered results
                   (eventsLoading && page === 0),
                   (eventsFetching && page > 0),
                   hasMore,
@@ -857,7 +878,7 @@ const Events = () => {
 
                 <TabsContent value={activeTab} className="space-y-4 mt-4">
                   {renderEventsList(
-                    events,
+                    eventsData?.data || [], // Use current page data for tab results
                     (eventsLoading && page === 0),
                     (eventsFetching && page > 0),
                     hasMore,

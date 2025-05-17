@@ -47,7 +47,11 @@ export const MobileCalendarDialog = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="h-10 w-10">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className={`h-10 w-10 ${selectedDate ? 'border-primary text-primary' : ''}`}
+        >
           <Calendar className="h-4 w-4" />
           <span className="sr-only">Open calendar</span>
         </Button>
@@ -76,6 +80,7 @@ export const MobileCalendarDialog = ({
             hideTitle={true}
             onRefresh={onRefresh}
             isRefreshing={isRefreshing}
+            selectedDate={selectedDate}
           />
           
           {selectedDate && (
