@@ -57,6 +57,7 @@ const Events = () => {
   const [isGoing, setIsGoing] = useState(false);
   const [isHosting, setIsHosting] = useState(false);
   const [accumulatedEvents, setAccumulatedEvents] = useState<EventWithProfile[]>([]);
+  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -349,6 +350,10 @@ const Events = () => {
     setCreateEventOpen(true);
   };
 
+  const openDeleteDialog = (event: EventWithProfile) => {
+    setEventToDelete(event);
+  };
+
   const handleShare = async (event: EventWithProfile) => {
     const shareUrl = `${window.location.origin}/events/${event.id}`;
     
@@ -410,8 +415,8 @@ const Events = () => {
   };
 
   const displayedEvents = accumulatedEvents.length > 0 ? accumulatedEvents : events;
-
-  const currentPageRSVPMap = rsvpMap || {};
+  
+  const currentRSVPMap = rsvpMap || {};
 
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
     return (
@@ -638,7 +643,7 @@ const Events = () => {
                   eventsLoading,
                   eventsFetching,
                   hasMore,
-                  currentPageRSVPMap,
+                  currentRSVPMap,
                   userRSVPEventIds || [],
                   profileId,
                   handleRSVPChange,
@@ -681,7 +686,10 @@ const Events = () => {
                   {canCreateEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
                 </p>
                 {canCreateEvents && (
-                  <Button className="mt-4" onClick={() => {}}>
+                  <Button className="mt-4" onClick={() => {
+                    setEventToEdit(null);
+                    setCreateEventOpen(true);
+                  }}>
                     <Plus className="mr-2 h-4 w-4" /> Create Event
                   </Button>
                 )}
@@ -825,7 +833,10 @@ const renderEventsList = (
           {canCreateEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
         </p>
         {canCreateEvents && (
-          <Button className="mt-4" onClick={() => {}}>
+          <Button className="mt-4" onClick={() => {
+            setEventToEdit(null);
+            setCreateEventOpen(true);
+          }}>
             <Plus className="mr-2 h-4 w-4" /> Create Event
           </Button>
         )}

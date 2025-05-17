@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -171,9 +170,12 @@ export function useInfiniteTabEvents(
       
       // When a date filter is applied, we shouldn't apply the tab-specific filters
       // Return early to skip the tab-specific filters below
-      const { data, error, count } = await query
+      const { data, error } = await query
         .order("start_date", { ascending: true })
         .range(offset, offset + pageSize - 1);
+
+      // Get count for pagination info
+      const { count } = await query.count();
 
       if (error) {
         console.error(`Error fetching events for date ${selectedDate}:`, error);
@@ -238,7 +240,79 @@ export function useInfiniteTabEvents(
     }
 
     // Get the count first for pagination information
-    const countQuery = query.count();
+    const countQuery = supabase.from('events').select('*', { count: 'exact', head: true });
+    
+    // Apply all the same filters to the count query
+    if (query.url.includes('id.in')) {
+      // If we have an ID filter (from tags, going, hosting), apply same to count query
+      if (selectedTags.length > 0) {
+        const eventIds = await supabase
+          .from("event_tag_relations")
+          .select("event_id")
+          .in("tag_id", selectedTags)
+          .then(res => res.data?.map(r => r.event_id) || []);
+        
+        if (eventIds.length > 0) {
+          countQuery.in('id', eventIds);
+        }
+      }
+      
+      if (isGoing && profileId) {
+        const rsvpEventIds = await supabase
+          .from("event_rsvps")
+          .select("event_id")
+          .eq("profile_id", profileId)
+          .then(res => res.data?.map(r => r.event_id) || []);
+        
+        if (rsvpEventIds.length > 0) {
+          countQuery.in('id', rsvpEventIds);
+        }
+      }
+      
+      if (isHosting && profileId) {
+        const { data: coHostData } = await supabase
+          .from("event_co_hosts")
+          .select("event_id")
+          .eq("profile_id", profileId);
+
+        const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
+        
+        if (coHostEventIds.length > 0) {
+          countQuery.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
+        } else {
+          countQuery.eq("created_by", profileId);
+        }
+      }
+    }
+    
+    // Apply tab-specific filters to count query
+    switch (tabType) {
+      case "today":
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        
+        countQuery
+          .or(`start_date.gte.${today.toISOString()},start_date.lte.${endOfToday.toISOString()}`)
+          .lte("start_date", endOfToday.toISOString());
+        break;
+
+      case "upcoming":
+        countQuery.gt("start_date", now.toISOString());
+        break;
+        
+      case "new":
+        countQuery.gte("created_at", last24Hours.toISOString());
+        break;
+
+      case "past":
+        countQuery.lt("end_date", now.toISOString());
+        break;
+
+      default:
+        // No additional filters for search/default mode
+        break;
+    }
+    
     const { count: totalCount, error: countError } = await countQuery;
     
     if (countError) {
