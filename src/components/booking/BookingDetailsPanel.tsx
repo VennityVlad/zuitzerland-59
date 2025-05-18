@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import DateSelectionFields from "./DateSelectionFields";
 import RoomSelectionFields from "./RoomSelectionFields";
 import PaymentTypeSelector from "./PaymentTypeSelector";
@@ -37,11 +37,32 @@ const BookingDetailsPanel = ({
   children,
   bookingBlockEnabled = true
 }: BookingDetailsPanelProps) => {
+  // Calculate prices whenever any related value changes
   const basePrice = formData.price ? formData.price.toFixed(2) : '0.00';
   const stripeFee = formData.paymentType === 'fiat' ? (formData.price * 0.03).toFixed(2) : '0.00';
   const subtotal = formData.price ? (formData.price + (formData.paymentType === 'fiat' ? formData.price * 0.03 : 0)) : 0;
   const vat = (subtotal * 0.038).toFixed(2);
   const total = customPrice ? customPrice + parseFloat(vat) : subtotal + parseFloat(vat);
+  
+  // Log price calculations for debugging
+  useEffect(() => {
+    console.log('BookingDetailsPanel price calculations:', {
+      price: formData.price,
+      basePrice,
+      stripeFee,
+      subtotal,
+      vat,
+      total: customPrice ? customPrice.toFixed(2) : total.toFixed(2),
+      discountAmount
+    });
+  }, [formData.price, formData.paymentType, customPrice, discountAmount]);
+
+  const handleRoomTypeChange = (value: string) => {
+    console.log('Room type changed in BookingDetailsPanel:', value);
+    handleInputChange({
+      target: { name: "roomType", value }
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
   
   return (
     <div className="bg-gray-50 p-6 rounded-lg space-y-6">
@@ -56,7 +77,7 @@ const BookingDetailsPanel = ({
 
       <RoomSelectionFields
         formData={formData}
-        handleInputChange={handleInputChange}
+        onRoomTypeChange={handleRoomTypeChange}
       />
 
       <PaymentTypeSelector

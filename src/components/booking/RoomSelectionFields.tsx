@@ -151,7 +151,9 @@ const RoomSelectionFields = ({
     if (isRoomSoldOut(value)) {
       return;
     }
-
+    
+    console.log("Room type changed to:", value);
+    
     if (onRoomTypeChange) {
       onRoomTypeChange(value);
     } else if (handleInputChange) {

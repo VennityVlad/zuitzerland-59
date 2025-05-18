@@ -23,7 +23,7 @@ interface BookingFormProps {
 const BookingForm = ({ bookingBlockEnabled = true }: BookingFormProps) => {
   const { toast } = useToast();
   // Fetch all prices at component mount
-  const { data: allPriceData } = useAllPrices();
+  const { data: allPriceData, isLoading: pricesLoading } = useAllPrices();
   
   const {
     formData,
@@ -54,9 +54,20 @@ const BookingForm = ({ bookingBlockEnabled = true }: BookingFormProps) => {
   // Pass all price data to the booking form hook
   useEffect(() => {
     if (allPriceData && allPriceData.length > 0) {
+      console.log('Setting price data in BookingForm:', allPriceData.length, 'prices');
       setPriceData(allPriceData);
     }
   }, [allPriceData, setPriceData]);
+
+  // Log any updates to the form data, particularly price changes
+  useEffect(() => {
+    console.log('BookingForm form data updated:', {
+      price: formData.price,
+      roomType: formData.roomType,
+      checkin: formData.checkin,
+      checkout: formData.checkout
+    });
+  }, [formData.price, formData.roomType, formData.checkin, formData.checkout]);
 
   const { data: roomTypeDetails } = useQuery({
     queryKey: ['roomTypeDetails', formData.roomType],
@@ -241,6 +252,12 @@ const BookingForm = ({ bookingBlockEnabled = true }: BookingFormProps) => {
         title="Complete Your Booking"
         description="Fill in your details to reserve your stay"
       />
+
+      {pricesLoading && (
+        <Alert>
+          <AlertDescription>Loading price information...</AlertDescription>
+        </Alert>
+      )}
 
       {validationWarning && (
         <Alert variant="destructive">

@@ -53,13 +53,17 @@ const DateSelectionFields = ({
       
       console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
       
+      // Use handleInputChange to trigger price calculation in the parent component
       handleInputChange({
         target: { name: "checkin", value: formattedStartDate }
       } as React.ChangeEvent<HTMLInputElement>);
       
-      handleInputChange({
-        target: { name: "checkout", value: formattedEndDate }
-      } as React.ChangeEvent<HTMLInputElement>);
+      // Add a small delay before setting checkout to ensure the checkin is processed first
+      setTimeout(() => {
+        handleInputChange({
+          target: { name: "checkout", value: formattedEndDate }
+        } as React.ChangeEvent<HTMLInputElement>);
+      }, 10);
     } catch (error) {
       console.error('Error processing dates:', error);
     }
@@ -160,7 +164,7 @@ const DateSelectionFields = ({
             <div className="relative bg-gray-50 p-4 rounded-lg border border-gray-200">
               <div className="flex items-center">
                 <CalendarIcon className="h-5 w-5 text-gray-400 mr-2" />
-                <span className="text-gray-900">
+                <span className="text-gray-900 truncate">
                   {formData.checkin ? formatDisplayDate(formData.checkin) : 'Select date'}
                 </span>
               </div>
@@ -195,7 +199,7 @@ const DateSelectionFields = ({
             <div className="relative bg-gray-50 p-4 rounded-lg border border-gray-200">
               <div className="flex items-center">
                 <CalendarIcon className="h-5 w-5 text-gray-400 mr-2" />
-                <span className="text-gray-900">
+                <span className="text-gray-900 truncate">
                   {formData.checkout ? formatDisplayDate(formData.checkout) : 'Select date'}
                 </span>
               </div>

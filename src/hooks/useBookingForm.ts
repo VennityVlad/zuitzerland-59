@@ -382,6 +382,7 @@ export const useBookingForm = () => {
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
 
+      // Create a separate function for price calculation to avoid nested async calls
       const updatePriceAndDiscount = async () => {
         if (
           (name === "checkin" || name === "checkout" || name === "roomType") &&
@@ -402,19 +403,23 @@ export const useBookingForm = () => {
           );
           
           const { amount, isRoleBasedDiscount, name, percentage, month } = await calculateDiscount(basePrice, newData.checkin);
+          
+          console.log('Price calculation results:', {
+            basePrice,
+            discount: { amount, isRoleBasedDiscount, name, percentage, month }
+          });
+          
           setDiscountAmount(amount);
           setIsRoleBasedDiscount(isRoleBasedDiscount);
           setDiscountName(name);
           setDiscountPercentage(percentage || 0);
           setDiscountMonth(month);
           
-          console.log('Updated price information:', {
-            basePrice,
-            discount: amount,
-            finalPrice: basePrice - amount
-          });
-          
-          newData.price = basePrice;
+          // Update form data with new price in a way that triggers UI updates
+          setFormData(current => ({
+            ...current,
+            price: basePrice
+          }));
         }
       };
 
@@ -614,6 +619,43 @@ export const useBookingForm = () => {
     }
   };
 
+  // Recalculate price whenever key booking parameters change
+  useEffect(() => {
+    const updatePrice = async () => {
+      if (formData.checkin && formData.checkout && formData.roomType) {
+        console.log('Recalculating price based on data changes:', {
+          checkin: formData.checkin,
+          checkout: formData.checkout,
+          roomType: formData.roomType
+        });
+
+        const basePrice = await calculatePrice(
+          formData.checkin,
+          formData.checkout,
+          formData.roomType
+        );
+        
+        const { amount, isRoleBasedDiscount, name, percentage, month } = await calculateDiscount(basePrice, formData.checkin);
+        
+        setDiscountAmount(amount);
+        setIsRoleBasedDiscount(isRoleBasedDiscount);
+        setDiscountName(name);
+        setDiscountPercentage(percentage || 0);
+        setDiscountMonth(month);
+        
+        if (basePrice !== formData.price) {
+          console.log('Updating price from', formData.price, 'to', basePrice);
+          setFormData(current => ({
+            ...current,
+            price: basePrice
+          }));
+        }
+      }
+    };
+
+    updatePrice();
+  }, [formData.checkin, formData.checkout, formData.roomType]);
+
   useEffect(() => {
     console.log('Running validation effect:', {
       formData,
@@ -632,6 +674,7 @@ export const useBookingForm = () => {
     formData.zip,
     formData.country,
     formData.paymentType,
+    formData.price, // Added to ensure validation runs when price changes
     roomTypeDetails
   ]);
 
