@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 
@@ -107,30 +106,6 @@ const PaginationEllipsis = ({
 )
 PaginationEllipsis.displayName = "PaginationEllipsis"
 
-// New component for showing page count
-const PaginationCount = ({
-  className,
-  currentPage,
-  totalItems,
-  pageSize,
-  ...props
-}: React.ComponentProps<"div"> & {
-  currentPage: number;
-  totalItems: number;
-  pageSize: number;
-}) => {
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  return (
-    <div
-      className={cn("text-sm text-muted-foreground flex items-center", className)}
-      {...props}
-    >
-      Page {currentPage + 1} of {totalPages}
-    </div>
-  );
-};
-PaginationCount.displayName = "PaginationCount";
-
 export {
   Pagination,
   PaginationContent,
@@ -139,5 +114,4 @@ export {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-  PaginationCount,
 }

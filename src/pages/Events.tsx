@@ -33,16 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Link, useNavigate } from 'react-router-dom';
 import { EventSearchModal } from "@/components/events/EventSearchModal"; 
-import { EVENTS_PER_PAGE, EventWithProfile, useInfiniteTabEvents } from "@/hooks/useTabEvents";
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious,
-  PaginationCount
-} from "@/components/ui/pagination";
+import { EVENTS_PER_PAGE, EventWithProfile } from "@/hooks/useTabEvents";
 
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
@@ -56,8 +47,8 @@ const Events = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isGoing, setIsGoing] = useState(false);
   const [isHosting, setIsHosting] = useState(false);
-  const [accumulatedEvents, setAccumulatedEvents] = useState<EventWithProfile[]>([]);
-  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -71,6 +62,7 @@ const Events = () => {
     privyUser?.id || supabaseUser?.id
   );
   
+  // Timer reference for auto-refresh
   const refreshTimerRef = useRef<number | null>(null);
   
   useEffect(() => {
@@ -136,11 +128,13 @@ const Events = () => {
   const userId = privyUser?.id || supabaseUser?.id || "";
   const profileId = userProfile?.id;
   
+  // Setup auto-refresh timer
   useEffect(() => {
     if (refreshTimerRef.current) {
       window.clearTimeout(refreshTimerRef.current);
     }
     
+    // Set a new timer for auto refresh (1 minute = 60000ms)
     refreshTimerRef.current = window.setTimeout(() => {
       console.log(`Auto-refreshing events after 1 minute`);
       refetchEvents();
@@ -153,24 +147,174 @@ const Events = () => {
     };
   }, [activeTab, selectedTags, selectedDate, isGoing, isHosting]);
   
+  // Main query to fetch events based on current filters and tab
   const { 
-    events, 
+    data: eventsData, 
     isLoading: eventsLoading, 
-    isFetchingMore: eventsFetching,
-    hasMore,
-    loadMore,
-    resetEvents: resetTabEvents,
-    refetch: refetchEvents,
-    totalCount: eventsTotalCount,
-    currentPage: eventsCurrentPage
-  } = useInfiniteTabEvents(
-    activeTab, 
-    { selectedTags, selectedDate, isGoing, isHosting },
-    profileId,
-    isAdminUser
-  );
-  
-  const eventIds = events?.map(event => event.id) || [];
+    isFetching: eventsFetching,
+    refetch: refetchEvents
+  } = useQuery({
+    queryKey: ["tabEvents", activeTab, selectedTags, selectedDate, isGoing, isHosting, page, profileId],
+    queryFn: async () => {
+      console.log(`🔍 Fetching events for tab ${activeTab}, page ${page}`);
+      const offset = page * EVENTS_PER_PAGE;
+      
+      // Start with a base query
+      let query = supabase
+        .from("events")
+        .select(`
+          *,
+          profiles:profiles!events_created_by_fkey(username, id),
+          locations:location_id (name, building, floor),
+          event_tags:event_tag_relations (
+            tags:event_tags (id, name)
+          )
+        `);
+
+      // Apply tag filters if any are selected
+      if (selectedTags.length > 0) {
+        // Get event IDs with selected tags
+        const eventIdsWithTags = await supabase
+          .from("event_tag_relations")
+          .select("event_id")
+          .in("tag_id", selectedTags);
+
+        if (eventIdsWithTags.error) {
+          throw eventIdsWithTags.error;
+        }
+
+        const eventIds = eventIdsWithTags.data.map(relation => relation.event_id);
+        if (eventIds.length > 0) {
+          query = query.in("id", eventIds);
+        } else {
+          // No events have the selected tags
+          return { data: [], hasMore: false };
+        }
+      }
+
+      // Apply isGoing filter if selected
+      if (isGoing && profileId) {
+        const { data: rsvpData, error: rsvpError } = await supabase
+          .from("event_rsvps")
+          .select("event_id")
+          .eq("profile_id", profileId);
+
+        if (rsvpError) {
+          throw rsvpError;
+        }
+
+        const rsvpEventIds = rsvpData.map(rsvp => rsvp.event_id);
+        if (rsvpEventIds.length === 0) {
+          return { data: [], hasMore: false }; // User hasn't RSVPed to any events
+        }
+        
+        query = query.in("id", rsvpEventIds);
+      }
+
+      // Apply isHosting filter if selected
+      if (isHosting && profileId) {
+        const { data: coHostData, error: coHostError } = await supabase
+          .from("event_co_hosts")
+          .select("event_id")
+          .eq("profile_id", profileId);
+
+        if (coHostError) {
+          throw coHostError;
+        }
+
+        const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
+        
+        if (coHostEventIds.length > 0) {
+          query = query.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
+        } else {
+          query = query.eq("created_by", profileId);
+        }
+      }
+
+      // Apply date filter if selected
+      if (selectedDate) {
+        const dateStart = new Date(selectedDate);
+        dateStart.setHours(0, 0, 0, 0);
+        
+        const dateEnd = new Date(selectedDate);
+        dateEnd.setHours(23, 59, 59, 999);
+
+        query = query.or(
+          `and(start_date.gte.${dateStart.toISOString()},start_date.lte.${dateEnd.toISOString()}),` +
+          `and(end_date.gte.${dateStart.toISOString()},end_date.lte.${dateEnd.toISOString()}),` + 
+          `and(start_date.lte.${dateStart.toISOString()},end_date.gte.${dateEnd.toISOString()})`
+        );
+      } else {
+        // Only apply tab-specific filters if no date filter is active
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        // Get date 24 hours ago for "new" tab
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        
+        // Apply tab-specific filters
+        switch (activeTab) {
+          case "today":
+            // Only show events that start or are ongoing today
+            const endOfToday = new Date(today);
+            endOfToday.setHours(23, 59, 59, 999);
+            
+            query = query
+              .or(`start_date.gte.${today.toISOString()},start_date.lte.${endOfToday.toISOString()}`)
+              .lte("start_date", endOfToday.toISOString());
+            break;
+
+          case "upcoming":
+            // Show future events (after today)
+            query = query.gt("start_date", now.toISOString());
+            break;
+            
+          case "new":
+            // Show events created in the last 24 hours
+            query = query.gte("created_at", last24Hours.toISOString());
+            break;
+
+          case "past":
+            // Events that have ended before now
+            query = query.lt("end_date", now.toISOString());
+            break;
+        }
+      }
+
+      // Add pagination
+      query = query
+        .order("start_date", { ascending: activeTab === "past" ? false : true })
+        .range(offset, offset + EVENTS_PER_PAGE - 1);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error(`Error fetching events for tab ${activeTab}:`, error);
+        throw error;
+      }
+
+      // Make sure event_tags is properly typed
+      const typedEvents = data.map((event: any) => {
+        const safeEventTags = Array.isArray(event.event_tags) ? event.event_tags : [];
+        return {
+          ...event,
+          event_tags: safeEventTags
+        };
+      });
+
+      const hasMoreData = typedEvents.length === EVENTS_PER_PAGE;
+      
+      return { 
+        data: typedEvents as EventWithProfile[], 
+        hasMore: hasMoreData 
+      };
+    },
+    placeholderData: (prevData) => prevData,
+    staleTime: 60000, // 1 minute
+  });
+
+  // Fetch RSVPs for displayed events
+  const eventIds = eventsData?.data?.map(event => event.id) || [];
   
   const { data: rsvpMap, refetch: refetchRSVPs } = useQuery({
     queryKey: ["eventRSVPs", eventIds],
@@ -189,6 +333,7 @@ const Events = () => {
         throw error;
       }
       
+      // Convert to map for easy lookup
       const rsvpMap: Record<string, { id: string; username: string | null; avatar_url?: string | null }[]> = {};
       
       if (data) {
@@ -210,6 +355,7 @@ const Events = () => {
     enabled: eventIds.length > 0,
   });
 
+  // Fetch user's RSVPs
   const { data: userRSVPEventIds = [], refetch: refetchUserRSVPs } = useQuery({
     queryKey: ["userRSVPs", profileId],
     queryFn: async () => {
@@ -230,14 +376,55 @@ const Events = () => {
     enabled: !!profileId
   });
 
+  // Update hasMore state when data changes
+  useEffect(() => {
+    if (eventsData) {
+      setHasMore(eventsData.hasMore);
+    }
+  }, [eventsData]);
+
+  // Handle tab change
   const handleTabChange = (newTab: string) => {
     setActiveTab(newTab);
-    resetTabEvents();
+    setPage(0); // Reset to first page
+    // Query will automatically refetch due to queryKey change
   };
   
+  // Handle load more
+  const loadMore = () => {
+    if (!eventsLoading && !eventsFetching && hasMore) {
+      setPage(prev => prev + 1);
+    }
+  };
+  
+  // Setup intersection observer for infinite scroll
+  const observerTarget = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !eventsLoading && !eventsFetching) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+    
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hasMore, eventsLoading, eventsFetching]);
+  
+  // Manual refresh function
   const refreshData = () => {
     setIsRefreshing(true);
-    resetTabEvents();
+    setPage(0);
     Promise.all([
       refetchEvents(), 
       refetchRSVPs(), 
@@ -247,33 +434,19 @@ const Events = () => {
     });
   };
 
-  useEffect(() => {
-    if (events) {
-      if (eventsCurrentPage === 0) {
-        setAccumulatedEvents(events);
-      } else {
-        setAccumulatedEvents(prev => {
-          const existingEventIds = new Set(prev.map(event => event.id));
-          const newEvents = events.filter(event => !existingEventIds.has(event.id));
-          return [...prev, ...newEvents];
-        });
-      }
-    }
-  }, [events, eventsCurrentPage]);
-
-  useEffect(() => {
-    setAccumulatedEvents([]);
-  }, [activeTab, selectedTags, selectedDate, isGoing, isHosting]);
-
+  // Fix the handleCreateEventSuccess function to match the expected prop type
   const handleCreateEventSuccess = useCallback((newEventId: string) => {
     console.log("Event created successfully, navigating to event page:", newEventId);
     
+    // Invalidate queries to refresh data
     queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
     queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
     
+    // Close the create event sheet
     setCreateEventOpen(false);
     setEventToEdit(null);
     
+    // Navigate to the new event's page
     if (newEventId) {
       navigate(`/events/${newEventId}`);
     } else {
@@ -286,26 +459,31 @@ const Events = () => {
     }
   }, [queryClient, navigate, toast]);
 
+  // Toggle the going filter
   const toggleGoingFilter = () => {
-    if (isHosting) setIsHosting(false);
+    if (isHosting) setIsHosting(false); // Turn off hosting filter if it's on
     setIsGoing(!isGoing);
-    resetTabEvents();
+    setPage(0); // Reset to first page
+    // Query will automatically refetch due to queryKey change
   };
 
+  // Toggle the hosting filter
   const toggleHostingFilter = () => {
-    if (isGoing) setIsGoing(false);
+    if (isGoing) setIsGoing(false); // Turn off going filter if it's on
     setIsHosting(!isHosting);
-    resetTabEvents();
+    setPage(0); // Reset to first page
+    // Query will automatically refetch due to queryKey change
   };
 
+  // Clear all filters function
   const clearAllFilters = () => {
     setIsGoing(false);
     setIsHosting(false);
     setSelectedTags([]);
     setSelectedDate(undefined);
-    setIsDateFilterActive(false);
     setActiveTab("upcoming");
-    resetTabEvents();
+    setPage(0); // Reset to first page
+    // Query will automatically refetch due to queryKey change
   };
 
   const handleDeleteEvent = async () => {
@@ -327,8 +505,9 @@ const Events = () => {
         description: "The event has been successfully deleted.",
       });
       
+      // Reset to upcoming tab and refresh queries
       setActiveTab("upcoming");
-      resetTabEvents();
+      setPage(0);
       queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
       queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
       queryClient.invalidateQueries({ queryKey: ["eventCount"] });
@@ -345,13 +524,20 @@ const Events = () => {
     }
   };
 
+  const openDeleteDialog = (event: EventWithProfile) => {
+    setEventToDelete(event);
+  };
+
   const handleEditEvent = (event: EventWithProfile) => {
     setEventToEdit(event);
     setCreateEventOpen(true);
   };
 
-  const openDeleteDialog = (event: EventWithProfile) => {
-    setEventToDelete(event);
+  const canEditEvent = (event: EventWithProfile) => {
+    if (isAdminUser) return true;
+    if (event.profiles?.id === profileId) return true;
+    
+    return userProfile?.role === 'admin';
   };
 
   const handleShare = async (event: EventWithProfile) => {
@@ -387,26 +573,24 @@ const Events = () => {
 
   const handleDateSelection = (date: Date | undefined) => {
     setSelectedDate(date);
-    setIsDateFilterActive(!!date);
-    resetTabEvents();
-    if (date) {
-      setActiveTab("upcoming");
-    }
+    setPage(0); // Reset to first page
+    // Query will automatically refetch due to queryKey change
   };
 
   const handleTagsChange = (tags: string[]) => {
     setSelectedTags(tags);
-    resetTabEvents();
+    setPage(0); // Reset to first page
+    // Query will automatically refetch due to queryKey change
   };
   
   const clearFilters = () => {
     setSelectedTags([]);
     setSelectedDate(undefined);
-    setIsDateFilterActive(false);
     setIsGoing(false);
     setIsHosting(false);
     setActiveTab("upcoming");
-    resetTabEvents();
+    setPage(0); // Reset to first page
+    // Query will automatically refetch due to queryKey change
   };
 
   const handleRSVPChange = (eventId: string, newStatus: boolean) => {
@@ -414,10 +598,13 @@ const Events = () => {
     refetchUserRSVPs();
   };
 
-  const displayedEvents = accumulatedEvents.length > 0 ? accumulatedEvents : events;
+  // Prepare events data for display
+  const events = eventsData?.data || [];
+  const currentPageRSVPMap = rsvpMap || {};
   
-  const currentRSVPMap = rsvpMap || {};
+  const isSearchMode = selectedTags.length > 0 || !!selectedDate;
 
+  // Check if the user has restricted access
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
     return (
       <div className="container py-6 space-y-6 max-w-7xl mx-auto px-4 sm:px-6">
@@ -570,19 +757,6 @@ const Events = () => {
               >
                 Hosting
               </Button>
-              
-              {selectedDate && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDateSelection(undefined)}
-                  className="flex-shrink-0 h-10 bg-gray-100"
-                >
-                  <Calendar className="mr-1 h-4 w-4" />
-                  {format(selectedDate, "MMM d, yyyy")}
-                  <span className="ml-1 text-xs">×</span>
-                </Button>
-              )}
             </div>
             
             {isMobile && (
@@ -612,6 +786,7 @@ const Events = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="col-span-1 md:col-span-3">
             <div className="flex justify-between items-center mb-2">
+              {/* Manual refresh button */}
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -636,19 +811,25 @@ const Events = () => {
               isHosting={isHosting}
             />
             
-            {displayedEvents.length > 0 ? (
-              <div className="space-y-4 mt-4">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-2">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="new">Newly Added</TabsTrigger>
+                <TabsTrigger value="past">Past</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value={activeTab} className="space-y-4 mt-4">
                 {renderEventsList(
-                  displayedEvents,
-                  eventsLoading,
-                  eventsFetching,
+                  events,
+                  (eventsLoading && page === 0),
+                  (eventsFetching && page > 0),
                   hasMore,
-                  currentRSVPMap,
+                  currentPageRSVPMap,
                   userRSVPEventIds || [],
                   profileId,
                   handleRSVPChange,
                   canCreateEvents,
-                  (event) => isAdminUser || event.profiles?.id === profileId,
+                  canEditEvent,
                   openDeleteDialog,
                   handleEditEvent,
                   handleShare,
@@ -659,42 +840,12 @@ const Events = () => {
                   isAdminUser
                 )}
                 
-                <div className="mt-6 flex justify-between items-center">
-                  <PaginationCount 
-                    currentPage={eventsCurrentPage}
-                    totalItems={eventsTotalCount}
-                    pageSize={EVENTS_PER_PAGE}
-                  />
-                  
-                  {hasMore && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={loadMore}
-                      disabled={eventsFetching}
-                    >
-                      {eventsFetching ? 'Loading...' : 'Load more'}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed">
-                <CalendarDays className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-4 text-lg font-medium">No events found</h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  {canCreateEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
-                </p>
-                {canCreateEvents && (
-                  <Button className="mt-4" onClick={() => {
-                    setEventToEdit(null);
-                    setCreateEventOpen(true);
-                  }}>
-                    <Plus className="mr-2 h-4 w-4" /> Create Event
-                  </Button>
+                {/* Intersection observer target for infinite scroll */}
+                {hasMore && !eventsLoading && !eventsFetching && (
+                  <div ref={observerTarget} className="h-10" />
                 )}
-              </div>
-            )}
+              </TabsContent>
+            </Tabs>
           </div>
           
           {!isMobile && (
@@ -702,9 +853,6 @@ const Events = () => {
               <EventCalendar 
                 onSelectDate={handleDateSelection} 
                 events={allEvents || []}
-                onRefresh={refreshData}
-                isRefreshing={isRefreshing}
-                selectedDate={selectedDate}
               />
             </div>
           )}
@@ -714,7 +862,7 @@ const Events = () => {
       <CreateEventSheet
         open={createEventOpen}
         onOpenChange={setCreateEventOpen}
-        onSuccess={handleCreateEventSuccess}
+        onSuccess={handleCreateEventSuccess as any}
         userId={privyUser?.id || supabaseUser?.id || ''}
         profileId={userProfile?.id}
         event={eventToEdit}
@@ -751,6 +899,7 @@ const Events = () => {
   );
 };
 
+// Helper functions for rendering the events list
 const formatDateForSidebar = (date: Date) => {
   return (
     <div className="flex flex-col items-center">
@@ -833,10 +982,7 @@ const renderEventsList = (
           {canCreateEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
         </p>
         {canCreateEvents && (
-          <Button className="mt-4" onClick={() => {
-            setEventToEdit(null);
-            setCreateEventOpen(true);
-          }}>
+          <Button className="mt-4" onClick={() => {}}>
             <Plus className="mr-2 h-4 w-4" /> Create Event
           </Button>
         )}

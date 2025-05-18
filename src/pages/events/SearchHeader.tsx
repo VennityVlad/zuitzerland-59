@@ -1,9 +1,11 @@
 
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { X, Calendar, Tag, User, UsersRound } from "lucide-react";
+import { Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SearchHeaderProps {
   selectedTags: string[];
@@ -14,51 +16,63 @@ interface SearchHeaderProps {
 }
 
 export const SearchHeader = ({ 
-  selectedTags = [], 
+  selectedTags, 
   selectedDate, 
   clearFilters,
   isGoing = false,
   isHosting = false
 }: SearchHeaderProps) => {
-  // Only show the search header when tags or date filters are active
-  // Going/hosting filters are shown by button color/state
-  const shouldShowHeader = selectedTags.length > 0 || !!selectedDate;
+  const { data: tags } = useQuery({
+    queryKey: ["event-tags-for-header"],
+    queryFn: async () => {
+      if (!selectedTags.length) return [];
+      
+      const { data, error } = await supabase
+        .from("event_tags")
+        .select("id, name")
+        .in("id", selectedTags);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: selectedTags.length > 0,
+  });
+
+  // Only show header if there are tags or date filters
+  // Don't show when only isGoing or isHosting are active
+  const hasFilterableCriteria = selectedTags.length > 0 || !!selectedDate;
   
-  if (!shouldShowHeader) {
-    return null;
-  }
+  if (!hasFilterableCriteria) return null;
 
   return (
-    <div className="bg-gray-50 border rounded-md p-4 mb-4 animate-in fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="space-y-2">
-          <h3 className="font-medium">Filtered results</h3>
-          <div className="flex flex-wrap gap-2">
-            {selectedDate && (
-              <Badge variant="outline" className="flex items-center gap-1 px-3 py-1">
-                <Calendar className="h-3 w-3" />
-                <span>{format(selectedDate, "MMMM d, yyyy")}</span>
-              </Badge>
-            )}
-            
-            {selectedTags.map((tag, index) => (
-              <Badge key={index} className="flex items-center gap-1 px-3 py-1">
-                <Tag className="h-3 w-3" />
-                <span>{tag}</span>
-              </Badge>
-            ))}
-          </div>
+    <div className="bg-muted/30 rounded-lg p-4 mb-4 border">
+      <div className="flex flex-col space-y-3">
+        <div className="flex justify-between items-center">
+          <h3 className="font-medium">Filtered Results</h3>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-muted-foreground hover:text-foreground"
+            onClick={clearFilters}
+          >
+            Clear all
+          </Button>
         </div>
         
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={clearFilters} 
-          className="self-start sm:self-center"
-        >
-          <X className="mr-1 h-4 w-4" />
-          Clear filters
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {selectedDate && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              <span>Date: {format(selectedDate, "MMM d, yyyy")}</span>
+            </Badge>
+          )}
+          
+          {selectedTags.length > 0 && tags?.map((tag) => (
+            <Badge key={tag.id} variant="outline" className="flex items-center gap-1 bg-gray-100">
+              <Tag className="h-3 w-3" />
+              <span>{tag.name}</span>
+            </Badge>
+          ))}
+        </div>
       </div>
     </div>
   );
