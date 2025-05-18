@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PostgrestFilterBuilder } from "@supabase/supabase-js";
 
 export interface TabEventFilters {
   selectedTags: string[];
@@ -75,6 +76,7 @@ export function useInfiniteTabEvents(
   const pageSize = EVENTS_PER_PAGE;
   const { staleTime = 60000, skipReset = false } = options; // Default to 1 minute stale time
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const previousFiltersRef = useRef<string>('');
 
   // Build the fetch function based on tab type and filters
   const fetchEvents = useCallback(async () => {
@@ -169,7 +171,7 @@ export function useInfiniteTabEvents(
         `and(start_date.lte.${dateStart.toISOString()},end_date.gte.${dateEnd.toISOString()})`
       );
       
-      // When a date filter is applied, we shouldn't apply the tab-specific filters
+      // When a date filter is applied, we shouldn't apply the tab-specific filters below
       // Return early to skip the tab-specific filters below
       const { data, error } = await query
         .order("start_date", { ascending: true })
@@ -267,6 +269,22 @@ export function useInfiniteTabEvents(
     staleTime: staleTime,
   });
 
+  // Check if filters have changed to determine if we need to reset
+  useEffect(() => {
+    const currentFilters = JSON.stringify({ tabType, selectedTags, selectedDate, isGoing, isHosting });
+    
+    if (previousFiltersRef.current !== currentFilters) {
+      // Filters changed, reset events list and page
+      if (!skipReset) {
+        console.log('Filters changed, resetting events');
+        setEvents([]);
+        setPage(0);
+        setHasMore(true);
+      }
+      previousFiltersRef.current = currentFilters;
+    }
+  }, [tabType, selectedTags, selectedDate, isGoing, isHosting, skipReset]);
+
   // Set up periodic refresh timer - refresh every minute
   useEffect(() => {
     if (refreshTimerRef.current) {
@@ -286,12 +304,16 @@ export function useInfiniteTabEvents(
     };
   }, [refetch, tabType]);
 
+  // Update events state when data changes
   useEffect(() => {
     if (data?.data) {
       if (page === 0) {
         setEvents(data.data);
       } else {
-        setEvents(prev => [...prev, ...data.data]);
+        // Append new events, avoiding duplicates
+        const existingIds = new Set(events.map(event => event.id));
+        const newEvents = data.data.filter(event => !existingIds.has(event.id));
+        setEvents(prev => [...prev, ...newEvents]);
       }
       setHasMore(data.hasMore);
     }
@@ -304,16 +326,11 @@ export function useInfiniteTabEvents(
   }, [isLoading, isFetching, hasMore]);
 
   const resetEvents = useCallback(() => {
-    if (skipReset) {
-      console.log(`Skipping reset for tab ${tabType} due to skipReset option`);
-      return;
-    }
-    
     console.log(`Resetting events for tab ${tabType}`);
     setEvents([]);
     setPage(0);
     setHasMore(true);
-  }, [skipReset, tabType]);
+  }, [tabType]);
 
   return { 
     events, 
@@ -324,7 +341,8 @@ export function useInfiniteTabEvents(
     resetEvents,
     refetch,
     error,
-    lastRefreshTime
+    lastRefreshTime,
+    currentPage: page
   };
 }
 

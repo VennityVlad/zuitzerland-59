@@ -38,9 +38,8 @@ export const SearchHeader = ({
     enabled: selectedTags.length > 0,
   });
 
-  // Only show header if there are tags or date filters
-  // Don't show when only isGoing or isHosting are active
-  const hasFilterableCriteria = selectedTags.length > 0 || !!selectedDate;
+  // Show header if there are any filters active (tags, date, going, hosting)
+  const hasFilterableCriteria = selectedTags.length > 0 || !!selectedDate || isGoing || isHosting;
   
   if (!hasFilterableCriteria) return null;
 
@@ -63,6 +62,18 @@ export const SearchHeader = ({
           {selectedDate && (
             <Badge variant="outline" className="flex items-center gap-1">
               <span>Date: {format(selectedDate, "MMM d, yyyy")}</span>
+            </Badge>
+          )}
+          
+          {isGoing && (
+            <Badge variant="outline" className="flex items-center gap-1 bg-green-100">
+              <span>Going</span>
+            </Badge>
+          )}
+          
+          {isHosting && (
+            <Badge variant="outline" className="flex items-center gap-1 bg-blue-100">
+              <span>Hosting</span>
             </Badge>
           )}
           

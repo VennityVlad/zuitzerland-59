@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isSameDay } from "date-fns";
@@ -33,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Link, useNavigate } from 'react-router-dom';
 import { EventSearchModal } from "@/components/events/EventSearchModal"; 
-import { EVENTS_PER_PAGE, EventWithProfile } from "@/hooks/useTabEvents";
+import { EVENTS_PER_PAGE, EventWithProfile, useInfiniteTabEvents } from "@/hooks/useTabEvents";
 
 const Events = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
@@ -47,8 +48,6 @@ const Events = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isGoing, setIsGoing] = useState(false);
   const [isHosting, setIsHosting] = useState(false);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -127,194 +126,27 @@ const Events = () => {
   
   const userId = privyUser?.id || supabaseUser?.id || "";
   const profileId = userProfile?.id;
-  
-  // Setup auto-refresh timer
-  useEffect(() => {
-    if (refreshTimerRef.current) {
-      window.clearTimeout(refreshTimerRef.current);
-    }
-    
-    // Set a new timer for auto refresh (1 minute = 60000ms)
-    refreshTimerRef.current = window.setTimeout(() => {
-      console.log(`Auto-refreshing events after 1 minute`);
-      refetchEvents();
-    }, 60000);
-    
-    return () => {
-      if (refreshTimerRef.current) {
-        window.clearTimeout(refreshTimerRef.current);
-      }
-    };
-  }, [activeTab, selectedTags, selectedDate, isGoing, isHosting]);
-  
-  // Main query to fetch events based on current filters and tab
+
+  // Use our new useInfiniteTabEvents hook for infinite scrolling
   const { 
-    data: eventsData, 
-    isLoading: eventsLoading, 
-    isFetching: eventsFetching,
-    refetch: refetchEvents
-  } = useQuery({
-    queryKey: ["tabEvents", activeTab, selectedTags, selectedDate, isGoing, isHosting, page, profileId],
-    queryFn: async () => {
-      console.log(`🔍 Fetching events for tab ${activeTab}, page ${page}`);
-      const offset = page * EVENTS_PER_PAGE;
-      
-      // Start with a base query
-      let query = supabase
-        .from("events")
-        .select(`
-          *,
-          profiles:profiles!events_created_by_fkey(username, id),
-          locations:location_id (name, building, floor),
-          event_tags:event_tag_relations (
-            tags:event_tags (id, name)
-          )
-        `);
-
-      // Apply tag filters if any are selected
-      if (selectedTags.length > 0) {
-        // Get event IDs with selected tags
-        const eventIdsWithTags = await supabase
-          .from("event_tag_relations")
-          .select("event_id")
-          .in("tag_id", selectedTags);
-
-        if (eventIdsWithTags.error) {
-          throw eventIdsWithTags.error;
-        }
-
-        const eventIds = eventIdsWithTags.data.map(relation => relation.event_id);
-        if (eventIds.length > 0) {
-          query = query.in("id", eventIds);
-        } else {
-          // No events have the selected tags
-          return { data: [], hasMore: false };
-        }
-      }
-
-      // Apply isGoing filter if selected
-      if (isGoing && profileId) {
-        const { data: rsvpData, error: rsvpError } = await supabase
-          .from("event_rsvps")
-          .select("event_id")
-          .eq("profile_id", profileId);
-
-        if (rsvpError) {
-          throw rsvpError;
-        }
-
-        const rsvpEventIds = rsvpData.map(rsvp => rsvp.event_id);
-        if (rsvpEventIds.length === 0) {
-          return { data: [], hasMore: false }; // User hasn't RSVPed to any events
-        }
-        
-        query = query.in("id", rsvpEventIds);
-      }
-
-      // Apply isHosting filter if selected
-      if (isHosting && profileId) {
-        const { data: coHostData, error: coHostError } = await supabase
-          .from("event_co_hosts")
-          .select("event_id")
-          .eq("profile_id", profileId);
-
-        if (coHostError) {
-          throw coHostError;
-        }
-
-        const coHostEventIds = coHostData?.map(ch => ch.event_id) || [];
-        
-        if (coHostEventIds.length > 0) {
-          query = query.or(`created_by.eq.${profileId},id.in.(${coHostEventIds.join(',')})`);
-        } else {
-          query = query.eq("created_by", profileId);
-        }
-      }
-
-      // Apply date filter if selected
-      if (selectedDate) {
-        const dateStart = new Date(selectedDate);
-        dateStart.setHours(0, 0, 0, 0);
-        
-        const dateEnd = new Date(selectedDate);
-        dateEnd.setHours(23, 59, 59, 999);
-
-        query = query.or(
-          `and(start_date.gte.${dateStart.toISOString()},start_date.lte.${dateEnd.toISOString()}),` +
-          `and(end_date.gte.${dateStart.toISOString()},end_date.lte.${dateEnd.toISOString()}),` + 
-          `and(start_date.lte.${dateStart.toISOString()},end_date.gte.${dateEnd.toISOString()})`
-        );
-      } else {
-        // Only apply tab-specific filters if no date filter is active
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        // Get date 24 hours ago for "new" tab
-        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        
-        // Apply tab-specific filters
-        switch (activeTab) {
-          case "today":
-            // Only show events that start or are ongoing today
-            const endOfToday = new Date(today);
-            endOfToday.setHours(23, 59, 59, 999);
-            
-            query = query
-              .or(`start_date.gte.${today.toISOString()},start_date.lte.${endOfToday.toISOString()}`)
-              .lte("start_date", endOfToday.toISOString());
-            break;
-
-          case "upcoming":
-            // Show future events (after today)
-            query = query.gt("start_date", now.toISOString());
-            break;
-            
-          case "new":
-            // Show events created in the last 24 hours
-            query = query.gte("created_at", last24Hours.toISOString());
-            break;
-
-          case "past":
-            // Events that have ended before now
-            query = query.lt("end_date", now.toISOString());
-            break;
-        }
-      }
-
-      // Add pagination
-      query = query
-        .order("start_date", { ascending: activeTab === "past" ? false : true })
-        .range(offset, offset + EVENTS_PER_PAGE - 1);
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error(`Error fetching events for tab ${activeTab}:`, error);
-        throw error;
-      }
-
-      // Make sure event_tags is properly typed
-      const typedEvents = data.map((event: any) => {
-        const safeEventTags = Array.isArray(event.event_tags) ? event.event_tags : [];
-        return {
-          ...event,
-          event_tags: safeEventTags
-        };
-      });
-
-      const hasMoreData = typedEvents.length === EVENTS_PER_PAGE;
-      
-      return { 
-        data: typedEvents as EventWithProfile[], 
-        hasMore: hasMoreData 
-      };
-    },
-    placeholderData: (prevData) => prevData,
-    staleTime: 60000, // 1 minute
-  });
-
+    events,
+    isLoading: eventsLoading,
+    isFetchingMore,
+    hasMore,
+    loadMore,
+    resetEvents,
+    refetch: refetchEvents,
+    lastRefreshTime,
+    currentPage
+  } = useInfiniteTabEvents(
+    activeTab,
+    { selectedTags, selectedDate, isGoing, isHosting },
+    profileId,
+    userIsAdmin
+  );
+  
   // Fetch RSVPs for displayed events
-  const eventIds = eventsData?.data?.map(event => event.id) || [];
+  const eventIds = events?.map(event => event.id) || [];
   
   const { data: rsvpMap, refetch: refetchRSVPs } = useQuery({
     queryKey: ["eventRSVPs", eventIds],
@@ -375,26 +207,30 @@ const Events = () => {
     },
     enabled: !!profileId
   });
-
-  // Update hasMore state when data changes
+  
+  // Setup auto-refresh timer
   useEffect(() => {
-    if (eventsData) {
-      setHasMore(eventsData.hasMore);
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current);
     }
-  }, [eventsData]);
+    
+    // Set a new timer for auto refresh (1 minute = 60000ms)
+    refreshTimerRef.current = window.setTimeout(() => {
+      console.log(`Auto-refreshing events after 1 minute`);
+      refetchEvents();
+    }, 60000);
+    
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [activeTab, selectedTags, selectedDate, isGoing, isHosting, refetchEvents]);
 
   // Handle tab change
   const handleTabChange = (newTab: string) => {
     setActiveTab(newTab);
-    setPage(0); // Reset to first page
-    // Query will automatically refetch due to queryKey change
-  };
-  
-  // Handle load more
-  const loadMore = () => {
-    if (!eventsLoading && !eventsFetching && hasMore) {
-      setPage(prev => prev + 1);
-    }
+    resetEvents();
   };
   
   // Setup intersection observer for infinite scroll
@@ -403,7 +239,7 @@ const Events = () => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && hasMore && !eventsLoading && !eventsFetching) {
+        if (entries[0].isIntersecting && hasMore && !eventsLoading && !isFetchingMore) {
           loadMore();
         }
       },
@@ -419,12 +255,12 @@ const Events = () => {
         observer.unobserve(observerTarget.current);
       }
     };
-  }, [hasMore, eventsLoading, eventsFetching]);
+  }, [hasMore, eventsLoading, isFetchingMore, loadMore]);
   
   // Manual refresh function
   const refreshData = () => {
     setIsRefreshing(true);
-    setPage(0);
+    resetEvents();
     Promise.all([
       refetchEvents(), 
       refetchRSVPs(), 
@@ -463,16 +299,12 @@ const Events = () => {
   const toggleGoingFilter = () => {
     if (isHosting) setIsHosting(false); // Turn off hosting filter if it's on
     setIsGoing(!isGoing);
-    setPage(0); // Reset to first page
-    // Query will automatically refetch due to queryKey change
   };
 
   // Toggle the hosting filter
   const toggleHostingFilter = () => {
     if (isGoing) setIsGoing(false); // Turn off going filter if it's on
     setIsHosting(!isHosting);
-    setPage(0); // Reset to first page
-    // Query will automatically refetch due to queryKey change
   };
 
   // Clear all filters function
@@ -482,8 +314,6 @@ const Events = () => {
     setSelectedTags([]);
     setSelectedDate(undefined);
     setActiveTab("upcoming");
-    setPage(0); // Reset to first page
-    // Query will automatically refetch due to queryKey change
   };
 
   const handleDeleteEvent = async () => {
@@ -507,7 +337,7 @@ const Events = () => {
       
       // Reset to upcoming tab and refresh queries
       setActiveTab("upcoming");
-      setPage(0);
+      resetEvents();
       queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
       queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
       queryClient.invalidateQueries({ queryKey: ["eventCount"] });
@@ -573,14 +403,12 @@ const Events = () => {
 
   const handleDateSelection = (date: Date | undefined) => {
     setSelectedDate(date);
-    setPage(0); // Reset to first page
-    // Query will automatically refetch due to queryKey change
+    resetEvents();
   };
 
   const handleTagsChange = (tags: string[]) => {
     setSelectedTags(tags);
-    setPage(0); // Reset to first page
-    // Query will automatically refetch due to queryKey change
+    resetEvents();
   };
   
   const clearFilters = () => {
@@ -589,20 +417,12 @@ const Events = () => {
     setIsGoing(false);
     setIsHosting(false);
     setActiveTab("upcoming");
-    setPage(0); // Reset to first page
-    // Query will automatically refetch due to queryKey change
   };
 
   const handleRSVPChange = (eventId: string, newStatus: boolean) => {
     refetchRSVPs();
     refetchUserRSVPs();
   };
-
-  // Prepare events data for display
-  const events = eventsData?.data || [];
-  const currentPageRSVPMap = rsvpMap || {};
-  
-  const isSearchMode = selectedTags.length > 0 || !!selectedDate;
 
   // Check if the user has restricted access
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
@@ -791,7 +611,7 @@ const Events = () => {
                 variant="ghost" 
                 size="sm"
                 onClick={refreshData}
-                disabled={isRefreshing || eventsLoading || eventsFetching}
+                disabled={isRefreshing || eventsLoading || isFetchingMore}
                 className="text-gray-500"
               >
                 <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -799,7 +619,10 @@ const Events = () => {
               </Button>
               
               <div className="text-xs text-gray-500">
-                Last updated: {new Date().toLocaleTimeString()}
+                Last updated: {new Date(lastRefreshTime).toLocaleTimeString()}
+                {currentPage > 0 && (
+                  <span className="ml-2">| Page: {currentPage + 1}</span>
+                )}
               </div>
             </div>
             
@@ -819,12 +642,13 @@ const Events = () => {
               </TabsList>
 
               <TabsContent value={activeTab} className="space-y-4 mt-4">
+                {/* Render events */}
                 {renderEventsList(
                   events,
-                  (eventsLoading && page === 0),
-                  (eventsFetching && page > 0),
+                  eventsLoading,
+                  isFetchingMore,
                   hasMore,
-                  currentPageRSVPMap,
+                  rsvpMap || {},
                   userRSVPEventIds || [],
                   profileId,
                   handleRSVPChange,
@@ -837,12 +661,23 @@ const Events = () => {
                   formatEventTime,
                   formatDateRange,
                   isMobile,
-                  isAdminUser
+                  isAdminUser,
+                  setEventToEdit,
+                  setCreateEventOpen
                 )}
                 
                 {/* Intersection observer target for infinite scroll */}
-                {hasMore && !eventsLoading && !eventsFetching && (
-                  <div ref={observerTarget} className="h-10" />
+                {hasMore && !eventsLoading && !isFetchingMore && (
+                  <div ref={observerTarget} className="h-10 flex justify-center items-center">
+                    <Skeleton className="h-8 w-32" />
+                  </div>
+                )}
+
+                {/* Pagination info */}
+                {events.length > 0 && currentPage > 0 && (
+                  <div className="text-center text-sm text-gray-500 pt-2">
+                    Showing {events.length} events ({currentPage + 1} {currentPage > 0 ? 'pages' : 'page'})
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
@@ -963,9 +798,11 @@ const renderEventsList = (
   formatEventTime: (startDate: string, endDate: string, isAllDay: boolean, timezone: string) => string,
   formatDateRange: (startDate: string, endDate: string, isAllDay: boolean) => string,
   isMobile: boolean,
-  isAdminUser: boolean
+  isAdminUser: boolean,
+  setEventToEdit: React.Dispatch<React.SetStateAction<EventWithProfile | null>>,
+  setCreateEventOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  if (isLoading) {
+  if (isLoading && events.length === 0) {
     return (
       <div className="flex justify-center py-8">
         <div className="animate-pulse">Loading events...</div>
@@ -982,7 +819,13 @@ const renderEventsList = (
           {canCreateEvents ? "Get started by creating a new event." : "Check back later for upcoming events."}
         </p>
         {canCreateEvents && (
-          <Button className="mt-4" onClick={() => {}}>
+          <Button 
+            className="mt-4" 
+            onClick={() => {
+              setEventToEdit(null);
+              setCreateEventOpen(true);
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" /> Create Event
           </Button>
         )}
@@ -1149,7 +992,7 @@ const renderEventsList = (
         );
       })}
       
-      {isFetchingMore && (
+      {isFetchingMore && events.length > 0 && (
         <div className="flex justify-center py-4">
           <div className="animate-pulse">Loading more events...</div>
         </div>
