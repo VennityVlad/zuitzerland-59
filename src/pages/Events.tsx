@@ -49,7 +49,6 @@ const Events = () => {
   const [isHosting, setIsHosting] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -303,7 +302,6 @@ const Events = () => {
         };
       });
 
-      // Determine if there are more results to load
       const hasMoreData = typedEvents.length === EVENTS_PER_PAGE;
       
       return { 
@@ -437,29 +435,18 @@ const Events = () => {
   };
 
   // Fix the handleCreateEventSuccess function to match the expected prop type
-  const handleCreateEventSuccess = useCallback((newEventId: string) => {
-    console.log("Event created successfully, navigating to event page:", newEventId);
-    
+  const handleCreateEventSuccess = (newEventId: string) => {
     // Invalidate queries to refresh data
     queryClient.invalidateQueries({ queryKey: ["tabEvents"] });
     queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
+    queryClient.invalidateQueries({ queryKey: ["eventCount"] });
     
     // Close the create event sheet
     setCreateEventOpen(false);
-    setEventToEdit(null);
     
     // Navigate to the new event's page
-    if (newEventId) {
-      navigate(`/events/${newEventId}`);
-    } else {
-      console.error("Cannot navigate to event page: No event ID provided");
-      toast({
-        title: "Error",
-        description: "Could not open the event page",
-        variant: "destructive"
-      });
-    }
-  }, [queryClient, navigate, toast]);
+    navigate(`/events/${newEventId}`);
+  };
 
   // Toggle the going filter
   const toggleGoingFilter = () => {
@@ -575,12 +562,8 @@ const Events = () => {
 
   const handleDateSelection = (date: Date | undefined) => {
     setSelectedDate(date);
-    setIsDateFilterActive(!!date);
     setPage(0); // Reset to first page
-    // Active tab is irrelevant when date filter is active
-    if (date) {
-      setActiveTab("upcoming"); // Just keep a default value
-    }
+    // Query will automatically refetch due to queryKey change
   };
 
   const handleTagsChange = (tags: string[]) => {
@@ -592,7 +575,6 @@ const Events = () => {
   const clearFilters = () => {
     setSelectedTags([]);
     setSelectedDate(undefined);
-    setIsDateFilterActive(false);
     setIsGoing(false);
     setIsHosting(false);
     setActiveTab("upcoming");
@@ -606,33 +588,10 @@ const Events = () => {
   };
 
   // Prepare events data for display
-  const [accumulatedEvents, setAccumulatedEvents] = useState<EventWithProfile[]>([]);
-  
-  // Update the accumulated events when new data arrives
-  useEffect(() => {
-    if (eventsData?.data) {
-      if (page === 0) {
-        // Reset accumulated events when starting a new query (first page)
-        setAccumulatedEvents(eventsData.data);
-      } else {
-        // Append new events to accumulated list for subsequent pages
-        setAccumulatedEvents(prev => [...prev, ...eventsData.data]);
-      }
-      setHasMore(eventsData.hasMore);
-    }
-  }, [eventsData, page]);
-
-  // Reset accumulated events when filters or tabs change
-  useEffect(() => {
-    setAccumulatedEvents([]);
-    setPage(0);
-  }, [activeTab, selectedTags, selectedDate, isGoing, isHosting]);
-
-  // Use accumulated events instead of eventsData.data for rendering
-  const events = isDateFilterActive ? accumulatedEvents : (eventsData?.data || []);
-
-  // Make sure we have a valid rsvpMap to pass to the render functions
+  const events = eventsData?.data || [];
   const currentPageRSVPMap = rsvpMap || {};
+  
+  const isSearchMode = selectedTags.length > 0 || !!selectedDate;
 
   // Check if the user has restricted access
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
@@ -841,11 +800,16 @@ const Events = () => {
               isHosting={isHosting}
             />
             
-            {isDateFilterActive ? (
-              // When date filter is active, show only filtered content without tabs
-              <div className="space-y-4 mt-4">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-2">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="new">Newly Added</TabsTrigger>
+                <TabsTrigger value="past">Past</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value={activeTab} className="space-y-4 mt-4">
                 {renderEventsList(
-                  accumulatedEvents, // Use accumulated events for date-filtered results
+                  events,
                   (eventsLoading && page === 0),
                   (eventsFetching && page > 0),
                   hasMore,
@@ -869,45 +833,8 @@ const Events = () => {
                 {hasMore && !eventsLoading && !eventsFetching && (
                   <div ref={observerTarget} className="h-10" />
                 )}
-              </div>
-            ) : (
-              // Original tabs display when no date filter is active
-              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-2">
-                  <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                  <TabsTrigger value="new">Newly Added</TabsTrigger>
-                  <TabsTrigger value="past">Past</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value={activeTab} className="space-y-4 mt-4">
-                  {renderEventsList(
-                    eventsData?.data || [], // Use current page data for tab results
-                    (eventsLoading && page === 0),
-                    (eventsFetching && page > 0),
-                    hasMore,
-                    currentPageRSVPMap,
-                    userRSVPEventIds || [],
-                    profileId,
-                    handleRSVPChange,
-                    canCreateEvents,
-                    canEditEvent,
-                    openDeleteDialog,
-                    handleEditEvent,
-                    handleShare,
-                    formatDateForSidebar,
-                    formatEventTime,
-                    formatDateRange,
-                    isMobile,
-                    isAdminUser
-                  )}
-                  
-                  {/* Intersection observer target for infinite scroll */}
-                  {hasMore && !eventsLoading && !eventsFetching && (
-                    <div ref={observerTarget} className="h-10" />
-                  )}
-                </TabsContent>
-              </Tabs>
-            )}
+              </TabsContent>
+            </Tabs>
           </div>
           
           {!isMobile && (
@@ -915,8 +842,6 @@ const Events = () => {
               <EventCalendar 
                 onSelectDate={handleDateSelection} 
                 events={allEvents || []}
-                onRefresh={refreshData}
-                isRefreshing={isRefreshing}
               />
             </div>
           )}
@@ -926,7 +851,7 @@ const Events = () => {
       <CreateEventSheet
         open={createEventOpen}
         onOpenChange={setCreateEventOpen}
-        onSuccess={handleCreateEventSuccess as any}
+        onSuccess={handleCreateEventSuccess}
         userId={privyUser?.id || supabaseUser?.id || ''}
         profileId={userProfile?.id}
         event={eventToEdit}

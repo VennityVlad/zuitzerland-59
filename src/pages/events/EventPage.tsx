@@ -34,7 +34,6 @@ const EventPage = () => {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [coHosts, setCoHosts] = useState<any[]>([]);
   const [commentCount, setCommentCount] = useState(0);
-  const [notFound, setNotFound] = useState(false); // Add state to track 404 status
   const commentsRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const locationData = useLocation();
@@ -48,7 +47,6 @@ const EventPage = () => {
   console.log("🎪 EventPage - Auth status:", { authenticated, userId: user?.id });
   console.log("🎪 EventPage - Invoice status:", { hasPaidInvoice, isPaidInvoiceLoading, isAdmin });
   console.log("🎪 EventPage - Current path:", locationData.pathname);
-  console.log("🎪 EventPage - Event ID from params:", eventId);
 
   // Define the fetchRsvps function to fix the error
   const fetchRsvps = async () => {
@@ -134,13 +132,6 @@ const EventPage = () => {
       return;
     }
     
-    if (!eventId) {
-      console.log("❌ No event ID provided");
-      setLoading(false);
-      setNotFound(true);
-      return;
-    }
-    
     try {
       console.log("🔍 Fetching event data with ID:", eventId);
       const { data, error } = await supabase
@@ -156,18 +147,11 @@ const EventPage = () => {
         .eq("id", eventId)
         .single();
 
-      if (error) {
-        console.error("Error fetching event:", error);
-        setNotFound(true);
-        throw error;
-      }
-      
+      if (error) throw error;
       setEvent(data);
-      setNotFound(false);
       console.log("✅ Event data fetched successfully:", data);
     } catch (error) {
       console.error("Error fetching event:", error);
-      setNotFound(true);
     } finally {
       setLoading(false);
     }
@@ -328,8 +312,7 @@ const EventPage = () => {
     setCreateEventOpen(true);
   };
 
-  const handleCreateEventSuccess = (newEventId: string) => {
-    console.log("Event edit complete, refreshing with new event ID:", newEventId);
+  const handleCreateEventSuccess = () => {
     fetchEvent();
     setCreateEventOpen(false);
     setEventToEdit(null);
@@ -388,8 +371,7 @@ const EventPage = () => {
     );
   }
 
-  if (notFound || (!event && !loading && (hasPaidInvoice || isAdmin))) {
-    console.log("❌ Event not found, navigating to 404");
+  if (!event && !loading && (hasPaidInvoice || isAdmin)) {
     return <Navigate to="/404" replace />;
   }
 

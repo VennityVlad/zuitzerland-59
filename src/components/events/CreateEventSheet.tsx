@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, addHours, startOfHour, addMinutes } from "date-fns";
@@ -26,7 +27,7 @@ import { Spinner } from "@/components/ui/spinner";
 interface CreateEventSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (eventId: string) => void;
+  onSuccess: () => void;
   userId: string;
   profileId?: string;
   event?: Event | null;
@@ -776,17 +777,8 @@ export function CreateEventSheet({
           : "Your event has been created successfully",
       });
       
-      // Now properly log and pass the eventId to the parent component
-      console.log("Event operation completed successfully. EventId:", eventId);
-      
       onOpenChange(false);
-      
-      // Make sure we have a valid eventId before calling onSuccess
-      if (eventId) {
-        onSuccess(eventId);
-      } else {
-        console.error("No valid eventId returned after event creation/update");
-      }
+      onSuccess();
     } catch (error: any) {
       console.error('Error saving event:', error);
       toast({
