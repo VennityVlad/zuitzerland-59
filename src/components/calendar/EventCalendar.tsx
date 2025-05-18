@@ -23,25 +23,32 @@ interface EventCalendarProps {
   onSelectDate?: (date: Date | undefined, shouldSwitchTab?: boolean) => void;
   className?: string;
   events?: Event[];
-  hideTitle?: boolean; // Add this prop to hide the title
-  onRefresh?: () => void; // Add refresh handler prop
-  isRefreshing?: boolean; // Add refreshing state prop
+  hideTitle?: boolean;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  selectedDate?: Date; // Add this prop to sync selected date
 }
 
 export const EventCalendar = ({ 
   onSelectDate, 
   className, 
   events = [],
-  hideTitle = false, // Default to showing the title
+  hideTitle = false,
   onRefresh,
-  isRefreshing = false
+  isRefreshing = false,
+  selectedDate: externalSelectedDate
 }: EventCalendarProps) => {
   // Initialize with May 2025
   const initialDate = new Date(2025, 4, 1); // Month is 0-based, so 4 is May
   const [currentMonth, setCurrentMonth] = useState<Date>(initialDate);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(externalSelectedDate);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [refreshTimerOn, setRefreshTimerOn] = useState(true);
+
+  // Sync internal state with external prop
+  useEffect(() => {
+    setSelectedDate(externalSelectedDate);
+  }, [externalSelectedDate]);
 
   const weekDays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
@@ -119,6 +126,7 @@ export const EventCalendar = ({
       if (onSelectDate) onSelectDate(undefined, false);
     } else {
       setSelectedDate(date);
+      // When selecting a date, always enable date filter mode by passing true
       if (onSelectDate) onSelectDate(date, true);
     }
   };
@@ -139,6 +147,13 @@ export const EventCalendar = ({
   };
 
   const calendarDays = generateCalendarDays();
+
+  // When selectedDate changes, ensure the calendar shows the correct month
+  useEffect(() => {
+    if (selectedDate) {
+      setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    }
+  }, [selectedDate]);
 
   return (
     <Card className={cn("bg-white p-4", className)}>

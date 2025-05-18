@@ -36,7 +36,8 @@ export const MobileCalendarDialog = ({
   const [open, setOpen] = React.useState(false);
   
   const handleDateSelect = (date: Date | undefined, shouldSwitchTab?: boolean) => {
-    onSelectDate(date, shouldSwitchTab);
+    // Always pass true as the second parameter to indicate we want to switch to date filter mode
+    onSelectDate(date, true);
     if (date) {
       // Close dialog after date selection
       setTimeout(() => setOpen(false), 100);
@@ -46,7 +47,11 @@ export const MobileCalendarDialog = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="h-10 w-10">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className={`h-10 w-10 ${selectedDate ? 'border-primary text-primary' : ''}`}
+        >
           <Calendar className="h-4 w-4" />
           <span className="sr-only">Open calendar</span>
         </Button>
@@ -75,6 +80,7 @@ export const MobileCalendarDialog = ({
             hideTitle={true}
             onRefresh={onRefresh}
             isRefreshing={isRefreshing}
+            selectedDate={selectedDate}
           />
           
           {selectedDate && (
@@ -87,7 +93,7 @@ export const MobileCalendarDialog = ({
                   variant="ghost" 
                   size="sm" 
                   onClick={() => {
-                    handleDateSelect(undefined);
+                    handleDateSelect(undefined, true);
                   }}
                   className="h-7 text-xs"
                 >
