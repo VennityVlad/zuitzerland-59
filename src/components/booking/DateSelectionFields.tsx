@@ -1,3 +1,4 @@
+
 import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parse, format } from "date-fns";
-import { EventCalendar } from "@/components/calendar/EventCalendar";
 import { useBookingSettings } from "@/hooks/useBookingSettings";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useEffect } from "react";
@@ -62,37 +62,6 @@ const DateSelectionFields = ({
       } as React.ChangeEvent<HTMLInputElement>);
     } catch (error) {
       console.error('Error processing dates:', error);
-    }
-  };
-
-  const handleCalendarSelect = (date: Date | undefined) => {
-    if (!date) return;
-    
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      
-      if (!formData.checkin) {
-        // Set as check-in date if none is set
-        handleInputChange({
-          target: { name: "checkin", value: formattedDate }
-        } as React.ChangeEvent<HTMLInputElement>);
-      } else if (!formData.checkout && formattedDate > formData.checkin) {
-        // Set as check-out date if check-in is already set and selected date is after check-in
-        handleInputChange({
-          target: { name: "checkout", value: formattedDate }
-        } as React.ChangeEvent<HTMLInputElement>);
-      } else {
-        // Otherwise, reset and set as new check-in date
-        handleInputChange({
-          target: { name: "checkin", value: formattedDate }
-        } as React.ChangeEvent<HTMLInputElement>);
-        
-        handleInputChange({
-          target: { name: "checkout", value: "" }
-        } as React.ChangeEvent<HTMLInputElement>);
-      }
-    } catch (error) {
-      console.error('Error formatting date:', error);
     }
   };
 
@@ -179,9 +148,6 @@ const DateSelectionFields = ({
 
   return (
     <div className="space-y-6">
-      {/* Event Calendar with date selection capability */}
-      <EventCalendar onSelectDate={handleCalendarSelect} />
-
       {/* Show DateRangeSelector only if blockEnabled is true */}
       {settings.blockEnabled && (
         <DateRangeSelector onDateRangeChange={handleDateRangeChange} />
