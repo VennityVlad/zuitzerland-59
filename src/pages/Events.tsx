@@ -631,6 +631,9 @@ const Events = () => {
   // Use accumulated events instead of eventsData.data for rendering
   const events = isDateFilterActive ? accumulatedEvents : (eventsData?.data || []);
 
+  // Make sure we have a valid rsvpMap to pass to the render functions
+  const currentPageRSVPMap = rsvpMap || {};
+
   // Check if the user has restricted access
   if (!hasPaidInvoice && !isPaidInvoiceLoading) {
     return (
