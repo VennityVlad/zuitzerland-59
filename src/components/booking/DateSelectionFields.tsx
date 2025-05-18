@@ -183,7 +183,7 @@ const DateSelectionFields = ({
               onDateChange={(date) => handleDatePickerChange('checkin', date)}
               fromDate={minDateObj}
               toDate={maxDateObj}
-              placeholder="Select check-in date"
+              placeholder="Select date"
               className="w-full"
             />
           )}
@@ -218,7 +218,7 @@ const DateSelectionFields = ({
               onDateChange={(date) => handleDatePickerChange('checkout', date)}
               fromDate={checkinDate || minDateObj}
               toDate={maxDateObj}
-              placeholder="Select check-out date"
+              placeholder="Select date"
               disabled={!formData.checkin}
               className="w-full"
             />

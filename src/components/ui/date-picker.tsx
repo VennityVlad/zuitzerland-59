@@ -22,7 +22,7 @@ export function DatePicker({
   onDateChange, 
   disabled = false, 
   className, 
-  placeholder = "Pick a date",
+  placeholder = "Select date",
   fromDate,
   toDate
 }: DatePickerProps) {
