@@ -1,4 +1,3 @@
-
 export interface BookingFormData {
   firstName: string;
   lastName: string;
@@ -26,6 +25,7 @@ export interface PaymentMethodOption {
 export interface PriceData {
   id: string;
   room_type: string;
+  room_code: string;  // Add room_code property
   date: string;
   price: number;
   duration: number;

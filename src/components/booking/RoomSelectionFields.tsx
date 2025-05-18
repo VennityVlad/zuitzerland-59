@@ -80,7 +80,7 @@ const getRoomTypes = async () => {
     }
 
     return data.map(room => ({
-      id: room.code,
+      id: room.code,  // This already returns the code correctly
       name: room.display_name
     })) || [];
   } catch (error) {
