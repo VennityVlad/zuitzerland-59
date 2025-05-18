@@ -1,7 +1,7 @@
 
 import React from "react";
 import { format } from "date-fns";
-import { Tag, X } from "lucide-react";
+import { Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -38,9 +38,11 @@ export const SearchHeader = ({
     enabled: selectedTags.length > 0,
   });
 
-  const hasFilters = selectedTags.length > 0 || !!selectedDate || isGoing || isHosting;
+  // Only show header if there are tags or date filters
+  // Don't show when only isGoing or isHosting are active
+  const hasFilterableCriteria = selectedTags.length > 0 || !!selectedDate;
   
-  if (!hasFilters) return null;
+  if (!hasFilterableCriteria) return null;
 
   return (
     <div className="bg-muted/30 rounded-lg p-4 mb-4 border">
@@ -61,18 +63,6 @@ export const SearchHeader = ({
           {selectedDate && (
             <Badge variant="outline" className="flex items-center gap-1">
               <span>Date: {format(selectedDate, "MMM d, yyyy")}</span>
-            </Badge>
-          )}
-          
-          {isGoing && (
-            <Badge variant="outline" className="flex items-center gap-1 bg-green-100">
-              <span>Going</span>
-            </Badge>
-          )}
-          
-          {isHosting && (
-            <Badge variant="outline" className="flex items-center gap-1 bg-blue-100">
-              <span>Hosting</span>
             </Badge>
           )}
           
