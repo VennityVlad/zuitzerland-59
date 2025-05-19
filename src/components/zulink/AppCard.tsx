@@ -2,10 +2,11 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Check, X } from "lucide-react";
+import { ExternalLink, Check, X, ChevronDown, ChevronUp } from "lucide-react"; // Added ChevronDown and ChevronUp icons
 import { useState } from "react";
 import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 import { toast } from "@/hooks/use-toast";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"; // Added Collapsible components
 
 export interface AppCardProps {
   id: string;
@@ -31,6 +32,7 @@ export function AppCard({
   onStatusUpdate,
 }: AppCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false); // Added state for description expansion
   const { authenticatedSupabase } = useSupabaseJwt();
 
   const handleApprove = async () => {
@@ -107,8 +109,9 @@ export function AppCard({
   };
 
   const isPending = status === 'pending';
-  // Fix: Use authenticatedSupabase.auth.getUser() instead of accessing .user directly
-  const isOwner = authenticatedSupabase?.auth.getSession().then(({ data }) => data.session?.user.id === createdBy);
+  
+  // Determine if description should be truncated
+  const shouldTruncateDescription = description && description.length > 100;
 
   return (
     <Card className="overflow-hidden flex flex-col h-full">
@@ -125,7 +128,7 @@ export function AppCard({
           </div>
         )}
         
-        {isPending && (isAdmin || isOwner) && (
+        {isPending && isAdmin && (
           <div className="absolute top-2 right-2">
             <Badge variant="secondary" className="bg-yellow-200 text-yellow-800">Pending Review</Badge>
           </div>
@@ -134,7 +137,44 @@ export function AppCard({
 
       <CardHeader className="pb-2">
         <CardTitle className="text-lg leading-tight">{name}</CardTitle>
-        {description && <CardDescription className="line-clamp-2">{description}</CardDescription>}
+        {/* Description with expand/collapse functionality */}
+        {description && (
+          <Collapsible 
+            open={isDescriptionExpanded} 
+            onOpenChange={setIsDescriptionExpanded}
+            className="pt-1" 
+          >
+            <div className="text-sm text-muted-foreground">
+              {shouldTruncateDescription && !isDescriptionExpanded ? (
+                <>{description.substring(0, 100)}...</>
+              ) : (
+                <>{description}</>
+              )}
+              
+              {shouldTruncateDescription && (
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
+                  >
+                    {isDescriptionExpanded ? (
+                      <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
+                    ) : (
+                      <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              )}
+            </div>
+            
+            {shouldTruncateDescription && (
+              <CollapsibleContent className="text-sm text-muted-foreground">
+                {description}
+              </CollapsibleContent>
+            )}
+          </Collapsible>
+        )}
       </CardHeader>
 
       <CardContent className="flex-grow">

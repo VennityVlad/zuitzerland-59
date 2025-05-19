@@ -1,18 +1,18 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, ThumbsUp, ThumbsDown, Edit3, CheckCircle, XCircle, Settings2, Tag, Link, Pencil } from "lucide-react"; // Added Link and Pencil icons
+import { ExternalLink, ThumbsUp, ThumbsDown, Edit3, CheckCircle, XCircle, Settings2, Tag, Link, Pencil, ChevronDown, ChevronUp } from "lucide-react"; // Added ChevronDown and ChevronUp icons
 import { Tables } from '@/integrations/supabase/types';
 import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 import { toast } from "@/hooks/use-toast";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Added Popover
-import { Input } from "@/components/ui/input"; // Added Input
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"; // Added Form components
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; 
+import { Input } from "@/components/ui/input"; 
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod"; // Added zod for form validation
+import * as z from "zod";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 type ZulinkProject = Tables<'zulink_projects'>;
 type ZulinkProjectStatus = ZulinkProject['status']; // 'pending' | 'approved' | 'rejected' | 'implemented'
@@ -52,6 +52,10 @@ export function ProjectIdeaCard({
   const { authenticatedSupabase } = useSupabaseJwt();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isEditingUrl, setIsEditingUrl] = useState(false);
+  
+  // Added state for description and benefit expansion
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isBenefitExpanded, setIsBenefitExpanded] = useState(false);
 
   // Form setup
   const form = useForm<UrlFormData>({
@@ -127,6 +131,10 @@ export function ProjectIdeaCard({
     return '#F1F0FB'; // Soft Gray (default for 'Grey' or other values)
   };
 
+  // Determine if text should be truncated based on length
+  const shouldTruncateDescription = description && description.length > 100;
+  const shouldTruncateBenefit = benefit_to_zuitzerland && benefit_to_zuitzerland.length > 100;
+
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
@@ -139,7 +147,45 @@ export function ProjectIdeaCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-3">
-        <p className="text-sm text-muted-foreground line-clamp-3">{description}</p>
+        {/* Description with expand/collapse functionality */}
+        {description && (
+          <Collapsible 
+            open={isDescriptionExpanded} 
+            onOpenChange={setIsDescriptionExpanded} 
+            className="space-y-1"
+          >
+            <div className="text-sm text-muted-foreground">
+              {shouldTruncateDescription && !isDescriptionExpanded ? (
+                <>{description.substring(0, 100)}...</>
+              ) : (
+                <>{description}</>
+              )}
+              
+              {shouldTruncateDescription && (
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
+                  >
+                    {isDescriptionExpanded ? (
+                      <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
+                    ) : (
+                      <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              )}
+            </div>
+            
+            {shouldTruncateDescription && (
+              <CollapsibleContent className="text-sm text-muted-foreground">
+                {description}
+              </CollapsibleContent>
+            )}
+          </Collapsible>
+        )}
+
         <div>
           <h4 className="font-semibold text-xs mb-1">Type:</h4>
           <Badge variant="outline" className="capitalize">{submission_type.replace('_', ' ')}</Badge>
@@ -160,10 +206,49 @@ export function ProjectIdeaCard({
             {flag}
           </Badge>
         </div>
-        <div>
-          <h4 className="font-semibold text-xs mb-1">Benefit to Zuitzerland:</h4>
-          <p className="text-sm text-muted-foreground line-clamp-2">{benefit_to_zuitzerland}</p>
-        </div>
+        
+        {/* Benefit to Zuitzerland with expand/collapse functionality */}
+        {benefit_to_zuitzerland && (
+          <div>
+            <h4 className="font-semibold text-xs mb-1">Benefit to Zuitzerland:</h4>
+            <Collapsible 
+              open={isBenefitExpanded} 
+              onOpenChange={setIsBenefitExpanded} 
+              className="space-y-1"
+            >
+              <div className="text-sm text-muted-foreground">
+                {shouldTruncateBenefit && !isBenefitExpanded ? (
+                  <>{benefit_to_zuitzerland.substring(0, 100)}...</>
+                ) : (
+                  <>{benefit_to_zuitzerland}</>
+                )}
+                
+                {shouldTruncateBenefit && (
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
+                    >
+                      {isBenefitExpanded ? (
+                        <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
+                      ) : (
+                        <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                )}
+              </div>
+              
+              {shouldTruncateBenefit && (
+                <CollapsibleContent className="text-sm text-muted-foreground">
+                  {benefit_to_zuitzerland}
+                </CollapsibleContent>
+              )}
+            </Collapsible>
+          </div>
+        )}
+        
         {support_needed && (
           <div>
             <h4 className="font-semibold text-xs mb-1">Support Needed:</h4>
