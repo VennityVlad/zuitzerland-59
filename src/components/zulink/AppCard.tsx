@@ -2,11 +2,11 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Check, X, ChevronDown, ChevronUp } from "lucide-react"; // Added ChevronDown and ChevronUp icons
+import { ExternalLink, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 import { toast } from "@/hooks/use-toast";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"; // Added Collapsible components
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export interface AppCardProps {
   id: string;
@@ -32,7 +32,7 @@ export function AppCard({
   onStatusUpdate,
 }: AppCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false); // Added state for description expansion
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { authenticatedSupabase } = useSupabaseJwt();
 
   const handleApprove = async () => {
@@ -137,42 +137,53 @@ export function AppCard({
 
       <CardHeader className="pb-2">
         <CardTitle className="text-lg leading-tight">{name}</CardTitle>
-        {/* Description with expand/collapse functionality */}
+        
+        {/* Description with expand/collapse functionality - updated positioning */}
         {description && (
           <Collapsible 
             open={isDescriptionExpanded} 
             onOpenChange={setIsDescriptionExpanded}
             className="pt-1" 
           >
-            <div className="text-sm text-muted-foreground">
-              {shouldTruncateDescription && !isDescriptionExpanded ? (
-                <>{description.substring(0, 100)}...</>
-              ) : (
-                <>{description}</>
-              )}
-              
-              {shouldTruncateDescription && (
-                <CollapsibleTrigger asChild>
-                  <Button 
-                    variant="link" 
-                    size="sm" 
-                    className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
-                  >
-                    {isDescriptionExpanded ? (
-                      <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
-                    ) : (
-                      <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-              )}
-            </div>
-            
-            {shouldTruncateDescription && (
-              <CollapsibleContent className="text-sm text-muted-foreground">
-                {description}
-              </CollapsibleContent>
+            {/* For collapsed state: show truncated text with "See more" at the end */}
+            {!isDescriptionExpanded && (
+              <div className="text-sm text-muted-foreground">
+                {shouldTruncateDescription ? (
+                  <>
+                    {description.substring(0, 100)}...
+                    <CollapsibleTrigger asChild>
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
+                      >
+                        <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
+                      </Button>
+                    </CollapsibleTrigger>
+                  </>
+                ) : (
+                  description
+                )}
+              </div>
             )}
+            
+            {/* For expanded state: show full text with "See less" at the bottom */}
+            <CollapsibleContent className="text-sm text-muted-foreground">
+              {description}
+              {shouldTruncateDescription && (
+                <div className="mt-2">
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      className="p-0 h-auto text-primary hover:text-primary/80"
+                    >
+                      <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+              )}
+            </CollapsibleContent>
           </Collapsible>
         )}
       </CardHeader>

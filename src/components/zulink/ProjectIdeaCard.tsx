@@ -53,7 +53,7 @@ export function ProjectIdeaCard({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isEditingUrl, setIsEditingUrl] = useState(false);
   
-  // Added state for description and benefit expansion
+  // State for description and benefit expansion
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isBenefitExpanded, setIsBenefitExpanded] = useState(false);
 
@@ -147,43 +147,55 @@ export function ProjectIdeaCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-3">
-        {/* Description with expand/collapse functionality */}
+        {/* Description with updated expand/collapse functionality */}
         {description && (
-          <Collapsible 
-            open={isDescriptionExpanded} 
-            onOpenChange={setIsDescriptionExpanded} 
-            className="space-y-1"
-          >
-            <div className="text-sm text-muted-foreground">
-              {shouldTruncateDescription && !isDescriptionExpanded ? (
-                <>{description.substring(0, 100)}...</>
-              ) : (
-                <>{description}</>
+          <div>
+            <Collapsible 
+              open={isDescriptionExpanded} 
+              onOpenChange={setIsDescriptionExpanded} 
+              className="space-y-1"
+            >
+              {/* For collapsed state: show truncated text with "See more" at the end */}
+              {!isDescriptionExpanded && (
+                <div className="text-sm text-muted-foreground">
+                  {shouldTruncateDescription ? (
+                    <>
+                      {description.substring(0, 100)}...
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
+                        >
+                          <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
+                        </Button>
+                      </CollapsibleTrigger>
+                    </>
+                  ) : (
+                    description
+                  )}
+                </div>
               )}
               
-              {shouldTruncateDescription && (
-                <CollapsibleTrigger asChild>
-                  <Button 
-                    variant="link" 
-                    size="sm" 
-                    className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
-                  >
-                    {isDescriptionExpanded ? (
-                      <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
-                    ) : (
-                      <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-              )}
-            </div>
-            
-            {shouldTruncateDescription && (
+              {/* For expanded state: show full text with "See less" at the bottom */}
               <CollapsibleContent className="text-sm text-muted-foreground">
                 {description}
+                {shouldTruncateDescription && (
+                  <div className="mt-2">
+                    <CollapsibleTrigger asChild>
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="p-0 h-auto text-primary hover:text-primary/80"
+                      >
+                        <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                )}
               </CollapsibleContent>
-            )}
-          </Collapsible>
+            </Collapsible>
+          </div>
         )}
 
         <div>
@@ -207,7 +219,7 @@ export function ProjectIdeaCard({
           </Badge>
         </div>
         
-        {/* Benefit to Zuitzerland with expand/collapse functionality */}
+        {/* Benefit to Zuitzerland with updated expand/collapse functionality */}
         {benefit_to_zuitzerland && (
           <div>
             <h4 className="font-semibold text-xs mb-1">Benefit to Zuitzerland:</h4>
@@ -216,35 +228,45 @@ export function ProjectIdeaCard({
               onOpenChange={setIsBenefitExpanded} 
               className="space-y-1"
             >
-              <div className="text-sm text-muted-foreground">
-                {shouldTruncateBenefit && !isBenefitExpanded ? (
-                  <>{benefit_to_zuitzerland.substring(0, 100)}...</>
-                ) : (
-                  <>{benefit_to_zuitzerland}</>
-                )}
-                
-                {shouldTruncateBenefit && (
-                  <CollapsibleTrigger asChild>
-                    <Button 
-                      variant="link" 
-                      size="sm" 
-                      className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
-                    >
-                      {isBenefitExpanded ? (
-                        <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
-                      ) : (
-                        <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                )}
-              </div>
-              
-              {shouldTruncateBenefit && (
-                <CollapsibleContent className="text-sm text-muted-foreground">
-                  {benefit_to_zuitzerland}
-                </CollapsibleContent>
+              {/* For collapsed state: show truncated text with "See more" at the end */}
+              {!isBenefitExpanded && (
+                <div className="text-sm text-muted-foreground">
+                  {shouldTruncateBenefit ? (
+                    <>
+                      {benefit_to_zuitzerland.substring(0, 100)}...
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="p-0 h-auto text-primary hover:text-primary/80 ml-1"
+                        >
+                          <span className="flex items-center">See more <ChevronDown className="h-3 w-3 ml-1" /></span>
+                        </Button>
+                      </CollapsibleTrigger>
+                    </>
+                  ) : (
+                    benefit_to_zuitzerland
+                  )}
+                </div>
               )}
+              
+              {/* For expanded state: show full text with "See less" at the bottom */}
+              <CollapsibleContent className="text-sm text-muted-foreground">
+                {benefit_to_zuitzerland}
+                {shouldTruncateBenefit && (
+                  <div className="mt-2">
+                    <CollapsibleTrigger asChild>
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="p-0 h-auto text-primary hover:text-primary/80"
+                      >
+                        <span className="flex items-center">See less <ChevronUp className="h-3 w-3 ml-1" /></span>
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                )}
+              </CollapsibleContent>
             </Collapsible>
           </div>
         )}
