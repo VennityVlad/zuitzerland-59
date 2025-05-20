@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -33,6 +34,21 @@ import { TablesInsert } from "@/integrations/supabase/types"; // Will be auto-ge
 interface CreateProjectIdeaSheetProps {
   onProjectCreated?: () => void;
   userId?: string; // Needed to associate project with user
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  editMode?: boolean;
+  projectData?: {
+    id: string;
+    name: string;
+    description: string;
+    submission_type: SubmissionTypeValue;
+    contribution_type: ContributionTypeValue;
+    flag: FlagTypeValue;
+    benefit_to_zuitzerland: string;
+    support_needed?: string;
+    github_link?: string;
+    telegram_handle?: string;
+  };
 }
 
 const projectIdeaFormSchema = z.object({
@@ -55,14 +71,35 @@ const projectIdeaFormSchema = z.object({
 
 type ProjectIdeaFormValues = z.infer<typeof projectIdeaFormSchema>;
 
-export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProjectIdeaSheetProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function CreateProjectIdeaSheet({ 
+  onProjectCreated, 
+  userId, 
+  isOpen, 
+  onOpenChange, 
+  editMode = false, 
+  projectData 
+}: CreateProjectIdeaSheetProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(isOpen || false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { authenticatedSupabase } = useSupabaseJwt();
 
+  // Use either the controlled or uncontrolled open state
+  const effectiveIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
+  const effectiveOnOpenChange = onOpenChange || setInternalIsOpen;
+
   const form = useForm<ProjectIdeaFormValues>({
     resolver: zodResolver(projectIdeaFormSchema),
-    defaultValues: {
+    defaultValues: editMode && projectData ? {
+      submission_type: projectData.submission_type,
+      name: projectData.name,
+      description: projectData.description,
+      contribution_type: projectData.contribution_type,
+      flag: projectData.flag,
+      benefit_to_zuitzerland: projectData.benefit_to_zuitzerland,
+      support_needed: projectData.support_needed || "",
+      github_link: projectData.github_link || "",
+      telegram_handle: projectData.telegram_handle || "",
+    } : {
       submission_type: "project_idea",
       name: "",
       description: "",
@@ -74,6 +111,23 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
       telegram_handle: "",
     },
   });
+
+  // Update form when projectData changes in edit mode
+  useEffect(() => {
+    if (editMode && projectData) {
+      form.reset({
+        submission_type: projectData.submission_type,
+        name: projectData.name,
+        description: projectData.description,
+        contribution_type: projectData.contribution_type,
+        flag: projectData.flag,
+        benefit_to_zuitzerland: projectData.benefit_to_zuitzerland,
+        support_needed: projectData.support_needed || "",
+        github_link: projectData.github_link || "",
+        telegram_handle: projectData.telegram_handle || "",
+      });
+    }
+  }, [editMode, projectData, form]);
 
   const onSubmit = async (data: ProjectIdeaFormValues) => {
     if (!authenticatedSupabase || !userId) {
@@ -88,35 +142,63 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
     setIsSubmitting(true);
 
     try {
-      const projectData: TablesInsert<'zulink_projects'> = {
-        profile_id: userId,
-        submission_type: data.submission_type,
-        name: data.name,
-        description: data.description,
-        contribution_type: data.contribution_type,
-        flag: data.flag,
-        benefit_to_zuitzerland: data.benefit_to_zuitzerland,
-        support_needed: data.support_needed || null,
-        github_link: data.github_link || null,
-        telegram_handle: data.telegram_handle || null,
-        status: 'pending', // default status
-      };
-      
-      const { error } = await authenticatedSupabase
-        .from('zulink_projects')
-        .insert(projectData);
+      if (editMode && projectData) {
+        // Update existing project
+        const { error } = await authenticatedSupabase
+          .from('zulink_projects')
+          .update({
+            submission_type: data.submission_type,
+            name: data.name,
+            description: data.description,
+            contribution_type: data.contribution_type,
+            flag: data.flag,
+            benefit_to_zuitzerland: data.benefit_to_zuitzerland,
+            support_needed: data.support_needed || null,
+            github_link: data.github_link || null,
+            telegram_handle: data.telegram_handle || null,
+          })
+          .eq('id', projectData.id);
 
-      if (error) {
-        console.error('Error submitting project/idea:', error);
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        toast({
+          title: "Project/Idea Updated",
+          description: "Your changes have been saved successfully.",
+        });
+      } else {
+        // Create new project
+        const projectData: TablesInsert<'zulink_projects'> = {
+          profile_id: userId,
+          submission_type: data.submission_type,
+          name: data.name,
+          description: data.description,
+          contribution_type: data.contribution_type,
+          flag: data.flag,
+          benefit_to_zuitzerland: data.benefit_to_zuitzerland,
+          support_needed: data.support_needed || null,
+          github_link: data.github_link || null,
+          telegram_handle: data.telegram_handle || null,
+          status: 'pending', // default status
+        };
+        
+        const { error } = await authenticatedSupabase
+          .from('zulink_projects')
+          .insert(projectData);
+
+        if (error) {
+          throw error;
+        }
+
+        toast({
+          title: "Project/Idea Submitted",
+          description: "Your submission has been received and is pending review.",
+        });
       }
 
-      toast({
-        title: "Project/Idea Submitted",
-        description: "Your submission has been received and is pending review.",
-      });
       form.reset();
-      setIsOpen(false);
+      effectiveOnOpenChange(false);
       if (onProjectCreated) {
         onProjectCreated();
       }
@@ -134,30 +216,35 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
   // This useEffect will show a toast and close the sheet if it's opened
   // while userId is still not available. Disabling the button makes this less likely.
   useEffect(() => {
-    if (isOpen && !userId) {
+    if (effectiveIsOpen && !userId) {
        toast({
         title: "User not identified",
         description: "Please wait a moment or try signing in again. The button will enable once your profile is loaded.",
         variant: "default",
       });
-       setIsOpen(false); // Close sheet if user is not identified
+       effectiveOnOpenChange(false); // Close sheet if user is not identified
     }
-  }, [isOpen, userId]);
+  }, [effectiveIsOpen, userId, effectiveOnOpenChange]);
 
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button variant="default" disabled={!userId} title={!userId ? "Loading user information..." : "Submit Project or Idea"}>
-          <Plus className="h-4 w-4 mr-2" />
-          Submit Project or Idea
-        </Button>
-      </SheetTrigger>
+    <Sheet open={effectiveIsOpen} onOpenChange={effectiveOnOpenChange}>
+      {!editMode && (
+        <SheetTrigger asChild>
+          <Button variant="default" disabled={!userId} title={!userId ? "Loading user information..." : "Submit Project or Idea"}>
+            <Plus className="h-4 w-4 mr-2" />
+            Submit Project or Idea
+          </Button>
+        </SheetTrigger>
+      )}
       <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Submit a Project or Idea</SheetTitle>
+          <SheetTitle>{editMode ? "Edit Project or Idea" : "Submit a Project or Idea"}</SheetTitle>
           <SheetDescription>
-            Share your project or idea with the Zuitzerland community.
+            {editMode 
+              ? "Update your project or idea information."
+              : "Share your project or idea with the Zuitzerland community."
+            }
           </SheetDescription>
         </SheetHeader>
 
@@ -343,7 +430,7 @@ export function CreateProjectIdeaSheet({ onProjectCreated, userId }: CreateProje
                     <Button type="button" variant="outline">Cancel</Button>
                 </SheetClose>
                 <Button type="submit" disabled={isSubmitting || !userId}>
-                  {isSubmitting ? "Submitting..." : "Submit"}
+                  {isSubmitting ? "Submitting..." : editMode ? "Save Changes" : "Submit"}
                 </Button>
               </div>
             </form>
