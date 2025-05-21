@@ -1657,7 +1657,7 @@ export type Database = {
         | "Practical Tooling"
         | "Visionary Tech"
         | "ZuLink Bounty"
-      zulink_flag_type: "Green" | "Grey" | "Yellow"
+      zulink_flag_type: "Green" | "Grey" | "Yellow" | "Swiss"
       zulink_project_status: "pending" | "approved" | "rejected" | "implemented"
       zulink_submission_type: "project_to_implement" | "project_idea"
     }
@@ -1853,7 +1853,7 @@ export const Constants = {
         "Visionary Tech",
         "ZuLink Bounty",
       ],
-      zulink_flag_type: ["Green", "Grey", "Yellow"],
+      zulink_flag_type: ["Green", "Grey", "Yellow", "Swiss"],
       zulink_project_status: ["pending", "approved", "rejected", "implemented"],
       zulink_submission_type: ["project_to_implement", "project_idea"],
     },
