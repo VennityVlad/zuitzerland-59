@@ -61,7 +61,7 @@ const projectIdeaFormSchema = z.object({
   }),
   benefit_to_zuitzerland: z.string().min(1, { message: "Benefit to Zuitzerland is required" }),
   support_needed: z.string().optional(),
-  github_link: z.string().url({ message: "Please enter a valid URL or leave empty" }).optional().or(z.literal('')),
+  github_link: z.string().url({ message: "Please enter a valid URL" }).min(1, { message: "GitHub or Document Link is required" }),
   telegram_handle: z.string().min(1, { message: "Telegram handle is required" }),
 });
 
@@ -367,7 +367,7 @@ export function CreateProjectIdeaSheet({
                 name="github_link"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>GitHub or Document Link (Optional)</FormLabel>
+                    <FormLabel>GitHub or Document Link</FormLabel>
                     <FormControl>
                       <Input placeholder="https://github.com/your/project" {...field} />
                     </FormControl>
