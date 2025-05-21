@@ -291,7 +291,7 @@ export function ProjectIdeaCard({
             {github_link && (
               <Button variant="outline" size="sm" asChild className="w-full">
                 <a href={github_link} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-2" /> GitHub
+                  <Link className="h-4 w-4 mr-2" /> Link
                 </a>
               </Button>
             )}
