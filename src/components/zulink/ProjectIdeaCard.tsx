@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -207,10 +206,6 @@ export function ProjectIdeaCard({
             </div>
           )}
 
-          <div>
-            <h4 className="font-semibold text-xs mb-1">Type:</h4>
-            <Badge variant="outline" className="capitalize">{submission_type.replace('_', ' ')}</Badge>
-          </div>
           <div>
             <h4 className="font-semibold text-xs mb-1">Contribution:</h4>
             <Badge variant="outline">{contribution_type}</Badge>
