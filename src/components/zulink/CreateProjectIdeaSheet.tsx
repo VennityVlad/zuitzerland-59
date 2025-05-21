@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -51,24 +50,12 @@ interface CreateProjectIdeaSheetProps {
   };
 }
 
-// Validate that the URL is a GitHub/GitLab/Notion/Google Docs link or a valid URL
+// Validate that the URL is a valid URL, without domain restrictions
 const validateProjectLink = (value: string) => {
   try {
-    // Try to parse as URL first
-    const url = new URL(value);
-    
-    // Check if it's from an allowed domain
-    const allowedDomains = [
-      'github.com', 
-      'gitlab.com', 
-      'notion.so', 
-      'docs.google.com', 
-      'www.notion.so', 
-      'drive.google.com',
-      'hackmd.io'
-    ];
-    
-    return allowedDomains.some(domain => url.hostname === domain || url.hostname.endsWith(`.${domain}`));
+    // Try to parse as URL to verify it's valid
+    new URL(value);
+    return true;
   } catch (e) {
     // Not a valid URL
     return false;
@@ -89,7 +76,7 @@ const projectIdeaFormSchema = z.object({
   github_link: z.string()
     .min(1, { message: "GitHub or Document Link is required" })
     .refine(validateProjectLink, {
-      message: "Please enter a valid URL from GitHub, GitLab, Notion, or Google Docs",
+      message: "Please enter a valid URL",
     }),
   telegram_handle: z.string().min(1, { message: "Telegram handle is required" }),
 });
