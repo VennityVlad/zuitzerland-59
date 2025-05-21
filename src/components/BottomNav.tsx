@@ -110,31 +110,31 @@ const BottomNav = () => {
               )}
             </NavLink>
 
-            {/* Onboarding (non-admin only, if enabled and paid) */}
-            {showOnboarding && hasPaidInvoice && (
-                <NavLink
-                to="/onboarding"
+            {/* ZuLink Apps (non-admin only, if paid invoice exists) */}
+            {hasPaidInvoice && (
+              <NavLink
+                to="/zulink-apps"
                 className={({ isActive }) =>
-                    cn(
+                  cn(
                     "flex flex-col items-center justify-center text-xs",
                     isActive
-                        ? "text-primary"
-                        : "text-gray-500 hover:text-primary"
-                    )
+                      ? "text-primary"
+                      : "text-gray-500 hover:text-primary"
+                  )
                 }
-                >
+              >
                 {({ isActive }) => (
-                    <>
-                    <BookOpen
-                        className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
+                  <>
+                    <AppWindow
+                      className={cn("mb-1 h-5 w-5", isActive && "fill-primary/10")}
                     />
-                    <span>Onboarding</span>
-                    </>
+                    <span>ZuLink Apps</span>
+                  </>
                 )}
-                </NavLink>
+              </NavLink>
             )}
-            {/* Placeholder if onboarding is not shown to maintain grid columns */}
-            {(!showOnboarding || !hasPaidInvoice) && <div />} 
+            {/* Placeholder if user doesn't have paid invoice to maintain grid columns */}
+            {!hasPaidInvoice && <div />}
           </>
         )}
 
@@ -148,14 +148,14 @@ const BottomNav = () => {
           </PopoverTrigger>
           <PopoverContent side="top" className="w-56 p-0">
             <div className="flex flex-col py-2">
-              {/* ZuLink Apps (non-admin only, if paid invoice exists) */}
-              {!isAdmin && hasPaidInvoice && (
+              {/* Onboarding (moved from main nav to More menu for non-admin with paid invoice) */}
+              {!isAdmin && showOnboarding && hasPaidInvoice && (
                 <NavLink
-                  to="/zulink-apps"
+                  to="/onboarding"
                   className="flex items-center px-3 py-2 text-sm hover:bg-primary/5"
                 >
-                  <AppWindow className="h-4 w-4 mr-2" />
-                  ZuLink Apps
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Onboarding
                 </NavLink>
               )}
 
