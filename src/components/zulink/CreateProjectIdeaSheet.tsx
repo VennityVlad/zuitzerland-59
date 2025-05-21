@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
-import { SUBMISSION_TYPES, CONTRIBUTION_TYPES, FLAG_TYPES, SubmissionTypeValue, ContributionTypeValue, FlagTypeValue } from "@/lib/zulinkConstants";
+import { SUBMISSION_TYPES, CONTRIBUTION_TYPES, DISPLAYED_CONTRIBUTION_TYPES, FLAG_TYPES, SubmissionTypeValue, ContributionTypeValue, FlagTypeValue } from "@/lib/zulinkConstants";
 import { TablesInsert } from "@/integrations/supabase/types"; // Will be auto-generated
 
 interface CreateProjectIdeaSheetProps {
@@ -315,15 +315,15 @@ export function CreateProjectIdeaSheet({
                 name="contribution_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type of Contribution</FormLabel>
+                    <FormLabel>Type of Submission</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a contribution type" />
+                          <SelectValue placeholder="Select a submission type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CONTRIBUTION_TYPES.map(type => (
+                        {DISPLAYED_CONTRIBUTION_TYPES.map(type => (
                           <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
                       </SelectContent>
