@@ -12,15 +12,14 @@ import { AppsFilter } from "@/components/zulink/AppsFilter";
 import { useToast } from "@/hooks/use-toast";
 import { Lightbulb, Loader2 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
-// Supabase client might be needed if authenticatedSupabase is not used directly in queryFn
-// import { supabase } from "@/integrations/supabase/client"; 
 
 type ProjectIdeaData = Tables<'zulink_projects'>;
 
 export default function ZuLinkProjects() {
   const [projects, setProjects] = useState<ProjectIdeaData[]>([]);
-  const [loadingProjects, setLoadingProjects] = useState(true); // Renamed for clarity
+  const [loadingProjects, setLoadingProjects] = useState(true); 
   const [filter, setFilter] = useState("all");
+  const [contributionTypeFilter, setContributionTypeFilter] = useState<string | null>(null);
   
   const { authenticatedSupabase, isAuthenticated } = useSupabaseJwt();
   const { toast } = useToast();
@@ -114,29 +113,42 @@ export default function ZuLinkProjects() {
     if (isAuthenticated && authenticatedSupabase) {
       fetchProjects();
     }
-  }, [isAuthenticated, authenticatedSupabase]); // Removed toast dependency, fetchProjects has its own
+  }, [isAuthenticated, authenticatedSupabase]); 
 
   const filteredProjects = useMemo(() => {
     // Ensure userProfileId is used for filtering 'my' submissions
     // and for non-admin 'all' view to show user's own pending/rejected items.
     if (!projects) return [];
 
+    // First filter by status/ownership
+    let statusFiltered = projects;
+    
     switch (filter) {
       case "pending":
-        return projects.filter(project => project.status === "pending");
+        statusFiltered = projects.filter(project => project.status === "pending");
+        break;
       case "my":
         // Only filter by 'my' if userProfileId is available
-        return userProfileId ? projects.filter(project => project.profile_id === userProfileId) : [];
+        statusFiltered = userProfileId ? projects.filter(project => project.profile_id === userProfileId) : [];
+        break;
       default: // "all"
-        return isAdmin 
+        statusFiltered = isAdmin 
           ? projects 
           : projects.filter(project => 
               project.status === "approved" || 
               project.status === "implemented" || 
               (userProfileId && project.profile_id === userProfileId) // Show user's own regardless of status
             );
+        break;
     }
-  }, [projects, filter, isAdmin, userProfileId]);
+    
+    // Then filter by contribution type if selected
+    if (contributionTypeFilter) {
+      return statusFiltered.filter(project => project.contribution_type === contributionTypeFilter);
+    }
+    
+    return statusFiltered;
+  }, [projects, filter, contributionTypeFilter, isAdmin, userProfileId]);
 
   const pendingProjectsCount = useMemo(() => {
     return projects.filter(project => project.status === "pending").length;
@@ -182,7 +194,7 @@ export default function ZuLinkProjects() {
         actions={
           <CreateProjectIdeaSheet 
             onProjectCreated={fetchProjects}
-            userId={userProfileId} // Pass the profile.id from the fetched profile
+            userId={userProfileId}
           />
         }
       />
@@ -190,7 +202,9 @@ export default function ZuLinkProjects() {
       <div className="container py-6">
         <AppsFilter 
           onFilterChange={setFilter}
+          onContributionTypeChange={setContributionTypeFilter}
           filter={filter}
+          contributionTypeFilter={contributionTypeFilter}
           isAdmin={isAdmin}
           pendingProjectsCount={pendingProjectsCount}
           myProjectsCount={myProjectsCount}
@@ -209,7 +223,7 @@ export default function ZuLinkProjects() {
                 key={project.id}
                 {...project} 
                 isAdmin={isAdmin}
-                currentUserId={userProfileId} // Pass profile.id as currentUserId
+                currentUserId={userProfileId}
                 onStatusUpdate={fetchProjects}
               />
             ))}
@@ -219,6 +233,7 @@ export default function ZuLinkProjects() {
             <h3 className="text-xl font-medium text-gray-500 mb-2">
               {filter === "pending" ? "No pending submissions found" : 
                filter === "my" ? (userProfileId ? "You haven't submitted any projects or ideas yet" : "Loading your submissions...") : 
+               contributionTypeFilter ? `No ${contributionTypeFilter} projects found` :
                "No projects or ideas available"}
             </h3>
             <p className="text-gray-400">
