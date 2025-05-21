@@ -7,7 +7,6 @@ import { useSupabaseJwt } from "@/components/SupabaseJwtProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -28,7 +27,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
-import { SUBMISSION_TYPES, CONTRIBUTION_TYPES, DISPLAYED_CONTRIBUTION_TYPES, FLAG_TYPES, SubmissionTypeValue, ContributionTypeValue, FlagTypeValue } from "@/lib/zulinkConstants";
+import { DISPLAYED_CONTRIBUTION_TYPES, CONTRIBUTION_TYPES, FLAG_TYPES, ContributionTypeValue, FlagTypeValue } from "@/lib/zulinkConstants";
 import { TablesInsert } from "@/integrations/supabase/types"; // Will be auto-generated
 
 interface CreateProjectIdeaSheetProps {
@@ -41,7 +40,7 @@ interface CreateProjectIdeaSheetProps {
     id: string;
     name: string;
     description: string;
-    submission_type: SubmissionTypeValue;
+    submission_type: string;
     contribution_type: ContributionTypeValue;
     flag: FlagTypeValue;
     benefit_to_zuitzerland: string;
@@ -52,21 +51,18 @@ interface CreateProjectIdeaSheetProps {
 }
 
 const projectIdeaFormSchema = z.object({
-  submission_type: z.enum(SUBMISSION_TYPES.map(st => st.value) as [SubmissionTypeValue, ...SubmissionTypeValue[]], {
+  name: z.string().min(1, { message: "Project name is required" }),
+  description: z.string().min(1, { message: "Project description is required" }),
+  contribution_type: z.enum([...CONTRIBUTION_TYPES] as [ContributionTypeValue, ...ContributionTypeValue[]], {
     required_error: "You need to select a submission type.",
   }),
-  name: z.string().min(1, { message: "Project/Idea name is required" }),
-  description: z.string().min(1, { message: "Project description/idea is required" }),
-  contribution_type: z.enum([...CONTRIBUTION_TYPES] as [ContributionTypeValue, ...ContributionTypeValue[]], { // Spread into mutable array
-    required_error: "You need to select a contribution type.",
-  }),
-  flag: z.enum([...FLAG_TYPES] as [FlagTypeValue, ...FlagTypeValue[]], { // Spread into mutable array
+  flag: z.enum([...FLAG_TYPES] as [FlagTypeValue, ...FlagTypeValue[]], {
     required_error: "You need to select a flag.",
   }),
   benefit_to_zuitzerland: z.string().min(1, { message: "Benefit to Zuitzerland is required" }),
   support_needed: z.string().optional(),
   github_link: z.string().url({ message: "Please enter a valid URL or leave empty" }).optional().or(z.literal('')),
-  telegram_handle: z.string().optional(),
+  telegram_handle: z.string().min(1, { message: "Telegram handle is required" }),
 });
 
 type ProjectIdeaFormValues = z.infer<typeof projectIdeaFormSchema>;
@@ -90,7 +86,6 @@ export function CreateProjectIdeaSheet({
   const form = useForm<ProjectIdeaFormValues>({
     resolver: zodResolver(projectIdeaFormSchema),
     defaultValues: editMode && projectData ? {
-      submission_type: projectData.submission_type,
       name: projectData.name,
       description: projectData.description,
       contribution_type: projectData.contribution_type,
@@ -100,7 +95,6 @@ export function CreateProjectIdeaSheet({
       github_link: projectData.github_link || "",
       telegram_handle: projectData.telegram_handle || "",
     } : {
-      submission_type: "project_idea",
       name: "",
       description: "",
       contribution_type: "Tooling",
@@ -116,7 +110,6 @@ export function CreateProjectIdeaSheet({
   useEffect(() => {
     if (editMode && projectData) {
       form.reset({
-        submission_type: projectData.submission_type,
         name: projectData.name,
         description: projectData.description,
         contribution_type: projectData.contribution_type,
@@ -147,7 +140,6 @@ export function CreateProjectIdeaSheet({
         const { error } = await authenticatedSupabase
           .from('zulink_projects')
           .update({
-            submission_type: data.submission_type,
             name: data.name,
             description: data.description,
             contribution_type: data.contribution_type,
@@ -155,7 +147,7 @@ export function CreateProjectIdeaSheet({
             benefit_to_zuitzerland: data.benefit_to_zuitzerland,
             support_needed: data.support_needed || null,
             github_link: data.github_link || null,
-            telegram_handle: data.telegram_handle || null,
+            telegram_handle: data.telegram_handle,
           })
           .eq('id', projectData.id);
 
@@ -164,14 +156,14 @@ export function CreateProjectIdeaSheet({
         }
 
         toast({
-          title: "Project/Idea Updated",
+          title: "Project Updated",
           description: "Your changes have been saved successfully.",
         });
       } else {
         // Create new project
         const projectData: TablesInsert<'zulink_projects'> = {
           profile_id: userId,
-          submission_type: data.submission_type,
+          submission_type: "project_idea", // Default submission type
           name: data.name,
           description: data.description,
           contribution_type: data.contribution_type,
@@ -179,7 +171,7 @@ export function CreateProjectIdeaSheet({
           benefit_to_zuitzerland: data.benefit_to_zuitzerland,
           support_needed: data.support_needed || null,
           github_link: data.github_link || null,
-          telegram_handle: data.telegram_handle || null,
+          telegram_handle: data.telegram_handle,
           status: 'pending', // default status
         };
         
@@ -192,7 +184,7 @@ export function CreateProjectIdeaSheet({
         }
 
         toast({
-          title: "Project/Idea Submitted",
+          title: "Project Submitted",
           description: "Your submission has been received and is pending review.",
         });
       }
@@ -231,19 +223,19 @@ export function CreateProjectIdeaSheet({
     <Sheet open={effectiveIsOpen} onOpenChange={effectiveOnOpenChange}>
       {!editMode && (
         <SheetTrigger asChild>
-          <Button variant="default" disabled={!userId} title={!userId ? "Loading user information..." : "Submit Project or Idea"}>
+          <Button variant="default" disabled={!userId} title={!userId ? "Loading user information..." : "Submit Project"}>
             <Plus className="h-4 w-4 mr-2" />
-            Submit Project or Idea
+            Submit Project
           </Button>
         </SheetTrigger>
       )}
       <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{editMode ? "Edit Project or Idea" : "Submit a Project or Idea"}</SheetTitle>
+          <SheetTitle>{editMode ? "Edit Project" : "Submit a Project"}</SheetTitle>
           <SheetDescription>
             {editMode 
-              ? "Update your project or idea information."
-              : "Share your project or idea with the Zuitzerland community."
+              ? "Update your project information."
+              : "Share your project with the Zuitzerland community."
             }
           </SheetDescription>
         </SheetHeader>
@@ -253,39 +245,12 @@ export function CreateProjectIdeaSheet({
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="submission_type"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>What is this?</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        {SUBMISSION_TYPES.map(type => (
-                          <FormItem key={type.value} className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value={type.value} />
-                            </FormControl>
-                            <FormLabel className="font-normal">{type.label}</FormLabel>
-                          </FormItem>
-                        ))}
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter project or idea name" {...field} />
+                      <Input placeholder="Enter project name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -300,7 +265,7 @@ export function CreateProjectIdeaSheet({
                     <FormLabel>Project Description / What do you want to build?</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Detailed description of your project or idea..."
+                        placeholder="Detailed description of your project..."
                         className="resize-none min-h-[100px]"
                         {...field} 
                       />
@@ -402,7 +367,7 @@ export function CreateProjectIdeaSheet({
                 name="github_link"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>GitHub Link (Optional)</FormLabel>
+                    <FormLabel>GitHub or Document Link (Optional)</FormLabel>
                     <FormControl>
                       <Input placeholder="https://github.com/your/project" {...field} />
                     </FormControl>
@@ -416,7 +381,7 @@ export function CreateProjectIdeaSheet({
                 name="telegram_handle"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telegram Handle (Optional)</FormLabel>
+                    <FormLabel>Telegram Handle</FormLabel>
                     <FormControl>
                       <Input placeholder="@your_telegram" {...field} />
                     </FormControl>
