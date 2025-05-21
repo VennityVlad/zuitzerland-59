@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -53,6 +54,11 @@ interface CreateProjectIdeaSheetProps {
 // Validate that the URL is a valid URL, without domain restrictions
 const validateProjectLink = (value: string) => {
   try {
+    // First check if it has a protocol, if not prepend https://
+    if (!/^https?:\/\//i.test(value)) {
+      value = 'https://' + value;
+    }
+    
     // Try to parse as URL to verify it's valid
     new URL(value);
     return true;
