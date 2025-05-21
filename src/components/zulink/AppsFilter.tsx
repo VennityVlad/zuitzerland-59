@@ -35,7 +35,7 @@ export function AppsFilter({
 }: AppsFilterProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-6">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 order-2 md:order-1">
         <Button
           variant={filter === "all" ? "default" : "outline"}
           onClick={() => onFilterChange("all")}
@@ -81,11 +81,11 @@ export function AppsFilter({
         </Button>
       </div>
       
-      <div className="ml-auto">
+      <div className="order-1 md:order-2 md:ml-auto mb-2 md:mb-0 w-full md:w-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="flex items-center">
-              {contributionTypeFilter ? `Contribution: ${contributionTypeFilter}` : "Filter by Contribution"}
+            <Button variant="outline" size="sm" className="flex items-center w-full md:w-auto">
+              {contributionTypeFilter ? `Type: ${contributionTypeFilter}` : "Filter by Type"}
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
