@@ -24,6 +24,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { toast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
@@ -50,6 +51,30 @@ interface CreateProjectIdeaSheetProps {
   };
 }
 
+// Validate that the URL is a GitHub/GitLab/Notion/Google Docs link or a valid URL
+const validateProjectLink = (value: string) => {
+  try {
+    // Try to parse as URL first
+    const url = new URL(value);
+    
+    // Check if it's from an allowed domain
+    const allowedDomains = [
+      'github.com', 
+      'gitlab.com', 
+      'notion.so', 
+      'docs.google.com', 
+      'www.notion.so', 
+      'drive.google.com',
+      'hackmd.io'
+    ];
+    
+    return allowedDomains.some(domain => url.hostname === domain || url.hostname.endsWith(`.${domain}`));
+  } catch (e) {
+    // Not a valid URL
+    return false;
+  }
+};
+
 const projectIdeaFormSchema = z.object({
   name: z.string().min(1, { message: "Project name is required" }),
   description: z.string().min(1, { message: "Project description is required" }),
@@ -61,7 +86,11 @@ const projectIdeaFormSchema = z.object({
   }),
   benefit_to_zuitzerland: z.string().min(1, { message: "Benefit to Zuitzerland is required" }),
   support_needed: z.string().optional(),
-  github_link: z.string().url({ message: "Please enter a valid URL" }).min(1, { message: "GitHub or Document Link is required" }),
+  github_link: z.string()
+    .min(1, { message: "GitHub or Document Link is required" })
+    .refine(validateProjectLink, {
+      message: "Please enter a valid URL from GitHub, GitLab, Notion, or Google Docs",
+    }),
   telegram_handle: z.string().min(1, { message: "Telegram handle is required" }),
 });
 
@@ -135,6 +164,12 @@ export function CreateProjectIdeaSheet({
     setIsSubmitting(true);
 
     try {
+      // Ensure URL has proper protocol
+      let githubLink = data.github_link;
+      if (!/^https?:\/\//i.test(githubLink)) {
+        githubLink = 'https://' + githubLink;
+      }
+      
       if (editMode && projectData) {
         // Update existing project
         const { error } = await authenticatedSupabase
@@ -146,7 +181,7 @@ export function CreateProjectIdeaSheet({
             flag: data.flag,
             benefit_to_zuitzerland: data.benefit_to_zuitzerland,
             support_needed: data.support_needed || null,
-            github_link: data.github_link || null,
+            github_link: githubLink,
             telegram_handle: data.telegram_handle,
           })
           .eq('id', projectData.id);
@@ -170,7 +205,7 @@ export function CreateProjectIdeaSheet({
           flag: data.flag,
           benefit_to_zuitzerland: data.benefit_to_zuitzerland,
           support_needed: data.support_needed || null,
-          github_link: data.github_link || null,
+          github_link: githubLink,
           telegram_handle: data.telegram_handle,
           status: 'pending', // default status
         };
@@ -371,6 +406,9 @@ export function CreateProjectIdeaSheet({
                     <FormControl>
                       <Input placeholder="https://github.com/your/project" {...field} />
                     </FormControl>
+                    <FormDescription>
+                      Please provide a link to GitHub, GitLab, Notion, or Google Docs
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
