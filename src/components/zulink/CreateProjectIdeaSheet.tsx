@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -302,7 +303,16 @@ export function CreateProjectIdeaSheet({
                 name="contribution_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type of Submission</FormLabel>
+                    <FormLabel>
+                      Type of Submission <a 
+                        href="https://www.canva.com/design/DAGn5OddGUQ/ZiszF32Lb1sLiPwaTJlwrQ/view?utm_content=DAGn5OddGUQ&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h1d392ce1be#8" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-600 hover:underline"
+                      >
+                        (Guidelines)
+                      </a>
+                    </FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
