@@ -276,7 +276,7 @@ export function CreateProjectIdeaSheet({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Name *</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter project name" {...field} />
                     </FormControl>
@@ -290,7 +290,7 @@ export function CreateProjectIdeaSheet({
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Project Description / What do you want to build?</FormLabel>
+                    <FormLabel>Project Description / What do you want to build? *</FormLabel>
                     <FormControl>
                       <Textarea 
                         placeholder="Detailed description of your project..."
@@ -309,7 +309,7 @@ export function CreateProjectIdeaSheet({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Type of Submission <a 
+                      Type of Submission * <a 
                         href="https://www.canva.com/design/DAGn5OddGUQ/ZiszF32Lb1sLiPwaTJlwrQ/view?utm_content=DAGn5OddGUQ&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h1d392ce1be#8" 
                         target="_blank" 
                         rel="noopener noreferrer" 
@@ -341,7 +341,7 @@ export function CreateProjectIdeaSheet({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Flag <a 
+                      Flag * <a 
                         href="https://docsend.com/view/gef3utaa236ewney" 
                         target="_blank" 
                         rel="noopener noreferrer" 
@@ -372,7 +372,7 @@ export function CreateProjectIdeaSheet({
                 name="benefit_to_zuitzerland"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>How will this benefit Zuitzerland?</FormLabel>
+                    <FormLabel>How will this benefit Zuitzerland? *</FormLabel>
                     <FormControl>
                       <Textarea 
                         placeholder="Explain the benefits..."
@@ -404,7 +404,7 @@ export function CreateProjectIdeaSheet({
                 name="github_link"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>GitHub or Document Link</FormLabel>
+                    <FormLabel>GitHub or Document Link *</FormLabel>
                     <FormControl>
                       <Input placeholder="https://github.com/your/project" {...field} />
                     </FormControl>
@@ -421,7 +421,7 @@ export function CreateProjectIdeaSheet({
                 name="telegram_handle"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telegram Handle</FormLabel>
+                    <FormLabel>Telegram Handle *</FormLabel>
                     <FormControl>
                       <Input placeholder="@your_telegram" {...field} />
                     </FormControl>
