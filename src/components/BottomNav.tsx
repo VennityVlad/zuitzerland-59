@@ -9,11 +9,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { useMenuVisibility } from "@/hooks/useMenuVisibility";
 
 const BottomNav = () => {
   const { user, logout } = usePrivy();
-  const { isAdmin, showOnboarding, hasPaidInvoice } = useMenuVisibility(user?.id); // Added hasPaidInvoice
+  const { hasPaidInvoice, isAdmin } = usePaidInvoiceStatus(user?.id);
+  const { showOnboarding } = useMenuVisibility(user?.id); // Keep this for showOnboarding only
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full border-t bg-white">

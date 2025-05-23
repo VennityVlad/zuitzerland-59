@@ -41,7 +41,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import BottomNav from "./BottomNav";
-import { useMenuVisibility } from "@/hooks/useMenuVisibility";
+import { usePaidInvoiceStatus } from "@/hooks/usePaidInvoiceStatus";
 import { getSettingEnabled } from "@/utils/settingsUtils";
 
 type MenuItem = {
@@ -61,41 +61,19 @@ const NavMenu = () => {
   const { logout, user } = usePrivy();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDirectory, setShowDirectory] = useState(false);
-  const [hasPaidInvoice, setHasPaidInvoice] = useState(false);
+  
+  const { hasPaidInvoice, isAdmin } = usePaidInvoiceStatus(user?.id);
   
   useEffect(() => {
-    const checkAccess = async () => {
+    const checkSettings = async () => {
       if (!user?.id) return;
 
       try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role, id')
-          .eq('privy_id', user.id)
-          .maybeSingle();
-
-        if (profileError) throw profileError;
-        
-        setIsAdmin(profileData?.role === 'admin');
-
-        if (profileData?.id) {
-          const { data: invoiceData, error: invoiceError } = await supabase
-            .from('invoices')
-            .select('id')
-            .eq('profile_id', profileData.id)
-            .eq('status', 'paid')
-            .maybeSingle();
-
-          if (invoiceError) throw invoiceError;
-          setHasPaidInvoice(!!invoiceData);
-        }
-
         const { data: settingsData, error: settingsError } = await supabase
           .from('settings')
           .select('key, value')
@@ -111,11 +89,11 @@ const NavMenu = () => {
           setShowDirectory(getSettingEnabled(directorySetting));
         }
       } catch (error) {
-        console.error('Error checking access:', error);
+        console.error('Error checking settings:', error);
       }
     };
 
-    checkAccess();
+    checkSettings();
   }, [user?.id]);
 
   useEffect(() => {
