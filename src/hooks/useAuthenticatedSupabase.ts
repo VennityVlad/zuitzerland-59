@@ -4,8 +4,10 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { usePrivy } from '@privy-io/react-auth';
 import { useToast } from './use-toast';
 
-const SUPABASE_URL = "https://cluqnvnxjexrhhgddoxu.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsdXFudm54amV4cmhoZ2Rkb3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg5MzM0MzQsImV4cCI6MjA1NDUwOTQzNH0.1F5eYt59BKGemUfRHD0bHhlIQ_k1hmSDLh7ixa03w6k";
+import { config } from '@/lib/config';
+
+const SUPABASE_URL = config.supabase.url;
+const SUPABASE_PUBLISHABLE_KEY = config.supabase.anonKey;
 
 interface JwtData {
   jwt: string;
