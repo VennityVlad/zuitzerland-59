@@ -1,69 +1,250 @@
-# Welcome to your Lovable project
+# ZuPass Community Platform
 
-## Project info
+A comprehensive community management platform built with React, TypeScript, and Supabase. This platform provides event management, user authentication, booking systems, and community features for modern organizations.
 
-**URL**: https://lovable.dev/projects/8f877de4-355e-4755-81f8-2de8d51eec8d
+## Features
 
-## How can I edit this code?
+- **Event Management**: Create, manage, and track community events with calendar integration
+- **User Authentication**: Multi-provider authentication with role-based access control
+- **Booking System**: Room and resource booking with payment integration
+- **Community Features**: User directory, team management, and social features
+- **Issue Tracking**: Built-in issue reporting and tracking system
+- **Admin Dashboard**: Comprehensive administration tools and analytics
+- **Mobile Responsive**: Fully responsive design for all devices
 
-There are several ways of editing your application.
+## Technology Stack
 
-**Use Lovable**
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+- **UI Components**: shadcn/ui, Radix UI
+- **State Management**: TanStack Query
+- **Authentication**: Supabase Auth + Privy (optional)
+- **Payments**: Stripe integration (optional)
+- **Deployment**: Vercel, Netlify, or custom hosting
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8f877de4-355e-4755-81f8-2de8d51eec8d) and start prompting.
+## Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- Node.js 18 or higher
+- npm or yarn
+- Supabase account and project
+- (Optional) Privy account for enhanced authentication
+- (Optional) Stripe account for payments
 
-**Use your preferred IDE**
+## Quick Start
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 1. Clone the Repository
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+git clone <repository-url>
+cd zupass-community-platform
+```
 
-Follow these steps:
+### 2. Install Dependencies
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 3. Configure Environment
 
-# Step 3: Install the necessary dependencies.
-npm i
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Update `src/lib/config.ts` with your Supabase credentials
+3. Copy `supabase/config.toml.example` to `supabase/config.toml` and update with your settings
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 4. Set Up Database
+
+```bash
+# Install Supabase CLI
+npm install -g @supabase/cli
+
+# Login and link to your project
+supabase login
+supabase link --project-ref your-project-ref
+
+# Push database schema
+supabase db push
+```
+
+### 5. Start Development Server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Visit `http://localhost:3000` to view the application.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Documentation
 
-**Use GitHub Codespaces**
+### 📚 Complete Setup Guide
+See [SETUP.md](./SETUP.md) for detailed step-by-step setup instructions, including:
+- Supabase configuration
+- Authentication setup
+- Database schema deployment
+- Edge functions configuration
+- Feature flag configuration
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 🔒 Security Guide
+See [SECURITY.md](./SECURITY.md) for security best practices:
+- Pre-deployment security checklist
+- Secret management
+- Database security (RLS policies)
+- API security guidelines
+- Incident response procedures
 
-## What technologies are used for this project?
+### 🚀 Deployment Guide
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for production deployment:
+- Multiple deployment options (Vercel, Netlify, custom)
+- Environment configuration
+- Database migrations
+- Monitoring and maintenance
+- Scaling considerations
 
-This project is built with .
+## Project Structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+├── src/
+│   ├── components/          # React components
+│   ├── pages/              # Page components
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utilities and configuration
+│   ├── integrations/       # Third-party integrations
+│   └── types/              # TypeScript type definitions
+├── supabase/
+│   ├── functions/          # Edge functions
+│   ├── migrations/         # Database migrations
+│   └── config.toml         # Supabase configuration
+├── public/                 # Static assets
+└── docs/                   # Additional documentation
+```
 
-## How can I deploy this project?
+## Key Features
 
-Simply open [Lovable](https://lovable.dev/projects/8f877de4-355e-4755-81f8-2de8d51eec8d) and click on Share -> Publish.
+### Event Management
+- Create and manage events with rich metadata
+- Calendar integration with recurring events
+- RSVP tracking and attendee management
+- Event comments and co-host functionality
 
-## I want to use a custom domain - is that possible?
+### User System
+- Multi-provider authentication
+- Role-based access control (Admin, Co-curator, Co-designer, Attendee)
+- User profiles with housing preferences
+- Team management and organization
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+### Booking System
+- Room and resource booking
+- Payment integration with Stripe
+- Invoice generation and tracking
+- Booking analytics and reporting
+
+### Community Features
+- User directory with privacy controls
+- Issue reporting and tracking system
+- File uploads and management
+- Real-time notifications
+
+## Configuration
+
+### Environment Configuration
+
+Update `src/lib/config.ts` with your specific settings:
+
+```typescript
+export const config = {
+  supabase: {
+    url: "https://your-project-ref.supabase.co",
+    anonKey: "your-anon-key",
+  },
+  features: {
+    enablePrivyAuth: true,
+    enableMeerkatIntegration: false,
+    enableFileUploads: true,
+    // ... other feature flags
+  },
+  // ... other configuration
+};
+```
+
+### Database Configuration
+
+The platform uses Supabase with PostgreSQL. Key tables include:
+- `profiles` - User profiles and preferences
+- `events` - Event management
+- `invoices` - Booking and payment tracking
+- `issue_reports` - Issue tracking system
+- `locations` - Rooms and resources
+
+## Development
+
+### Available Scripts
+
+```bash
+# Development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Run tests
+npm run test
+
+# Lint code
+npm run lint
+```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Style
+
+- Use TypeScript for all new code
+- Follow the existing code style and patterns
+- Use semantic CSS tokens from the design system
+- Write tests for new features
+- Update documentation as needed
+
+## API Integration
+
+The platform integrates with several external services:
+
+- **Supabase**: Database, authentication, storage, edge functions
+- **Privy**: Enhanced authentication (optional)
+- **Stripe**: Payment processing (optional)
+- **Meerkat**: Video conferencing (optional)
+
+## Security
+
+This platform implements multiple security layers:
+- Row Level Security (RLS) for database access
+- JWT-based authentication
+- Role-based authorization
+- Input validation and sanitization
+- Secure file upload handling
+
+See [SECURITY.md](./SECURITY.md) for detailed security guidelines.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- Check the [SETUP.md](./SETUP.md) for setup issues
+- Review [SECURITY.md](./SECURITY.md) for security concerns
+- Consult [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment problems
+- Open an issue for bugs or feature requests
+
+## Acknowledgments
+
+- Built with [React](https://reactjs.org/) and [TypeScript](https://www.typescriptlang.org/)
+- Powered by [Supabase](https://supabase.com/)
+- UI components from [shadcn/ui](https://ui.shadcn.com/)
+- Styled with [Tailwind CSS](https://tailwindcss.com/)
