@@ -1,4 +1,4 @@
-# ZuPass Community Platform
+# Zuitzerland Community Platform
 
 A comprehensive community management platform built with React, TypeScript, and Supabase. This platform provides event management, user authentication, booking systems, and community features for modern organizations.
 
